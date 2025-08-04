@@ -7,7 +7,6 @@ import Divider from '@mui/material/Divider';
 import { checkForAvailabilityInArray, checkForGroupAvailability, getAllArraysFromParentObjects } from '../utils/utils';
 import { Campground } from './Campground';
 import Grid from '@mui/material/Grid';
-import { flattenData } from '../utils/tables/formatRows';
 
 export function CampgroundsGroups(props) {
     const [groups, setGroups] = useState({});

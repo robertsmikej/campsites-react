@@ -2,19 +2,16 @@ import { useEffect, useState, useContext } from 'react';
 
 import SiteSettings from '../context/SiteSettingsContext';
 
-import Box from '@mui/material/Container';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-import Divider from '@mui/material/Divider';
 
 import { Campsites } from './Campsites';
-import { checkForAvailabilityInArray, checkForGroupAvailability } from '../utils/utils';
+import { checkForAvailabilityInArray } from '../utils/utils';
 
 export function Campground(props) {
     const siteSettings = useContext(SiteSettings);
 
     const [campground, setCampground] = useState({});
-    const [hasCampgroundAvailability, setHasCampgroundAvailability] = useState(false);
 
     useEffect(() => {
         // console.log('props.data: ', props.data);

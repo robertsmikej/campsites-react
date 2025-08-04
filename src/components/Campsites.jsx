@@ -2,7 +2,6 @@ import { useEffect, useState, useContext } from 'react';
 
 import SiteSettings from '../context/SiteSettingsContext';
 
-import Box from '@mui/material/Container'
 import Stack from '@mui/material/Stack';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
@@ -11,19 +10,16 @@ import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Paper from '@mui/material/Paper';
-import Typography from '@mui/material/Typography';
-import Divider from '@mui/material/Divider';
 
-import { flattenData, formatToMMDDYYYY, getDayOfWeek, groupArrayOfObjectsByKey, sortByFromDate, sortBySiteName } from '../utils/tables/formatRows';
-import { checkForAvailability, checkForAvailabilityInArray, getSitesWithMatches } from '../utils/utils';
+import { formatToMMDDYYYY, getDayOfWeek, sortByFromDate, sortBySiteName } from '../utils/tables/formatRows';
+import { checkForAvailabilityInArray, getSitesWithMatches } from '../utils/utils';
 
 export function Campsites(props) {
     const siteSettings = useContext(SiteSettings);
 
     const [hasSiteAvailability, setHasSiteAvailability] = useState(false);
     const [sites, setSites] = useState([]);
-    const [rows, setRows] = useState([]);
-    const [tableTypes, setTableTypes] = useState({
+    const [tableTypes] = useState({
         'Favorites': {
             'headers': ['Site #', 'Start Day', 'From', 'To', 'Total Nights'],
             'rowKeys': ['']

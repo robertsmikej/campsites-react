@@ -1,14 +1,3 @@
-import { flattenData } from './tables/formatRows';
-
-// export const checkForIndividualAvailability = (data) => {
-//     // console.log('data: ', data);
-//     if (!data?.siteAvailability) return false;
-//     // console.log('data: ', data)
-//     const hasAvailability = Object.values(data.siteAvailability).some(site =>
-//         site.matches.length > 0
-//     );
-//     return hasAvailability;
-// };
 
 export const checkForAvailability = (data) => {
     if (!data?.siteAvailability && !data?.matches) return false;
