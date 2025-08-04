@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const CACHE_DURATION_MS = 10 * 60 * 1000; // 10 minutes
+const CACHE_DURATION_MS = 4 * 60 * 1000; // Minutes - first number is number of minutes
 
 const setCache = (key, data) => {
     const entry = {
@@ -60,51 +60,57 @@ export const fetchCampgrounds = async (sites, settings) => {
         console.error("Error with Sites JSON Provided");
         return;
     }
-    if (!settings?.startDate || !settings.endDate) {
-        console.error("Error with Date's Provided");
-        return;
-    }
 
-    const cacheKey = `campgrounds-${settings.startDate}-${settings.endDate}`;
+    const cacheKey = `campgrounds-${settings.dates.startDate}-${settings.dates.endDate}`;
     const cached = getCache(cacheKey, sites);
     if (cached) {
         return cached;
     }
 
-    const allDates = getAllDatesInRange(settings.startDate, settings.endDate);
-    const allMonths = [...new Set(allDates.map(date => date.slice(0, 7)))];
-
     const allFetchTasks = [];
     const siteFetchMap = [];
+    const results = {};
 
     for (let system in sites) {
         const campgroundData = sites[system];
         if (!Array.isArray(campgroundData)) continue;
 
         for (let campground of campgroundData) {
+            const startDate = campground.dates?.startDate || settings.dates.startDate;
+            const endDate = campground.dates?.endDate || settings.dates.endDate;
+            const allDates = getAllDatesInRange(startDate, endDate);
+            const allMonths = [...new Set(allDates.map(date => date.slice(0, 7)))];
+
             for (let month of allMonths) {
                 allFetchTasks.push(fetchData(campground.id, month));
-                siteFetchMap.push({ system, campground });
+                siteFetchMap.push({ system, campground, allDates });
             }
         }
     }
 
     const allResults = await Promise.all(allFetchTasks);
-    const results = {};
 
     allResults.forEach((data, index) => {
-        const { system, campground } = siteFetchMap[index];
+        const { system, campground, allDates } = siteFetchMap[index];
         if (!data || !data.campsites) return;
 
         if (!results[system]) results[system] = [];
 
         let campgroundEntry = results[system].find(c => c.id === campground.id);
         if (!campgroundEntry) {
-            campgroundEntry = { ...campground, siteAvailability: {} };
+            const sitesGroupedByFavorites = {
+                'Favorites': [],
+                'Worthwhile': [],
+                'All Others': [],
+            };
+            campgroundEntry = { ...campground, siteAvailability: {}, sitesGroupedByFavorites: sitesGroupedByFavorites };
             results[system].push(campgroundEntry);
         }
 
         for (const [siteId, siteData] of Object.entries(data.campsites)) {
+            if (settings.ignoreTypes.includes(siteData.campsite_type)) {
+                return;
+            }
             if (!campgroundEntry.siteAvailability[siteId]) {
                 campgroundEntry.siteAvailability[siteId] = {
                     siteId,
@@ -126,16 +132,16 @@ export const fetchCampgrounds = async (sites, settings) => {
             const uniqueDates = [...new Set(site.dates)].sort();
             const stayMatches = [];
 
-            for (const stayLength of settings.stayLengths || []) {
+            for (const stayLength of settings.dates.stayLengths || []) {
                 const matches = findConsecutiveAvailableRanges(uniqueDates, stayLength)
                     .filter(([from]) => {
-                        if (!settings.validStartDays?.length) return true;
+                        if (!settings.dates.validStartDays?.length) return true;
                         const [y, m, d] = from.split('-').map(Number);
                         const startDay = new Date(Date.UTC(y, m - 1, d)).toLocaleString('en-US', {
                             weekday: 'long',
                             timeZone: 'UTC'
                         });
-                        return settings.validStartDays.includes(startDay);
+                        return settings.dates.validStartDays.includes(startDay);
                     })
                     .map(([from, to]) => ({ from, to, nights: stayLength }));
 
@@ -178,7 +184,7 @@ export const getAllDatesInRange = (start, end) => {
 export const findConsecutiveAvailableRanges = (dates, length) => {
     const ranges = [];
     const timestamps = dates.map(d => new Date(d).getTime());
-    for (let i = 0; i <= timestamps.length - length; i++) {
+    for (let i = 0; i <= timestamps.length - length;) {
         let isConsecutive = true;
         for (let j = 1; j < length; j++) {
             const expected = timestamps[i] + j * 86400000;
@@ -189,8 +195,13 @@ export const findConsecutiveAvailableRanges = (dates, length) => {
         }
         if (isConsecutive) {
             const from = new Date(timestamps[i]).toISOString().split('T')[0];
-            const to = new Date(timestamps[i + length - 1]).toISOString().split('T')[0];
+            const toDate = new Date(timestamps[i + length - 1]);
+            toDate.setDate(toDate.getDate() + 1);
+            const to = toDate.toISOString().split('T')[0];
             ranges.push([from, to]);
+            i += length;
+        } else {
+            i++;
         }
     }
     return ranges;

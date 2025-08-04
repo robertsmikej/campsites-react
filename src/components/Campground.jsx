@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useContext } from 'react';
+
+import SiteSettings from '../context/SiteSettingsContext';
 
 import Box from '@mui/material/Container';
 import Stack from '@mui/material/Stack';
@@ -6,9 +8,11 @@ import Typography from '@mui/material/Typography';
 import Divider from '@mui/material/Divider';
 
 import { Campsites } from './Campsites';
-import { checkForGroupAvailability } from '../utils/utils';
+import { checkForAvailabilityInArray, checkForGroupAvailability } from '../utils/utils';
 
 export function Campground(props) {
+    const siteSettings = useContext(SiteSettings);
+
     const [campground, setCampground] = useState({});
     const [hasCampgroundAvailability, setHasCampgroundAvailability] = useState(false);
 
@@ -25,13 +29,32 @@ export function Campground(props) {
     }, [campground]);
 
     return (
-        <Stack key={campground.name}>
-            <Campsites
-                key={campground.name}
-                data={campground}
-                type='all-sites'
-            />
-        </Stack>
+        <>
+            {campground.sitesGroupedByFavorites &&
+                <Stack key={campground.name} spacing={3}>
+                    {Object.keys(campground.sitesGroupedByFavorites).map((type, typeIndex) => {
+                        if (siteSettings.showOrHideOverride && !siteSettings.showOrHideOverride[type]) {
+                            return null;
+                        }
+                        if (!campground.showOrHide[type]) {
+                            return null;
+                        }
+                        const group = campground.sitesGroupedByFavorites[type];
+                        const hasPreferenceAvailability = checkForAvailabilityInArray(group);
+                        return hasPreferenceAvailability ? (
+                            <Stack spacing={1} key={campground.name + typeIndex}>
+                                <Typography variant='h5'>{type}</Typography>
+                                <Campsites
+                                    key={campground.name + typeIndex}
+                                    data={group}
+                                    site={type}
+                                    campground={campground}
+                                />
+                            </Stack>
+                        ) : null;
+                    })}
+                </Stack>
+            }
+        </>
     )
-
 }

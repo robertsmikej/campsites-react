@@ -2,33 +2,35 @@ import './App.css';
 
 import { useEffect, useState } from 'react';
 
+import SiteSettings from './context/SiteSettingsContext';
+
 import Container from '@mui/material/Container';
 import Grid from '@mui/material/Grid';
-import Typography from '@mui/material/Typography';
 
 import { sites } from './json/sites';
 import { fetchCampgrounds } from './calls/fetchCampgroundData';
 
 import { CampgroundsGroups } from './components/CampgroundsGroups';
-import { formatGroups, formatRows } from './utils/tables/formatRows';
-import Stack from '@mui/material/Stack';
-import Divider from '@mui/material/Divider';
+import { formatGroups, formatGroupsByFavorites } from './utils/tables/formatRows';
+import Button from '@mui/material/Button';
 
-export default function App() {
-
-    const [settings] = useState({
+const settings = {
+    dates: {
         startDate: '2025-08-01',
         endDate: '2025-10-01',
-        stayLengths: [2, 3, 4],
-        show: {
-            all: false,
-            favorites: true,
-            worthwhile: true,
-            allOthers: true,
-        },
         validStartDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'], // Only include stays that start on these days
-    });
+        preferredStartDays: ['Thurs', 'Fri', 'Sat'], //Has to be formatted this way
+        stayLengths: [2, 3, 4, 5],
+    },
+    showOrHideOverride: {
+        'Favorites': true,
+        'Worthwhile': true,
+        'All Others': true,
+    },
+    ignoreTypes: ['GROUP SHELTER NONELECTRIC', 'WALK TO', 'DAY USE'],
+};
 
+export default function App() {
     const [campgroundsData, setCampgroundsData] = useState({});
     const [campgroundsByAreas, setCampgroundsByAreas] = useState({});
 
@@ -41,36 +43,51 @@ export default function App() {
             const siteData = await fetchCampgrounds(sites, settings);
             setCampgroundsData(siteData);
         })();
-    }, [settings]);
+    }, []);
 
     useEffect(() => {
         if (Object.keys(campgroundsData)?.length > 0) {
-            const formattedTableIntoGroups = formatGroups(campgroundsData, true, 'area');
-            console.log('formattedTableIntoGroups: ', formattedTableIntoGroups);
+            const groupedByFavorites = formatGroupsByFavorites(campgroundsData);
+            const formattedTableIntoGroups = formatGroups(groupedByFavorites, true, 'area');
             setCampgroundsByAreas(formattedTableIntoGroups);
         }
-
-        // console.log('campgroundsData', campgroundsData);
     }, [campgroundsData]);
 
-    return (
-        <Container maxWidth="false" sx={{
-            padding: "20px"
-        }}>
-            <Grid container spacing={2} sx={{
-                justifyContent: "center",
-                alignItems: "center",
-            }}>
-                <Grid size="grow">
+    const refreshData = async () => {
+        localStorage.clear();
+        const siteData = await fetchCampgrounds(sites, settings);
+        setCampgroundsData(siteData);
+    };
 
-                </Grid>
-                <Grid container size={9} spacing={3}>
+    return (
+        <SiteSettings.Provider value={settings}>
+            <Container
+                maxWidth="false"
+                sx={{
+                    padding: "20px"
+                }}
+            >
+                <Container>
+                    <Button
+                        sx={{
+                            justifySelf: "center",
+                        }}
+                        color="primary"
+                        variant="contained"
+                        onClick={refreshData}
+                    >
+                        Refresh
+                    </Button>
+                </Container>
+                <Grid spacing={1} sx={{
+                    justifyContent: "center",
+                }}>
                     <CampgroundsGroups
                         groups={campgroundsByAreas}
                         settings={settings}
                     />
                 </Grid>
-            </Grid>
-        </Container>
+            </Container>
+        </SiteSettings.Provider >
     );
 };
