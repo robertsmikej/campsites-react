@@ -17,23 +17,15 @@ import { getSitesWithMatches } from '../utils/utils';
 export function Campsites(props) {
     const siteSettings = useContext(SiteSettings);
 
-    // const [hasSiteAvailability, setHasSiteAvailability] = useState(false);
     const [sites, setSites] = useState([]);
 
-    const tableHeaders = ['Site #', 'Start Day', 'From', 'To', 'Total Nights'];
+    const tableHeaders = ['Site #', 'Arrival Day', 'From', 'To', 'Total Nights'];
 
 
     useEffect(() => {
         if (!props.data) return;
-        // console.log('props.data: ', props.data);
         setSites(Object.values(props.data));
     }, [props.data]);
-
-    // useEffect(() => {
-    //     const isThereAvailability = checkForAvailabilityInArray(sites);
-    //     setHasSiteAvailability(isThereAvailability);
-    // }, [sites, props.data]);
-
 
     const TableHeading = (props) => {
         return (
@@ -109,8 +101,6 @@ export function Campsites(props) {
             </TableBody>
         );
     };
-
-
 
     return (
         <Stack spacing={2}>

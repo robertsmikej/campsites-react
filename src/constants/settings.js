@@ -1,4 +1,17 @@
-import { getDateForCurrentMonth, getDateForFutureMonth } from '../utils/utils';
+// import {
+//     getDateForCurrentMonth,
+//     getDateForFutureMonth
+// } from '../utils/utils';
+export const getDateForCurrentMonth = (monthNum = 1) => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + monthNum).padStart(2, '0'); // getMonth() is 0-based
+    return `${year}-${month}-01`;
+};
+
+export const getDateForFutureMonth = (months) => {
+    return getDateForCurrentMonth(months);
+};
 
 export const defaultStartDate = getDateForCurrentMonth();
 export const defaultEndDate = getDateForFutureMonth(3);
@@ -32,10 +45,6 @@ export const sitewideDefaultSettings = (overrides) => {
             stayLengths: overrides.dates.stayLengths ?? defaultStayLengths,
         },
         ignoreTypes: overrides.ignoreTypes ?? defaultIgnoreTypes,
-        showOrHideOverride: overrides.showOrHideOverride ?? Object.values(siteGroups).reduce((acc, group) => {
-            acc[group.label] = group.default;
-            return acc;
-        }, {}),
     };
 
     return settings;

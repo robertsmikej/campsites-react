@@ -2,6 +2,7 @@ import './App.css';
 
 import { useEffect, useState } from 'react';
 
+import { CACHE_DURATION_MS } from './calls/fetchCampgroundData';
 import SiteSettings from './context/SiteSettingsContext';
 import { sitewideDefaultSettings } from './constants/settings';
 
@@ -37,11 +38,13 @@ export default function App() {
     }, []);
 
     useEffect(() => {
+
         const setupSettings = sitewideDefaultSettings(settingsOverrides);
         if (!setupSettings) {
             return;
         }
         setSettings(sitewideDefaultSettings(settingsOverrides));
+
     }, []);
 
     // useEffect(() => {
@@ -54,7 +57,8 @@ export default function App() {
             const siteData = await fetchCampgrounds(sites, settings);
             setCampgroundsData(siteData);
         })();
-    }, [settings]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     useEffect(() => {
         if (Object.keys(campgroundsData)?.length > 0) {
@@ -70,6 +74,15 @@ export default function App() {
         const siteData = await fetchCampgrounds(sites, settings);
         setCampgroundsData(siteData);
     };
+
+    // useEffect(() => {
+    //     const interval = setInterval(() => {
+    //         refreshData();
+    //     }, CACHE_DURATION_MS);
+
+    //     return () => clearInterval(interval);
+    //     // eslint-disable-next-line react-hooks/exhaustive-deps
+    // }, []);
 
     return (
         <SiteSettings.Provider value={settings}>

@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { getEmptyGroupedSites } from '../utils/utils';
 
-const CACHE_DURATION_MS = 4 * 60 * 1000; // Minutes - first number is number of minutes
+export const CACHE_DURATION_MS = 4 * 60 * 1000; // Minutes - first number is number of minutes
 
 const setCache = (key, data) => {
     const entry = {
@@ -57,6 +57,7 @@ export const removeParentFromObject = (data) => {
 };
 
 export const fetchCampgrounds = async (sites, settings) => {
+    console.log('settings: ', settings);
     if (!sites) {
         console.error("Error with Sites JSON Provided");
         return;
