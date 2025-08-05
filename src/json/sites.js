@@ -6,8 +6,10 @@ export const sites = {
             site: 'recreation.gov',
             type: 'campsite',
             id: '232085',
-            favorites: ['012', '014', '016'],
-            worthwhile: [],
+            sites: {
+                favorites: ['012', '014', '016'],
+                worthwhile: [],
+            },
             description: 'West side of Redfish Lake, close to lodge. Smaller Campground.',
             dates: {
                 startDate: '2025-08-01',
@@ -26,8 +28,10 @@ export const sites = {
             site: 'recreation.gov',
             type: 'campsite',
             id: '232358',
-            favorites: ['013', '015', '011', '008'],
-            worthwhile: [],
+            sites: {
+                favorites: ['013', '015', '011', '008'],
+                worthwhile: [],
+            },
             description: 'East side of Redfish Lake, right on lake.',
             dates: {
                 startDate: '2025-08-01',
@@ -46,8 +50,10 @@ export const sites = {
             site: 'recreation.gov',
             type: 'campsite',
             id: '232050',
-            favorites: ['016', '014', '012', '003'],
-            worthwhile: [],
+            sites: {
+                favorites: ['016', '014', '012', '003'],
+                worthwhile: [],
+            },
             description: 'North side of Redfish Lake, right off of lake, but still on lake.',
             dates: {
                 startDate: '2025-08-01',
@@ -66,8 +72,10 @@ export const sites = {
             site: 'recreation.gov',
             type: 'campsite',
             id: '234150',
-            favorites: ['026', '027'],
-            worthwhile: [],
+            sites: {
+                favorites: ['026', '027'],
+                worthwhile: [],
+            },
             description: 'Off of highway right across from Redfish Lake, but not walking distance.',
             dates: {
                 startDate: '2025-08-01',
@@ -86,8 +94,10 @@ export const sites = {
             site: 'recreation.gov',
             type: 'campsite',
             id: '233858',
-            favorites: ['014', '015', '016', '017', '018'],
-            worthwhile: ['009', '010', '011', '012'],
+            sites: {
+                favorites: ['014', '015', '016', '017', '018'],
+                worthwhile: ['009', '010', '011', '012'],
+            },
             description: 'At Stanley Lake, "favorites" are all campsites on shoreline.',
             dates: {
                 startDate: '2025-08-01',
@@ -101,33 +111,15 @@ export const sites = {
             },
         },
         {
-            name: 'Redfish Cabin',
-            area: 'Redfish Lake',
-            site: 'recreation.gov',
-            type: 'cabin',
-            id: '233348',
-            favorites: ['RF01'],
-            worthwhile: [],
-            description: 'Cabin only available duriung fall and winter.',
-            dates: {
-                startDate: '2025-10-01',
-                endDate: '2026-02-01',
-            },
-            image: 'redfish_cabin_map.jpg',
-            showOrHide: {
-                'Favorites': true,
-                'Worthwhile': true,
-                'All Others': true,
-            },
-        },
-        {
             name: 'Mountain View Campground',
             area: 'Lowman',
             site: 'recreation.gov',
             type: 'campsite',
             id: '232169',
-            favorites: ['014', '015'],
-            worthwhile: ['012', '011', '010', '008', '006'],
+            sites: {
+                favorites: ['014', '015'],
+                worthwhile: ['012', '011', '010', '008', '006'],
+            },
             description: 'Favorite sites are right on river',
             dates: {
                 startDate: '2025-08-01',
@@ -146,8 +138,10 @@ export const sites = {
             site: 'recreation.gov',
             type: 'campsite',
             id: '232098',
-            favorites: ['010', '013', '025'],
-            worthwhile: [],
+            sites: {
+                favorites: ['010', '013', '025'],
+                worthwhile: [],
+            },
             description: 'North Shore of Warm Lake',
             dates: {
                 startDate: '2025-08-01',
@@ -158,6 +152,28 @@ export const sites = {
                 'Favorites': true,
                 'Worthwhile': true,
                 'All Others': false,
+            },
+        },
+        {
+            name: 'Redfish Cabin',
+            area: 'Redfish Cabin',
+            site: 'recreation.gov',
+            type: 'cabin',
+            id: '233348',
+            sites: {
+                favorites: ['RF01'],
+                worthwhile: [],
+            },
+            description: 'Cabin only available duriung fall and winter.',
+            dates: {
+                startDate: '2025-10-01',
+                endDate: '2026-02-01',
+            },
+            image: 'redfish_cabin_map.jpg',
+            showOrHide: {
+                'Favorites': true,
+                'Worthwhile': true,
+                'All Others': true,
             },
         },
     ]

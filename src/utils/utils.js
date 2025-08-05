@@ -1,3 +1,4 @@
+import { siteGroups } from '../constants/settings';
 
 export const checkForAvailability = (data) => {
     if (!data?.siteAvailability && !data?.matches) return false;
@@ -49,3 +50,21 @@ export const getAllArraysFromParentObjects = (data, key) => {
         return null;
     }
 }
+
+export const getDateForCurrentMonth = (monthNum = 1) => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + monthNum).padStart(2, '0'); // getMonth() is 0-based
+    return `${year}-${month}-01`;
+};
+
+export const getDateForFutureMonth = (months) => {
+    return getDateForCurrentMonth(months);
+};
+
+export const getEmptyGroupedSites = () => {
+    return Object.values(siteGroups).reduce((acc, group) => {
+        acc[group.label] = [];
+        return acc;
+    }, {});
+};

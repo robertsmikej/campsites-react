@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getEmptyGroupedSites } from '../utils/utils';
 
 const CACHE_DURATION_MS = 4 * 60 * 1000; // Minutes - first number is number of minutes
 
@@ -61,7 +62,20 @@ export const fetchCampgrounds = async (sites, settings) => {
         return;
     }
 
-    const cacheKey = `campgrounds-${settings.dates.startDate}-${settings.dates.endDate}`;
+    const uniqueKeyFragments = [];
+
+    for (let system in sites) {
+        const campgroundData = sites[system];
+        if (!Array.isArray(campgroundData)) continue;
+
+        for (let campground of campgroundData) {
+            const start = campground.dates?.startDate || '';
+            const end = campground.dates?.endDate || '';
+            uniqueKeyFragments.push(`${campground.id}:${start}-${end}`);
+        }
+    }
+
+    const cacheKey = `campgrounds-${uniqueKeyFragments.sort().join('|')}`;
     const cached = getCache(cacheKey, sites);
     if (cached) {
         return cached;
@@ -98,17 +112,12 @@ export const fetchCampgrounds = async (sites, settings) => {
 
         let campgroundEntry = results[system].find(c => c.id === campground.id);
         if (!campgroundEntry) {
-            const sitesGroupedByFavorites = {
-                'Favorites': [],
-                'Worthwhile': [],
-                'All Others': [],
-            };
+            const sitesGroupedByFavorites = getEmptyGroupedSites();
             campgroundEntry = { ...campground, siteAvailability: {}, sitesGroupedByFavorites: sitesGroupedByFavorites };
             results[system].push(campgroundEntry);
         }
-
         for (const [siteId, siteData] of Object.entries(data.campsites)) {
-            if (settings.ignoreTypes.includes(siteData.campsite_type)) {
+            if (settings?.ignoreTypes?.includes(siteData.campsite_type)) {
                 return;
             }
             if (!campgroundEntry.siteAvailability[siteId]) {

@@ -3,6 +3,7 @@ import './App.css';
 import { useEffect, useState } from 'react';
 
 import SiteSettings from './context/SiteSettingsContext';
+import { sitewideDefaultSettings } from './constants/settings';
 
 import Container from '@mui/material/Container';
 import Grid from '@mui/material/Grid';
@@ -14,23 +15,20 @@ import { CampgroundsGroups } from './components/CampgroundsGroups';
 import { formatGroups, formatGroupsByFavorites } from './utils/tables/formatRows';
 import Button from '@mui/material/Button';
 
-const settings = {
+//Override default settings here
+const settingsOverrides = {
     dates: {
-        startDate: '2025-08-01',
-        endDate: '2025-10-01',
+        // startDate: '2025-08-01',
+        // endDate: '2025-10-01',
         validStartDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'], // Only include stays that start on these days
-        preferredStartDays: ['Thurs', 'Fri', 'Sat'], //Has to be formatted this way
+        // preferredStartDays: ['Thursday', 'Friday', 'Saturday'], //Has to be formatted this way
         stayLengths: [2, 3, 4, 5],
     },
-    showOrHideOverride: {
-        'Favorites': true,
-        'Worthwhile': true,
-        'All Others': true,
-    },
-    ignoreTypes: ['GROUP SHELTER NONELECTRIC', 'WALK TO', 'DAY USE'],
 };
 
 export default function App() {
+    const [settings, setSettings] = useState(null);
+
     const [campgroundsData, setCampgroundsData] = useState({});
     const [campgroundsByAreas, setCampgroundsByAreas] = useState({});
 
@@ -39,11 +37,24 @@ export default function App() {
     }, []);
 
     useEffect(() => {
+        const setupSettings = sitewideDefaultSettings(settingsOverrides);
+        if (!setupSettings) {
+            return;
+        }
+        setSettings(sitewideDefaultSettings(settingsOverrides));
+    }, []);
+
+    // useEffect(() => {
+    //     console.log('settings updated', settings)
+    // }, [settings]);
+
+    useEffect(() => {
+        if (!settings) return;
         (async () => {
             const siteData = await fetchCampgrounds(sites, settings);
             setCampgroundsData(siteData);
         })();
-    }, []);
+    }, [settings]);
 
     useEffect(() => {
         if (Object.keys(campgroundsData)?.length > 0) {
@@ -55,6 +66,7 @@ export default function App() {
 
     const refreshData = async () => {
         localStorage.clear();
+        setSettings(sitewideDefaultSettings(settingsOverrides));
         const siteData = await fetchCampgrounds(sites, settings);
         setCampgroundsData(siteData);
     };
@@ -62,12 +74,18 @@ export default function App() {
     return (
         <SiteSettings.Provider value={settings}>
             <Container
-                maxWidth="false"
+                maxWidth="xl"
                 sx={{
                     padding: "20px"
                 }}
             >
-                <Container>
+                <Container
+                    maxWidth="xl"
+                    disableGutters
+                    sx={{
+                        paddingBottom: "10px"
+                    }}
+                >
                     <Button
                         sx={{
                             justifySelf: "center",

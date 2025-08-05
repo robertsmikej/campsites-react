@@ -55,7 +55,8 @@ export function CampgroundsGroups(props) {
                                                     loading="lazy"
                                                     style={{
                                                         maxWidth: '100%',
-                                                        maxHeight: '300px'
+                                                        maxHeight: '300px',
+                                                        marginTop: '10px',
                                                     }}
                                                 />
                                             </Grid>

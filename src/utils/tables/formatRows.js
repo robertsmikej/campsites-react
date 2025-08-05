@@ -1,3 +1,5 @@
+import { siteGroups } from '../../constants/settings';
+
 export const flattenData = (data) => {
     return Object.values(data).flat();
 };
@@ -10,12 +12,6 @@ const groupArrayOfObjectsByKey = (arr, key) => {
         return acc;
     }, {});
 };
-
-export const formatRows = (data) => {
-    console.log('group data: ', data);
-
-    return data;
-}
 
 export const formatGroups = (data, removeParent = false, groupByKey = 'area') => {
     //Remove parent from object if needed and flattens all objects into one array
@@ -32,11 +28,17 @@ export const formatToMMDDYYYY = (dateStr) => {
     return `${month}/${day}/${year}`;
 };
 
-export const getDayOfWeek = (dateStr, returnString = true) => {
-    const dayNames = ["Sun", "Mon", "Tues", "Wed", "Thurs", "Fri", "Sat"];
+const dayNamesShort = ["Sun", "Mon", "Tues", "Wed", "Thurs", "Fri", "Sat"];
+const dayNamesLong = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+export const getDayOfWeek = (dateStr, returnString = true, longForm = false) => {
     const dayNumber = new Date(dateStr).getUTCDay();
-    return returnString ? dayNames[dayNumber] : dayNumber;
+    return returnString ? longForm ? dayNamesLong[dayNumber] : dayNamesShort[dayNumber] : dayNumber;
 };
+
+export const getShortenedDayOfWeek = (dayStr) => {
+    return dayNamesShort[dayNamesLong.indexOf(dayStr)];
+}
 
 export const sortBySiteName = (arr) => {
     return [...arr].sort((a, b) =>
@@ -55,12 +57,12 @@ export const formatGroupsByFavorites = (data) => {
     flattenedData.forEach(campground => {
         for (let siteId in campground.siteAvailability) {
             const site = campground.siteAvailability[siteId];
-            if (campground.favorites.includes(site.siteName)) {
-                campground.sitesGroupedByFavorites['Favorites'].push(site);
-            } else if (campground.worthwhile.includes(site.siteName)) {
-                campground.sitesGroupedByFavorites['Worthwhile'].push(site);
+            if (campground.sites.favorites.includes(site.siteName)) {
+                campground.sitesGroupedByFavorites[siteGroups.favorites.label].push(site);
+            } else if (campground.sites.worthwhile.includes(site.siteName)) {
+                campground.sitesGroupedByFavorites[siteGroups.worthwhile.label].push(site);
             } else {
-                campground.sitesGroupedByFavorites['All Others'].push(site);
+                campground.sitesGroupedByFavorites[siteGroups.allOthers.label].push(site);
             }
         }
     });
