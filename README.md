@@ -1,6 +1,11 @@
-# Getting Started with Create React App
+# To Install
+Run `npm install`
+Run `npm start`
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Set your own Campgrounds and site options in `/json/sites.js` and `App.js`.
+
+Data is cached for ~10 minutes, to get rid of it, clear Local Storage. Has to make a call for each campground, for each month you want to check, so calls add up quick. Don't refresh data with calls too much or Recreation.gov will block you for awhile.
+
 
 ## Available Scripts
 
