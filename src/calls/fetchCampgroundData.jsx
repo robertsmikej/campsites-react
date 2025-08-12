@@ -1,7 +1,8 @@
 import axios from 'axios';
 import { getEmptyGroupedSites } from '../utils/utils';
 
-export const CACHE_DURATION_MS = 4 * 60 * 1000; // Minutes - first number is number of minutes
+export const CACHE_DURATION_MS = 4 * 60 * 1000; // 4 minutes
+const DELAY_BETWEEN_REQUESTS_MS = 1; // Delay in ms between each API call
 
 const setCache = (key, data) => {
     const entry = {
@@ -52,17 +53,13 @@ const fetchData = async (facilityId, month) => {
     }
 };
 
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+
 export const removeParentFromObject = (data) => {
     return Object.values(data).flat();
 };
 
-export const fetchCampgrounds = async (sites, settings) => {
-    console.log('settings: ', settings);
-    if (!sites) {
-        console.error("Error with Sites JSON Provided");
-        return;
-    }
-
+const buildCacheKey = (sites) => {
     const uniqueKeyFragments = [];
 
     for (let system in sites) {
@@ -76,15 +73,11 @@ export const fetchCampgrounds = async (sites, settings) => {
         }
     }
 
-    const cacheKey = `campgrounds-${uniqueKeyFragments.sort().join('|')}`;
-    const cached = getCache(cacheKey, sites);
-    if (cached) {
-        return cached;
-    }
+    return `campgrounds-${uniqueKeyFragments.sort().join('|')}`;
+};
 
-    const allFetchTasks = [];
+export const getSiteFetchMap = (sites, settings) => {
     const siteFetchMap = [];
-    const results = {};
 
     for (let system in sites) {
         const campgroundData = sites[system];
@@ -97,13 +90,31 @@ export const fetchCampgrounds = async (sites, settings) => {
             const allMonths = [...new Set(allDates.map(date => date.slice(0, 7)))];
 
             for (let month of allMonths) {
-                allFetchTasks.push(fetchData(campground.id, month));
-                siteFetchMap.push({ system, campground, allDates });
+                siteFetchMap.push({ system, campground, allDates, month });
             }
         }
     }
 
-    const allResults = await Promise.all(allFetchTasks);
+    return siteFetchMap;
+};
+
+export const makeAllRequests = async (siteFetchMap, onProgress) => {
+    const allResults = [];
+    const total = siteFetchMap.length;
+    for (let i = 0; i < siteFetchMap.length; i++) {
+        const { campground, month } = siteFetchMap[i];
+        const result = await fetchData(campground.id, month);
+        allResults.push(result);
+        if (typeof onProgress === 'function') {
+            onProgress(i + 1, total); // 1-based current call
+        }
+        await delay(DELAY_BETWEEN_REQUESTS_MS);
+    }
+    return allResults;
+};
+
+const processApiResults = (allResults, siteFetchMap, settings) => {
+    const results = {};
 
     allResults.forEach((data, index) => {
         const { system, campground, allDates } = siteFetchMap[index];
@@ -175,6 +186,31 @@ export const fetchCampgrounds = async (sites, settings) => {
             site.matches = filtered;
         }
     });
+
+    return results;
+};
+
+export const fetchCampgrounds = async (sites, settings, onProgress, onlyReturnNumOfCalls = false) => {
+    if (!sites) {
+        console.error("Error with Sites JSON Provided");
+        return;
+    }
+
+    const cacheKey = buildCacheKey(sites);
+    const cached = getCache(cacheKey, sites);
+    if (cached && !onlyReturnNumOfCalls) {
+        return cached;
+    }
+
+    const siteFetchMap = getSiteFetchMap(sites, settings);
+
+    if (onlyReturnNumOfCalls) {
+        return siteFetchMap.length;
+    }
+
+    const allResults = await makeAllRequests(siteFetchMap, onProgress);
+
+    const results = processApiResults(allResults, siteFetchMap, settings);
 
     setCache(cacheKey, results);
     return results;

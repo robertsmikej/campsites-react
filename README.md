@@ -1,15 +1,15 @@
 # To Install
-Run `npm install`
+Run `npm install`  
 
-Run `npm start`
+Run `npm start`  
 
 # To Customize
 Set your own Campgrounds and site options in `/json/sites.js` and `App.js`.
 
 # Important Info
-Data is cached for ~10 minutes - to get refresh it manually, clear Local Storage or click 'Refresh Data' button at top (Do this sparingly, see below). 
+Data is cached for ~10 minutes - to get refresh it manually, clear Local Storage or click 'Refresh Data' button at top (Do this sparingly, see below).  
 
-The app has to make a call for each campground, and one for each month you want to check in that campground, so calls add up quick. Don't refresh data with calls too much or Recreation.gov will block you for awhile. This doesn't happen much, but if you start getting 429 errors, this is probably what's happening.
+The app has to make a call for each campground, and one for each month you want to check in that campground, so calls add up quick. Don't refresh data with calls too much or Recreation.gov will block you for awhile. This doesn't happen much, but if you start getting 429 errors, this is probably what's happening.  
 
 
 ## Available Scripts

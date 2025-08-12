@@ -68,3 +68,14 @@ export const getEmptyGroupedSites = () => {
         return acc;
     }, {});
 };
+
+export const getTotalGroups = (parents) => {
+    console.log('parents: ', parents);
+    let total = 0;
+    for (let parentName in parents) {
+        const campgroundData = parents[parentName];
+        if (!Array.isArray(campgroundData)) continue;
+        total += campgroundData.length;
+    }
+    return total;
+}

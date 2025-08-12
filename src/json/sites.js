@@ -63,7 +63,7 @@ export const sites = {
             showOrHide: {
                 'Favorites': true,
                 'Worthwhile': true,
-                'All Others': false,
+                'All Others': true,
             },
         },
         {
@@ -85,7 +85,7 @@ export const sites = {
             showOrHide: {
                 'Favorites': true,
                 'Worthwhile': true,
-                'All Others': true,
+                'All Others': false,
             },
         },
         {
@@ -128,7 +128,7 @@ export const sites = {
             image: 'mountain_view_campground_map.jpg',
             showOrHide: {
                 'Favorites': true,
-                'Worthwhile': true,
+                'Worthwhile': false,
                 'All Others': false,
             },
         },
@@ -173,7 +173,7 @@ export const sites = {
             showOrHide: {
                 'Favorites': true,
                 'Worthwhile': true,
-                'All Others': true,
+                'All Others': false,
             },
         },
     ]
