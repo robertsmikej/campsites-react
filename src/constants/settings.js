@@ -1,6 +1,9 @@
 // import {
 //     getDateForCurrentMonth,
 //     getDateForFutureMonth
+
+import { deepMerge } from '../utils/utils';
+
 // } from '../utils/utils';
 export const getDateForCurrentMonth = (monthNum = 1) => {
     const now = new Date();
@@ -35,8 +38,8 @@ export const siteGroups = {
     },
 };
 
-export const sitewideDefaultSettings = (overrides) => {
-    const settings = {
+export const getSitewideDefaultSettings = (overrides) => {
+    let settings = {
         dates: {
             startDate: overrides.dates.startDate ?? defaultStartDate,
             endDate: overrides.dates.endDate ?? defaultEndDate,
@@ -45,7 +48,13 @@ export const sitewideDefaultSettings = (overrides) => {
             stayLengths: overrides.dates.stayLengths ?? defaultStayLengths,
         },
         ignoreTypes: overrides.ignoreTypes ?? defaultIgnoreTypes,
-    };
+        views: {
+            type: 'table',
+        },
 
+    };
+    if (overrides) {
+        settings = deepMerge(settings, overrides);
+    }
     return settings;
 };

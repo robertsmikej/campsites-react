@@ -104,6 +104,7 @@ export const makeAllRequests = async (siteFetchMap, onProgress) => {
     for (let i = 0; i < siteFetchMap.length; i++) {
         const { campground, month } = siteFetchMap[i];
         const result = await fetchData(campground.id, month);
+        // console.log('result: ', result);
         allResults.push(result);
         if (typeof onProgress === 'function') {
             onProgress(i + 1, total); // 1-based current call

@@ -12,15 +12,14 @@ import TableRow from '@mui/material/TableRow';
 import Paper from '@mui/material/Paper';
 
 import { formatToMMDDYYYY, getDayOfWeek, getShortenedDayOfWeek, sortByFromDate, sortBySiteName } from '../utils/tables/formatRows';
-import { getSitesWithMatches } from '../utils/utils';
+import { getSitesWithMatches, goToPage } from '../utils/utils';
 
-export function Campsites(props) {
+export function CampsitesTable(props) {
     const siteSettings = useContext(SiteSettings);
 
     const [sites, setSites] = useState([]);
 
     const tableHeaders = ['Site #', 'Arrival Day', 'From', 'To', 'Total Nights'];
-
 
     useEffect(() => {
         if (!props.data) return;
@@ -37,23 +36,6 @@ export function Campsites(props) {
                 </TableRow>
             </TableHead>
         );
-    };
-
-    const buildReservationLink = (siteId, fromDate, nights) => {
-        const from = new Date(fromDate);
-        const to = new Date(from);
-        to.setDate(from.getDate() + nights);
-        const arrival = from.toISOString().split('T')[0];
-        const departure = to.toISOString().split('T')[0];
-        return `https://www.recreation.gov/camping/campsites/${siteId}?arrivalDate=${arrival}&departureDate=${departure}`;
-    };
-
-    const goToPage = (data) => {
-        const siteId = data.site.siteId;
-        const fromDate = data.row.from;
-        const nights = data.row.nights;
-        const url = buildReservationLink(siteId, fromDate, nights);
-        window.open(url, "_blank", "noreferrer");
     };
 
     const TableRowEl = (props) => {

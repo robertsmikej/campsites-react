@@ -4,7 +4,7 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import Divider from '@mui/material/Divider';
 
-import { checkForAvailabilityInArray, checkForGroupAvailability, getAllArraysFromParentObjects } from '../utils/utils';
+import { checkForAvailabilityInArray, checkForGroupAvailability, checkForGroupedAvailability, getAllArraysFromParentObjects } from '../utils/utils';
 import { Campground } from './Campground';
 import Grid from '@mui/material/Grid';
 
@@ -26,7 +26,6 @@ export function CampgroundsGroups(props) {
                 const parentGroup = groups[key];
                 const flattenedParentGroup = getAllArraysFromParentObjects(parentGroup, 'siteAvailability');
                 let hasGroupAvailability = checkForAvailabilityInArray(Object.values(flattenedParentGroup));
-
                 return hasGroupAvailability ? (
                     <Stack
                         key={key + index} spacing={1}
@@ -37,7 +36,7 @@ export function CampgroundsGroups(props) {
                             Campgrounds In Area: {parentGroup.length}
                         </Typography>
                         {parentGroup.map((campground, campgroundIndex) => {
-                            let hasCampgroundAvailability = checkForGroupAvailability(campground.siteAvailability);
+                            let hasCampgroundAvailability = checkForGroupedAvailability(campground);
                             const campgroundImage = campground.image?.length > 0 ? '/images/sites/' + campground.image : '/images/sites/bg_default.jpg';
                             if (hasCampgroundAvailability) {
                                 return (
@@ -77,7 +76,6 @@ export function CampgroundsGroups(props) {
                             } else {
                                 return null;
                             }
-
                         })}
                     </Stack >
                 ) : null;

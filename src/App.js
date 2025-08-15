@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import SiteSettings from './context/SiteSettingsContext';
-import { sitewideDefaultSettings } from './constants/settings';
+import { getSitewideDefaultSettings } from './constants/settings';
 
 import ProgressBar from './context/ProgressBarContext';
 
@@ -10,15 +10,14 @@ import Grid from '@mui/material/Grid';
 
 
 import { sites } from './json/sites';
-import { fetchCampgrounds, getAllCallsNeeded, getSiteFetchMap } from './calls/fetchCampgroundData';
+import { fetchCampgrounds, getSiteFetchMap } from './calls/fetchCampgroundData';
 
 import { CampgroundsGroups } from './components/CampgroundsGroups';
 import { formatGroups, formatGroupsByFavorites } from './utils/tables/formatRows';
 import Button from '@mui/material/Button';
 import { ProgressBarEl } from './components/ProgressBarEl';
-import { getTotalGroups } from './utils/utils';
 
-//Override default settings here
+//Override default settings here, default settings are in constants/settings.js
 const settingsOverrides = {
     dates: {
         // startDate: '2025-08-01',
@@ -27,10 +26,14 @@ const settingsOverrides = {
         // preferredStartDays: ['Thursday', 'Friday', 'Saturday'], //Has to be formatted this way
         stayLengths: [2, 3, 4, 5],
     },
+    views: {
+        type: 'table',
+    }
 };
+const settingsObject = getSitewideDefaultSettings(settingsOverrides);
 
 export default function App() {
-    const [settings, setSettings] = useState(null);
+    const [settings] = useState(settingsObject ?? {});
     const [progressBarData, setProgressBarData] = useState({
         totalCalls: 0,
         currentCall: 0,
@@ -46,16 +49,6 @@ export default function App() {
     }, []);
 
     useEffect(() => {
-
-        const setupSettings = sitewideDefaultSettings(settingsOverrides);
-        if (!setupSettings) {
-            return;
-        }
-        setSettings(sitewideDefaultSettings(settingsOverrides));
-
-    }, []);
-
-    useEffect(() => {
         //This useEffect is just to set the # of calls that need to be made when gathering data
         const totalCallsToBeMade = getSiteFetchMap(sites, settings);
         if (totalCallsToBeMade?.length > 0) {
@@ -68,9 +61,7 @@ export default function App() {
     }, []);
 
     useEffect(() => {
-        //IF Nothing loads on first load, this settings check is the issue, we need to provide 'default' dates, need to build that in
         if (!settings) return;
-        setCampgroundsByAreas({});
         (async () => {
             const siteData = await fetchCampgrounds(
                 sites,
@@ -88,11 +79,6 @@ export default function App() {
         })();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
-
-    // useEffect(() => {
-    //     if (!progressBarData) return;
-    //     console.log('progressBarData: ', progressBarData);
-    // }, [progressBarData]);
 
     useEffect(() => {
         if (Object.keys(campgroundsData)?.length > 0) {

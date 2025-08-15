@@ -17,7 +17,7 @@ export const checkForAvailabilityInArray = (data) => {
     );
 };
 
-export const checkForGroupAvailability = (group) => {
+export const checkForGroupAvailability = (group, grouped, showOrHide) => {
     if (!group || Object.values(group).length === 0) return false;
 
     const hasGroupAvailability = Object.values(group).map(campground => {
@@ -27,6 +27,29 @@ export const checkForGroupAvailability = (group) => {
 
     const hasTrue = hasGroupAvailability.some(element => element === true)
     return hasTrue;
+};
+
+export const checkForGroupedAvailability = (campground) => {
+    if (!campground?.sitesGroupedByFavorites) return false;
+
+    const showHide = campground.showOrHide || {};
+
+    // Loop through each group like "Favorites", "Worthwhile", etc.
+    for (let key in campground.sitesGroupedByFavorites) {
+        // Skip if this group is turned off
+        if (!showHide[key]) continue;
+
+        const groupSites = campground.sitesGroupedByFavorites[key];
+
+        // Check if any site in this group has matches
+        const hasGroupAvailability = groupSites.some(site => checkForAvailability(site));
+        if (hasGroupAvailability) {
+            return true; // Short-circuit as soon as we find availability
+        }
+    }
+
+    // If we went through all allowed groups and found nothing
+    return false;
 };
 
 export const getSitesWithMatches = (campground) => {
@@ -70,7 +93,6 @@ export const getEmptyGroupedSites = () => {
 };
 
 export const getTotalGroups = (parents) => {
-    console.log('parents: ', parents);
     let total = 0;
     for (let parentName in parents) {
         const campgroundData = parents[parentName];
@@ -79,3 +101,39 @@ export const getTotalGroups = (parents) => {
     }
     return total;
 }
+
+export const buildReservationLink = (siteId, fromDate, nights) => {
+    const from = new Date(fromDate);
+    const to = new Date(from);
+    to.setDate(from.getDate() + nights);
+    const arrival = from.toISOString().split('T')[0];
+    const departure = to.toISOString().split('T')[0];
+    return `https://www.recreation.gov/camping/campsites/${siteId}?arrivalDate=${arrival}&departureDate=${departure}`;
+};
+
+export const goToPage = (data) => {
+    const siteId = data.site.siteId;
+    const fromDate = data.row.from;
+    const nights = data.row.nights;
+    const url = buildReservationLink(siteId, fromDate, nights);
+    window.open(url, "_blank", "noreferrer");
+};
+
+export const deepMerge = (target, source) => {
+    for (const key in source) {
+        if (
+            source[key] &&
+            typeof source[key] === 'object' &&
+            !Array.isArray(source[key])
+        ) {
+            // Ensure the target has this object
+            if (!target[key] || typeof target[key] !== 'object') {
+                target[key] = {};
+            }
+            deepMerge(target[key], source[key]);
+        } else {
+            target[key] = source[key]; // Override or add
+        }
+    }
+    return target;
+};

@@ -1,18 +1,22 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useContext } from 'react';
+
+import SiteSettings from '../context/SiteSettingsContext';
 
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
-import { Campsites } from './Campsites';
+import { CampsitesTable } from './CampsitesTable';
+import { CampsitesCalendar } from './CampsitesCalendar';
 import { checkForAvailabilityInArray } from '../utils/utils';
 
 export function Campground(props) {
+    const siteSettings = useContext(SiteSettings);
+
     const [campground, setCampground] = useState({});
 
     useEffect(() => {
         setCampground(props.campground);
     }, [props.campground]);
-
     return (
         <>
             {campground.sitesGroupedByFavorites &&
@@ -27,12 +31,21 @@ export function Campground(props) {
                             return hasPreferenceAvailability ? (
                                 <Stack spacing={1} key={campground.name + typeIndex}>
                                     <Typography variant='h5'>{type}</Typography>
-                                    <Campsites
-                                        key={campground.name + typeIndex}
-                                        data={group}
-                                        site={type}
-                                        campground={campground}
-                                    />
+                                    {siteSettings.views.type === 'table' &&
+                                        <CampsitesTable
+                                            key={campground.name + typeIndex}
+                                            data={group}
+                                            site={type}
+                                            campground={campground}
+                                        />}
+                                    {siteSettings.views.type === 'calendar' &&
+
+                                        <CampsitesCalendar
+                                            key={campground.name + typeIndex}
+                                            data={group}
+                                            site={type}
+                                            campground={campground}
+                                        />}
                                 </Stack>
                             ) : null;
                         }

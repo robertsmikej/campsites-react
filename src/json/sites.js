@@ -63,7 +63,7 @@ export const sites = {
             showOrHide: {
                 'Favorites': true,
                 'Worthwhile': true,
-                'All Others': true,
+                'All Others': false,
             },
         },
         {
