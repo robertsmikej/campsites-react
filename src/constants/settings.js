@@ -34,7 +34,7 @@ export const siteGroups = {
     },
     allOthers: {
         label: 'All Others',
-        default: false
+        default: true
     },
 };
 

@@ -4,7 +4,7 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import Divider from '@mui/material/Divider';
 
-import { checkForAvailabilityInArray, checkForGroupAvailability, checkForGroupedAvailability, getAllArraysFromParentObjects } from '../utils/utils';
+import { checkForAvailabilityInArray, checkForGroupedAvailability, getAllArraysFromParentObjects } from '../utils/utils';
 import { Campground } from './Campground';
 import Grid from '@mui/material/Grid';
 
@@ -33,7 +33,7 @@ export function CampgroundsGroups(props) {
                         {index > 0 && <Divider orientation="horizontal" flexItem />}
                         <Typography variant='h3'>{key}</Typography>
                         <Typography variant='span' gutterBottom>
-                            Campgrounds In Area: {parentGroup.length}
+                            Campgrounds W/ Availabilty: {parentGroup.length}
                         </Typography>
                         {parentGroup.map((campground, campgroundIndex) => {
                             let hasCampgroundAvailability = checkForGroupedAvailability(campground);

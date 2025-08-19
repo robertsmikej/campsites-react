@@ -13,9 +13,9 @@ import { sites } from './json/sites';
 import { fetchCampgrounds, getSiteFetchMap } from './calls/fetchCampgroundData';
 
 import { CampgroundsGroups } from './components/CampgroundsGroups';
-import { formatGroups, formatGroupsByFavorites } from './utils/tables/formatRows';
 import Button from '@mui/material/Button';
 import { ProgressBarEl } from './components/ProgressBarEl';
+import { formatGroupsByFavorites, formatGroups } from './utils/utils';
 
 //Override default settings here, default settings are in constants/settings.js
 const settingsOverrides = {
@@ -60,21 +60,25 @@ export default function App() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    const getCampgroundsData = async () => {
+        return await fetchCampgrounds(
+            sites,
+            settings,
+            (current, total) => {
+                setProgressBarData(prev => ({
+                    ...prev,
+                    currentCall: current,
+                    totalCalls: total,
+                    progress: total > 0 ? current / total : 0,
+                }));
+            }
+        );
+    };
+
     useEffect(() => {
         if (!settings) return;
         (async () => {
-            const siteData = await fetchCampgrounds(
-                sites,
-                settings,
-                (current, total) => {
-                    setProgressBarData(prev => ({
-                        ...prev,
-                        currentCall: current,
-                        totalCalls: total,
-                        progress: total > 0 ? current / total : 0,
-                    }));
-                }
-            );
+            const siteData = await getCampgroundsData();
             setCampgroundsData(siteData);
         })();
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -91,18 +95,7 @@ export default function App() {
     const refreshData = async () => {
         localStorage.clear();
         setCampgroundsByAreas({});
-        const siteData = await fetchCampgrounds(
-            sites,
-            settings,
-            (current, total) => {
-                setProgressBarData(prev => ({
-                    ...prev,
-                    currentCall: current,
-                    totalCalls: total,
-                    progress: total > 0 ? current / total : 0,
-                }));
-            }
-        );
+        const siteData = await await getCampgroundsData();
         setCampgroundsData(siteData);
     };
 

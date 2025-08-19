@@ -19,7 +19,7 @@ export const sites = {
             showOrHide: {
                 'Favorites': true,
                 'Worthwhile': true,
-                'All Others': true,
+                'All Others': false,
             },
         },
         {
@@ -41,7 +41,7 @@ export const sites = {
             showOrHide: {
                 'Favorites': true,
                 'Worthwhile': true,
-                'All Others': true,
+                'All Others': false,
             },
         },
         {
@@ -81,10 +81,10 @@ export const sites = {
                 startDate: '2025-08-01',
                 endDate: '2025-10-01',
             },
-            image: 'sunny_gully_campground_map.jpg',
+            image: 'sunny_gulch_campground_map1.jpg',
             showOrHide: {
                 'Favorites': true,
-                'Worthwhile': true,
+                'Worthwhile': false,
                 'All Others': false,
             },
         },
@@ -106,7 +106,7 @@ export const sites = {
             image: 'stanley_lake_campground_map.jpg',
             showOrHide: {
                 'Favorites': true,
-                'Worthwhile': true,
+                'Worthwhile': false,
                 'All Others': false,
             },
         },
@@ -150,7 +150,7 @@ export const sites = {
             image: 'shoreline_campground_map.jpg',
             showOrHide: {
                 'Favorites': true,
-                'Worthwhile': true,
+                'Worthwhile': false,
                 'All Others': false,
             },
         },
@@ -172,7 +172,7 @@ export const sites = {
             image: 'redfish_cabin_map.jpg',
             showOrHide: {
                 'Favorites': true,
-                'Worthwhile': true,
+                'Worthwhile': false,
                 'All Others': false,
             },
         },

@@ -116,75 +116,73 @@ export const makeAllRequests = async (siteFetchMap, onProgress) => {
 
 const processApiResults = (allResults, siteFetchMap, settings) => {
     const results = {};
-
     allResults.forEach((data, index) => {
         const { system, campground, allDates } = siteFetchMap[index];
-        if (!data || !data.campsites) return;
+        if (data && data.campsites) {
 
-        if (!results[system]) results[system] = [];
+            if (!results[system]) results[system] = [];
+            let campgroundEntry = results[system].find(c => c.id === campground.id);
 
-        let campgroundEntry = results[system].find(c => c.id === campground.id);
-        if (!campgroundEntry) {
-            const sitesGroupedByFavorites = getEmptyGroupedSites();
-            campgroundEntry = { ...campground, siteAvailability: {}, sitesGroupedByFavorites: sitesGroupedByFavorites };
-            results[system].push(campgroundEntry);
-        }
-        for (const [siteId, siteData] of Object.entries(data.campsites)) {
-            if (settings?.ignoreTypes?.includes(siteData.campsite_type)) {
-                return;
-            }
-            if (!campgroundEntry.siteAvailability[siteId]) {
-                campgroundEntry.siteAvailability[siteId] = {
-                    siteId,
-                    siteName: siteData.site,
-                    dates: []
-                };
+            if (!campgroundEntry) {
+                const sitesGroupedByFavorites = getEmptyGroupedSites();
+                campgroundEntry = { ...campground, siteAvailability: {}, sitesGroupedByFavorites: sitesGroupedByFavorites };
+                results[system].push(campgroundEntry);
             }
 
-            const validDates = Object.entries(siteData.availabilities)
-                .filter(([_, status]) => status === 'Available')
-                .map(([date]) => date.split('T')[0])
-                .filter(date => allDates.includes(date));
+            for (const [siteId, siteData] of Object.entries(data.campsites)) {
+                if (settings?.ignoreTypes?.includes(siteData.campsite_type)) {
+                    break;
+                }
+                if (!campgroundEntry.siteAvailability[siteId]) {
+                    campgroundEntry.siteAvailability[siteId] = {
+                        siteId,
+                        siteName: siteData.site,
+                        dates: []
+                    };
+                }
+                const validDates = Object.entries(siteData.availabilities)
+                    .filter(([_, status]) => status === 'Available')
+                    .map(([date]) => date.split('T')[0])
+                    .filter(date => allDates.includes(date));
 
-            campgroundEntry.siteAvailability[siteId].dates.push(...validDates);
-        }
-
-        for (const siteId in campgroundEntry.siteAvailability) {
-            const site = campgroundEntry.siteAvailability[siteId];
-            const uniqueDates = [...new Set(site.dates)].sort();
-            const stayMatches = [];
-
-            for (const stayLength of settings.dates.stayLengths || []) {
-                const matches = findConsecutiveAvailableRanges(uniqueDates, stayLength)
-                    .filter(([from]) => {
-                        if (!settings.dates.validStartDays?.length) return true;
-                        const [y, m, d] = from.split('-').map(Number);
-                        const startDay = new Date(Date.UTC(y, m - 1, d)).toLocaleString('en-US', {
-                            weekday: 'long',
-                            timeZone: 'UTC'
-                        });
-                        return settings.dates.validStartDays.includes(startDay);
-                    })
-                    .map(([from, to]) => ({ from, to, nights: stayLength }));
-
-                stayMatches.push(...matches);
+                campgroundEntry.siteAvailability[siteId].dates.push(...validDates);
             }
+            for (const siteId in campgroundEntry.siteAvailability) {
+                const site = campgroundEntry.siteAvailability[siteId];
+                const uniqueDates = [...new Set(site.dates)].sort();
+                const stayMatches = [];
+                for (const stayLength of settings.dates.stayLengths || []) {
+                    const matches = findConsecutiveAvailableRanges(uniqueDates, stayLength)
+                        .filter(([from]) => {
+                            if (!settings.dates.validStartDays?.length) return true;
+                            const [y, m, d] = from.split('-').map(Number);
+                            const startDay = new Date(Date.UTC(y, m - 1, d)).toLocaleString('en-US', {
+                                weekday: 'long',
+                                timeZone: 'UTC'
+                            });
+                            return settings.dates.validStartDays.includes(startDay);
+                        })
+                        .map(([from, to]) => ({ from, to, nights: stayLength }));
 
-            const sorted = stayMatches.sort((a, b) => (new Date(b.nights) - new Date(a.nights)));
-            const filtered = [];
+                    stayMatches.push(...matches);
+                }
 
-            for (const match of sorted) {
-                const matchStart = new Date(match.from);
-                const matchEnd = new Date(match.to);
-                const isContained = filtered.some(({ from, to }) => {
-                    const existingStart = new Date(from);
-                    const existingEnd = new Date(to);
-                    return matchStart >= existingStart && matchEnd <= existingEnd;
-                });
-                if (!isContained) filtered.push(match);
+                const sorted = stayMatches.sort((a, b) => b.nights - a.nights);
+                const filtered = [];
+
+                for (const match of sorted) {
+                    const matchStart = new Date(match.from);
+                    const matchEnd = new Date(match.to);
+                    const isContained = filtered.some(({ from, to }) => {
+                        const existingStart = new Date(from);
+                        const existingEnd = new Date(to);
+                        return matchStart >= existingStart && matchEnd <= existingEnd;
+                    });
+                    if (!isContained) filtered.push(match);
+                }
+
+                site.matches = filtered;
             }
-
-            site.matches = filtered;
         }
     });
 
@@ -258,7 +256,7 @@ export const filterLongestNonOverlappingStays = entries => {
     const grouped = {};
     for (const { siteId, siteName, matches } of entries) {
         if (!grouped[siteName]) grouped[siteName] = { siteId, matches: [] };
-        const sorted = [...matches].sort((a, b) => new Date(b.nights) - new Date(a.nights));
+        const sorted = [...matches].sort((a, b) => b.nights - a.nights);
         const filtered = [];
         for (const match of sorted) {
             const matchStart = new Date(match.from);
