@@ -197,10 +197,11 @@ export const buildReservationLink = (siteId, fromDate, nights) => {
     return `https://www.recreation.gov/camping/campsites/${siteId}?arrivalDate=${arrival}&departureDate=${departure}`;
 };
 
-export const goToPage = (data) => {
-    const siteId = data.site.siteId;
-    const fromDate = data.row.from;
-    const nights = data.row.nights;
+export const goToPage = (data, month) => {
+    console.log('data: ', data);
+    const siteId = data.site?.siteId ?? data.siteId;
+    const fromDate = data.row?.from ?? month;
+    const nights = data.row?.nights ?? 1;
     const url = buildReservationLink(siteId, fromDate, nights);
     window.open(url, "_blank", "noreferrer");
 };

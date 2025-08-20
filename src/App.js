@@ -24,10 +24,10 @@ const settingsOverrides = {
         // endDate: '2025-10-01',
         validStartDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'], // Only include stays that start on these days
         // preferredStartDays: ['Thursday', 'Friday', 'Saturday'], //Has to be formatted this way
-        stayLengths: [2, 3, 4, 5],
+        stayLengths: [2, 3, 4, 5], // Number of days you want to stay
     },
     views: {
-        type: 'table',
+        type: 'calendar', //'table' or 'calendar'
     }
 };
 const settingsObject = getSitewideDefaultSettings(settingsOverrides);
@@ -87,8 +87,9 @@ export default function App() {
     useEffect(() => {
         if (Object.keys(campgroundsData)?.length > 0) {
             const groupedByFavorites = formatGroupsByFavorites(campgroundsData);
-            const formattedTableIntoGroups = formatGroups(groupedByFavorites, true, 'area');
-            setCampgroundsByAreas(formattedTableIntoGroups);
+            const formattedIntoGroups = formatGroups(groupedByFavorites, true, 'area');
+            console.log('formattedIntoGroups: ', formattedIntoGroups);
+            setCampgroundsByAreas(formattedIntoGroups);
         }
     }, [campgroundsData]);
 

@@ -7,6 +7,7 @@ import Typography from '@mui/material/Typography';
 
 import { CampsitesTable } from './CampsitesTable';
 import { CampsitesCalendar } from './CampsitesCalendar';
+import { CampsitesCalendarParent } from './CampsitesCalendarParent';
 import { checkForAvailabilityInArray } from '../utils/utils';
 
 export function Campground(props) {
@@ -39,11 +40,10 @@ export function Campground(props) {
                                             campground={campground}
                                         />}
                                     {siteSettings.views.type === 'calendar' &&
-
-                                        <CampsitesCalendar
+                                        <CampsitesCalendarParent
                                             key={campground.name + typeIndex}
                                             data={group}
-                                            site={type}
+                                            type={type}
                                             campground={campground}
                                         />}
                                 </Stack>

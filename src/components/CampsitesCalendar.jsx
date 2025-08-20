@@ -8,11 +8,13 @@ import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
 
 import { styled } from "@mui/material/styles";
 import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
 
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { StaticDatePicker } from '@mui/x-date-pickers/StaticDatePicker';
 import { PickersDay } from '@mui/x-date-pickers/PickersDay';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { goToPage } from '../utils/utils';
 
 dayjs.extend(isBetween);
 dayjs.extend(isSameOrBefore);
@@ -123,36 +125,130 @@ const ServerDay = (props) => {
 };
 
 export function CampsitesCalendar(props) {
-    const [sites, setSites] = useState([]);
+    const [site, setSite] = useState([]);
     const [monthsToShow, setMonthsToShow] = useState([dayjs('2025-08-01'), dayjs('2025-09-01')]);
 
     const [values, setValues] = useState([
-        dayjs('2025-08-17'),
-        { from: dayjs('2025-08-10'), to: dayjs('2025-08-15') },
-        dayjs('2025-08-25'),
+        dayjs('2025-08-23'),
+        { from: dayjs('2025-08-25'), to: dayjs('2025-08-27') },
+        dayjs('2025-08-29'),
         { from: dayjs('2025-09-02'), to: dayjs('2025-09-05') },
         dayjs('2025-09-12')
     ]);
 
+
     useEffect(() => {
-        if (!props.data) return;
-        setSites(Object.values(props.data));
+        if (!props.site) return;
+        setSite(props.site);
     }, [props.data]);
+
+    const buildDateDisplayArray = (site) => {
+        const { dates = [], matches = [] } = site;
+
+        const matchRanges = matches.map(m => {
+            if (m.from === m.to) {
+                return dayjs(m.from);
+            } else {
+                return {
+                    from: dayjs(m.from),
+                    to: dayjs(m.to)
+                };
+            }
+        });
+
+        const allMatchDays = new Set();
+        matches.forEach(m => {
+            let current = dayjs(m.from);
+            const end = dayjs(m.to);
+            while (current.isBefore(end, 'day')) {
+                allMatchDays.add(current.format('YYYY-MM-DD'));
+                current = current.add(1, 'day');
+            }
+        });
+
+        const singles = dates
+            .filter(d => !allMatchDays.has(d))
+            .map(d => ({ from: dayjs(d), to: dayjs(d).add(1, 'day') }));
+
+        const combined = [...singles, ...matchRanges].sort((a, b) => {
+            const aDate = dayjs(a.from ?? a);
+            const bDate = dayjs(b.from ?? b);
+            return aDate.diff(bDate);
+        });
+
+        return combined;
+    };
+
+    const getMonthsFromSiteData = (site) => {
+        const { dates = [], matches = [] } = site;
+
+        const monthsSet = new Set();
+
+        // Add months from single dates
+        dates.forEach(dateStr => {
+            monthsSet.add(dayjs(dateStr).startOf("month").format("YYYY-MM-DD"));
+        });
+
+        // Add months from match ranges
+        matches.forEach(m => {
+            let current = dayjs(m.from).startOf("month");
+            const end = dayjs(m.to).startOf("month");
+
+            // Loop through each month in the range
+            while (current.isSameOrBefore(end, "month")) {
+                monthsSet.add(current.format("YYYY-MM-DD"));
+                current = current.add(1, "month");
+            }
+        });
+
+        // Convert back to sorted array of dayjs
+        return [...monthsSet]
+            .map(m => dayjs(m))
+            .sort((a, b) => a.diff(b));
+    };
+
+    useEffect(() => {
+        if (!site) return;
+        const formattedDates = buildDateDisplayArray(site);
+        setValues(formattedDates);
+        const formattedMonths = getMonthsFromSiteData(site);
+        setMonthsToShow(formattedMonths);
+    }, [site]);
 
     return (
         <LocalizationProvider dateAdapter={AdapterDayjs}>
-            <Stack direction="row" spacing={2}>
-                {monthsToShow.map((month) => (
-                    <StaticDatePicker
-                        key={month.format('YYYY-MM')}
-                        displayStaticWrapperAs="desktop"
-                        value={month}
-                        onChange={() => { }}
-                        readOnly
-                        slots={{ day: ServerDay }}
-                        slotProps={{ day: { highlightedValues: values } }}
-                    />
-                ))}
+            <Stack
+                direction="row"
+                spacing={1}
+                sx={{ flexWrap: 'wrap' }}
+            >
+                {monthsToShow.map((month) => {
+                    return (
+                        <StaticDatePicker
+                            key={month}
+                            displayStaticWrapperAs="desktop"
+                            value={month}
+                            slots={{
+                                day: ServerDay
+                            }}
+                            slotProps={{
+                                day: { highlightedValues: values },
+                                actionBar: {
+                                    actions: []
+                                }
+                            }}
+                            sx={{
+                                '& .MuiPickersArrowSwitcher-root': { // Target the arrow switcher container
+                                    display: 'none', // Hide the entire arrow switcher
+                                },
+                                '.MuiPickersCalendarHeader-switchViewButton': {
+                                    display: 'none',
+                                },
+                            }}
+                            onChange={(e) => goToPage(site, month)}
+                        />
+                    )
+                })}
             </Stack>
         </LocalizationProvider>
     );
