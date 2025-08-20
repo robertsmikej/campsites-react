@@ -11,9 +11,9 @@ import Grid from '@mui/material/Grid';
 export function CampgroundsGroups(props) {
     const [groups, setGroups] = useState({});
 
-    useEffect(() => {
-        // console.log('props: ', props);
-    }, [props]);
+    // useEffect(() => {
+    //     // console.log('props: ', props);
+    // }, [props]);
 
     useEffect(() => {
         // console.log('props.data: ', props.data);

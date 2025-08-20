@@ -1,5 +1,9 @@
 import { useEffect, useState } from 'react';
 
+import { ThemeProvider } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+import theme from './theme';
+
 import SiteSettings from './context/SiteSettingsContext';
 import { getSitewideDefaultSettings } from './constants/settings';
 
@@ -88,7 +92,6 @@ export default function App() {
         if (Object.keys(campgroundsData)?.length > 0) {
             const groupedByFavorites = formatGroupsByFavorites(campgroundsData);
             const formattedIntoGroups = formatGroups(groupedByFavorites, true, 'area');
-            console.log('formattedIntoGroups: ', formattedIntoGroups);
             setCampgroundsByAreas(formattedIntoGroups);
         }
     }, [campgroundsData]);
@@ -101,43 +104,46 @@ export default function App() {
     };
 
     return (
-        <SiteSettings.Provider value={settings}>
-            <ProgressBar.Provider value={progressBarData}>
-                {progressBarData?.progress < 1 && <ProgressBarEl />}
-                <Container
-                    maxWidth="xl"
-                    sx={{
-                        padding: "20px"
-                    }}
-                >
+        <ThemeProvider theme={theme}>
+            <CssBaseline />
+            <SiteSettings.Provider value={settings}>
+                <ProgressBar.Provider value={progressBarData}>
+                    {progressBarData?.progress < 1 && <ProgressBarEl />}
                     <Container
                         maxWidth="xl"
-                        disableGutters
                         sx={{
-                            paddingBottom: "10px"
+                            padding: "20px"
                         }}
                     >
-                        <Button
+                        <Container
+                            maxWidth="xl"
+                            disableGutters
                             sx={{
-                                justifySelf: "center",
+                                paddingBottom: "10px"
                             }}
-                            color="primary"
-                            variant="contained"
-                            onClick={refreshData}
                         >
-                            Refresh
-                        </Button>
+                            <Button
+                                sx={{
+                                    justifySelf: "center",
+                                }}
+                                color="primary"
+                                variant="contained"
+                                onClick={refreshData}
+                            >
+                                Refresh
+                            </Button>
+                        </Container>
+                        <Grid spacing={1} sx={{
+                            justifyContent: "center",
+                        }}>
+                            <CampgroundsGroups
+                                groups={campgroundsByAreas}
+                                settings={settings}
+                            />
+                        </Grid>
                     </Container>
-                    <Grid spacing={1} sx={{
-                        justifyContent: "center",
-                    }}>
-                        <CampgroundsGroups
-                            groups={campgroundsByAreas}
-                            settings={settings}
-                        />
-                    </Grid>
-                </Container>
-            </ProgressBar.Provider>
-        </SiteSettings.Provider>
+                </ProgressBar.Provider>
+            </SiteSettings.Provider>
+        </ThemeProvider>
     );
 };

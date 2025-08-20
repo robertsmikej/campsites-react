@@ -18,6 +18,7 @@ export function Campground(props) {
     useEffect(() => {
         setCampground(props.campground);
     }, [props.campground]);
+
     return (
         <>
             {campground.sitesGroupedByFavorites &&

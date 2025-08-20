@@ -198,6 +198,7 @@ export const fetchCampgrounds = async (sites, settings, onProgress, onlyReturnNu
     const cacheKey = buildCacheKey(sites);
     const cached = getCache(cacheKey, sites);
     if (cached && !onlyReturnNumOfCalls) {
+        console.info('Using Cached Data');
         return cached;
     }
 
@@ -207,6 +208,7 @@ export const fetchCampgrounds = async (sites, settings, onProgress, onlyReturnNu
         return siteFetchMap.length;
     }
 
+    console.info(`Making ${siteFetchMap.length} Calls For Data`);
     const allResults = await makeAllRequests(siteFetchMap, onProgress);
 
     const results = processApiResults(allResults, siteFetchMap, settings);

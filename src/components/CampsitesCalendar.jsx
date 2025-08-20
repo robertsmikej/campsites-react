@@ -64,12 +64,14 @@ const RangeDay = styled(PickersDay, {
     ...(variant === 'rangeEnd' && {
         backgroundColor: 'red',
         color: theme.palette.primary.contrastText,
-        borderTopRightRadius: '50%',
-        borderBottomRightRadius: '50%',
+        borderTopRightRadius: '0%',
+        borderBottomRightRadius: '0%',
         borderTopLeftRadius: 0,
         borderBottomLeftRadius: 0,
+        backgroundImage: 'linear-gradient(115deg, #ff0000 65%, #fff 45%)',
         "&:hover, &:focus": {
-            backgroundColor: 'darkred'
+            backgroundColor: 'darkred',
+            backgroundImage: 'linear-gradient(125deg, darkred 65%, #fff 45%)',
         },
     }),
 }));
@@ -219,7 +221,7 @@ export function CampsitesCalendar(props) {
         <LocalizationProvider dateAdapter={AdapterDayjs}>
             <Stack
                 direction="row"
-                spacing={1}
+                spacing={0}
                 sx={{ flexWrap: 'wrap' }}
             >
                 {monthsToShow.map((month) => {
@@ -238,12 +240,34 @@ export function CampsitesCalendar(props) {
                                 }
                             }}
                             sx={{
-                                '& .MuiPickersArrowSwitcher-root': { // Target the arrow switcher container
-                                    display: 'none', // Hide the entire arrow switcher
+                                '& .MuiPickersArrowSwitcher-root': {
+                                    display: 'none',
                                 },
                                 '.MuiPickersCalendarHeader-switchViewButton': {
                                     display: 'none',
                                 },
+                                '.MuiPickersCalendarHeader-root': {
+                                    marginTop: '6px',
+                                    marginBottom: 0,
+                                    minHeight: '20px',
+                                    paddingLeft: '12px'
+                                },
+                                '.MuiDateCalendar-root': {
+                                    height: '220px',
+                                    width: '230px',
+                                },
+                                '.MuiDayCalendar-weekDayLabel': {
+                                    height: '26px',
+                                },
+                                '.MuiPickersDay-root': {
+                                    height: '26px',
+                                },
+                                '.MuiDayCalendar-slideTransition': {
+                                    minHeight: '170px',
+                                },
+                                '& .MuiPickersLayout-root': {
+                                    minWidth: '220px',
+                                }
                             }}
                             onChange={(e) => goToPage(site, month)}
                         />
