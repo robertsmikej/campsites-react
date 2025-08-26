@@ -8,7 +8,6 @@ import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
 
 import { styled } from "@mui/material/styles";
 import Stack from '@mui/material/Stack';
-import Typography from '@mui/material/Typography';
 
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { StaticDatePicker } from '@mui/x-date-pickers/StaticDatePicker';
@@ -142,7 +141,7 @@ export function CampsitesCalendar(props) {
     useEffect(() => {
         if (!props.site) return;
         setSite(props.site);
-    }, [props.data]);
+    }, [props.site]);
 
     const buildDateDisplayArray = (site) => {
         const { dates = [], matches = [] } = site;
