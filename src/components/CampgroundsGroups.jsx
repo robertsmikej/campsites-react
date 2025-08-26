@@ -30,7 +30,12 @@ export function CampgroundsGroups(props) {
                     <Stack
                         key={key + index} spacing={1}
                     >
-                        {index > 0 && <Divider orientation="horizontal" flexItem />}
+                        {index > 0 &&
+                            <Divider
+
+                                orientation="horizontal"
+                                flexItem
+                            />}
                         <Typography variant='h2'>{key}</Typography>
                         <Typography variant='span' gutterBottom>
                             Campgrounds W/ Availabilty: {parentGroup.length}
@@ -44,8 +49,13 @@ export function CampgroundsGroups(props) {
                                         spacing={4}
                                         key={campground + campgroundIndex}
                                     >
-                                        <Grid container spacing={1}>
-                                            <Grid size={3}>
+                                        <Grid
+                                            container
+                                            spacing={3}
+                                        >
+                                            <Grid
+                                                size={{ xs: 2, md: 3, lg: 4 }}
+                                            >
                                                 <Stack spacing={1}>
                                                     <Divider>
                                                         <Typography variant='h4'>{campground.name}</Typography>
@@ -63,7 +73,9 @@ export function CampgroundsGroups(props) {
                                                     />
                                                 </Stack>
                                             </Grid>
-                                            <Grid size={9}>
+                                            <Grid
+                                                size={{ xs: 10, md: 9, lg: 8 }}
+                                            >
                                                 {hasCampgroundAvailability ?
                                                     <Campground
                                                         key={key}
@@ -74,7 +86,11 @@ export function CampgroundsGroups(props) {
                                                 }
                                             </Grid>
                                         </Grid>
-                                        <Divider />
+                                        <Divider
+                                            sx={{
+                                                marginTop: '12px !important',
+                                            }}
+                                        />
                                     </Stack>
                                 )
                             } else {

@@ -252,7 +252,7 @@ export function CampsitesCalendar(props) {
                                     paddingLeft: '10px'
                                 },
                                 '.MuiDateCalendar-root': {
-                                    height: '220px',
+                                    height: '190px',
                                     width: '230px',
                                 },
                                 '.MuiDayCalendar-weekDayLabel': {
