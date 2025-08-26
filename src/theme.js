@@ -25,6 +25,41 @@ const theme = createTheme({
             },
         },
     },
+    typography: {
+        fontFamily: "'Roboto', 'Helvetica', 'Arial', sans-serif",
+
+        // Global default font size
+        fontSize: 12, // affects body1/body2, buttons, etc.
+
+        // Override headers specifically
+        h1: {
+            fontSize: '2rem',
+            fontWeight: 700,
+        },
+        h2: {
+            fontSize: '1.8rem',
+            fontWeight: 400,
+        },
+        h3: {
+            fontSize: '1.6rem',
+            fontWeight: 700,
+        },
+        h4: {
+            fontSize: '1.3rem',
+            fontWeight: 600,
+        },
+        h5: {
+            fontSize: '1.2rem',
+
+        },
+        h6: {
+            fontSize: '1.1rem',
+        },
+        body: {
+            fontSize: '0.9rem',
+            lineHeight: 1,
+        },
+    },
 });
 
 export default theme;

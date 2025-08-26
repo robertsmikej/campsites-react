@@ -31,7 +31,7 @@ export function CampgroundsGroups(props) {
                         key={key + index} spacing={1}
                     >
                         {index > 0 && <Divider orientation="horizontal" flexItem />}
-                        <Typography variant='h3'>{key}</Typography>
+                        <Typography variant='h2'>{key}</Typography>
                         <Typography variant='span' gutterBottom>
                             Campgrounds W/ Availabilty: {parentGroup.length}
                         </Typography>
@@ -44,22 +44,26 @@ export function CampgroundsGroups(props) {
                                         spacing={4}
                                         key={campground + campgroundIndex}
                                     >
-                                        <Grid container spacing={2}>
-                                            <Grid size={4}>
-                                                <Typography variant='h4'>{campground.name}</Typography>
-                                                <Typography variant='subtitle1'>{campground.description}</Typography>
-                                                <img
-                                                    src={`${campgroundImage}`}
-                                                    alt={campground.name}
-                                                    loading="lazy"
-                                                    style={{
-                                                        maxWidth: '100%',
-                                                        maxHeight: '300px',
-                                                        marginTop: '10px',
-                                                    }}
-                                                />
+                                        <Grid container spacing={1}>
+                                            <Grid size={3}>
+                                                <Stack spacing={1}>
+                                                    <Divider>
+                                                        <Typography variant='h4'>{campground.name}</Typography>
+                                                    </Divider>
+                                                    <Typography variant='body'>{campground.description}</Typography>
+                                                    <img
+                                                        src={`${campgroundImage}`}
+                                                        alt={campground.name}
+                                                        loading="lazy"
+                                                        style={{
+                                                            maxWidth: '100%',
+                                                            maxHeight: '300px',
+                                                            marginTop: '10px',
+                                                        }}
+                                                    />
+                                                </Stack>
                                             </Grid>
-                                            <Grid size={8}>
+                                            <Grid size={9}>
                                                 {hasCampgroundAvailability ?
                                                     <Campground
                                                         key={key}

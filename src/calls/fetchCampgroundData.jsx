@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { getEmptyGroupedSites } from '../utils/utils';
+import { getEmptyGroupedSites, getLocalCurrentTime } from '../utils/utils';
 
 export const CACHE_DURATION_MS = 4 * 60 * 1000; // 4 minutes
 const DELAY_BETWEEN_REQUESTS_MS = 1; // Delay in ms between each API call
@@ -198,7 +198,7 @@ export const fetchCampgrounds = async (sites, settings, onProgress, onlyReturnNu
     const cacheKey = buildCacheKey(sites);
     const cached = getCache(cacheKey, sites);
     if (cached && !onlyReturnNumOfCalls) {
-        console.info('Using Cached Data');
+        console.info(`Using Cached Data at ${getLocalCurrentTime()}`);
         return cached;
     }
 
@@ -208,7 +208,7 @@ export const fetchCampgrounds = async (sites, settings, onProgress, onlyReturnNu
         return siteFetchMap.length;
     }
 
-    console.info(`Making ${siteFetchMap.length} Calls For Data`);
+    console.info(`Making ${siteFetchMap.length} Calls For Data at ${getLocalCurrentTime()}`);
     const allResults = await makeAllRequests(siteFetchMap, onProgress);
 
     const results = processApiResults(allResults, siteFetchMap, settings);

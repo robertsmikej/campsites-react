@@ -21,7 +21,12 @@ export function CampsitesCalendarParent(props) {
             {sites.map((site, siteIndex) => {
                 return (
                     <Stack key={site.siteId + siteIndex ?? siteIndex}>
-                        <Typography variant="body">
+                        <Typography
+                            variant="h6"
+                            sx={{
+                                marginLeft: '20px'
+                            }}
+                        >
                             Site: {site.siteName}
                         </Typography>
                         <CampsitesCalendar site={site} />

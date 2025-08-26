@@ -12,7 +12,7 @@ export const sites = {
             },
             description: 'West side of Redfish Lake, close to lodge. Smaller Campground.',
             dates: {
-                startDate: '2025-08-01',
+                startDate: '2025-09-01',
                 endDate: '2025-10-01',
             },
             image: 'point_campground_map.jpg',
@@ -34,14 +34,14 @@ export const sites = {
             },
             description: 'East side of Redfish Lake, right on lake.',
             dates: {
-                startDate: '2025-08-01',
+                startDate: '2025-09-01',
                 endDate: '2025-10-01',
             },
             image: 'outlet_campground_map.jpg',
             showOrHide: {
                 'Favorites': true,
                 'Worthwhile': true,
-                'All Others': false,
+                'All Others': true,
             },
         },
         {
@@ -56,7 +56,7 @@ export const sites = {
             },
             description: 'North side of Redfish Lake, right off of lake, but still on lake.',
             dates: {
-                startDate: '2025-08-01',
+                startDate: '2025-09-01',
                 endDate: '2025-10-01',
             },
             image: 'glacier_view_campground_map.jpg',
@@ -78,7 +78,7 @@ export const sites = {
             },
             description: 'Off of highway right across from Redfish Lake, but not walking distance.',
             dates: {
-                startDate: '2025-08-01',
+                startDate: '2025-09-01',
                 endDate: '2025-10-01',
             },
             image: 'sunny_gulch_campground_map1.jpg',
@@ -100,7 +100,7 @@ export const sites = {
             },
             description: 'At Stanley Lake, "favorites" are all campsites on shoreline.',
             dates: {
-                startDate: '2025-08-01',
+                startDate: '2025-09-01',
                 endDate: '2025-10-01',
             },
             image: 'stanley_lake_campground_map.jpg',
@@ -122,7 +122,7 @@ export const sites = {
             },
             description: 'Favorite sites are right on river',
             dates: {
-                startDate: '2025-08-01',
+                startDate: '2025-09-01',
                 endDate: '2025-10-01',
             },
             image: 'mountain_view_campground_map.jpg',
@@ -144,7 +144,7 @@ export const sites = {
             },
             description: 'North Shore of Warm Lake',
             dates: {
-                startDate: '2025-08-01',
+                startDate: '2025-09-01',
                 endDate: '2025-10-01',
             },
             image: 'shoreline_campground_map.jpg',
@@ -167,7 +167,7 @@ export const sites = {
             description: 'Cabin only available duriung fall and winter.',
             dates: {
                 startDate: '2025-10-01',
-                endDate: '2026-02-01',
+                endDate: '2026-01-01',
             },
             image: 'redfish_cabin_map.jpg',
             showOrHide: {

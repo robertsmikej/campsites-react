@@ -224,3 +224,14 @@ export const deepMerge = (target, source) => {
     }
     return target;
 };
+
+export const getLocalCurrentTime = () => {
+    const options = {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: true,
+    };
+
+    return new Intl.DateTimeFormat("en-US", options).format(new Date());
+};

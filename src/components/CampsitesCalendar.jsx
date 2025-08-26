@@ -247,10 +247,10 @@ export function CampsitesCalendar(props) {
                                     display: 'none',
                                 },
                                 '.MuiPickersCalendarHeader-root': {
-                                    marginTop: '6px',
+                                    marginTop: '0px',
                                     marginBottom: 0,
                                     minHeight: '20px',
-                                    paddingLeft: '12px'
+                                    paddingLeft: '10px'
                                 },
                                 '.MuiDateCalendar-root': {
                                     height: '220px',
