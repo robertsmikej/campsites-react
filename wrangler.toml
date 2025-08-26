@@ -1,0 +1,6 @@
+name = "campsite-finder"
+compatibility_date = "2024-05-02"
+
+[site]
+bucket = "./build"
+entry-point = "workers-site"
