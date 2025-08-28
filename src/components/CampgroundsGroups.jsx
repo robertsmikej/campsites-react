@@ -7,6 +7,7 @@ import Divider from '@mui/material/Divider';
 import { checkForAvailabilityInArray, checkForGroupedAvailability, getAllArraysFromParentObjects } from '../utils/utils';
 import { Campground } from './Campground';
 import Grid from '@mui/material/Grid';
+import Box from '@mui/material/Box';
 
 export function CampgroundsGroups(props) {
     const [groups, setGroups] = useState({});
@@ -54,27 +55,34 @@ export function CampgroundsGroups(props) {
                                             spacing={3}
                                         >
                                             <Grid
-                                                size={{ xs: 2, md: 3, lg: 4 }}
+                                                size={{ xs: 12, md: 3, lg: 4 }}
                                             >
                                                 <Stack spacing={1}>
                                                     <Divider>
                                                         <Typography variant='h4'>{campground.name}</Typography>
                                                     </Divider>
                                                     <Typography variant='body'>{campground.description}</Typography>
-                                                    <img
-                                                        src={`${campgroundImage}`}
-                                                        alt={campground.name}
-                                                        loading="lazy"
-                                                        style={{
+                                                    <Box
+                                                        sx={{
                                                             maxWidth: '100%',
-                                                            maxHeight: '300px',
                                                             marginTop: '10px',
+                                                            display: { xs: 'none', sm: 'block' },
                                                         }}
-                                                    />
+                                                    >
+                                                        <img
+                                                            src={`${campgroundImage}`}
+                                                            alt={campground.name}
+                                                            loading="lazy"
+                                                            style={{
+                                                                maxWidth: '100%',
+                                                                maxHeight: '300px',
+                                                            }}
+                                                        />
+                                                    </Box>
                                                 </Stack>
                                             </Grid>
                                             <Grid
-                                                size={{ xs: 10, md: 9, lg: 8 }}
+                                                size='grow'
                                             >
                                                 {hasCampgroundAvailability ?
                                                     <Campground
