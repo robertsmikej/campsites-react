@@ -19,6 +19,7 @@ dayjs.extend(isBetween);
 dayjs.extend(isSameOrBefore);
 dayjs.extend(isSameOrAfter);
 
+const calendarColors = ['green', 'darkgreen'];
 // 1. Create a styled component that handles different variants for the range
 const RangeDay = styled(PickersDay, {
     shouldForwardProp: (prop) => prop !== "variant" && prop !== "selected"
@@ -30,47 +31,47 @@ const RangeDay = styled(PickersDay, {
     justifyContent: 'center',
     alignItems: 'center',
     ...(variant === 'single' && {
-        backgroundColor: 'blue',
+        backgroundColor: calendarColors[0],
         color: theme.palette.primary.contrastText,
         borderRadius: '50%',
         "&:hover, &:focus": {
-            backgroundColor: 'darkblue'
+            backgroundColor: calendarColors[1]
         },
     }),
     // Styling for a day at the start of a range
     ...(variant === 'rangeStart' && {
-        backgroundColor: 'blue',
+        backgroundColor: calendarColors[0],
         color: theme.palette.primary.contrastText,
         borderTopLeftRadius: '50%',
         borderBottomLeftRadius: '50%',
         borderTopRightRadius: 0,
         borderBottomRightRadius: 0,
         "&:hover, &:focus": {
-            backgroundColor: 'darkblue'
+            backgroundColor: calendarColors[1]
         },
     }),
     // Styling for a day in the middle of a range
     ...(variant === 'rangeMiddle' && {
-        backgroundColor: 'blue',
+        backgroundColor: calendarColors[0],
         color: theme.palette.primary.contrastText,
         borderRadius: 0,
         "&:hover, &:focus": {
-            backgroundColor: 'darkblue'
+            backgroundColor: calendarColors[1]
         },
 
     }),
     // Styling for a day at the end of a range
     ...(variant === 'rangeEnd' && {
-        backgroundColor: 'blue',
+        backgroundColor: calendarColors[0],
         color: theme.palette.primary.contrastText,
         borderTopRightRadius: '0%',
         borderBottomRightRadius: '0%',
         borderTopLeftRadius: 0,
         borderBottomLeftRadius: 0,
-        backgroundImage: 'linear-gradient(115deg, blue 65%, #fff 45%)',
+        backgroundImage: `linear-gradient(115deg, ${calendarColors[0]} 65%, #fff 45%)`,
         "&:hover, &:focus": {
-            backgroundColor: 'darkblue',
-            backgroundImage: 'linear-gradient(125deg, darkblue 65%, #fff 45%)',
+            backgroundColor: calendarColors[1],
+            backgroundImage: `linear-gradient(125deg, ${calendarColors[1]} 65%, #fff 45%)`,
         },
     }),
 }));
