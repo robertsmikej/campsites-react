@@ -30,47 +30,47 @@ const RangeDay = styled(PickersDay, {
     justifyContent: 'center',
     alignItems: 'center',
     ...(variant === 'single' && {
-        backgroundColor: 'red',
+        backgroundColor: 'blue',
         color: theme.palette.primary.contrastText,
         borderRadius: '50%',
         "&:hover, &:focus": {
-            backgroundColor: 'darkred'
+            backgroundColor: 'darkblue'
         },
     }),
     // Styling for a day at the start of a range
     ...(variant === 'rangeStart' && {
-        backgroundColor: 'red',
+        backgroundColor: 'blue',
         color: theme.palette.primary.contrastText,
         borderTopLeftRadius: '50%',
         borderBottomLeftRadius: '50%',
         borderTopRightRadius: 0,
         borderBottomRightRadius: 0,
         "&:hover, &:focus": {
-            backgroundColor: 'darkred'
+            backgroundColor: 'darkblue'
         },
     }),
     // Styling for a day in the middle of a range
     ...(variant === 'rangeMiddle' && {
-        backgroundColor: 'red',
+        backgroundColor: 'blue',
         color: theme.palette.primary.contrastText,
         borderRadius: 0,
         "&:hover, &:focus": {
-            backgroundColor: 'darkred'
+            backgroundColor: 'darkblue'
         },
 
     }),
     // Styling for a day at the end of a range
     ...(variant === 'rangeEnd' && {
-        backgroundColor: 'red',
+        backgroundColor: 'blue',
         color: theme.palette.primary.contrastText,
         borderTopRightRadius: '0%',
         borderBottomRightRadius: '0%',
         borderTopLeftRadius: 0,
         borderBottomLeftRadius: 0,
-        backgroundImage: 'linear-gradient(115deg, #ff0000 65%, #fff 45%)',
+        backgroundImage: 'linear-gradient(115deg, blue 65%, #fff 45%)',
         "&:hover, &:focus": {
-            backgroundColor: 'darkred',
-            backgroundImage: 'linear-gradient(125deg, darkred 65%, #fff 45%)',
+            backgroundColor: 'darkblue',
+            backgroundImage: 'linear-gradient(125deg, darkblue 65%, #fff 45%)',
         },
     }),
 }));
