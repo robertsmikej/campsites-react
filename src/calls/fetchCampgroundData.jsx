@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { getEmptyGroupedSites, getLocalCurrentTime } from '../utils/utils';
+import { getMockApiResponse } from '../json/mockRecreationApi';
 
 export const CACHE_DURATION_MS = 4 * 60 * 1000; // 4 minutes
 const DELAY_BETWEEN_REQUESTS_MS = 1; // Delay in ms between each API call
@@ -114,6 +115,20 @@ export const makeAllRequests = async (siteFetchMap, onProgress) => {
     return allResults;
 };
 
+const makeMockRequests = async (siteFetchMap, onProgress) => {
+    const total = siteFetchMap.length;
+    const allResults = [];
+    for (let i = 0; i < siteFetchMap.length; i++) {
+        const { campground, month } = siteFetchMap[i];
+        const result = getMockApiResponse(campground.id, month);
+        allResults.push(result);
+        if (typeof onProgress === 'function') {
+            onProgress(i + 1, total);
+        }
+    }
+    return allResults;
+};
+
 const processApiResults = (allResults, siteFetchMap, settings) => {
     const results = {};
     allResults.forEach((data, index) => {
@@ -189,14 +204,21 @@ const processApiResults = (allResults, siteFetchMap, settings) => {
     return results;
 };
 
-export const fetchCampgrounds = async (sites, settings, onProgress, onlyReturnNumOfCalls = false) => {
+export const fetchCampgrounds = async (
+    sites,
+    settings,
+    onProgress,
+    onlyReturnNumOfCalls = false,
+    options = {}
+) => {
+    const { useMockData = false } = options;
     if (!sites) {
         console.error("Error with Sites JSON Provided");
         return;
     }
 
-    const cacheKey = buildCacheKey(sites);
-    const cached = getCache(cacheKey, sites);
+    const cacheKey = `${buildCacheKey(sites)}${useMockData ? '-mock' : ''}`;
+    const cached = useMockData ? null : getCache(cacheKey, sites);
     if (cached && !onlyReturnNumOfCalls) {
         console.info(`Using Cached Data at ${getLocalCurrentTime()}`);
         return cached;
@@ -208,12 +230,20 @@ export const fetchCampgrounds = async (sites, settings, onProgress, onlyReturnNu
         return siteFetchMap.length;
     }
 
-    console.info(`Making ${siteFetchMap.length} Calls For Data at ${getLocalCurrentTime()}`);
-    const allResults = await makeAllRequests(siteFetchMap, onProgress);
+    let allResults;
+    if (useMockData) {
+        console.info(`Using mock Recreation.gov data at ${getLocalCurrentTime()}`);
+        allResults = await makeMockRequests(siteFetchMap, onProgress);
+    } else {
+        console.info(`Making ${siteFetchMap.length} Calls For Data at ${getLocalCurrentTime()}`);
+        allResults = await makeAllRequests(siteFetchMap, onProgress);
+    }
 
     const results = processApiResults(allResults, siteFetchMap, settings);
 
-    setCache(cacheKey, results);
+    if (!useMockData) {
+        setCache(cacheKey, results);
+    }
     return results;
 };
 

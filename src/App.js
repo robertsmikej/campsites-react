@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import theme from './theme';
+import { createAppTheme } from './theme';
+
+import { siteData } from './json/siteData';
 
 import SiteSettings from './context/SiteSettingsContext';
 import { getSitewideDefaultSettings } from './constants/settings';
@@ -11,14 +13,24 @@ import ProgressBar from './context/ProgressBarContext';
 
 import Container from '@mui/material/Container';
 import Grid from '@mui/material/Grid';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Switch from '@mui/material/Switch';
+import Tooltip from '@mui/material/Tooltip';
+import Stack from '@mui/material/Stack';
+import Button from '@mui/material/Button';
+import Box from '@mui/material/Box';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
+import ToggleButton from '@mui/material/ToggleButton';
+import Typography from '@mui/material/Typography';
 
-import { sites } from './json/sites';
+import { sites as defaultSites, getCampgroundOptions } from './json/sites';
 import { fetchCampgrounds } from './calls/fetchCampgroundData';
 
 import { CampgroundsGroups } from './components/CampgroundsGroups';
-import Button from '@mui/material/Button';
 import { ProgressBarEl } from './components/ProgressBarEl';
-import { formatGroupsByFavorites, formatGroups } from './utils/utils';
+import { formatGroupsByFavorites } from './utils/utils';
+import { TopBar } from './components/TopBar';
+import { SiteConfigDialog } from './components/SiteConfigDialog';
 
 // Override default settings here, default settings are in constants/settings.js
 const settingsOverrides = {
@@ -31,9 +43,27 @@ const settingsOverrides = {
     },
     views: {
         type: 'calendar', //'table' or 'calendar'
+    },
+    dev: {
+        useMockData: true,
     }
 };
 const settingsObject = getSitewideDefaultSettings(settingsOverrides);
+const USER_SITES_STORAGE_KEY = 'campsites-react-user-sites';
+const COLOR_MODE_STORAGE_KEY = 'campgrounds-color-mode';
+const catalogOptions = getCampgroundOptions();
+
+const cloneSitesConfig = (config) => JSON.parse(JSON.stringify(config));
+const getInitialColorMode = () => {
+    if (typeof window === 'undefined') {
+        return settingsObject?.appearance?.mode ?? 'dark';
+    }
+    try {
+        return localStorage.getItem(COLOR_MODE_STORAGE_KEY) ?? settingsObject?.appearance?.mode ?? 'dark';
+    } catch {
+        return settingsObject?.appearance?.mode ?? 'dark';
+    }
+};
 
 export default function App() {
     const [settings] = useState(settingsObject ?? {});
@@ -42,93 +72,250 @@ export default function App() {
         currentCall: 0,
         progress: 0,
     });
+    const [useMockData, setUseMockData] = useState(settingsObject?.dev?.useMockData ?? false);
+    const [siteConfig, setSiteConfig] = useState(() => cloneSitesConfig(defaultSites));
+    const [isConfigDialogOpen, setIsConfigDialogOpen] = useState(false);
+    const [colorMode, setColorMode] = useState(getInitialColorMode);
+
+    const theme = useMemo(() => createAppTheme(colorMode), [colorMode]);
 
     const [campgroundsData, setCampgroundsData] = useState({});
-    const [campgroundsByAreas, setCampgroundsByAreas] = useState({});
+    const [campgroundsByAreas, setCampgroundsByAreas] = useState([]);
 
     // useEffect(() => {
     //     console.clear();
     // }, []);
 
     useEffect(() => {
-        if (!settings) return;
+        const storedSites = localStorage.getItem(USER_SITES_STORAGE_KEY);
+        if (storedSites) {
+            try {
+                const parsed = JSON.parse(storedSites);
+                setSiteConfig(parsed);
+            } catch (error) {
+                console.error('Failed to parse stored site configuration', error);
+                setSiteConfig(cloneSitesConfig(defaultSites));
+            }
+        }
+    }, []);
+
+    useEffect(() => {
+        if (!settings || !siteConfig) return;
+
+        setCampgroundsData({});
+        setCampgroundsByAreas([]);
+        setProgressBarData({
+            totalCalls: 0,
+            currentCall: 0,
+            progress: 0,
+        });
 
         (async () => {
             const siteData = await fetchCampgrounds(
-                sites,
+                siteConfig,
                 settings,
                 (current, total) => {
-                    setProgressBarData(prev => ({
-                        ...prev,
+                    setProgressBarData({
                         currentCall: current,
                         totalCalls: total,
                         progress: total > 0 ? current / total : 0,
-                    }));
-                }
+                    });
+                },
+                false,
+                { useMockData }
             );
-            setCampgroundsData(siteData);
+            setCampgroundsData(siteData ?? {});
         })();
-    }, [settings]);
+    }, [settings, useMockData, siteConfig]);
 
     useEffect(() => {
         if (Object.keys(campgroundsData)?.length > 0) {
             const groupedByFavorites = formatGroupsByFavorites(campgroundsData);
-            const formattedIntoGroups = formatGroups(groupedByFavorites, true, 'area');
-            setCampgroundsByAreas(formattedIntoGroups);
+            setCampgroundsByAreas(groupedByFavorites ?? []);
         }
     }, [campgroundsData]);
 
+    useEffect(() => {
+        try {
+            localStorage.setItem(COLOR_MODE_STORAGE_KEY, colorMode);
+        } catch {
+            // ignore storage issues
+        }
+    }, [colorMode]);
+
     const refreshData = async () => {
+        const storedSites = localStorage.getItem(USER_SITES_STORAGE_KEY);
         localStorage.clear();
-        setCampgroundsByAreas({});
+        if (storedSites) {
+            localStorage.setItem(USER_SITES_STORAGE_KEY, storedSites);
+        }
+        setCampgroundsByAreas([]);
+        setCampgroundsData({});
+        setProgressBarData({
+            totalCalls: 0,
+            currentCall: 0,
+            progress: 0,
+        });
         const siteData = await fetchCampgrounds(
-            sites,
+            siteConfig,
             settings,
             (current, total) => {
-                setProgressBarData(prev => ({
-                    ...prev,
+                setProgressBarData({
                     currentCall: current,
                     totalCalls: total,
                     progress: total > 0 ? current / total : 0,
-                }));
-            }
+                });
+            },
+            false,
+            { useMockData }
         );
-        setCampgroundsData(siteData);
+        setCampgroundsData(siteData ?? {});
     };
+    const isLoading = progressBarData?.progress < 1 && progressBarData?.totalCalls > 0;
+
+    const handleMockToggle = (event) => {
+        setUseMockData(event.target.checked);
+    };
+    const handleToggleMockMode = () => {
+        setUseMockData(prev => !prev);
+    };
+
+    const handleOpenConfigDialog = () => setIsConfigDialogOpen(true);
+    const handleCloseConfigDialog = () => setIsConfigDialogOpen(false);
+    const handleColorModeChange = (_event, nextMode) => {
+        if (nextMode) {
+            setColorMode(nextMode);
+        }
+    };
+
+    const handleSaveSitesConfig = (newConfig) => {
+        const cloned = cloneSitesConfig(newConfig);
+        setSiteConfig(cloned);
+        try {
+            localStorage.setItem(USER_SITES_STORAGE_KEY, JSON.stringify(cloned));
+        } catch (error) {
+            console.error('Failed to store custom site configuration', error);
+        }
+        setIsConfigDialogOpen(false);
+    };
+
+    const handleResetSitesConfig = () => {
+        localStorage.removeItem(USER_SITES_STORAGE_KEY);
+        setSiteConfig(cloneSitesConfig(defaultSites));
+        setIsConfigDialogOpen(false);
+    };
+
+    const topBarMenuItems = [
+        {
+            label: 'Configure Sites',
+            action: () => setIsConfigDialogOpen(true),
+        },
+        {
+            label: useMockData ? 'Switch to live data' : 'Switch to mock data',
+            action: handleToggleMockMode,
+        },
+    ];
+
+    const topBarActions = (
+        <Stack direction="row" spacing={1.5} alignItems="center">
+            <Tooltip
+                title={useMockData ? 'Using stored Recreation.gov responses' : 'Fetch live Recreation.gov data'}
+                placement="bottom"
+            >
+                <FormControlLabel
+                    control={
+                        <Switch
+                            size="small"
+                            color="primary"
+                            checked={useMockData}
+                            onChange={handleMockToggle}
+                        />
+                    }
+                    label="Mock data"
+                    sx={{ color: 'inherit' }}
+                />
+            </Tooltip>
+            <Button
+                variant="outlined"
+                color="primary"
+                onClick={handleOpenConfigDialog}
+                size="small"
+            >
+                Configure Sites
+            </Button>
+        </Stack>
+    );
 
     return (
         <ThemeProvider theme={theme}>
             <CssBaseline />
             <SiteSettings.Provider value={settings}>
                 <ProgressBar.Provider value={progressBarData}>
+                    <TopBar
+                        title={siteData.name ?? ''}
+                        subtitle={siteData.tagline ?? ''}
+                        logo={{ src: '/images/logos/CampWatch_Logo_trimmed.png', alt: 'Camp Watch logo', height: 36 }}
+                        menuItems={topBarMenuItems}
+                        onRefresh={refreshData}
+                        isRefreshing={isLoading}
+                        actionItems={topBarActions}
+                    />
                     {progressBarData?.progress < 1 && <ProgressBarEl />}
                     <Container
                         maxWidth="xl"
                         sx={{ padding: "20px" }}
                     >
-                        <Container
-                            maxWidth="xl"
-                            disableGutters
-                            sx={{ paddingBottom: "10px" }}
-                        >
-                            <Button
-                                sx={{ justifySelf: "center" }}
-                                color="primary"
-                                variant="contained"
-                                onClick={refreshData}
-                            >
-                                Refresh
-                            </Button>
-                        </Container>
                         <Grid spacing={1} sx={{ justifyContent: "center" }}>
                             <CampgroundsGroups
-                                groups={campgroundsByAreas}
+                                campgrounds={campgroundsByAreas}
                                 settings={settings}
                             />
                         </Grid>
+                        <Box
+                            component="footer"
+                            sx={{
+                                mt: 4,
+                                pt: 2,
+                                borderTop: theme => `1px solid ${theme.palette.divider}`,
+                            }}
+                        >
+                            <Stack
+                                direction={{ xs: 'column', sm: 'row' }}
+                                spacing={1.5}
+                                justifyContent="space-between"
+                                alignItems={{ xs: 'flex-start', sm: 'center' }}
+                            >
+                                <Typography variant="body2" color="text.secondary">
+                                    {useMockData ? 'Mock Recreation.gov data' : 'Live Recreation.gov data'}
+                                </Typography>
+                                <Stack direction="row" spacing={1} alignItems="center">
+                                    <Typography variant="caption" color="text.secondary">
+                                        Color mode
+                                    </Typography>
+                                    <ToggleButtonGroup
+                                        size="small"
+                                        exclusive
+                                        value={colorMode}
+                                        onChange={handleColorModeChange}
+                                        color="primary"
+                                    >
+                                        <ToggleButton value="light">Light</ToggleButton>
+                                        <ToggleButton value="dark">Dark</ToggleButton>
+                                    </ToggleButtonGroup>
+                                </Stack>
+                            </Stack>
+                        </Box>
                     </Container>
                 </ProgressBar.Provider>
             </SiteSettings.Provider>
+            <SiteConfigDialog
+                open={isConfigDialogOpen}
+                onClose={handleCloseConfigDialog}
+                onSave={handleSaveSitesConfig}
+                onResetToDefaults={handleResetSitesConfig}
+                initialData={siteConfig}
+                catalogOptions={catalogOptions}
+            />
         </ThemeProvider>
     );
 };

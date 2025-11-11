@@ -94,11 +94,20 @@ export const flattenData = (data) => {
     return Object.values(data).flat();
 };
 
-export const checkForAppropriateGroups = (campgrounds, groups) => {
-    const filteredForGroups = campgrounds.filter(campground => {
-        return checkForGroupedAvailability(campground);
+export const checkForAppropriateGroups = (campgrounds = [], groups = siteGroups) => {
+    if (!Array.isArray(campgrounds)) return [];
+    const groupList = groups ? Object.values(groups) : [];
+    return campgrounds.map(campground => {
+        const updated = { ...campground };
+        const showHide = { ...(updated.showOrHide ?? {}) };
+        groupList.forEach(group => {
+            if (typeof showHide[group.label] === 'undefined') {
+                showHide[group.label] = group.default ?? true;
+            }
+        });
+        updated.showOrHide = showHide;
+        return updated;
     });
-    return filteredForGroups;
 };
 
 export const formatGroupsByFavorites = (data) => {
@@ -121,11 +130,9 @@ export const formatGroupsByFavorites = (data) => {
         }
     });
 
-    const campgroundGroupsWithAvailability = flattenedData.filter(cg => cg.hasAvailability);
+    const campgroundsWithGroupSettings = checkForAppropriateGroups(flattenedData, siteGroups);
 
-    const campgroundsGroupCheck = checkForAppropriateGroups(campgroundGroupsWithAvailability, siteGroups);
-
-    return campgroundsGroupCheck;
+    return campgroundsWithGroupSettings;
 };
 
 export const formatGroups = (data, removeParent = false, groupByKey = 'area') => {

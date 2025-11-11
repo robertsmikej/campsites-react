@@ -68,10 +68,10 @@ const RangeDay = styled(PickersDay, {
         borderBottomRightRadius: '0%',
         borderTopLeftRadius: 0,
         borderBottomLeftRadius: 0,
-        backgroundImage: `linear-gradient(115deg, ${calendarColors[0]} 65%, #fff 45%)`,
+        backgroundImage: `linear-gradient(115deg, ${calendarColors[0]} 65%, ${theme.palette.background.paper} 45%)`,
         "&:hover, &:focus": {
             backgroundColor: calendarColors[1],
-            backgroundImage: `linear-gradient(125deg, ${calendarColors[1]} 65%, #fff 45%)`,
+            backgroundImage: `linear-gradient(125deg, ${calendarColors[1]} 65%, ${theme.palette.background.paper} 45%)`,
         },
     }),
 }));
