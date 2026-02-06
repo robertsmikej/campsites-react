@@ -14,7 +14,8 @@ import Tooltip from '@mui/material/Tooltip';
 import Switch from '@mui/material/Switch';
 import FormGroup from '@mui/material/FormGroup';
 import FormControlLabel from '@mui/material/FormControlLabel';
-import Alert from '@mui/material/Alert';
+import Checkbox from '@mui/material/Checkbox';
+import Slider from '@mui/material/Slider';
 import MenuItem from '@mui/material/MenuItem';
 import Box from '@mui/material/Box';
 import Accordion from '@mui/material/Accordion';
@@ -122,6 +123,11 @@ const sanitizeCampground = (campground) => {
     };
 };
 
+const ALL_DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const DEFAULT_STAY_RANGE = [2, 5];
+const STAY_MIN = 1;
+const STAY_MAX = 14;
+
 export function SiteConfigDialog({
     open,
     onClose,
@@ -129,12 +135,21 @@ export function SiteConfigDialog({
     onResetToDefaults,
     initialData,
     catalogOptions = [],
+    globalSettings = {},
 }) {
     const [campgrounds, setCampgrounds] = useState([createEmptyCampground()]);
     const [newCampgroundSelection, setNewCampgroundSelection] = useState('');
     const [draggingIndex, setDraggingIndex] = useState(null);
     const [viewMode, setViewMode] = useState('cards');
     const [expandedPanels, setExpandedPanels] = useState(new Set([0]));
+
+    // Global settings state
+    const getStayRange = (stayLengths) => {
+        if (!stayLengths || stayLengths.length === 0) return DEFAULT_STAY_RANGE;
+        return [Math.min(...stayLengths), Math.max(...stayLengths)];
+    };
+    const [stayRange, setStayRange] = useState(() => getStayRange(globalSettings.stayLengths));
+    const [validStartDays, setValidStartDays] = useState(() => globalSettings.validStartDays ?? ALL_DAYS);
 
     const catalogLookup = useMemo(() => {
         return catalogOptions.reduce((acc, option) => {
@@ -171,7 +186,11 @@ export function SiteConfigDialog({
         } else {
             setCampgrounds([createEmptyCampground()]);
         }
-    }, [open, initialCampgrounds]);
+
+        // Reset global settings state when dialog opens
+        setStayRange(getStayRange(globalSettings.stayLengths));
+        setValidStartDays(globalSettings.validStartDays ?? ALL_DAYS);
+    }, [open, initialCampgrounds, globalSettings]);
 
     const updateCampground = (index, updater) => {
         setCampgrounds(prev =>
@@ -328,11 +347,40 @@ export function SiteConfigDialog({
         previousViewMode.current = viewMode;
     }, [viewMode, campgrounds.length]);
 
+    const handleStayRangeChange = (_event, newValue) => {
+        setStayRange(newValue);
+    };
+
+    const handleValidStartDayToggle = (day) => () => {
+        setValidStartDays(prev => {
+            if (prev.includes(day)) {
+                // Don't allow removing all days
+                if (prev.length === 1) return prev;
+                return prev.filter(d => d !== day);
+            }
+            return [...prev, day];
+        });
+    };
+
+    const buildStayLengthsArray = (range) => {
+        const lengths = [];
+        for (let i = range[0]; i <= range[1]; i++) {
+            lengths.push(i);
+        }
+        return lengths;
+    };
+
     const handleSave = () => {
         const sanitizedCampgrounds = campgrounds.map(sanitizeCampground);
         const updatedConfig = { ...(initialData || {}) };
         updatedConfig['recreation.gov'] = sanitizedCampgrounds;
-        onSave?.(updatedConfig);
+
+        const updatedGlobalSettings = {
+            stayLengths: buildStayLengthsArray(stayRange),
+            validStartDays: validStartDays,
+        };
+
+        onSave?.(updatedConfig, updatedGlobalSettings);
     };
 
     const isSaveDisabled = campgrounds.some(
@@ -348,10 +396,66 @@ export function SiteConfigDialog({
         >
             <DialogTitle>Configure Campgrounds</DialogTitle>
             <DialogContent dividers>
-                <Stack spacing={1}>
-                    {/* <Alert severity="info">
-                        Custom campground settings are saved to your browser's local storage. Reset to defaults anytime to restore the built-in list.
-                    </Alert> */}
+                <Stack spacing={2}>
+                    {/* Global Settings Section */}
+                    <Accordion defaultExpanded={false} disableGutters elevation={0} sx={{ border: theme => `1px solid ${theme.palette.divider}`, borderRadius: 1.5 }}>
+                        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                            <Typography variant="subtitle1" fontWeight={500}>Search Settings</Typography>
+                        </AccordionSummary>
+                        <AccordionDetails>
+                            <Stack spacing={3}>
+                                <Box>
+                                    <Typography variant="body2" gutterBottom>
+                                        Stay Length (nights): {stayRange[0]} – {stayRange[1]}
+                                    </Typography>
+                                    <Box sx={{ px: 1 }}>
+                                        <Slider
+                                            value={stayRange}
+                                            onChange={handleStayRangeChange}
+                                            valueLabelDisplay="auto"
+                                            min={STAY_MIN}
+                                            max={STAY_MAX}
+                                            marks={[
+                                                { value: 1, label: '1' },
+                                                { value: 7, label: '7' },
+                                                { value: 14, label: '14' },
+                                            ]}
+                                        />
+                                    </Box>
+                                    <Typography variant="caption" color="text.secondary">
+                                        Only show stays between {stayRange[0]} and {stayRange[1]} nights
+                                    </Typography>
+                                </Box>
+                                <Box>
+                                    <Typography variant="body2" gutterBottom>
+                                        Valid Start Days
+                                    </Typography>
+                                    <FormGroup row>
+                                        {ALL_DAYS.map(day => (
+                                            <FormControlLabel
+                                                key={day}
+                                                control={
+                                                    <Checkbox
+                                                        checked={validStartDays.includes(day)}
+                                                        onChange={handleValidStartDayToggle(day)}
+                                                        size="small"
+                                                    />
+                                                }
+                                                label={day.slice(0, 3)}
+                                            />
+                                        ))}
+                                    </FormGroup>
+                                    <Typography variant="caption" color="text.secondary">
+                                        Only show stays that start on these days
+                                    </Typography>
+                                </Box>
+                            </Stack>
+                        </AccordionDetails>
+                    </Accordion>
+
+                    <Divider />
+
+                    {/* Campground Configuration Section */}
                     <Stack
                         direction={{ xs: 'column', md: 'row' }}
                         spacing={2}

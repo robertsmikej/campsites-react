@@ -205,9 +205,14 @@ export function CampgroundsGroups(props) {
                 }
             });
         });
+        const excluded = campground.excludedMatches ?? { byStayLength: 0, byStartDay: 0 };
+        const totalExcluded = excluded.byStayLength + excluded.byStartDay;
         return {
             totalMatches,
             favoriteMatches,
+            excludedByStayLength: excluded.byStayLength,
+            excludedByStartDay: excluded.byStartDay,
+            totalExcluded,
         };
     };
 
@@ -333,12 +338,12 @@ export function CampgroundsGroups(props) {
                                 <Typography variant='h3'>Campgrounds</Typography>
                                 <Stack direction="row" spacing={1} flexWrap="wrap">
                                     <Chip
-                                        label={`Total: ${orderedCampgrounds.length}`}
+                                        label={`Total Checked: ${orderedCampgrounds.length}`}
                                         variant="outlined"
                                         size="small"
                                     />
                                     <Chip
-                                        label={`With availability: ${availableCampgroundCount}`}
+                                        label={`With Availability: ${availableCampgroundCount}`}
                                         color={availableCampgroundCount > 0 ? 'success' : 'default'}
                                         variant="outlined"
                                         size="small"
@@ -431,7 +436,7 @@ export function CampgroundsGroups(props) {
                                                             <Typography variant='body2' color="text.secondary">
                                                                 {campground.description}
                                                             </Typography>
-                                                            <Stack direction="row" spacing={1}>
+                                                            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                                                                 <Chip
                                                                     label={`Total matches: ${stats.totalMatches}`}
                                                                     size="small"
@@ -442,6 +447,27 @@ export function CampgroundsGroups(props) {
                                                                     color="success"
                                                                     variant="outlined"
                                                                 />
+                                                                {stats.totalExcluded > 0 && (
+                                                                    <Tooltip
+                                                                        title={
+                                                                            <span>
+                                                                                {stats.excludedByStayLength > 0 && (
+                                                                                    <>{stats.excludedByStayLength} excluded by stay length<br /></>
+                                                                                )}
+                                                                                {stats.excludedByStartDay > 0 && (
+                                                                                    <>{stats.excludedByStartDay} excluded by start day</>
+                                                                                )}
+                                                                            </span>
+                                                                        }
+                                                                    >
+                                                                        <Chip
+                                                                            label={`${stats.totalExcluded} excluded by filters`}
+                                                                            size="small"
+                                                                            color="info"
+                                                                            variant="outlined"
+                                                                        />
+                                                                    </Tooltip>
+                                                                )}
                                                             </Stack>
                                                         </Stack>
                                                         <Tooltip title="View map">
@@ -508,6 +534,7 @@ export function CampgroundsGroups(props) {
                                             <TableCell>Campground</TableCell>
                                             <TableCell>Matches</TableCell>
                                             <TableCell>Favorites</TableCell>
+                                            <TableCell>Excluded</TableCell>
                                             <TableCell>Status</TableCell>
                                         </TableRow>
                                     </TableHead>
@@ -555,6 +582,24 @@ export function CampgroundsGroups(props) {
                                                     <TableCell>{stats.totalMatches}</TableCell>
                                                     <TableCell>{stats.favoriteMatches}</TableCell>
                                                     <TableCell>
+                                                        {stats.totalExcluded > 0 ? (
+                                                            <Tooltip
+                                                                title={
+                                                                    <span>
+                                                                        {stats.excludedByStayLength > 0 && (
+                                                                            <>{stats.excludedByStayLength} by stay length<br /></>
+                                                                        )}
+                                                                        {stats.excludedByStartDay > 0 && (
+                                                                            <>{stats.excludedByStartDay} by start day</>
+                                                                        )}
+                                                                    </span>
+                                                                }
+                                                            >
+                                                                <span>{stats.totalExcluded}</span>
+                                                            </Tooltip>
+                                                        ) : '—'}
+                                                    </TableCell>
+                                                    <TableCell>
                                                         {hasCampgroundAvailability ? (
                                                             <Chip size="small" color="success" label="Has matches" />
                                                         ) : (
@@ -571,7 +616,7 @@ export function CampgroundsGroups(props) {
                                                 onDragOver={handleDragOver(ALL_CAMPGROUNDS_KEY)}
                                                 onDrop={handleDropAtEnd(ALL_CAMPGROUNDS_KEY, orderedCampgrounds)}
                                             >
-                                                <TableCell colSpan={5}>
+                                                <TableCell colSpan={6}>
                                                     <Box
                                                         sx={{
                                                             py: 1,

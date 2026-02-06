@@ -2,6 +2,10 @@ import { useEffect, useState } from 'react';
 
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
+import Card from '@mui/material/Card';
+import CardContent from '@mui/material/CardContent';
+import Box from '@mui/material/Box';
+import Chip from '@mui/material/Chip';
 
 import { CampsitesCalendar } from './CampsitesCalendar';
 
@@ -17,22 +21,27 @@ export function CampsitesCalendarParent(props) {
     }, [props.data]);
 
     return (
-        <>
+        <Stack spacing={2}>
             {sites.map((site, siteIndex) => {
                 return (
-                    <Stack key={site.siteId + siteIndex ?? siteIndex}>
-                        <Typography
-                            variant="h6"
-                            sx={{
-                                marginLeft: '20px'
-                            }}
-                        >
-                            Site: {site.siteName}
-                        </Typography>
-                        <CampsitesCalendar site={site} />
-                    </Stack>
+                    <Card key={site.siteId + siteIndex ?? siteIndex} variant="outlined" sx={{ borderRadius: 2 }}>
+                        <CardContent sx={{ p: { xs: 1.5, md: 2 } }}>
+                            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }}>
+                                <Stack spacing={0.25}>
+                                    <Typography variant="h6">Site: {site.siteName}</Typography>
+                                    <Typography variant="body2" color="text.secondary">{site.loop ?? 'Primary loop'}</Typography>
+                                </Stack>
+                                <Stack direction="row" spacing={1} flexWrap="wrap" rowGap={0.5}>
+                                    <Chip size="small" label={site.campsite_type ?? 'Standard'} />
+                                    {site.max_num_people && <Chip size="small" label={`Up to ${site.max_num_people} people`} />}
+                                    {site.max_vehicle_length && <Chip size="small" label={`Vehicle ${site.max_vehicle_length} ft`} />}
+                                </Stack>
+                            </Stack>
+                            <CampsitesCalendar site={site} campground={props.campground} />
+                        </CardContent>
+                    </Card>
                 )
             })}
-        </>
+        </Stack>
     );
 }

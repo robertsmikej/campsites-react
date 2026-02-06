@@ -47,30 +47,37 @@ const writeMapToStorage = (key, value) => {
 
 const getCampgroundStorageId = (campground) => campground?.id ?? campground?.name ?? '';
 
+const getInitialExpandedState = (campground) => {
+    if (!campground?.sitesGroupedByFavorites) return {};
+    const campgroundId = getCampgroundStorageId(campground);
+    const storedExpandedMap = readMapFromStorage(SECTION_EXPANDED_KEY);
+    return Object.keys(campground.sitesGroupedByFavorites || {}).reduce((acc, key) => {
+        const saved = storedExpandedMap[campgroundId]?.[key];
+        const isHiddenBySetting = !campground.showOrHide?.[key];
+        // If hidden by setting, always start collapsed; otherwise use saved state or default to expanded
+        acc[key] = isHiddenBySetting ? false : (typeof saved === 'boolean' ? saved : true);
+        return acc;
+    }, {});
+};
+
+const getInitialSectionViews = (campground) => {
+    if (!campground) return {};
+    const campgroundId = getCampgroundStorageId(campground);
+    const storedViewsMap = readMapFromStorage(SECTION_VIEWS_KEY);
+    return storedViewsMap[campgroundId] ?? {};
+};
+
 export function Campground({ campground: campgroundProp, viewMode }) {
     const siteSettings = useContext(SiteSettings);
 
-    const [campground, setCampground] = useState({});
-    const [expandedSections, setExpandedSections] = useState({});
-    const [sectionViews, setSectionViews] = useState({});
+    // Initialize state synchronously to avoid flash of wrong expanded state
+    const [expandedSections, setExpandedSections] = useState(() => getInitialExpandedState(campgroundProp));
+    const [sectionViews, setSectionViews] = useState(() => getInitialSectionViews(campgroundProp));
 
+    // Update state when campgroundProp changes (e.g., settings updated)
     useEffect(() => {
-        setCampground(campgroundProp);
-    }, [campgroundProp]);
-
-    useEffect(() => {
-        if (!campgroundProp?.sitesGroupedByFavorites) return;
-        const campgroundId = getCampgroundStorageId(campgroundProp);
-        const storedExpandedMap = readMapFromStorage(SECTION_EXPANDED_KEY);
-        const storedViewsMap = readMapFromStorage(SECTION_VIEWS_KEY);
-
-        const initialState = Object.keys(campgroundProp.sitesGroupedByFavorites || {}).reduce((acc, key) => {
-            const saved = storedExpandedMap[campgroundId]?.[key];
-            acc[key] = typeof saved === 'boolean' ? saved : true;
-            return acc;
-        }, {});
-        setExpandedSections(initialState);
-        setSectionViews(storedViewsMap[campgroundId] ?? {});
+        setExpandedSections(getInitialExpandedState(campgroundProp));
+        setSectionViews(getInitialSectionViews(campgroundProp));
     }, [campgroundProp]);
 
     const effectiveView = useMemo(() => {
@@ -84,15 +91,15 @@ export function Campground({ campground: campgroundProp, viewMode }) {
     };
 
     useEffect(() => {
-        const storageId = getCampgroundStorageId(campground);
+        const storageId = getCampgroundStorageId(campgroundProp);
         if (!storageId || Object.keys(expandedSections).length === 0) return;
         const stored = readMapFromStorage(SECTION_EXPANDED_KEY);
         stored[storageId] = expandedSections;
         writeMapToStorage(SECTION_EXPANDED_KEY, stored);
-    }, [expandedSections, campground?.id, campground?.name]);
+    }, [expandedSections, campgroundProp?.id, campgroundProp?.name]);
 
     useEffect(() => {
-        const storageId = getCampgroundStorageId(campground);
+        const storageId = getCampgroundStorageId(campgroundProp);
         if (!storageId) return;
         const stored = readMapFromStorage(SECTION_VIEWS_KEY);
         if (Object.keys(sectionViews).length === 0) {
@@ -101,7 +108,7 @@ export function Campground({ campground: campgroundProp, viewMode }) {
             stored[storageId] = sectionViews;
         }
         writeMapToStorage(SECTION_VIEWS_KEY, stored);
-    }, [sectionViews, campground?.id, campground?.name]);
+    }, [sectionViews, campgroundProp?.id, campgroundProp?.name]);
 
     const toggleSection = (type) => () => {
         setExpandedSections(prev => {
@@ -121,7 +128,7 @@ export function Campground({ campground: campgroundProp, viewMode }) {
         }));
     };
 
-    if (!campground?.sitesGroupedByFavorites) {
+    if (!campgroundProp?.sitesGroupedByFavorites) {
         return null;
     }
 
@@ -137,40 +144,41 @@ export function Campground({ campground: campgroundProp, viewMode }) {
         if (sectionView === 'table') {
             return (
                 <CampsitesTable
-                    key={`${campground.name}-${typeIndex}-table`}
+                    key={`${campgroundProp.name}-${typeIndex}-table`}
                     data={group}
                     site={type}
-                    campground={campground}
+                    campground={campgroundProp}
                 />
             );
         }
         return (
             <CampsitesCalendarParent
-                key={`${campground.name}-${typeIndex}-calendar`}
+                key={`${campgroundProp.name}-${typeIndex}-calendar`}
                 data={group}
                 type={type}
-                campground={campground}
+                campground={campgroundProp}
             />
         );
     };
 
     return (
-        <Stack key={campground.name} spacing={2}>
-            {Object.keys(campground.sitesGroupedByFavorites).map((type, typeIndex) => {
-                const group = campground.sitesGroupedByFavorites[type];
-                if (!campground.showOrHide[type]) {
-                    return null;
-                }
+        <Stack key={campgroundProp.name} spacing={2}>
+            {Object.keys(campgroundProp.sitesGroupedByFavorites).map((type, typeIndex) => {
+                const group = campgroundProp.sitesGroupedByFavorites[type];
                 const hasPreferenceAvailability = checkForAvailabilityInArray(group);
                 if (!hasPreferenceAvailability) {
                     return null;
                 }
+                const isHiddenBySetting = !campgroundProp.showOrHide?.[type];
                 const matchCount = getMatchCount(group);
-                const expanded = expandedSections[type] ?? hasPreferenceAvailability;
+                // Default to collapsed if hidden by setting, otherwise use stored state or default to expanded
+                const expanded = isHiddenBySetting
+                    ? (expandedSections[type] ?? false)
+                    : (expandedSections[type] ?? hasPreferenceAvailability);
                 const sectionView = overridesEnabled ? (sectionViews[type] ?? effectiveView) : effectiveView;
                 return (
                     <Card
-                        key={campground.name + typeIndex}
+                        key={campgroundProp.name + typeIndex}
                         variant="outlined"
                     // sx={{ borderRadius: 2, borderColor: expanded ? 'primary.light' : 'divider' }}
                     >
@@ -179,6 +187,9 @@ export function Campground({ campground: campgroundProp, viewMode }) {
                                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ sm: 'center' }}>
                                     <Typography variant='h6'>{type}</Typography>
                                     <Chip size="small" label={`${matchCount} stays available`} color="primary" variant="outlined" />
+                                    {isHiddenBySetting && (
+                                        <Chip size="small" label="Hidden by settings" color="default" variant="outlined" sx={{ opacity: 0.7 }} />
+                                    )}
                                 </Stack>
                             }
                             action={
@@ -211,7 +222,7 @@ export function Campground({ campground: campgroundProp, viewMode }) {
                                     </Tooltip>
                                 </Stack>
                             }
-                            sx={{ pb: 0.5 }}
+                            sx={{ pb: expanded ? 0.5 : 1.5 }}
                         />
                         <Collapse in={expanded} timeout="auto" unmountOnExit>
                             <CardContent sx={{ pt: 1.5 }}>

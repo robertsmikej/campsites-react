@@ -7,8 +7,8 @@ export const defaultCampgroundConfigurations = {
                 worthwhile: [],
             },
             dates: {
-                startDate: '2025-09-01',
-                endDate: '2025-10-01',
+                startDate: '2026-06-01',
+                endDate: '2026-10-01',
             },
             showOrHide: {
                 'Favorites': true,
@@ -23,8 +23,8 @@ export const defaultCampgroundConfigurations = {
                 worthwhile: [],
             },
             dates: {
-                startDate: '2025-09-01',
-                endDate: '2025-10-01',
+                startDate: '2026-06-01',
+                endDate: '2026-10-01',
             },
             showOrHide: {
                 'Favorites': true,
@@ -39,8 +39,8 @@ export const defaultCampgroundConfigurations = {
                 worthwhile: [],
             },
             dates: {
-                startDate: '2025-09-01',
-                endDate: '2025-11-01',
+                startDate: '2026-06-01',
+                endDate: '2026-10-01',
             },
             showOrHide: {
                 'Favorites': true,
@@ -55,8 +55,8 @@ export const defaultCampgroundConfigurations = {
                 worthwhile: [],
             },
             dates: {
-                startDate: '2025-09-01',
-                endDate: '2025-10-01',
+                startDate: '2026-06-01',
+                endDate: '2026-10-01',
             },
             showOrHide: {
                 'Favorites': true,
@@ -71,8 +71,8 @@ export const defaultCampgroundConfigurations = {
                 worthwhile: [],
             },
             dates: {
-                startDate: '2025-09-01',
-                endDate: '2025-10-01',
+                startDate: '2026-06-01',
+                endDate: '2026-10-01',
             },
             showOrHide: {
                 'Favorites': true,
@@ -87,8 +87,8 @@ export const defaultCampgroundConfigurations = {
                 worthwhile: ['009', '010', '011', '012'],
             },
             dates: {
-                startDate: '2025-09-01',
-                endDate: '2025-10-01',
+                startDate: '2026-06-01',
+                endDate: '2026-10-01',
             },
             showOrHide: {
                 'Favorites': true,
@@ -103,8 +103,8 @@ export const defaultCampgroundConfigurations = {
                 worthwhile: ['012', '011', '010', '008', '006'],
             },
             dates: {
-                startDate: '2025-09-01',
-                endDate: '2025-10-01',
+                startDate: '2026-06-01',
+                endDate: '2026-10-01',
             },
             showOrHide: {
                 'Favorites': true,
@@ -119,8 +119,8 @@ export const defaultCampgroundConfigurations = {
                 worthwhile: [],
             },
             dates: {
-                startDate: '2025-09-01',
-                endDate: '2025-10-01',
+                startDate: '2026-06-01',
+                endDate: '2026-10-01',
             },
             showOrHide: {
                 'Favorites': true,
@@ -135,8 +135,8 @@ export const defaultCampgroundConfigurations = {
                 worthwhile: [],
             },
             dates: {
-                startDate: '2025-10-01',
-                endDate: '2026-01-01',
+                startDate: '2026-06-01',
+                endDate: '2026-10-01',
             },
             showOrHide: {
                 'Favorites': true,
