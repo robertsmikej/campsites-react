@@ -71,12 +71,12 @@ const getInitialGlobalSettings = () => {
 
 const getInitialColorMode = () => {
     if (typeof window === 'undefined') {
-        return settingsObject?.appearance?.mode ?? 'dark';
+        return settingsObject?.appearance?.mode ?? 'light';
     }
     try {
-        return localStorage.getItem(COLOR_MODE_STORAGE_KEY) ?? settingsObject?.appearance?.mode ?? 'dark';
+        return localStorage.getItem(COLOR_MODE_STORAGE_KEY) ?? settingsObject?.appearance?.mode ?? 'light';
     } catch {
-        return settingsObject?.appearance?.mode ?? 'dark';
+        return settingsObject?.appearance?.mode ?? 'light';
     }
 };
 

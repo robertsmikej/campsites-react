@@ -177,7 +177,7 @@ const getComponents = (palette, shape) => ({
     },
 });
 
-export const createAppTheme = (mode = 'dark', overrides = {}) => {
+export const createAppTheme = (mode = 'light', overrides = {}) => {
     const palette = {
         ...basePalette,
         ...(paletteByMode[mode] ?? paletteByMode.dark),

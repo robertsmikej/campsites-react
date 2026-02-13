@@ -120,9 +120,6 @@ export const formatGroupsByFavorites = (data) => {
         campground.hasAvailability = false;
         campground.sitesGroupedByFavorites = getEmptyGroupedSites();
 
-        const matchCount = Object.values(campground.siteAvailability || {}).reduce((sum, site) => sum + (site.matches?.length || 0), 0);
-        console.log(`[formatGroupsByFavorites] ${campground.name || campground.id}: ${matchCount} matches in siteAvailability`);
-
         for (let siteId in campground.siteAvailability) {
             const site = campground.siteAvailability[siteId];
             if (site.matches?.length > 0) {
@@ -140,12 +137,7 @@ export const formatGroupsByFavorites = (data) => {
 
     const campgroundsWithGroupSettings = checkForAppropriateGroups(flattenedData, siteGroups);
 
-    // Sort so campgrounds with availability appear first
-    campgroundsWithGroupSettings.sort((a, b) => {
-        const aHas = a.hasAvailability ? 1 : 0;
-        const bHas = b.hasAvailability ? 1 : 0;
-        return bHas - aHas; // descending: true (1) before false (0)
-    });
+    // Preserve user-configured order from siteConfig - do not re-sort
 
     return campgroundsWithGroupSettings;
 };

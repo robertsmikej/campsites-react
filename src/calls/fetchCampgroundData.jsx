@@ -355,6 +355,19 @@ const calculateExcludedMatches = (data, settings) => {
     return data;
 };
 
+// Reorder results to match the order specified in siteConfig
+const reorderResultsByConfig = (results, siteConfig) => {
+    const reordered = {};
+    for (const system in siteConfig) {
+        if (!results[system]) continue;
+        const configOrder = siteConfig[system].map(c => c.id);
+        reordered[system] = configOrder
+            .map(id => results[system].find(c => c.id === id))
+            .filter(Boolean);
+    }
+    return reordered;
+};
+
 export const fetchCampgrounds = async (
     sites,
     settings,
@@ -374,7 +387,8 @@ export const fetchCampgrounds = async (
         console.info(`Using Cached Data at ${getLocalCurrentTime()}`);
         // Calculate excluded matches based on current settings (may have changed since cache was created)
         calculateExcludedMatches(cached, settings);
-        return cached;
+        // Reorder to match current siteConfig order
+        return reorderResultsByConfig(cached, sites);
     }
 
     const siteFetchMap = getSiteFetchMap(sites, settings);
@@ -394,10 +408,13 @@ export const fetchCampgrounds = async (
 
     const results = processApiResults(allResults, siteFetchMap, settings);
 
+    // Reorder to match siteConfig order
+    const orderedResults = reorderResultsByConfig(results, sites);
+
     if (!useMockData) {
-        setCache(cacheKey, results);
+        setCache(cacheKey, orderedResults);
     }
-    return results;
+    return orderedResults;
 };
 
 export const getAllDatesInRange = (start, end) => {

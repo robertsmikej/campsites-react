@@ -24,14 +24,12 @@ import TableRow from '@mui/material/TableRow';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import MapIcon from '@mui/icons-material/Map';
 import TableChartIcon from '@mui/icons-material/TableChart';
-import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 
 import { checkForGroupedAvailability } from '../utils/utils';
 import { Campground } from './Campground';
 
 const VIEW_MODE_STORAGE_KEY = 'campgrounds-view-mode';
 const EXPANDED_GROUPS_STORAGE_KEY = 'campgrounds-expanded-groups';
-const GROUP_ORDER_STORAGE_KEY = 'campgrounds-order';
 const ALL_CAMPGROUNDS_KEY = 'all-campgrounds';
 
 const safeParse = (value, fallback) => {
@@ -63,10 +61,7 @@ export function CampgroundsGroups(props) {
     const [campgrounds, setCampgrounds] = useState([]);
     const [viewMode, setViewMode] = useState(() => storedViewRef.current ?? props.settings?.views?.type ?? 'calendar');
     const [expandedCampgrounds, setExpandedCampgrounds] = useState(() => readObjectFromStorage(EXPANDED_GROUPS_STORAGE_KEY, {}));
-    const [groupOrders, setGroupOrders] = useState(() => readObjectFromStorage(GROUP_ORDER_STORAGE_KEY, {}));
     const [imagePreview, setImagePreview] = useState({ open: false, src: '', alt: '' });
-    const [draggingCampground, setDraggingCampground] = useState(null);
-    const [dragOverCampground, setDragOverCampground] = useState(null);
 
     // useEffect(() => {
     //     // console.log('props: ', props);
@@ -96,21 +91,6 @@ export function CampgroundsGroups(props) {
             }
             return next;
         });
-        setGroupOrders(prev => {
-            const next = { ...prev };
-            const ids = flattenedCampgrounds.map(getCampgroundId);
-            if (!next[ALL_CAMPGROUNDS_KEY]) {
-                next[ALL_CAMPGROUNDS_KEY] = ids;
-            } else {
-                next[ALL_CAMPGROUNDS_KEY] = next[ALL_CAMPGROUNDS_KEY].filter(id => ids.includes(id));
-                ids.forEach(id => {
-                    if (!next[ALL_CAMPGROUNDS_KEY].includes(id)) {
-                        next[ALL_CAMPGROUNDS_KEY].push(id);
-                    }
-                });
-            }
-            return next;
-        });
     }, [props.campgrounds]);
 
     useEffect(() => {
@@ -133,10 +113,6 @@ export function CampgroundsGroups(props) {
     useEffect(() => {
         writeObjectToStorage(VIEW_MODE_STORAGE_KEY, viewMode);
     }, [viewMode]);
-
-    useEffect(() => {
-        writeObjectToStorage(GROUP_ORDER_STORAGE_KEY, groupOrders);
-    }, [groupOrders]);
 
     useEffect(() => {
         writeObjectToStorage(EXPANDED_GROUPS_STORAGE_KEY, expandedCampgrounds);
@@ -184,10 +160,6 @@ export function CampgroundsGroups(props) {
 
     const handleImageOpen = (src, alt) => () => setImagePreview({ open: true, src, alt });
     const handleImageClose = () => setImagePreview({ open: false, src: '', alt: '' });
-    const resetDragState = () => {
-        setDraggingCampground(null);
-        setDragOverCampground(null);
-    };
 
     const getCampgroundId = (campground) => campground?.id ?? campground?.name ?? `${campground?.area ?? 'camp'}-${campground?.description ?? ''}`;
 
@@ -215,88 +187,7 @@ export function CampgroundsGroups(props) {
         };
     };
 
-    const getOrderedCampgrounds = (groupKey, campgrounds = []) => {
-        const order = groupOrders[groupKey];
-        if (!order?.length) {
-            return campgrounds;
-        }
-        const lookup = new Map(campgrounds.map(campground => [getCampgroundId(campground), campground]));
-        const seen = new Set();
-        const ordered = [];
-
-        order.forEach(id => {
-            const match = lookup.get(id);
-            if (match) {
-                ordered.push(match);
-                seen.add(id);
-            }
-        });
-
-        campgrounds.forEach(campground => {
-            const id = getCampgroundId(campground);
-            if (!seen.has(id)) {
-                ordered.push(campground);
-            }
-        });
-
-        return ordered;
-    };
-
-    const handleReorderCampground = (groupKey, orderedCampgrounds, sourceId, targetId) => {
-        if (sourceId === targetId) return;
-        setGroupOrders(prev => {
-            const baseOrder = prev[groupKey] ?? orderedCampgrounds.map(getCampgroundId);
-            const currentOrder = [...baseOrder];
-            const fromIndex = currentOrder.indexOf(sourceId);
-            if (fromIndex === -1) {
-                return prev;
-            }
-            const [moved] = currentOrder.splice(fromIndex, 1);
-            let insertIndex = typeof targetId === 'string' ? currentOrder.indexOf(targetId) : currentOrder.length;
-            if (insertIndex === -1) {
-                insertIndex = currentOrder.length;
-            }
-            currentOrder.splice(insertIndex, 0, moved);
-            return {
-                ...prev,
-                [groupKey]: currentOrder,
-            };
-        });
-    };
-
-    const handleDragStart = (groupKey, campgroundId) => (event) => {
-        setDraggingCampground({ groupKey, id: campgroundId });
-        event.dataTransfer.effectAllowed = 'move';
-        event.dataTransfer.setData('text/plain', campgroundId);
-    };
-
-    const handleDragEnter = (groupKey, targetId) => (event) => {
-        if (draggingCampground?.groupKey !== groupKey) return;
-        event.preventDefault();
-        setDragOverCampground({ groupKey, id: targetId });
-    };
-
-    const handleDragOver = (groupKey) => (event) => {
-        if (draggingCampground?.groupKey !== groupKey) return;
-        event.preventDefault();
-    };
-
-    const handleDropOnRow = (groupKey, orderedCampgrounds, targetId) => (event) => {
-        event.preventDefault();
-        if (!draggingCampground || draggingCampground.groupKey !== groupKey) return;
-        handleReorderCampground(groupKey, orderedCampgrounds, draggingCampground.id, targetId);
-        resetDragState();
-    };
-
-    const handleDropAtEnd = (groupKey, orderedCampgrounds) => (event) => {
-        event.preventDefault();
-        if (!draggingCampground || draggingCampground.groupKey !== groupKey) return;
-        handleReorderCampground(groupKey, orderedCampgrounds, draggingCampground.id, null);
-        resetDragState();
-    };
-
-    const orderedCampgrounds = getOrderedCampgrounds(ALL_CAMPGROUNDS_KEY, campgrounds);
-    const availableCampgroundCount = orderedCampgrounds.filter(checkForGroupedAvailability).length;
+    const availableCampgroundCount = campgrounds.filter(checkForGroupedAvailability).length;
 
     return (
         <Stack spacing={3}>
@@ -322,7 +213,7 @@ export function CampgroundsGroups(props) {
                     </ToggleButton>
                 </ToggleButtonGroup>
             </Stack>
-            {orderedCampgrounds.length === 0 ? (
+            {campgrounds.length === 0 ? (
                 <Paper variant="outlined" sx={{ p: { xs: 2, md: 3 }, borderRadius: 2 }}>
                     <Typography variant="body1">No campgrounds configured yet.</Typography>
                 </Paper>
@@ -337,7 +228,7 @@ export function CampgroundsGroups(props) {
                                 <Typography variant='h3'>Campgrounds</Typography>
                                 <Stack direction="row" spacing={1} flexWrap="wrap">
                                     <Chip
-                                        label={`Total Checked: ${orderedCampgrounds.length}`}
+                                        label={`Total Checked: ${campgrounds.length}`}
                                         variant="outlined"
                                         size="small"
                                     />
@@ -353,7 +244,7 @@ export function CampgroundsGroups(props) {
                                 <Stack direction="row" spacing={1}>
                                     <Button
                                         size="small"
-                                        onClick={() => expandAllForGroup(ALL_CAMPGROUNDS_KEY, orderedCampgrounds)}
+                                        onClick={() => expandAllForGroup(ALL_CAMPGROUNDS_KEY, campgrounds)}
                                     >
                                         Expand all
                                     </Button>
@@ -374,7 +265,7 @@ export function CampgroundsGroups(props) {
                                     columnGap: 4,
                                 }}
                             >
-                                {orderedCampgrounds.map((campground, campgroundIndex) => {
+                                {campgrounds.map((campground, campgroundIndex) => {
                                     const hasCampgroundAvailability = checkForGroupedAvailability(campground);
                                     const campgroundImage = campground.image?.length > 0 ? '/images/sites/' + campground.image : '/images/sites/bg_default.jpg';
                                     const stats = getCampgroundStats(campground);
@@ -414,7 +305,6 @@ export function CampgroundsGroups(props) {
                                                                 direction={{ xs: 'column', sm: 'row' }}
                                                                 spacing={1}
                                                                 alignItems={{ xs: 'flex-start' }}
-                                                                fullWidth
                                                                 justifyContent={'space-between'}
                                                             >
                                                                 <Typography variant='h5'>{campground.name}</Typography>
@@ -544,7 +434,6 @@ export function CampgroundsGroups(props) {
                                 <Table size="small">
                                     <TableHead>
                                         <TableRow>
-                                            <TableCell width="90">Order</TableCell>
                                             <TableCell>Campground</TableCell>
                                             <TableCell>Matches</TableCell>
                                             <TableCell>Favorites</TableCell>
@@ -553,40 +442,15 @@ export function CampgroundsGroups(props) {
                                         </TableRow>
                                     </TableHead>
                                     <TableBody>
-                                        {orderedCampgrounds.map((campground) => {
+                                        {campgrounds.map((campground) => {
                                             const campgroundId = getCampgroundId(campground);
                                             const stats = getCampgroundStats(campground);
                                             const hasCampgroundAvailability = checkForGroupedAvailability(campground);
-                                            const isDragging =
-                                                draggingCampground?.groupKey === ALL_CAMPGROUNDS_KEY && draggingCampground?.id === campgroundId;
-                                            const isDragOver =
-                                                dragOverCampground?.groupKey === ALL_CAMPGROUNDS_KEY && dragOverCampground?.id === campgroundId;
                                             return (
                                                 <TableRow
                                                     hover
                                                     key={campgroundId}
-                                                    draggable
-                                                    aria-label={`Reorder ${campground.name}`}
-                                                    aria-grabbed={isDragging}
-                                                    onDragStart={handleDragStart(ALL_CAMPGROUNDS_KEY, campgroundId)}
-                                                    onDragEnd={resetDragState}
-                                                    onDragEnter={handleDragEnter(ALL_CAMPGROUNDS_KEY, campgroundId)}
-                                                    onDragOver={handleDragOver(ALL_CAMPGROUNDS_KEY)}
-                                                    onDrop={handleDropOnRow(ALL_CAMPGROUNDS_KEY, orderedCampgrounds, campgroundId)}
-                                                    sx={{
-                                                        cursor: 'grab',
-                                                        opacity: isDragging ? 0.5 : 1,
-                                                        border: isDragOver ? (theme => `2px dashed ${theme.palette.primary.main}`) : undefined,
-                                                    }}
                                                 >
-                                                    <TableCell>
-                                                        <Stack direction="row" spacing={0.5} alignItems="center">
-                                                            <DragIndicatorIcon fontSize="small" color="action" />
-                                                            <Typography variant="caption" color="text.secondary">
-                                                                Drag
-                                                            </Typography>
-                                                        </Stack>
-                                                    </TableCell>
                                                     <TableCell>
                                                         <Stack spacing={0.25}>
                                                             <Typography variant="body1">{campground.name}</Typography>
@@ -623,29 +487,6 @@ export function CampgroundsGroups(props) {
                                                 </TableRow>
                                             );
                                         })}
-                                        {draggingCampground?.groupKey === ALL_CAMPGROUNDS_KEY && (
-                                            <TableRow
-                                                hover={false}
-                                                key="drop-zone"
-                                                onDragOver={handleDragOver(ALL_CAMPGROUNDS_KEY)}
-                                                onDrop={handleDropAtEnd(ALL_CAMPGROUNDS_KEY, orderedCampgrounds)}
-                                            >
-                                                <TableCell colSpan={6}>
-                                                    <Box
-                                                        sx={{
-                                                            py: 1,
-                                                            border: theme => `1px dashed ${theme.palette.primary.light}`,
-                                                            borderRadius: 1,
-                                                            textAlign: 'center',
-                                                        }}
-                                                    >
-                                                        <Typography variant="caption" color="text.secondary">
-                                                            Drop here to move to end
-                                                        </Typography>
-                                                    </Box>
-                                                </TableCell>
-                                            </TableRow>
-                                        )}
                                     </TableBody>
                                 </Table>
                             </TableContainer>
