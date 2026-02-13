@@ -5,26 +5,22 @@ import { getMockApiResponse } from '../json/mockRecreationApi';
 export const CACHE_DURATION_MS = 30 * 60 * 1000; // 30 minutes
 const DELAY_BETWEEN_REQUESTS_MS = 5; // Delay in ms between each API call (increased to avoid rate limiting)
 
+const countMatches = (dataObj) => {
+    return Object.values(dataObj || {}).flat().reduce((total, campground) => {
+        return total + Object.values(campground?.siteAvailability || {}).reduce((sum, site) => sum + (site.matches?.length || 0), 0);
+    }, 0);
+};
+
 const setCache = (key, data) => {
     // Calculate total matches in new data
-    let newMatchCount = 0;
-    for (const system in data) {
-        (data[system] || []).forEach(campground => {
-            newMatchCount += Object.values(campground.siteAvailability || {}).reduce((sum, site) => sum + (site.matches?.length || 0), 0);
-        });
-    }
+    const newMatchCount = countMatches(data);
 
     // Check if existing cache has more matches (don't overwrite good data with empty data)
     const existingStr = localStorage.getItem(key);
     if (existingStr) {
         try {
             const existing = JSON.parse(existingStr);
-            let existingMatchCount = 0;
-            for (const system in existing.data) {
-                (existing.data[system] || []).forEach(campground => {
-                    existingMatchCount += Object.values(campground.siteAvailability || {}).reduce((sum, site) => sum + (site.matches?.length || 0), 0);
-                });
-            }
+            const existingMatchCount = countMatches(existing.data);
             if (existingMatchCount > 0 && newMatchCount === 0) {
                 console.log(`[Cache] BLOCKED: Not overwriting cache with ${existingMatchCount} matches with empty data`);
                 return;
