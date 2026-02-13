@@ -4,7 +4,6 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
-import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
 
 import { CampsitesCalendar } from './CampsitesCalendar';

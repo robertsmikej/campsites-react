@@ -96,7 +96,7 @@ export function Campground({ campground: campgroundProp, viewMode }) {
         const stored = readMapFromStorage(SECTION_EXPANDED_KEY);
         stored[storageId] = expandedSections;
         writeMapToStorage(SECTION_EXPANDED_KEY, stored);
-    }, [expandedSections, campgroundProp?.id, campgroundProp?.name]);
+    }, [expandedSections, campgroundProp]);
 
     useEffect(() => {
         const storageId = getCampgroundStorageId(campgroundProp);
@@ -108,7 +108,7 @@ export function Campground({ campground: campgroundProp, viewMode }) {
             stored[storageId] = sectionViews;
         }
         writeMapToStorage(SECTION_VIEWS_KEY, stored);
-    }, [sectionViews, campgroundProp?.id, campgroundProp?.name]);
+    }, [sectionViews, campgroundProp]);
 
     const toggleSection = (type) => () => {
         setExpandedSections(prev => {
