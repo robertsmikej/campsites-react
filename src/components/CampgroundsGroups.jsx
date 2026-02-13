@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from 'react';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import Divider from '@mui/material/Divider';
-import Alert from '@mui/material/Alert';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Paper from '@mui/material/Paper';
@@ -205,9 +204,14 @@ export function CampgroundsGroups(props) {
                 }
             });
         });
+        const excluded = campground.excludedMatches ?? { byStayLength: 0, byStartDay: 0 };
+        const totalExcluded = excluded.byStayLength + excluded.byStartDay;
         return {
             totalMatches,
             favoriteMatches,
+            excludedByStayLength: excluded.byStayLength,
+            excludedByStartDay: excluded.byStartDay,
+            totalExcluded,
         };
     };
 
@@ -333,12 +337,12 @@ export function CampgroundsGroups(props) {
                                 <Typography variant='h3'>Campgrounds</Typography>
                                 <Stack direction="row" spacing={1} flexWrap="wrap">
                                     <Chip
-                                        label={`Total: ${orderedCampgrounds.length}`}
+                                        label={`Total Checked: ${orderedCampgrounds.length}`}
                                         variant="outlined"
                                         size="small"
                                     />
                                     <Chip
-                                        label={`With availability: ${availableCampgroundCount}`}
+                                        label={`With Availability: ${availableCampgroundCount}`}
                                         color={availableCampgroundCount > 0 ? 'success' : 'default'}
                                         variant="outlined"
                                         size="small"
@@ -389,6 +393,7 @@ export function CampgroundsGroups(props) {
                                                 sx={{
                                                     border: theme => `1px solid ${theme.palette.divider}`,
                                                     borderRadius: 1.5,
+                                                    overflow: 'hidden',
                                                     '&::before': { display: 'none' },
                                                 }}
                                             >
@@ -405,33 +410,47 @@ export function CampgroundsGroups(props) {
                                                 >
                                                     <Stack direction="row" spacing={1} alignItems="center" sx={{ flexGrow: 1 }}>
                                                         <Stack spacing={1} sx={{ flexGrow: 1 }}>
-                                                            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ sm: 'center' }}>
+                                                            <Stack
+                                                                direction={{ xs: 'column', sm: 'row' }}
+                                                                spacing={1}
+                                                                alignItems={{ xs: 'flex-start' }}
+                                                                fullWidth
+                                                                justifyContent={'space-between'}
+                                                            >
                                                                 <Typography variant='h5'>{campground.name}</Typography>
-                                                                <Chip
-                                                                    label={campground.area}
-                                                                    size="small"
-                                                                    color="secondary"
-                                                                    variant="outlined"
-                                                                />
-                                                            </Stack>
-
-                                                            {!hasCampgroundAvailability && (
                                                                 <Stack
                                                                     direction="row"
+                                                                    spacing={1}
+                                                                    alignItems={'center'}
+                                                                    justifyContent={'space-between'}
+                                                                    sx={{ flex: 1 }}
                                                                 >
+                                                                    {!hasCampgroundAvailability ? (
+                                                                        <Chip
+                                                                            label="No availability"
+                                                                            size="small"
+                                                                            color="warning"
+                                                                            variant="filled"
+                                                                        />
+                                                                    ) : (
+                                                                        <span />
+                                                                    )}
                                                                     <Chip
-                                                                        label="No availability"
+                                                                        label={campground.area}
                                                                         size="small"
-                                                                        color="warning"
-                                                                        variant="filled"
+                                                                        color="secondary"
+                                                                        variant="outlined"
+                                                                        sx={{ backgroundColor: 'white' }}
                                                                     />
                                                                 </Stack>
-                                                            )}
+                                                            </Stack>
+
+
 
                                                             <Typography variant='body2' color="text.secondary">
                                                                 {campground.description}
                                                             </Typography>
-                                                            <Stack direction="row" spacing={1}>
+                                                            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                                                                 <Chip
                                                                     label={`Total matches: ${stats.totalMatches}`}
                                                                     size="small"
@@ -442,6 +461,27 @@ export function CampgroundsGroups(props) {
                                                                     color="success"
                                                                     variant="outlined"
                                                                 />
+                                                                {stats.totalExcluded > 0 && (
+                                                                    <Tooltip
+                                                                        title={
+                                                                            <span>
+                                                                                {stats.excludedByStayLength > 0 && (
+                                                                                    <>{stats.excludedByStayLength} excluded by stay length<br /></>
+                                                                                )}
+                                                                                {stats.excludedByStartDay > 0 && (
+                                                                                    <>{stats.excludedByStartDay} excluded by start day</>
+                                                                                )}
+                                                                            </span>
+                                                                        }
+                                                                    >
+                                                                        <Chip
+                                                                            label={`${stats.totalExcluded} excluded by filters`}
+                                                                            size="small"
+                                                                            color="info"
+                                                                            variant="outlined"
+                                                                        />
+                                                                    </Tooltip>
+                                                                )}
                                                             </Stack>
                                                         </Stack>
                                                         <Tooltip title="View map">
@@ -508,6 +548,7 @@ export function CampgroundsGroups(props) {
                                             <TableCell>Campground</TableCell>
                                             <TableCell>Matches</TableCell>
                                             <TableCell>Favorites</TableCell>
+                                            <TableCell>Excluded</TableCell>
                                             <TableCell>Status</TableCell>
                                         </TableRow>
                                     </TableHead>
@@ -555,6 +596,24 @@ export function CampgroundsGroups(props) {
                                                     <TableCell>{stats.totalMatches}</TableCell>
                                                     <TableCell>{stats.favoriteMatches}</TableCell>
                                                     <TableCell>
+                                                        {stats.totalExcluded > 0 ? (
+                                                            <Tooltip
+                                                                title={
+                                                                    <span>
+                                                                        {stats.excludedByStayLength > 0 && (
+                                                                            <>{stats.excludedByStayLength} by stay length<br /></>
+                                                                        )}
+                                                                        {stats.excludedByStartDay > 0 && (
+                                                                            <>{stats.excludedByStartDay} by start day</>
+                                                                        )}
+                                                                    </span>
+                                                                }
+                                                            >
+                                                                <span>{stats.totalExcluded}</span>
+                                                            </Tooltip>
+                                                        ) : '—'}
+                                                    </TableCell>
+                                                    <TableCell>
                                                         {hasCampgroundAvailability ? (
                                                             <Chip size="small" color="success" label="Has matches" />
                                                         ) : (
@@ -571,7 +630,7 @@ export function CampgroundsGroups(props) {
                                                 onDragOver={handleDragOver(ALL_CAMPGROUNDS_KEY)}
                                                 onDrop={handleDropAtEnd(ALL_CAMPGROUNDS_KEY, orderedCampgrounds)}
                                             >
-                                                <TableCell colSpan={5}>
+                                                <TableCell colSpan={6}>
                                                     <Box
                                                         sx={{
                                                             py: 1,

@@ -1,0 +1,9 @@
+name = "campsites-finder"
+compatibility_date = "2024-01-01"
+
+# For Cloudflare Pages (static site)
+pages_build_output_dir = "build"
+
+# Uncomment below if using Workers Sites instead of Pages
+# [site]
+# bucket = "./build"

@@ -2,24 +2,71 @@ import axios from 'axios';
 import { getEmptyGroupedSites, getLocalCurrentTime } from '../utils/utils';
 import { getMockApiResponse } from '../json/mockRecreationApi';
 
-export const CACHE_DURATION_MS = 4 * 60 * 1000; // 4 minutes
-const DELAY_BETWEEN_REQUESTS_MS = 1; // Delay in ms between each API call
+export const CACHE_DURATION_MS = 30 * 60 * 1000; // 30 minutes
+const DELAY_BETWEEN_REQUESTS_MS = 5; // Delay in ms between each API call (increased to avoid rate limiting)
 
 const setCache = (key, data) => {
+    // Calculate total matches in new data
+    let newMatchCount = 0;
+    for (const system in data) {
+        (data[system] || []).forEach(campground => {
+            newMatchCount += Object.values(campground.siteAvailability || {}).reduce((sum, site) => sum + (site.matches?.length || 0), 0);
+        });
+    }
+
+    // Check if existing cache has more matches (don't overwrite good data with empty data)
+    const existingStr = localStorage.getItem(key);
+    if (existingStr) {
+        try {
+            const existing = JSON.parse(existingStr);
+            let existingMatchCount = 0;
+            for (const system in existing.data) {
+                (existing.data[system] || []).forEach(campground => {
+                    existingMatchCount += Object.values(campground.siteAvailability || {}).reduce((sum, site) => sum + (site.matches?.length || 0), 0);
+                });
+            }
+            if (existingMatchCount > 0 && newMatchCount === 0) {
+                console.log(`[Cache] BLOCKED: Not overwriting cache with ${existingMatchCount} matches with empty data`);
+                return;
+            }
+        } catch {
+            // ignore parse errors, proceed with save
+        }
+    }
+
     const entry = {
         data,
         timestamp: Date.now()
     };
+    console.log(`[Cache] Saving to cache: ${newMatchCount} total matches`);
     localStorage.setItem(key, JSON.stringify(entry));
+};
+
+export const clearCampgroundCache = () => {
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('campgrounds-')) {
+            keysToRemove.push(key);
+        }
+    }
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+    console.log(`[Cache] Cleared ${keysToRemove.length} cache entries`);
+    return keysToRemove.length;
 };
 
 const getCache = (key, sites) => {
     const entryStr = localStorage.getItem(key);
-    if (!entryStr) return null;
+    if (!entryStr) {
+        console.log('[Cache] No cache entry found for key:', key);
+        return null;
+    }
 
     try {
         const entry = JSON.parse(entryStr);
-        if (Date.now() - entry.timestamp > CACHE_DURATION_MS) {
+        const age = Date.now() - entry.timestamp;
+        if (age > CACHE_DURATION_MS) {
+            console.log(`[Cache] Cache expired (age: ${Math.round(age / 1000)}s, max: ${CACHE_DURATION_MS / 1000}s)`);
             localStorage.removeItem(key);
             return null;
         }
@@ -28,12 +75,38 @@ const getCache = (key, sites) => {
             const expectedIds = new Set(sites[system].map(c => c.id));
             const cachedIds = new Set((entry.data?.[system] || []).map(c => c.id));
             for (let id of expectedIds) {
-                if (!cachedIds.has(id)) return null;
+                if (!cachedIds.has(id)) {
+                    console.log(`[Cache] Cache miss - missing campground ID: ${id}`);
+                    return null;
+                }
             }
         }
 
+        console.log(`[Cache] Cache hit! Age: ${Math.round(age / 1000)}s`);
+
+        // Merge current showOrHide settings from siteConfig into cached data
+        // This ensures user's setting changes are reflected even when using cached data
+        for (const system in entry.data) {
+            if (sites[system]) {
+                entry.data[system].forEach(cachedCampground => {
+                    const currentConfig = sites[system].find(c => c.id === cachedCampground.id);
+                    if (currentConfig?.showOrHide) {
+                        cachedCampground.showOrHide = { ...currentConfig.showOrHide };
+                    }
+                });
+            }
+        }
+
+        // Log what's in the cached data
+        for (const system in entry.data) {
+            entry.data[system].forEach(campground => {
+                const matchCount = Object.values(campground.siteAvailability || {}).reduce((sum, site) => sum + (site.matches?.length || 0), 0);
+                console.log(`[Cache] Cached ${campground.name || campground.id}: ${matchCount} matches`);
+            });
+        }
         return entry.data;
-    } catch {
+    } catch (e) {
+        console.log('[Cache] Error parsing cache:', e);
         localStorage.removeItem(key);
         return null;
     }
@@ -131,18 +204,29 @@ const makeMockRequests = async (siteFetchMap, onProgress) => {
 
 const processApiResults = (allResults, siteFetchMap, settings) => {
     const results = {};
+
+    // First, ensure all configured campgrounds are in results (even without data)
+    siteFetchMap.forEach(({ system, campground }) => {
+        if (!results[system]) results[system] = [];
+        let campgroundEntry = results[system].find(c => c.id === campground.id);
+        if (!campgroundEntry) {
+            const sitesGroupedByFavorites = getEmptyGroupedSites();
+            campgroundEntry = {
+                ...campground,
+                siteAvailability: {},
+                sitesGroupedByFavorites: sitesGroupedByFavorites,
+                excludedMatches: { byStayLength: 0, byStartDay: 0 },
+            };
+            results[system].push(campgroundEntry);
+        }
+    });
+
+    // Then process API results for availability data
     allResults.forEach((data, index) => {
         const { system, campground, allDates } = siteFetchMap[index];
+        console.log(`[API Response] Campground ${campground.id}:`, data ? `${Object.keys(data.campsites || {}).length} campsites returned` : 'No data');
         if (data && data.campsites) {
-
-            if (!results[system]) results[system] = [];
             let campgroundEntry = results[system].find(c => c.id === campground.id);
-
-            if (!campgroundEntry) {
-                const sitesGroupedByFavorites = getEmptyGroupedSites();
-                campgroundEntry = { ...campground, siteAvailability: {}, sitesGroupedByFavorites: sitesGroupedByFavorites };
-                results[system].push(campgroundEntry);
-            }
 
             for (const [siteId, siteData] of Object.entries(data.campsites)) {
                 if (settings?.ignoreTypes?.includes(siteData.campsite_type)) {
@@ -160,26 +244,45 @@ const processApiResults = (allResults, siteFetchMap, settings) => {
                     .map(([date]) => date.split('T')[0])
                     .filter(date => allDates.includes(date));
 
+                if (validDates.length > 0) {
+                    console.log(`  [Available] Site ${siteData.site} (${siteId}): ${validDates.length} available dates`);
+                }
                 campgroundEntry.siteAvailability[siteId].dates.push(...validDates);
             }
             for (const siteId in campgroundEntry.siteAvailability) {
                 const site = campgroundEntry.siteAvailability[siteId];
                 const uniqueDates = [...new Set(site.dates)].sort();
                 const stayMatches = [];
-                for (const stayLength of settings.dates.stayLengths || []) {
-                    const matches = findConsecutiveAvailableRanges(uniqueDates, stayLength)
-                        .filter(([from]) => {
-                            if (!settings.dates.validStartDays?.length) return true;
-                            const [y, m, d] = from.split('-').map(Number);
-                            const startDay = new Date(Date.UTC(y, m - 1, d)).toLocaleString('en-US', {
-                                weekday: 'long',
-                                timeZone: 'UTC'
-                            });
-                            return settings.dates.validStartDays.includes(startDay);
-                        })
-                        .map(([from, to]) => ({ from, to, nights: stayLength }));
 
-                    stayMatches.push(...matches);
+                // Get min/max stay lengths to check for excluded matches
+                const minStay = Math.min(...(settings.dates.stayLengths || [2]));
+                const maxStay = Math.max(...(settings.dates.stayLengths || [5]));
+
+                // Find all possible ranges (1-14 nights) to count exclusions
+                for (let length = 1; length <= 14; length++) {
+                    const allRangesForLength = findConsecutiveAvailableRanges(uniqueDates, length);
+
+                    for (const [from, to] of allRangesForLength) {
+                        const [y, m, d] = from.split('-').map(Number);
+                        const startDay = new Date(Date.UTC(y, m - 1, d)).toLocaleString('en-US', {
+                            weekday: 'long',
+                            timeZone: 'UTC'
+                        });
+                        const isValidStartDay = !settings.dates.validStartDays?.length || settings.dates.validStartDays.includes(startDay);
+                        const isValidStayLength = length >= minStay && length <= maxStay;
+
+                        if (isValidStayLength && isValidStartDay) {
+                            // This match passes all filters
+                            stayMatches.push({ from, to, nights: length });
+                        } else {
+                            // Track exclusions (only count once per range, prioritize stay length exclusion)
+                            if (!isValidStayLength) {
+                                campgroundEntry.excludedMatches.byStayLength++;
+                            } else if (!isValidStartDay) {
+                                campgroundEntry.excludedMatches.byStartDay++;
+                            }
+                        }
+                    }
                 }
 
                 const sorted = stayMatches.sort((a, b) => b.nights - a.nights);
@@ -197,11 +300,63 @@ const processApiResults = (allResults, siteFetchMap, settings) => {
                 }
 
                 site.matches = filtered;
+                if (filtered.length > 0) {
+                    console.log(`  [Matches] Site ${site.siteName}: ${filtered.length} matching stays`, filtered);
+                }
             }
         }
     });
 
+    // Summary log
+    for (const system in results) {
+        results[system].forEach(campground => {
+            const totalMatches = Object.values(campground.siteAvailability).reduce((sum, site) => sum + (site.matches?.length || 0), 0);
+            console.log(`[Summary] ${campground.name || campground.id}: ${totalMatches} total matches`);
+        });
+    }
+
     return results;
+};
+
+// Calculate excluded matches based on current settings
+// This runs on both cached and fresh data so exclusion counts stay accurate when settings change
+const calculateExcludedMatches = (data, settings) => {
+    const minStay = Math.min(...(settings.dates.stayLengths || [2]));
+    const maxStay = Math.max(...(settings.dates.stayLengths || [5]));
+
+    for (const system in data) {
+        (data[system] || []).forEach(campground => {
+            campground.excludedMatches = { byStayLength: 0, byStartDay: 0 };
+
+            for (const siteId in campground.siteAvailability) {
+                const site = campground.siteAvailability[siteId];
+                const uniqueDates = [...new Set(site.dates || [])].sort();
+
+                // Check all possible ranges (1-14 nights) against current filters
+                for (let length = 1; length <= 14; length++) {
+                    const allRangesForLength = findConsecutiveAvailableRanges(uniqueDates, length);
+
+                    for (const [from] of allRangesForLength) {
+                        const [y, m, d] = from.split('-').map(Number);
+                        const startDay = new Date(Date.UTC(y, m - 1, d)).toLocaleString('en-US', {
+                            weekday: 'long',
+                            timeZone: 'UTC'
+                        });
+                        const isValidStartDay = !settings.dates.validStartDays?.length || settings.dates.validStartDays.includes(startDay);
+                        const isValidStayLength = length >= minStay && length <= maxStay;
+
+                        // Only count exclusions (not matches)
+                        if (!isValidStayLength) {
+                            campground.excludedMatches.byStayLength++;
+                        } else if (!isValidStartDay) {
+                            campground.excludedMatches.byStartDay++;
+                        }
+                    }
+                }
+            }
+        });
+    }
+    return data;
 };
 
 export const fetchCampgrounds = async (
@@ -221,6 +376,8 @@ export const fetchCampgrounds = async (
     const cached = useMockData ? null : getCache(cacheKey, sites);
     if (cached && !onlyReturnNumOfCalls) {
         console.info(`Using Cached Data at ${getLocalCurrentTime()}`);
+        // Calculate excluded matches based on current settings (may have changed since cache was created)
+        calculateExcludedMatches(cached, settings);
         return cached;
     }
 

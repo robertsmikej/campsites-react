@@ -11,6 +11,8 @@ import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
+import Checkbox from '@mui/material/Checkbox';
+import FormControlLabel from '@mui/material/FormControlLabel';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
 
@@ -22,7 +24,6 @@ export function TopBar({
     title = 'Campground Availability',
     subtitle,
     logo,
-    onRefresh,
     isRefreshing = false,
     actionItems,
     onMenuClick,
@@ -138,6 +139,11 @@ export function TopBar({
                                 color="inherit"
                                 onClick={handleMenuOpen}
                                 startIcon={<MenuIcon />}
+                                endIcon={
+                                    isRefreshing ? (
+                                        <CircularProgress color="inherit" size={14} thickness={5} />
+                                    ) : null
+                                }
                                 size="small"
                             >
                                 {menuButtonLabel}
@@ -149,29 +155,43 @@ export function TopBar({
                                 anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
                                 transformOrigin={{ vertical: 'top', horizontal: 'right' }}
                             >
-                                {menuItems.map((item) => (
-                                    <MenuItem key={item.label} onClick={handleMenuItemClick(item)}>
-                                        {item.label}
-                                    </MenuItem>
-                                ))}
+                                {menuItems.map((item) => {
+                                    if (item?.type === 'toggle') {
+                                        return (
+                                            <MenuItem
+                                                key={item.label}
+                                                disableRipple
+                                                disableTouchRipple
+                                                onClick={(event) => event.stopPropagation()}
+                                                sx={{ py: 0.5 }}
+                                            >
+                                                <FormControlLabel
+                                                    control={
+                                                        <Checkbox
+                                                            size="small"
+                                                            checked={Boolean(item.checked)}
+                                                            onChange={item.onChange}
+                                                        />
+                                                    }
+                                                    label={item.label}
+                                                />
+                                            </MenuItem>
+                                        );
+                                    }
+                                    return (
+                                        <MenuItem
+                                            key={item.label}
+                                            onClick={handleMenuItemClick(item)}
+                                            disabled={item.disabled}
+                                        >
+                                            {item.label}
+                                        </MenuItem>
+                                    );
+                                })}
                             </Menu>
                         </>
                     )}
                     {actionItems}
-                    {onRefresh && (
-                        <Button
-                            variant="contained"
-                            color="primary"
-                            onClick={onRefresh}
-                            disabled={isRefreshing}
-                        >
-                            {isRefreshing ? (
-                                <CircularProgress color="inherit" size={20} thickness={5} />
-                            ) : (
-                                'Refresh'
-                            )}
-                        </Button>
-                    )}
                 </Stack>
             </Toolbar>
         </AppBar>

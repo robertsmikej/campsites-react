@@ -13,18 +13,14 @@ import ProgressBar from './context/ProgressBarContext';
 
 import Container from '@mui/material/Container';
 import Grid from '@mui/material/Grid';
-import FormControlLabel from '@mui/material/FormControlLabel';
-import Switch from '@mui/material/Switch';
-import Tooltip from '@mui/material/Tooltip';
 import Stack from '@mui/material/Stack';
-import Button from '@mui/material/Button';
 import Box from '@mui/material/Box';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import ToggleButton from '@mui/material/ToggleButton';
 import Typography from '@mui/material/Typography';
 
 import { sites as defaultSites, getCampgroundOptions } from './json/sites';
-import { fetchCampgrounds } from './calls/fetchCampgroundData';
+import { fetchCampgrounds, clearCampgroundCache } from './calls/fetchCampgroundData';
 
 import { CampgroundsGroups } from './components/CampgroundsGroups';
 import { ProgressBarEl } from './components/ProgressBarEl';
@@ -45,15 +41,34 @@ const settingsOverrides = {
         type: 'calendar', //'table' or 'calendar'
     },
     dev: {
-        useMockData: true,
+        useMockData: false,
     }
 };
 const settingsObject = getSitewideDefaultSettings(settingsOverrides);
 const USER_SITES_STORAGE_KEY = 'campsites-react-user-sites';
+const USER_GLOBAL_SETTINGS_KEY = 'campsites-react-global-settings';
 const COLOR_MODE_STORAGE_KEY = 'campgrounds-color-mode';
 const catalogOptions = getCampgroundOptions();
 
 const cloneSitesConfig = (config) => JSON.parse(JSON.stringify(config));
+
+const getInitialGlobalSettings = () => {
+    const defaults = {
+        stayLengths: settingsObject?.dates?.stayLengths ?? [2, 3, 4, 5],
+        validStartDays: settingsObject?.dates?.validStartDays ?? ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+    };
+    if (typeof window === 'undefined') return defaults;
+    try {
+        const stored = localStorage.getItem(USER_GLOBAL_SETTINGS_KEY);
+        if (stored) {
+            return { ...defaults, ...JSON.parse(stored) };
+        }
+    } catch {
+        // ignore parse errors
+    }
+    return defaults;
+};
+
 const getInitialColorMode = () => {
     if (typeof window === 'undefined') {
         return settingsObject?.appearance?.mode ?? 'dark';
@@ -66,7 +81,7 @@ const getInitialColorMode = () => {
 };
 
 export default function App() {
-    const [settings] = useState(settingsObject ?? {});
+    const [globalSettings, setGlobalSettings] = useState(getInitialGlobalSettings);
     const [progressBarData, setProgressBarData] = useState({
         totalCalls: 0,
         currentCall: 0,
@@ -76,6 +91,18 @@ export default function App() {
     const [siteConfig, setSiteConfig] = useState(() => cloneSitesConfig(defaultSites));
     const [isConfigDialogOpen, setIsConfigDialogOpen] = useState(false);
     const [colorMode, setColorMode] = useState(getInitialColorMode);
+
+    const settings = useMemo(() => {
+        if (!settingsObject) return {};
+        return {
+            ...settingsObject,
+            dates: {
+                ...settingsObject.dates,
+                stayLengths: globalSettings.stayLengths,
+                validStartDays: globalSettings.validStartDays,
+            },
+        };
+    }, [globalSettings]);
 
     const theme = useMemo(() => createAppTheme(colorMode), [colorMode]);
 
@@ -91,6 +118,24 @@ export default function App() {
         if (storedSites) {
             try {
                 const parsed = JSON.parse(storedSites);
+                // Merge stored config with defaults to get updated dates
+                // but preserve user's favorites/worthwhile/showOrHide settings
+                for (const system in parsed) {
+                    if (defaultSites[system]) {
+                        parsed[system] = parsed[system].map(storedCampground => {
+                            const defaultCampground = defaultSites[system].find(d => d.id === storedCampground.id);
+                            if (defaultCampground) {
+                                // Use dates from defaults (code), preserve user's other settings
+                                return {
+                                    ...storedCampground,
+                                    dates: defaultCampground.dates,
+                                };
+                            }
+                            return storedCampground;
+                        });
+                    }
+                }
+                console.log('[Config] Merged stored config with default dates');
                 setSiteConfig(parsed);
             } catch (error) {
                 console.error('Failed to parse stored site configuration', error);
@@ -176,10 +221,6 @@ export default function App() {
     const handleMockToggle = (event) => {
         setUseMockData(event.target.checked);
     };
-    const handleToggleMockMode = () => {
-        setUseMockData(prev => !prev);
-    };
-
     const handleOpenConfigDialog = () => setIsConfigDialogOpen(true);
     const handleCloseConfigDialog = () => setIsConfigDialogOpen(false);
     const handleColorModeChange = (_event, nextMode) => {
@@ -188,7 +229,9 @@ export default function App() {
         }
     };
 
-    const handleSaveSitesConfig = (newConfig) => {
+    const handleSaveSitesConfig = (newConfig, newGlobalSettings) => {
+        // Clear cache so new settings take effect immediately
+        clearCampgroundCache();
         const cloned = cloneSitesConfig(newConfig);
         setSiteConfig(cloned);
         try {
@@ -196,55 +239,56 @@ export default function App() {
         } catch (error) {
             console.error('Failed to store custom site configuration', error);
         }
+        if (newGlobalSettings) {
+            setGlobalSettings(newGlobalSettings);
+            try {
+                localStorage.setItem(USER_GLOBAL_SETTINGS_KEY, JSON.stringify(newGlobalSettings));
+            } catch (error) {
+                console.error('Failed to store global settings', error);
+            }
+        }
         setIsConfigDialogOpen(false);
     };
 
     const handleResetSitesConfig = () => {
+        // Clear cache so default settings take effect immediately
+        clearCampgroundCache();
         localStorage.removeItem(USER_SITES_STORAGE_KEY);
+        localStorage.removeItem(USER_GLOBAL_SETTINGS_KEY);
         setSiteConfig(cloneSitesConfig(defaultSites));
+        setGlobalSettings(getInitialGlobalSettings());
         setIsConfigDialogOpen(false);
     };
 
     const topBarMenuItems = [
         {
-            label: 'Configure Sites',
-            action: () => setIsConfigDialogOpen(true),
+            type: 'toggle',
+            label: 'Use mock data',
+            checked: useMockData,
+            onChange: handleMockToggle,
         },
         {
-            label: useMockData ? 'Switch to live data' : 'Switch to mock data',
-            action: handleToggleMockMode,
+            label: 'Configure Sites',
+            action: handleOpenConfigDialog,
+        },
+        {
+            label: isLoading ? 'Refreshing…' : 'Refresh data',
+            action: () => {
+                refreshData();
+            },
+            disabled: isLoading,
+        },
+        {
+            label: 'Clear cache',
+            action: () => {
+                clearCampgroundCache();
+                refreshData();
+            },
+            disabled: isLoading,
         },
     ];
 
-    const topBarActions = (
-        <Stack direction="row" spacing={1.5} alignItems="center">
-            <Tooltip
-                title={useMockData ? 'Using stored Recreation.gov responses' : 'Fetch live Recreation.gov data'}
-                placement="bottom"
-            >
-                <FormControlLabel
-                    control={
-                        <Switch
-                            size="small"
-                            color="primary"
-                            checked={useMockData}
-                            onChange={handleMockToggle}
-                        />
-                    }
-                    label="Mock data"
-                    sx={{ color: 'inherit' }}
-                />
-            </Tooltip>
-            <Button
-                variant="outlined"
-                color="primary"
-                onClick={handleOpenConfigDialog}
-                size="small"
-            >
-                Configure Sites
-            </Button>
-        </Stack>
-    );
+    const topBarActions = null;
 
     return (
         <ThemeProvider theme={theme}>
@@ -256,7 +300,6 @@ export default function App() {
                         subtitle={siteData.tagline ?? ''}
                         logo={{ src: '/images/logos/CampWatch_Logo_trimmed.png', alt: 'Camp Watch logo', height: 36 }}
                         menuItems={topBarMenuItems}
-                        onRefresh={refreshData}
                         isRefreshing={isLoading}
                         actionItems={topBarActions}
                     />
@@ -315,6 +358,7 @@ export default function App() {
                 onResetToDefaults={handleResetSitesConfig}
                 initialData={siteConfig}
                 catalogOptions={catalogOptions}
+                globalSettings={globalSettings}
             />
         </ThemeProvider>
     );

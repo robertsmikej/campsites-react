@@ -8,6 +8,16 @@ import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
 
 import { styled } from "@mui/material/styles";
 import Stack from '@mui/material/Stack';
+import Button from '@mui/material/Button';
+import Chip from '@mui/material/Chip';
+import Tooltip from '@mui/material/Tooltip';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
+import Box from '@mui/material/Box';
+
+import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
 
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { StaticDatePicker } from '@mui/x-date-pickers/StaticDatePicker';
@@ -129,7 +139,6 @@ const ServerDay = (props) => {
 export function CampsitesCalendar(props) {
     const [site, setSite] = useState([]);
     const [monthsToShow, setMonthsToShow] = useState([dayjs('2025-08-01'), dayjs('2025-09-01')]);
-
     const [values, setValues] = useState([
         dayjs('2025-08-23'),
         { from: dayjs('2025-08-25'), to: dayjs('2025-08-27') },
@@ -137,6 +146,7 @@ export function CampsitesCalendar(props) {
         { from: dayjs('2025-09-02'), to: dayjs('2025-09-05') },
         dayjs('2025-09-12')
     ]);
+    const [photoPreview, setPhotoPreview] = useState({ open: false, photos: [], siteName: '' });
 
 
     useEffect(() => {
@@ -217,63 +227,129 @@ export function CampsitesCalendar(props) {
         setMonthsToShow(formattedMonths);
     }, [site]);
 
+    const openPhotoPreview = (currentSite) => () => {
+        const fallback = props.campground?.image ? `/images/sites/${props.campground.image}` : '/images/sites/bg_default.jpg';
+        const sitePhotos = currentSite.photos?.length ? currentSite.photos : currentSite.photo ? [currentSite.photo] : [fallback];
+        const resolvedPhotos = sitePhotos.map(photo => {
+            if (photo.startsWith('http')) return photo;
+            return photo.startsWith('/images/') ? photo : `/images/sites/${photo}`;
+        });
+        setPhotoPreview({ open: true, photos: resolvedPhotos, siteName: currentSite.siteName });
+    };
+
+    const closePhotoPreview = () => setPhotoPreview({ open: false, photos: [], siteName: '' });
+
     return (
-        <LocalizationProvider dateAdapter={AdapterDayjs}>
-            <Stack
-                direction="row"
-                spacing={0}
-                sx={{ flexWrap: 'wrap' }}
+        <>
+            <LocalizationProvider dateAdapter={AdapterDayjs}>
+                <Stack spacing={1.5} sx={{ p: { xs: 1, md: 1.5 } }}>
+                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={0.5} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }}>
+                        <Stack direction="row" spacing={1} flexWrap="wrap" rowGap={0.5}>
+                            <Chip size="small" label={site.campsite_type ?? 'Standard'} />
+                            {site.max_num_people && <Chip size="small" label={`Up to ${site.max_num_people} people`} />}
+                            {site.max_vehicle_length && <Chip size="small" label={`Vehicle ${site.max_vehicle_length} ft`} />}
+                        </Stack>
+                        <Tooltip title="Preview campsite photos">
+                            <span>
+                                <Button
+                                    size="small"
+                                    color="inherit"
+                                    startIcon={<PhotoCameraIcon fontSize="small" />}
+                                    onClick={openPhotoPreview(site)}
+                                >
+                                    Photos
+                                </Button>
+                            </span>
+                        </Tooltip>
+                    </Stack>
+                    <Stack
+                        direction="row"
+                        spacing={0}
+                        sx={{ flexWrap: 'wrap' }}
+                    >
+                        {monthsToShow.map((month) => {
+                            return (
+                                <StaticDatePicker
+                                    key={month}
+                                    displayStaticWrapperAs="desktop"
+                                    value={month}
+                                    slots={{
+                                        day: ServerDay
+                                    }}
+                                    slotProps={{
+                                        day: { highlightedValues: values },
+                                        actionBar: {
+                                            actions: []
+                                        }
+                                    }}
+                                    sx={{
+                                        '& .MuiPickersArrowSwitcher-root': {
+                                            display: 'none',
+                                        },
+                                        '.MuiPickersCalendarHeader-switchViewButton': {
+                                            display: 'none',
+                                        },
+                                        '.MuiPickersCalendarHeader-root': {
+                                            marginTop: '0px',
+                                            marginBottom: 0,
+                                            minHeight: '20px',
+                                            paddingLeft: '10px'
+                                        },
+                                        '.MuiDateCalendar-root': {
+                                            height: '190px',
+                                            width: '230px',
+                                        },
+                                        '.MuiDayCalendar-weekDayLabel': {
+                                            height: '26px',
+                                        },
+                                        '.MuiPickersDay-root': {
+                                            height: '26px',
+                                        },
+                                        '.MuiDayCalendar-slideTransition': {
+                                            minHeight: '170px',
+                                        },
+                                        '& .MuiPickersLayout-root': {
+                                            minWidth: '220px',
+                                        }
+                                    }}
+                                    onChange={(e) => goToPage(site, month)}
+                                />
+                            )
+                        })}
+                    </Stack>
+                </Stack>
+            </LocalizationProvider>
+            <Dialog
+                open={photoPreview.open}
+                onClose={closePhotoPreview}
+                maxWidth="sm"
+                fullWidth
             >
-                {monthsToShow.map((month) => {
-                    return (
-                        <StaticDatePicker
-                            key={month}
-                            displayStaticWrapperAs="desktop"
-                            value={month}
-                            slots={{
-                                day: ServerDay
-                            }}
-                            slotProps={{
-                                day: { highlightedValues: values },
-                                actionBar: {
-                                    actions: []
-                                }
-                            }}
-                            sx={{
-                                '& .MuiPickersArrowSwitcher-root': {
-                                    display: 'none',
-                                },
-                                '.MuiPickersCalendarHeader-switchViewButton': {
-                                    display: 'none',
-                                },
-                                '.MuiPickersCalendarHeader-root': {
-                                    marginTop: '0px',
-                                    marginBottom: 0,
-                                    minHeight: '20px',
-                                    paddingLeft: '10px'
-                                },
-                                '.MuiDateCalendar-root': {
-                                    height: '190px',
-                                    width: '230px',
-                                },
-                                '.MuiDayCalendar-weekDayLabel': {
-                                    height: '26px',
-                                },
-                                '.MuiPickersDay-root': {
-                                    height: '26px',
-                                },
-                                '.MuiDayCalendar-slideTransition': {
-                                    minHeight: '170px',
-                                },
-                                '& .MuiPickersLayout-root': {
-                                    minWidth: '220px',
-                                }
-                            }}
-                            onChange={(e) => goToPage(site, month)}
-                        />
-                    )
-                })}
-            </Stack>
-        </LocalizationProvider>
+                <DialogTitle>{photoPreview.siteName}</DialogTitle>
+                <DialogContent dividers>
+                    <Stack spacing={2}>
+                        {photoPreview.photos.map((photo, index) => (
+                            <Box
+                                key={photo + index}
+                                component="img"
+                                src={photo}
+                                alt={`Campsite photo ${index + 1}`}
+                                loading="lazy"
+                                sx={{
+                                    width: '100%',
+                                    borderRadius: 1.5,
+                                    border: theme => `1px solid ${theme.palette.divider}`,
+                                }}
+                            />
+                        ))}
+                    </Stack>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={closePhotoPreview} color="primary">
+                        Close
+                    </Button>
+                </DialogActions>
+            </Dialog>
+        </>
     );
 }
