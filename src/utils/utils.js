@@ -135,6 +135,8 @@ export const formatGroupsByFavorites = (data) => {
         }
     });
 
+
+
     const campgroundsWithGroupSettings = checkForAppropriateGroups(flattenedData, siteGroups);
 
     // Preserve user-configured order from siteConfig - do not re-sort
