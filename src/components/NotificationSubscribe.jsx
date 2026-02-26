@@ -54,7 +54,7 @@ export function NotificationSubscribe() {
             <Stack direction="row" spacing={0.5} alignItems="center">
                 <NotificationsActiveIcon fontSize="small" color="action" />
                 <Typography variant="body2" color="text.secondary">
-                    Get emailed when new campsites open up
+                    Get emailed when new campsites in our curated list open up
                 </Typography>
             </Stack>
             <form onSubmit={handleSubmit}>

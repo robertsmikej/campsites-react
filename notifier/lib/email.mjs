@@ -67,17 +67,17 @@ export const formatEmail = (newMatches, options = {}) => {
                 .map((m) => {
                     const link = buildReservationLink(m.siteId, m.match.from, m.match.nights);
                     return `<tr>
-                        <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;">
-                            <strong>${m.siteName}</strong>
+                        <td style="padding:6px 8px;border-bottom:1px solid #e5e7eb;white-space:nowrap;">
+                            <strong>${m.siteName.replace(/^Site\s+/i, '')}</strong>
                         </td>
-                        <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;">
+                        <td style="padding:6px 8px;border-bottom:1px solid #e5e7eb;white-space:nowrap;">
                             ${formatDate(m.match.from)} &rarr; ${formatDate(m.match.to)}
                         </td>
-                        <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:center;">
+                        <td style="padding:6px 4px;border-bottom:1px solid #e5e7eb;text-align:center;">
                             ${m.match.nights}
                         </td>
-                        <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;">
-                            <a href="${link}" style="color:#2563eb;text-decoration:none;">Book now &rarr;</a>
+                        <td style="padding:6px 8px;border-bottom:1px solid #e5e7eb;white-space:nowrap;">
+                            <a href="${link}" style="color:#2563eb;text-decoration:none;">Book&nbsp;&rarr;</a>
                         </td>
                     </tr>`;
                 })
@@ -87,13 +87,13 @@ export const formatEmail = (newMatches, options = {}) => {
                 <div style="margin-bottom:24px;">
                     <h2 style="margin:0 0 4px 0;font-size:18px;color:#111;">${name}</h2>
                     <p style="margin:0 0 12px 0;font-size:13px;color:#6b7280;">${area}</p>
-                    <table style="width:100%;border-collapse:collapse;font-size:14px;">
+                    <table style="width:100%;border-collapse:collapse;font-size:13px;">
                         <thead>
                             <tr style="background:#f9fafb;">
-                                <th style="padding:8px 12px;text-align:left;border-bottom:2px solid #e5e7eb;">Site</th>
-                                <th style="padding:8px 12px;text-align:left;border-bottom:2px solid #e5e7eb;">Dates</th>
-                                <th style="padding:8px 12px;text-align:center;border-bottom:2px solid #e5e7eb;">Nights</th>
-                                <th style="padding:8px 12px;text-align:left;border-bottom:2px solid #e5e7eb;"></th>
+                                <th style="padding:6px 8px;text-align:left;border-bottom:2px solid #e5e7eb;">Site</th>
+                                <th style="padding:6px 8px;text-align:left;border-bottom:2px solid #e5e7eb;">Dates</th>
+                                <th style="padding:6px 4px;text-align:center;border-bottom:2px solid #e5e7eb;">&#127769;</th>
+                                <th style="padding:6px 8px;text-align:left;border-bottom:2px solid #e5e7eb;"></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -143,7 +143,7 @@ export const formatEmail = (newMatches, options = {}) => {
         <h1 style="margin:0;font-size:20px;color:#166534;">
             ${count} New Campsite${count === 1 ? '' : 's'} Available
         </h1>
-        <p style="margin:4px 0 0 0;font-size:13px;color:#6b7280;">Checked at ${timestamp} (Mountain Time)</p>
+        <p style="margin:4px 0 0 0;font-size:13px;color:#6b7280;">Checked at ${timestamp} (MST)</p>
     </div>
     ${campgroundSections}
     ${viewAllHtml}
