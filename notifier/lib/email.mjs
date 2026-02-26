@@ -28,12 +28,6 @@ const buildReservationLink = (siteId, fromDate, nights) => {
     return `https://www.recreation.gov/camping/campsites/${siteId}?arrivalDate=${arrival}&departureDate=${departure}`;
 };
 
-const groupLabel = (group) => {
-    if (group === 'favorites') return 'Favorite';
-    if (group === 'worthwhile') return 'Worthwhile';
-    return '';
-};
-
 export const formatEmail = (newMatches, options = {}) => {
     const { unsubscribeUrl, email, apiSecret, siteUrl } = options;
     const unsubscribeOptions = { unsubscribeUrl, email, apiSecret };
@@ -72,14 +66,9 @@ export const formatEmail = (newMatches, options = {}) => {
             const rows = matches
                 .map((m) => {
                     const link = buildReservationLink(m.siteId, m.match.from, m.match.nights);
-                    const badge = m.group === 'favorites'
-                        ? '<span style="background:#16a34a;color:#fff;padding:2px 6px;border-radius:4px;font-size:11px;margin-left:6px;">Favorite</span>'
-                        : m.group === 'worthwhile'
-                            ? '<span style="background:#2563eb;color:#fff;padding:2px 6px;border-radius:4px;font-size:11px;margin-left:6px;">Worthwhile</span>'
-                            : '';
                     return `<tr>
                         <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;">
-                            <strong>${m.siteName}</strong>${badge}
+                            <strong>${m.siteName}</strong>
                         </td>
                         <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;">
                             ${formatDate(m.match.from)} &rarr; ${formatDate(m.match.to)}
