@@ -1,40 +1,134 @@
-# To Install
-Run `npm install`  
+# CampWatch
 
-Run `npm start`  
+A campsite availability tracker that monitors [recreation.gov](https://www.recreation.gov) for openings at popular campgrounds and sends email alerts when your favorite sites become available.
 
-# To Customize
-Set your own Campgrounds and site options in `/json/sites.js` and `App.js`.
+Built with React, deployed on Cloudflare Workers, and automated with GitHub Actions.
 
-# Important Info
-Data is cached for ~10 minutes - to get refresh it manually, clear Local Storage or click 'Refresh Data' button at top (Do this sparingly, see below).  
+## What It Does
 
-The app has to make a call for each campground, and one for each month you want to check in that campground, so calls add up quick. Don't refresh data with calls too much or Recreation.gov will block you for awhile. This doesn't happen much, but if you start getting 429 errors, this is probably what's happening.  
+Finding campsites at popular campgrounds is notoriously difficult — sites book months in advance and cancellations are gone within minutes. CampWatch solves this by continuously monitoring availability and alerting you the moment a site opens up.
 
+- **Tracks 9+ campgrounds** across Idaho's Sawtooth region (Redfish Lake, Stanley Lake, Warm Lake, and more)
+- **Curated site lists** — mark specific sites as favorites based on location (lakefront, riverside, etc.)
+- **Email notifications** — get alerted within 15 minutes when a favorite site opens
+- **Priority subscribers** — configurable head-start for select emails before general subscribers are notified
+- **Calendar and table views** — visualize availability across date ranges with filtering by stay length and start day
 
-## Available Scripts
+## Architecture
 
-In the project directory, you can run:
+```
+┌─────────────────────────────────────────────────────┐
+│  GitHub Actions (every 15 min)                      │
+│  ┌───────────────────────────────────────────────┐  │
+│  │  notifier/check.mjs                           │  │
+│  │  → Fetch recreation.gov API                   │  │
+│  │  → Diff against previous state                │  │
+│  │  → Email new matches via Resend               │  │
+│  └───────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────┘
+                        │
+                        ▼
+┌─────────────────────────────────────────────────────┐
+│  Cloudflare Workers                                 │
+│  ┌──────────────┐  ┌────────────────────────────┐   │
+│  │  Static SPA  │  │  Subscriber API             │  │
+│  │  (React app) │  │  POST /api/subscribe        │  │
+│  │              │  │  GET  /api/unsubscribe      │  │
+│  │              │  │  GET  /api/subscribers       │  │
+│  └──────────────┘  └────────────────────────────┘   │
+│                          │                          │
+│                    ┌─────┴─────┐                    │
+│                    │ Workers KV │                    │
+│                    │ (emails)   │                    │
+│                    └───────────┘                    │
+└─────────────────────────────────────────────────────┘
+```
 
-### `npm start`
+## Tech Stack
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React 19, Material-UI 7, Emotion |
+| Backend | Cloudflare Workers |
+| Storage | Cloudflare Workers KV |
+| Email | Resend API |
+| CI/CD | GitHub Actions |
+| Data Source | recreation.gov API |
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## Key Features
 
-### `npm test` - Not implemented yet
+**Availability Monitoring**
+- Fetches live availability data from recreation.gov's public API
+- Configurable date ranges, stay lengths (2-5 nights), and valid start days
+- Groups results by campground with favorites highlighted
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+**Smart Notifications**
+- Signature-based diffing — only alerts on *new* availability, not repeats
+- Cancellation detection — if a site opens up again, you get re-notified
+- Delayed delivery queue — priority subscribers get a 15-minute head start
+- HMAC-secured unsubscribe links
 
-### `npm run build` - Not implemented yet
+**Performance**
+- 30-minute client-side cache to minimize API calls
+- Rate-limited API requests (50ms between calls) to respect recreation.gov limits
+- State persisted across GitHub Actions runs via cache
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+## Project Structure
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+```
+├── src/
+│   ├── components/          # React components (calendar, table, config)
+│   ├── calls/               # recreation.gov API integration
+│   ├── json/                # Campground catalog & site configurations
+│   ├── context/             # React context (settings, progress)
+│   └── utils/               # Shared utilities
+├── notifier/
+│   ├── check.mjs            # Scheduled availability checker
+│   └── lib/
+│       ├── fetch-availability.mjs  # API fetching & match detection
+│       ├── diff.mjs                # Signature-based change detection
+│       └── email.mjs               # Email formatting & Resend integration
+├── workers-site/
+│   └── index.js             # Cloudflare Worker (static + API routes)
+└── .github/workflows/
+    ├── deploy.yml            # Auto-deploy on push to main
+    └── check-campsites.yml   # Scheduled availability checks (every 15 min)
+```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## Setup
+
+### Prerequisites
+- Node.js 20+
+- A [Resend](https://resend.com) account (free tier: 3,000 emails/month)
+- A [Cloudflare](https://cloudflare.com) account
+
+### Local Development
+
+```bash
+npm install
+npm start
+```
+
+The app runs at `http://localhost:3000`. A proxy server handles recreation.gov API calls to avoid CORS issues during development.
+
+### Deployment
+
+The app auto-deploys to Cloudflare Workers on push to `main`. Required GitHub secrets:
+
+| Secret | Purpose |
+|--------|---------|
+| `CLOUDFLARE_API_TOKEN` | Wrangler deployment |
+| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account |
+| `RESEND_API_KEY` | Email sending |
+| `SUBSCRIBER_API_URL` | CF Worker base URL |
+| `SUBSCRIBER_API_SECRET` | API authentication |
+| `PRIORITY_EMAILS` | Comma-separated priority addresses |
+| `SITE_URL` | App URL (for email links) |
+
+### Configuring Campgrounds
+
+Edit `src/json/campgroundCatalog.js` to add campgrounds and `src/json/siteConfigurations.js` to configure favorite sites and date ranges per campground.
+
+## License
+
+MIT

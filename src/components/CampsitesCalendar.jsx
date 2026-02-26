@@ -259,7 +259,7 @@ export function CampsitesCalendar(props) {
         <>
             <LocalizationProvider dateAdapter={AdapterDayjs}>
                 <Stack spacing={1.5} sx={{ p: { xs: 1, md: 1.5 } }}>
-                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={0.5} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }}>
+                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} justifyContent="flex-start" alignItems={{ xs: 'flex-start', sm: 'center' }}>
                         <Stack direction="row" spacing={1} flexWrap="wrap" rowGap={0.5}>
                             <Chip size="small" label={site.campsite_type ?? 'Standard'} />
                             {site.max_num_people && <Chip size="small" label={`Up to ${site.max_num_people} people`} />}

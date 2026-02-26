@@ -324,7 +324,12 @@ export function CampgroundsGroups(props) {
                                                                 alignItems={{ xs: 'flex-start' }}
                                                                 justifyContent={'space-between'}
                                                             >
-                                                                <Typography variant='h5'>{campground.name}</Typography>
+                                                                <Stack spacing={0}>
+                                                                    <Typography variant='h5'>{campground.name}</Typography>
+                                                                    <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.65rem', letterSpacing: 0.5 }}>
+                                                                        ID: {campground.id}
+                                                                    </Typography>
+                                                                </Stack>
                                                                 <Stack
                                                                     direction="row"
                                                                     spacing={1}

@@ -9,6 +9,7 @@ import CardActions from '@mui/material/CardActions';
 import Typography from '@mui/material/Typography';
 import Chip from '@mui/material/Chip';
 import Button from '@mui/material/Button';
+import IconButton from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
@@ -36,14 +37,26 @@ export function CampsitesTable(props) {
     }, [props.data]);
 
     const openPhotoPreview = (site) => () => {
+        const campgroundId = props.campground?.id;
+        const siteNumber = site.siteName?.replace(/^Site\s+/i, '');
         const fallback = props.campground?.image ? `/images/sites/${props.campground.image}` : '/images/sites/bg_default.jpg';
-        const sitePhotos = site.photos?.length ? site.photos : site.photo ? [site.photo] : [fallback];
+
+        // Check for photos in the campground's directory: /images/sites/{campgroundId}/{siteNumber}.jpg
+        // Also support explicit photos array from data
+        const sitePhotos = site.photos?.length ? site.photos : site.photo ? [site.photo] : [];
         const resolvedPhotos = sitePhotos.map(photo => {
-            if (photo.startsWith('http')) {
-                return photo;
-            }
+            if (photo.startsWith('http')) return photo;
             return photo.startsWith('/images/') ? photo : `/images/sites/${photo}`;
         });
+
+        // If no explicit photos, try the convention-based path, then fall back to campground map
+        if (resolvedPhotos.length === 0 && campgroundId && siteNumber) {
+            resolvedPhotos.push(`/images/sites/${campgroundId}/${siteNumber}.jpg`);
+        }
+        if (resolvedPhotos.length === 0) {
+            resolvedPhotos.push(fallback);
+        }
+
         setPhotoPreview({
             open: true,
             photos: resolvedPhotos,
@@ -78,7 +91,19 @@ export function CampsitesTable(props) {
                     <Stack spacing={1.5}>
                         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} justifyContent="space-between">
                             <Stack spacing={0.25}>
-                                <Typography variant="h6">{site.siteName}</Typography>
+                                <Stack direction="row" spacing={0.5} alignItems="center" sx={{ width: 'fit-content' }}>
+                                    <Typography variant="h6">{site.siteName}</Typography>
+                                    <Tooltip title="View photos">
+                                        <IconButton
+                                            size="small"
+                                            color="default"
+                                            onClick={openPhotoPreview(site)}
+                                            sx={{ p: 0.25, opacity: 0.4, '&:hover': { opacity: 1 } }}
+                                        >
+                                            <PhotoCameraIcon sx={{ fontSize: 16 }} />
+                                        </IconButton>
+                                    </Tooltip>
+                                </Stack>
                                 <Typography variant="body2" color="text.secondary">
                                     {site?.loop ?? props.campground?.name}
                                 </Typography>
@@ -119,7 +144,7 @@ export function CampsitesTable(props) {
                         </Grid>
                     </Stack>
                 </CardContent>
-                <CardActions sx={{ justifyContent: 'space-between', px: 2, pb: 2 }}>
+                <CardActions sx={{ px: 2, pb: 2 }}>
                     <Tooltip title="View site on Recreation.gov">
                         <Button
                             size="small"
@@ -129,18 +154,6 @@ export function CampsitesTable(props) {
                         >
                             Open Site
                         </Button>
-                    </Tooltip>
-                    <Tooltip title="Preview campsite photos">
-                        <span>
-                            <Button
-                                size="small"
-                                color="inherit"
-                                startIcon={<PhotoCameraIcon fontSize="small" />}
-                                onClick={openPhotoPreview(site)}
-                            >
-                                Photos
-                            </Button>
-                        </span>
                     </Tooltip>
                 </CardActions>
             </Card>
