@@ -27,6 +27,7 @@ import { ProgressBarEl } from './components/ProgressBarEl';
 import { formatGroupsByFavorites } from './utils/utils';
 import { TopBar } from './components/TopBar';
 import { SiteConfigDialog } from './components/SiteConfigDialog';
+import { NotificationSubscribe } from './components/NotificationSubscribe';
 
 // Override default settings here, default settings are in constants/settings.js
 const settingsOverrides = {
@@ -39,6 +40,9 @@ const settingsOverrides = {
     },
     views: {
         type: 'calendar', //'table' or 'calendar'
+    },
+    appearance: {
+        mode: 'light',
     },
     dev: {
         useMockData: false,
@@ -322,29 +326,32 @@ export default function App() {
                                 borderTop: theme => `1px solid ${theme.palette.divider}`,
                             }}
                         >
-                            <Stack
-                                direction={{ xs: 'column', sm: 'row' }}
-                                spacing={1.5}
-                                justifyContent="space-between"
-                                alignItems={{ xs: 'flex-start', sm: 'center' }}
-                            >
-                                <Typography variant="body2" color="text.secondary">
-                                    {useMockData ? 'Mock Recreation.gov data' : 'Live Recreation.gov data'}
-                                </Typography>
-                                <Stack direction="row" spacing={1} alignItems="center">
-                                    <Typography variant="caption" color="text.secondary">
-                                        Color mode
+                            <Stack spacing={2}>
+                                <NotificationSubscribe />
+                                <Stack
+                                    direction={{ xs: 'column', sm: 'row' }}
+                                    spacing={1.5}
+                                    justifyContent="space-between"
+                                    alignItems={{ xs: 'flex-start', sm: 'center' }}
+                                >
+                                    <Typography variant="body2" color="text.secondary">
+                                        {useMockData ? 'Mock Recreation.gov data' : 'Live Recreation.gov data'}
                                     </Typography>
-                                    <ToggleButtonGroup
-                                        size="small"
-                                        exclusive
-                                        value={colorMode}
-                                        onChange={handleColorModeChange}
-                                        color="primary"
-                                    >
-                                        <ToggleButton value="light">Light</ToggleButton>
-                                        <ToggleButton value="dark">Dark</ToggleButton>
-                                    </ToggleButtonGroup>
+                                    <Stack direction="row" spacing={1} alignItems="center">
+                                        <Typography variant="caption" color="text.secondary">
+                                            Color mode
+                                        </Typography>
+                                        <ToggleButtonGroup
+                                            size="small"
+                                            exclusive
+                                            value={colorMode}
+                                            onChange={handleColorModeChange}
+                                            color="primary"
+                                        >
+                                            <ToggleButton value="light">Light</ToggleButton>
+                                            <ToggleButton value="dark">Dark</ToggleButton>
+                                        </ToggleButtonGroup>
+                                    </Stack>
                                 </Stack>
                             </Stack>
                         </Box>

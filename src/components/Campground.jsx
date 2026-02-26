@@ -67,7 +67,7 @@ const getInitialSectionViews = (campground) => {
     return storedViewsMap[campgroundId] ?? {};
 };
 
-export function Campground({ campground: campgroundProp, viewMode }) {
+export function Campground({ campground: campgroundProp, viewMode, showExcluded = false }) {
     const siteSettings = useContext(SiteSettings);
 
     // Initialize state synchronously to avoid flash of wrong expanded state
@@ -148,6 +148,7 @@ export function Campground({ campground: campgroundProp, viewMode }) {
                     data={group}
                     site={type}
                     campground={campgroundProp}
+                    showExcluded={showExcluded}
                 />
             );
         }
@@ -157,6 +158,7 @@ export function Campground({ campground: campgroundProp, viewMode }) {
                 data={group}
                 type={type}
                 campground={campgroundProp}
+                showExcluded={showExcluded}
             />
         );
     };
@@ -166,15 +168,18 @@ export function Campground({ campground: campgroundProp, viewMode }) {
             {Object.keys(campgroundProp.sitesGroupedByFavorites).map((type, typeIndex) => {
                 const group = campgroundProp.sitesGroupedByFavorites[type];
                 const hasPreferenceAvailability = checkForAvailabilityInArray(group);
-                if (!hasPreferenceAvailability) {
+                const hasExcludedAvailability = showExcluded && group.some(site => site.excludedMatches?.length > 0);
+                if (!hasPreferenceAvailability && !hasExcludedAvailability) {
                     return null;
                 }
                 const isHiddenBySetting = !campgroundProp.showOrHide?.[type];
                 const matchCount = getMatchCount(group);
-                // Default to collapsed if hidden by setting, otherwise use stored state or default to expanded
-                const expanded = isHiddenBySetting
-                    ? (expandedSections[type] ?? false)
-                    : (expandedSections[type] ?? hasPreferenceAvailability);
+                // Sections with excluded data expand when user toggled "show excluded"
+                // Otherwise use stored state, defaulting to collapsed for hidden sections
+                const expanded = hasExcludedAvailability
+                    || (isHiddenBySetting
+                        ? (expandedSections[type] ?? false)
+                        : (expandedSections[type] ?? hasPreferenceAvailability));
                 const sectionView = overridesEnabled ? (sectionViews[type] ?? effectiveView) : effectiveView;
                 return (
                     <Card

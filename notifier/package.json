@@ -1,0 +1,10 @@
+{
+  "name": "campwatch-notifier",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "description": "CampWatch notifier — sends email alerts via Resend when new favorite campsites open up on recreation.gov.",
+  "scripts": {
+    "check": "node check.mjs"
+  }
+}

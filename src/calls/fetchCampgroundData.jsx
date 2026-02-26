@@ -211,7 +211,7 @@ const processApiResults = (allResults, siteFetchMap, settings) => {
                 ...campground,
                 siteAvailability: {},
                 sitesGroupedByFavorites: sitesGroupedByFavorites,
-                excludedMatches: { byStayLength: 0, byStartDay: 0 },
+                excludedMatches: { byStayLength: 0, byStartDay: 0, sites: {} },
             };
             results[system].push(campgroundEntry);
         }
@@ -249,6 +249,7 @@ const processApiResults = (allResults, siteFetchMap, settings) => {
                 const site = campgroundEntry.siteAvailability[siteId];
                 const uniqueDates = [...new Set(site.dates)].sort();
                 const stayMatches = [];
+                const excludedRanges = [];
 
                 // Get min/max stay lengths to check for excluded matches
                 const minStay = Math.min(...(settings.dates.stayLengths || [2]));
@@ -271,11 +272,19 @@ const processApiResults = (allResults, siteFetchMap, settings) => {
                             // This match passes all filters
                             stayMatches.push({ from, to, nights: length });
                         } else {
-                            // Track exclusions (only count once per range, prioritize stay length exclusion)
+                            // Track exclusions
+                            const sName = site.siteName;
+                            if (!campgroundEntry.excludedMatches.sites[sName]) {
+                                campgroundEntry.excludedMatches.sites[sName] = { siteId, byStayLength: 0, byStartDay: 0 };
+                            }
+                            const reason = !isValidStayLength ? 'stayLength' : 'startDay';
+                            excludedRanges.push({ from, to, nights: length, excluded: true, reason });
                             if (!isValidStayLength) {
                                 campgroundEntry.excludedMatches.byStayLength++;
-                            } else if (!isValidStartDay) {
+                                campgroundEntry.excludedMatches.sites[sName].byStayLength++;
+                            } else {
                                 campgroundEntry.excludedMatches.byStartDay++;
+                                campgroundEntry.excludedMatches.sites[sName].byStartDay++;
                             }
                         }
                     }
@@ -295,7 +304,22 @@ const processApiResults = (allResults, siteFetchMap, settings) => {
                     if (!isContained) filtered.push(match);
                 }
 
+                // Apply same non-overlapping filter to excluded ranges
+                const sortedExcluded = excludedRanges.sort((a, b) => b.nights - a.nights);
+                const filteredExcluded = [];
+                for (const match of sortedExcluded) {
+                    const matchStart = new Date(match.from);
+                    const matchEnd = new Date(match.to);
+                    const isContained = filteredExcluded.some(({ from, to }) => {
+                        const existingStart = new Date(from);
+                        const existingEnd = new Date(to);
+                        return matchStart >= existingStart && matchEnd <= existingEnd;
+                    });
+                    if (!isContained) filteredExcluded.push(match);
+                }
+
                 site.matches = filtered;
+                site.excludedMatches = filteredExcluded;
                 if (filtered.length > 0) {
                     console.log(`  [Matches] Site ${site.siteName}: ${filtered.length} matching stays`, filtered);
                 }
@@ -322,17 +346,18 @@ const calculateExcludedMatches = (data, settings) => {
 
     for (const system in data) {
         (data[system] || []).forEach(campground => {
-            campground.excludedMatches = { byStayLength: 0, byStartDay: 0 };
+            campground.excludedMatches = { byStayLength: 0, byStartDay: 0, sites: {} };
 
             for (const siteId in campground.siteAvailability) {
                 const site = campground.siteAvailability[siteId];
                 const uniqueDates = [...new Set(site.dates || [])].sort();
+                const excludedRanges = [];
 
                 // Check all possible ranges (1-14 nights) against current filters
                 for (let length = 1; length <= 14; length++) {
                     const allRangesForLength = findConsecutiveAvailableRanges(uniqueDates, length);
 
-                    for (const [from] of allRangesForLength) {
+                    for (const [from, to] of allRangesForLength) {
                         const [y, m, d] = from.split('-').map(Number);
                         const startDay = new Date(Date.UTC(y, m - 1, d)).toLocaleString('en-US', {
                             weekday: 'long',
@@ -341,14 +366,38 @@ const calculateExcludedMatches = (data, settings) => {
                         const isValidStartDay = !settings.dates.validStartDays?.length || settings.dates.validStartDays.includes(startDay);
                         const isValidStayLength = length >= minStay && length <= maxStay;
 
-                        // Only count exclusions (not matches)
-                        if (!isValidStayLength) {
-                            campground.excludedMatches.byStayLength++;
-                        } else if (!isValidStartDay) {
-                            campground.excludedMatches.byStartDay++;
+                        const sName = site.siteName;
+                        if (!isValidStayLength || !isValidStartDay) {
+                            if (!campground.excludedMatches.sites[sName]) {
+                                campground.excludedMatches.sites[sName] = { siteId, byStayLength: 0, byStartDay: 0 };
+                            }
+                            const reason = !isValidStayLength ? 'stayLength' : 'startDay';
+                            excludedRanges.push({ from, to, nights: length, excluded: true, reason });
+                            if (!isValidStayLength) {
+                                campground.excludedMatches.byStayLength++;
+                                campground.excludedMatches.sites[sName].byStayLength++;
+                            } else {
+                                campground.excludedMatches.byStartDay++;
+                                campground.excludedMatches.sites[sName].byStartDay++;
+                            }
                         }
                     }
                 }
+
+                // Apply non-overlapping filter to excluded ranges
+                const sortedExcluded = excludedRanges.sort((a, b) => b.nights - a.nights);
+                const filteredExcluded = [];
+                for (const match of sortedExcluded) {
+                    const matchStart = new Date(match.from);
+                    const matchEnd = new Date(match.to);
+                    const isContained = filteredExcluded.some(({ from, to }) => {
+                        const existingStart = new Date(from);
+                        const existingEnd = new Date(to);
+                        return matchStart >= existingStart && matchEnd <= existingEnd;
+                    });
+                    if (!isContained) filteredExcluded.push(match);
+                }
+                site.excludedMatches = filteredExcluded;
             }
         });
     }

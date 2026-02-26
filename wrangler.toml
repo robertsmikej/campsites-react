@@ -4,3 +4,8 @@ main = "workers-site/index.js"
 
 [site]
 bucket = "./build"
+
+# Subscriber email storage for notifications
+[[kv_namespaces]]
+binding = "SUBSCRIBERS"
+id = "41a67a8b06044ee38f0bf22cfbcc069d"

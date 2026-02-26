@@ -55,8 +55,9 @@ export function CampsitesTable(props) {
 
     const CampsiteCard = ({ match, site }) => {
         if (!match?.from) return null;
+        const isExcluded = !!match.excluded;
         const dayOfWeek = getDayOfWeek(match.from, true, true);
-        const isPreferred = siteSettings.dates.preferredStartDays.includes(dayOfWeek);
+        const isPreferred = !isExcluded && siteSettings.dates.preferredStartDays.includes(dayOfWeek);
         const shortedDayOfWeek = getShortenedDayOfWeek(dayOfWeek);
         const rowProps = {
             row: match,
@@ -68,8 +69,9 @@ export function CampsitesTable(props) {
             <Card
                 variant="outlined"
                 sx={{
-                    borderColor: isPreferred ? 'primary.light' : 'divider',
-                    borderWidth: isPreferred ? 2 : 1,
+                    borderColor: isExcluded ? 'warning.main' : isPreferred ? 'primary.light' : 'divider',
+                    borderWidth: isExcluded ? 2 : isPreferred ? 2 : 1,
+                    opacity: isExcluded ? 0.75 : 1,
                 }}
             >
                 <CardContent>
@@ -82,9 +84,10 @@ export function CampsitesTable(props) {
                                 </Typography>
                             </Stack>
                             <Stack direction="row" spacing={1} flexWrap="wrap" rowGap={0.5}>
-                                <Chip label={`${match.nights} nights`} color="primary" variant="outlined" size="small" />
+                                <Chip label={`${match.nights} nights`} color={isExcluded ? 'warning' : 'primary'} variant="outlined" size="small" />
                                 <Chip label={`Arrives ${shortedDayOfWeek}`} size="small" />
                                 {isPreferred && <Chip label="Preferred start" color="success" size="small" />}
+                                {isExcluded && <Chip label={match.reason === 'stayLength' ? 'Excluded: stay length' : 'Excluded: start day'} color="warning" size="small" />}
                             </Stack>
                         </Stack>
                         <Divider />
@@ -163,7 +166,29 @@ export function CampsitesTable(props) {
                     <CampsiteCard key={`${site.siteName}-${match.from}-${match.to}`} site={site} match={match} />
                 );
             });
+            // Include excluded matches when toggled on
+            if (props.showExcluded && site.excludedMatches?.length > 0) {
+                const sortedExcluded = sortByFromDate(site.excludedMatches);
+                sortedExcluded.forEach(match => {
+                    cards.push(
+                        <CampsiteCard key={`${site.siteName}-excluded-${match.from}-${match.to}`} site={site} match={match} />
+                    );
+                });
+            }
         });
+        // Also show sites that only have excluded matches (no regular matches)
+        if (props.showExcluded) {
+            const sitesOnlyExcluded = sites.filter(s =>
+                (!s.matches || s.matches.length === 0) && s.excludedMatches?.length > 0
+            );
+            sortBySiteName(sitesOnlyExcluded).forEach(site => {
+                sortByFromDate(site.excludedMatches).forEach(match => {
+                    cards.push(
+                        <CampsiteCard key={`${site.siteName}-excluded-${match.from}-${match.to}`} site={site} match={match} />
+                    );
+                });
+            });
+        }
         if (cards.length === 0) {
             return (
                 <Typography variant="body2" color="text.secondary">

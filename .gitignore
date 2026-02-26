@@ -21,3 +21,8 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# notifier state (managed by GitHub Actions cache)
+notifier/state.json
+notifier/pending-notifications.json
+notifier/email-preview.html

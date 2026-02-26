@@ -122,8 +122,10 @@ export const formatGroupsByFavorites = (data) => {
 
         for (let siteId in campground.siteAvailability) {
             const site = campground.siteAvailability[siteId];
-            if (site.matches?.length > 0) {
-                campground.hasAvailability = true;
+            if (site.matches?.length > 0 || site.excludedMatches?.length > 0) {
+                if (site.matches?.length > 0) {
+                    campground.hasAvailability = true;
+                }
                 if (campground.sites.favorites.includes(site.siteName)) {
                     campground.sitesGroupedByFavorites[siteGroups.favorites.label].push(site);
                 } else if (campground.sites.worthwhile.includes(site.siteName)) {

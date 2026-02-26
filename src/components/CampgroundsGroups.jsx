@@ -62,6 +62,7 @@ export function CampgroundsGroups(props) {
     const [viewMode, setViewMode] = useState(() => storedViewRef.current ?? props.settings?.views?.type ?? 'calendar');
     const [expandedCampgrounds, setExpandedCampgrounds] = useState(() => readObjectFromStorage(EXPANDED_GROUPS_STORAGE_KEY, {}));
     const [imagePreview, setImagePreview] = useState({ open: false, src: '', alt: '' });
+    const [showExcludedMap, setShowExcludedMap] = useState({});
 
     // useEffect(() => {
     //     // console.log('props: ', props);
@@ -167,6 +168,7 @@ export function CampgroundsGroups(props) {
         const grouped = campground.sitesGroupedByFavorites ?? {};
         let totalMatches = 0;
         let favoriteMatches = 0;
+        let totalExcluded = 0;
         Object.entries(grouped).forEach(([label, sites]) => {
             sites.forEach(site => {
                 const matches = site.matches ?? [];
@@ -174,17 +176,31 @@ export function CampgroundsGroups(props) {
                 if (label === 'Favorites') {
                     favoriteMatches += matches.length;
                 }
+                totalExcluded += site.excludedMatches?.length ?? 0;
             });
         });
-        const excluded = campground.excludedMatches ?? { byStayLength: 0, byStartDay: 0 };
-        const totalExcluded = excluded.byStayLength + excluded.byStartDay;
         return {
             totalMatches,
             favoriteMatches,
-            excludedByStayLength: excluded.byStayLength,
-            excludedByStartDay: excluded.byStartDay,
             totalExcluded,
         };
+    };
+
+    const toggleShowExcluded = (campgroundId) => (event) => {
+        event.stopPropagation();
+        const turningOn = !showExcludedMap[campgroundId];
+        setShowExcludedMap(prev => ({
+            ...prev,
+            [campgroundId]: turningOn,
+        }));
+        // When toggling excluded ON, ensure this campground's accordion is expanded
+        if (turningOn) {
+            setExpandedCampgrounds(prev => {
+                const current = new Set(prev[ALL_CAMPGROUNDS_KEY] ?? []);
+                current.add(campgroundId);
+                return { ...prev, [ALL_CAMPGROUNDS_KEY]: Array.from(current) };
+            });
+        }
     };
 
     const availableCampgroundCount = campgrounds.filter(checkForGroupedAvailability).length;
@@ -270,7 +286,10 @@ export function CampgroundsGroups(props) {
                                     const campgroundImage = campground.image?.length > 0 ? '/images/sites/' + campground.image : '/images/sites/bg_default.jpg';
                                     const stats = getCampgroundStats(campground);
                                     const campgroundId = getCampgroundId(campground);
-                                    const expanded = hasCampgroundAvailability && isCampgroundExpanded(ALL_CAMPGROUNDS_KEY, campgroundId, hasCampgroundAvailability);
+                                    const showingExcluded = !!showExcludedMap[campgroundId];
+                                    const hasExcludedData = showingExcluded && stats.totalExcluded > 0;
+                                    const isExpandable = hasCampgroundAvailability || hasExcludedData;
+                                    const expanded = isExpandable && isCampgroundExpanded(ALL_CAMPGROUNDS_KEY, campgroundId, isExpandable);
                                     return (
                                         <Box
                                             key={`${campground.name}-${campgroundIndex}`}
@@ -278,8 +297,7 @@ export function CampgroundsGroups(props) {
                                         >
                                             <Accordion
                                                 expanded={expanded}
-                                                // disabled={!hasCampgroundAvailability}
-                                                onChange={hasCampgroundAvailability ? toggleCampground(ALL_CAMPGROUNDS_KEY, campgroundId) : undefined}
+                                                onChange={isExpandable ? toggleCampground(ALL_CAMPGROUNDS_KEY, campgroundId) : undefined}
                                                 disableGutters
                                                 sx={{
                                                     border: theme => `1px solid ${theme.palette.divider}`,
@@ -293,10 +311,9 @@ export function CampgroundsGroups(props) {
                                                     sx={{
                                                         px: 1.5,
                                                         py: 1,
-                                                        backgroundColor: hasCampgroundAvailability
+                                                        backgroundColor: isExpandable
                                                             ? (expanded ? 'action.hover' : 'transparent')
                                                             : 'action.disabledBackground',
-                                                        // opacity: hasCampgroundAvailability ? 1 : 0.95,
                                                     }}
                                                 >
                                                     <Stack direction="row" spacing={1} alignItems="center" sx={{ flexGrow: 1 }}>
@@ -352,25 +369,14 @@ export function CampgroundsGroups(props) {
                                                                     variant="outlined"
                                                                 />
                                                                 {stats.totalExcluded > 0 && (
-                                                                    <Tooltip
-                                                                        title={
-                                                                            <span>
-                                                                                {stats.excludedByStayLength > 0 && (
-                                                                                    <>{stats.excludedByStayLength} excluded by stay length<br /></>
-                                                                                )}
-                                                                                {stats.excludedByStartDay > 0 && (
-                                                                                    <>{stats.excludedByStartDay} excluded by start day</>
-                                                                                )}
-                                                                            </span>
-                                                                        }
-                                                                    >
-                                                                        <Chip
-                                                                            label={`${stats.totalExcluded} excluded by filters`}
-                                                                            size="small"
-                                                                            color="info"
-                                                                            variant="outlined"
-                                                                        />
-                                                                    </Tooltip>
+                                                                    <Chip
+                                                                        label={showExcludedMap[campgroundId] ? `Hide ${stats.totalExcluded} excluded` : `Show ${stats.totalExcluded} excluded`}
+                                                                        size="small"
+                                                                        color="info"
+                                                                        variant={showExcludedMap[campgroundId] ? 'filled' : 'outlined'}
+                                                                        onClick={toggleShowExcluded(campgroundId)}
+                                                                        sx={{ cursor: 'pointer' }}
+                                                                    />
                                                                 )}
                                                             </Stack>
                                                         </Stack>
@@ -419,9 +425,10 @@ export function CampgroundsGroups(props) {
                                                         }}
                                                     />
                                                     <Campground
-                                                        key={`${campground.name}-${viewMode}`}
+                                                        key={`${campground.name}-${viewMode}-${!!showExcludedMap[campgroundId]}`}
                                                         campground={campground}
                                                         viewMode={viewMode}
+                                                        showExcluded={!!showExcludedMap[campgroundId]}
                                                     />
                                                 </AccordionDetails>
                                             </Accordion>
@@ -461,20 +468,14 @@ export function CampgroundsGroups(props) {
                                                     <TableCell>{stats.favoriteMatches}</TableCell>
                                                     <TableCell>
                                                         {stats.totalExcluded > 0 ? (
-                                                            <Tooltip
-                                                                title={
-                                                                    <span>
-                                                                        {stats.excludedByStayLength > 0 && (
-                                                                            <>{stats.excludedByStayLength} by stay length<br /></>
-                                                                        )}
-                                                                        {stats.excludedByStartDay > 0 && (
-                                                                            <>{stats.excludedByStartDay} by start day</>
-                                                                        )}
-                                                                    </span>
-                                                                }
-                                                            >
-                                                                <span>{stats.totalExcluded}</span>
-                                                            </Tooltip>
+                                                            <Chip
+                                                                label={showExcludedMap[campgroundId] ? `Hide ${stats.totalExcluded}` : stats.totalExcluded}
+                                                                size="small"
+                                                                color="info"
+                                                                variant={showExcludedMap[campgroundId] ? 'filled' : 'outlined'}
+                                                                onClick={toggleShowExcluded(campgroundId)}
+                                                                sx={{ cursor: 'pointer' }}
+                                                            />
                                                         ) : '—'}
                                                     </TableCell>
                                                     <TableCell>

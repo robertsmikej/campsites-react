@@ -1,0 +1,52 @@
+name: Check Campsite Availability
+
+on:
+  schedule:
+    - cron: '*/15 * * * *' # Every 15 minutes
+  workflow_dispatch:
+    inputs:
+      force_email:
+        description: 'Send email even if no previous state (skip first-run seeding)'
+        type: boolean
+        default: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Restore previous state from cache
+      - uses: actions/cache/restore@v4
+        id: restore-state
+        with:
+          path: |
+            notifier/state.json
+            notifier/pending-notifications.json
+          key: campsite-state-never-matches
+          restore-keys: |
+            campsite-state-
+
+      - name: Check availability and notify
+        working-directory: notifier
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          SUBSCRIBER_API_URL: ${{ secrets.SUBSCRIBER_API_URL }}
+          SUBSCRIBER_API_SECRET: ${{ secrets.SUBSCRIBER_API_SECRET }}
+          PRIORITY_EMAILS: ${{ secrets.PRIORITY_EMAILS }}
+          SITE_URL: ${{ secrets.SITE_URL }}
+          FORCE_EMAIL: ${{ github.event.inputs.force_email }}
+        run: node check.mjs
+
+      # Save state for next run (unique key per run so it always saves)
+      - uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: |
+            notifier/state.json
+            notifier/pending-notifications.json
+          key: campsite-state-${{ github.run_id }}

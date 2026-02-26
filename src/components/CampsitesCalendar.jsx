@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 // Import the dayjs plugins you need
 import dayjs from 'dayjs';
@@ -30,60 +30,66 @@ dayjs.extend(isSameOrBefore);
 dayjs.extend(isSameOrAfter);
 
 const calendarColors = ['green', 'darkgreen'];
-// 1. Create a styled component that handles different variants for the range
+const excludedColors = ['#e67e22', '#d35400'];
+
+const getRangeStyles = (variant, colors, bgPaper) => {
+    if (variant === 'single' || variant === 'excludedSingle') {
+        return {
+            backgroundColor: colors[0],
+            color: '#fff',
+            borderRadius: '50%',
+            "&:hover, &:focus": { backgroundColor: colors[1] },
+        };
+    }
+    if (variant === 'rangeStart' || variant === 'excludedRangeStart') {
+        return {
+            backgroundColor: colors[0],
+            color: '#fff',
+            borderTopLeftRadius: '50%',
+            borderBottomLeftRadius: '50%',
+            borderTopRightRadius: 0,
+            borderBottomRightRadius: 0,
+            "&:hover, &:focus": { backgroundColor: colors[1] },
+        };
+    }
+    if (variant === 'rangeMiddle' || variant === 'excludedRangeMiddle') {
+        return {
+            backgroundColor: colors[0],
+            color: '#fff',
+            borderRadius: 0,
+            "&:hover, &:focus": { backgroundColor: colors[1] },
+        };
+    }
+    if (variant === 'rangeEnd' || variant === 'excludedRangeEnd') {
+        return {
+            backgroundColor: colors[0],
+            color: '#fff',
+            borderTopRightRadius: '0%',
+            borderBottomRightRadius: '0%',
+            borderTopLeftRadius: 0,
+            borderBottomLeftRadius: 0,
+            backgroundImage: `linear-gradient(115deg, ${colors[0]} 65%, ${bgPaper} 45%)`,
+            "&:hover, &:focus": {
+                backgroundColor: colors[1],
+                backgroundImage: `linear-gradient(125deg, ${colors[1]} 65%, ${bgPaper} 45%)`,
+            },
+        };
+    }
+    return {};
+};
+
 const RangeDay = styled(PickersDay, {
     shouldForwardProp: (prop) => prop !== "variant" && prop !== "selected"
 })(({ theme, variant }) => ({
-    // Default styling for a selected day
     width: '40px',
     height: '40px',
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
-    ...(variant === 'single' && {
-        backgroundColor: calendarColors[0],
-        color: theme.palette.primary.contrastText,
-        borderRadius: '50%',
-        "&:hover, &:focus": {
-            backgroundColor: calendarColors[1]
-        },
-    }),
-    // Styling for a day at the start of a range
-    ...(variant === 'rangeStart' && {
-        backgroundColor: calendarColors[0],
-        color: theme.palette.primary.contrastText,
-        borderTopLeftRadius: '50%',
-        borderBottomLeftRadius: '50%',
-        borderTopRightRadius: 0,
-        borderBottomRightRadius: 0,
-        "&:hover, &:focus": {
-            backgroundColor: calendarColors[1]
-        },
-    }),
-    // Styling for a day in the middle of a range
-    ...(variant === 'rangeMiddle' && {
-        backgroundColor: calendarColors[0],
-        color: theme.palette.primary.contrastText,
-        borderRadius: 0,
-        "&:hover, &:focus": {
-            backgroundColor: calendarColors[1]
-        },
-
-    }),
-    // Styling for a day at the end of a range
-    ...(variant === 'rangeEnd' && {
-        backgroundColor: calendarColors[0],
-        color: theme.palette.primary.contrastText,
-        borderTopRightRadius: '0%',
-        borderBottomRightRadius: '0%',
-        borderTopLeftRadius: 0,
-        borderBottomLeftRadius: 0,
-        backgroundImage: `linear-gradient(115deg, ${calendarColors[0]} 65%, ${theme.palette.background.paper} 45%)`,
-        "&:hover, &:focus": {
-            backgroundColor: calendarColors[1],
-            backgroundImage: `linear-gradient(125deg, ${calendarColors[1]} 65%, ${theme.palette.background.paper} 45%)`,
-        },
-    }),
+    ...(variant?.startsWith('excluded')
+        ? getRangeStyles(variant, excludedColors, theme.palette.background.paper)
+        : getRangeStyles(variant, calendarColors, theme.palette.background.paper)
+    ),
 }));
 
 const ServerDay = (props) => {
@@ -92,37 +98,41 @@ const ServerDay = (props) => {
     let variant = 'default';
 
     // Loop through the values to determine the variant for the day
+    // Check regular matches first, then excluded (regular takes priority)
     for (let item of highlightedValues) {
-        // Case 1: Single date (Dayjs object)
+        if (item?.excluded) continue; // skip excluded on first pass
+
         if (dayjs.isDayjs(item) && item.isSame(day, 'day')) {
             variant = 'single';
             break;
         }
-
-        // Case 2: Date range ({ from, to })
         if (item?.from && item?.to) {
             const isStart = day.isSame(item.from, 'day');
             const isEnd = day.isSame(item.to, 'day');
             const isMiddle = day.isBetween(item.from, item.to, 'day', '()');
+            if (isStart && isEnd) { variant = 'single'; break; }
+            else if (isStart) { variant = 'rangeStart'; break; }
+            else if (isEnd) { variant = 'rangeEnd'; break; }
+            else if (isMiddle) { variant = 'rangeMiddle'; break; }
+        }
+    }
 
-            if (isStart && isEnd) {
-                // If the range is only one day long, treat it as a single date
-                variant = 'single';
-                break;
-            } else if (isStart) {
-                variant = 'rangeStart';
-                break;
-            } else if (isEnd) {
-                variant = 'rangeEnd';
-                break;
-            } else if (isMiddle) {
-                variant = 'rangeMiddle';
-                break;
+    // If no regular match, check excluded matches
+    if (variant === 'default') {
+        for (let item of highlightedValues) {
+            if (!item?.excluded) continue;
+            if (item?.from && item?.to) {
+                const isStart = day.isSame(item.from, 'day');
+                const isEnd = day.isSame(item.to, 'day');
+                const isMiddle = day.isBetween(item.from, item.to, 'day', '()');
+                if (isStart && isEnd) { variant = 'excludedSingle'; break; }
+                else if (isStart) { variant = 'excludedRangeStart'; break; }
+                else if (isEnd) { variant = 'excludedRangeEnd'; break; }
+                else if (isMiddle) { variant = 'excludedRangeMiddle'; break; }
             }
         }
     }
 
-    // Determine the 'selected' prop based on the variant
     const isSelected = variant !== 'default';
 
     return (
@@ -130,46 +140,44 @@ const ServerDay = (props) => {
             {...other}
             day={day}
             variant={variant}
-            selected={isSelected} // Pass the boolean selected state
+            selected={isSelected}
             disableMargin
         />
     );
 };
 
-export function CampsitesCalendar(props) {
-    const [site, setSite] = useState([]);
-    const [monthsToShow, setMonthsToShow] = useState([dayjs('2025-08-01'), dayjs('2025-09-01')]);
-    const [values, setValues] = useState([
-        dayjs('2025-08-23'),
-        { from: dayjs('2025-08-25'), to: dayjs('2025-08-27') },
-        dayjs('2025-08-29'),
-        { from: dayjs('2025-09-02'), to: dayjs('2025-09-05') },
-        dayjs('2025-09-12')
-    ]);
-    const [photoPreview, setPhotoPreview] = useState({ open: false, photos: [], siteName: '' });
+const buildDateDisplayArray = (site, includeExcluded) => {
+    const { dates = [], matches = [], excludedMatches = [] } = site;
 
+    const matchRanges = matches.map(m => {
+        if (m.from === m.to) {
+            return dayjs(m.from);
+        } else {
+            return {
+                from: dayjs(m.from),
+                to: dayjs(m.to)
+            };
+        }
+    });
 
-    useEffect(() => {
-        if (!props.site) return;
-        setSite(props.site);
-    }, [props.site]);
+    // Build excluded ranges if toggled on
+    const excludedRanges = includeExcluded ? excludedMatches.map(m => ({
+        from: dayjs(m.from),
+        to: dayjs(m.to),
+        excluded: true,
+    })) : [];
 
-    const buildDateDisplayArray = (site) => {
-        const { dates = [], matches = [] } = site;
-
-        const matchRanges = matches.map(m => {
-            if (m.from === m.to) {
-                return dayjs(m.from);
-            } else {
-                return {
-                    from: dayjs(m.from),
-                    to: dayjs(m.to)
-                };
-            }
-        });
-
-        const allMatchDays = new Set();
-        matches.forEach(m => {
+    const allMatchDays = new Set();
+    matches.forEach(m => {
+        let current = dayjs(m.from);
+        const end = dayjs(m.to);
+        while (current.isBefore(end, 'day')) {
+            allMatchDays.add(current.format('YYYY-MM-DD'));
+            current = current.add(1, 'day');
+        }
+    });
+    if (includeExcluded) {
+        excludedMatches.forEach(m => {
             let current = dayjs(m.from);
             const end = dayjs(m.to);
             while (current.isBefore(end, 'day')) {
@@ -177,55 +185,63 @@ export function CampsitesCalendar(props) {
                 current = current.add(1, 'day');
             }
         });
+    }
 
-        const singles = dates
-            .filter(d => !allMatchDays.has(d))
-            .map(d => ({ from: dayjs(d), to: dayjs(d).add(1, 'day') }));
+    const singles = dates
+        .filter(d => !allMatchDays.has(d))
+        .map(d => ({ from: dayjs(d), to: dayjs(d).add(1, 'day') }));
 
-        const combined = [...singles, ...matchRanges].sort((a, b) => {
-            const aDate = dayjs(a.from ?? a);
-            const bDate = dayjs(b.from ?? b);
-            return aDate.diff(bDate);
-        });
+    const combined = [...singles, ...matchRanges, ...excludedRanges].sort((a, b) => {
+        const aDate = dayjs(a.from ?? a);
+        const bDate = dayjs(b.from ?? b);
+        return aDate.diff(bDate);
+    });
 
-        return combined;
-    };
+    return combined;
+};
 
-    const getMonthsFromSiteData = (site) => {
-        const { dates = [], matches = [] } = site;
+const getMonthsFromSiteData = (site, includeExcluded) => {
+    const { dates = [], matches = [], excludedMatches = [] } = site;
+    const allMatches = includeExcluded ? [...matches, ...excludedMatches] : matches;
 
-        const monthsSet = new Set();
+    const monthsSet = new Set();
 
-        // Add months from single dates
-        dates.forEach(dateStr => {
-            monthsSet.add(dayjs(dateStr).startOf("month").format("YYYY-MM-DD"));
-        });
+    // Add months from single dates
+    dates.forEach(dateStr => {
+        monthsSet.add(dayjs(dateStr).startOf("month").format("YYYY-MM-DD"));
+    });
 
-        // Add months from match ranges
-        matches.forEach(m => {
-            let current = dayjs(m.from).startOf("month");
-            const end = dayjs(m.to).startOf("month");
+    // Add months from match ranges
+    allMatches.forEach(m => {
+        let current = dayjs(m.from).startOf("month");
+        const end = dayjs(m.to).startOf("month");
 
-            // Loop through each month in the range
-            while (current.isSameOrBefore(end, "month")) {
-                monthsSet.add(current.format("YYYY-MM-DD"));
-                current = current.add(1, "month");
-            }
-        });
+        // Loop through each month in the range
+        while (current.isSameOrBefore(end, "month")) {
+            monthsSet.add(current.format("YYYY-MM-DD"));
+            current = current.add(1, "month");
+        }
+    });
 
-        // Convert back to sorted array of dayjs
-        return [...monthsSet]
-            .map(m => dayjs(m))
-            .sort((a, b) => a.diff(b));
-    };
+    // Convert back to sorted array of dayjs
+    return [...monthsSet]
+        .map(m => dayjs(m))
+        .sort((a, b) => a.diff(b));
+};
 
-    useEffect(() => {
-        if (!site) return;
-        const formattedDates = buildDateDisplayArray(site);
-        setValues(formattedDates);
-        const formattedMonths = getMonthsFromSiteData(site);
-        setMonthsToShow(formattedMonths);
-    }, [site]);
+export function CampsitesCalendar(props) {
+    const site = props.site || {};
+    const [photoPreview, setPhotoPreview] = useState({ open: false, photos: [], siteName: '' });
+
+    const values = useMemo(() => {
+        if (!props.site) return [];
+        return buildDateDisplayArray(props.site, props.showExcluded);
+    }, [props.site, props.showExcluded]);
+
+    const monthsToShow = useMemo(() => {
+        if (!props.site) return [];
+        return getMonthsFromSiteData(props.site, props.showExcluded);
+    }, [props.site, props.showExcluded]);
 
     const openPhotoPreview = (currentSite) => () => {
         const fallback = props.campground?.image ? `/images/sites/${props.campground.image}` : '/images/sites/bg_default.jpg';
@@ -270,7 +286,7 @@ export function CampsitesCalendar(props) {
                         {monthsToShow.map((month) => {
                             return (
                                 <StaticDatePicker
-                                    key={month}
+                                    key={`${month.format('YYYY-MM')}-${props.showExcluded}`}
                                     displayStaticWrapperAs="desktop"
                                     value={month}
                                     slots={{
