@@ -198,14 +198,15 @@ const main = async () => {
         saveState(currentSignatures);
         return;
     }
-    if (previousSignatures === null && forceEmail) {
-        console.log('[First Run] No previous state — but FORCE_EMAIL is set, treating all matches as new.');
+    if (forceEmail) {
+        console.log('[Force] FORCE_EMAIL is set — treating all current matches as new.');
     }
 
     // Find new matches — favorites only
-    // Use empty set when no previous state (force email treats everything as new)
+    // Use empty set when force email or no previous state (treats everything as new)
     const allConfigs = Object.values(siteConfigurations).flat();
-    const allNewMatches = findNewMatches(results, previousSignatures ?? new Set(), allConfigs);
+    const compareAgainst = forceEmail ? new Set() : (previousSignatures ?? new Set());
+    const allNewMatches = findNewMatches(results, compareAgainst, allConfigs);
     const newMatches = allNewMatches.filter(m => m.group === 'favorites');
     console.log(`[Diff] ${allNewMatches.length} new matches total, ${newMatches.length} favorites`);
 
