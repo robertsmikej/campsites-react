@@ -203,8 +203,9 @@ const main = async () => {
     }
 
     // Find new matches — favorites only
+    // Use empty set when no previous state (force email treats everything as new)
     const allConfigs = Object.values(siteConfigurations).flat();
-    const allNewMatches = findNewMatches(results, previousSignatures, allConfigs);
+    const allNewMatches = findNewMatches(results, previousSignatures ?? new Set(), allConfigs);
     const newMatches = allNewMatches.filter(m => m.group === 'favorites');
     console.log(`[Diff] ${allNewMatches.length} new matches total, ${newMatches.length} favorites`);
 
