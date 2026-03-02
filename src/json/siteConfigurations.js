@@ -31,6 +31,7 @@ export const defaultCampgroundConfigurations = {
                 'Worthwhile': true,
                 'All Others': true,
             },
+            notifyAll: true,
         },
         {
             id: '232050',

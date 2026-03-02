@@ -202,13 +202,16 @@ const main = async () => {
         console.log('[Force] FORCE_EMAIL is set — treating all current matches as new.');
     }
 
-    // Find new matches — favorites only
+    // Find new matches — favorites + notifyAll campgrounds
     // Use empty set when force email or no previous state (treats everything as new)
     const allConfigs = Object.values(siteConfigurations).flat();
     const compareAgainst = forceEmail ? new Set() : (previousSignatures ?? new Set());
     const allNewMatches = findNewMatches(results, compareAgainst, allConfigs);
-    const newMatches = allNewMatches.filter(m => m.group === 'favorites');
-    console.log(`[Diff] ${allNewMatches.length} new matches total, ${newMatches.length} favorites`);
+    const notifyAllIds = new Set(allConfigs.filter(c => c.notifyAll).map(c => c.id));
+    const newMatches = allNewMatches.filter(
+        m => m.group === 'favorites' || notifyAllIds.has(m.campgroundId)
+    );
+    console.log(`[Diff] ${allNewMatches.length} new matches total, ${newMatches.length} after filtering (${notifyAllIds.size} campground(s) set to notifyAll)`);
 
     if (newMatches.length > 0) {
         // Send immediately to priority subscribers

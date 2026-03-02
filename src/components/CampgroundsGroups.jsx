@@ -347,13 +347,23 @@ export function CampgroundsGroups(props) {
                                                                     ) : (
                                                                         <span />
                                                                     )}
-                                                                    <Chip
-                                                                        label={campground.area}
-                                                                        size="small"
-                                                                        color="secondary"
-                                                                        variant="outlined"
-                                                                        sx={{ backgroundColor: 'white' }}
-                                                                    />
+                                                                    <Stack direction="row" spacing={0.5}>
+                                                                        {campground.notifyAll && (
+                                                                            <Chip
+                                                                                label="Notify all"
+                                                                                size="small"
+                                                                                color="info"
+                                                                                variant="outlined"
+                                                                            />
+                                                                        )}
+                                                                        <Chip
+                                                                            label={campground.area}
+                                                                            size="small"
+                                                                            color="secondary"
+                                                                            variant="outlined"
+                                                                            sx={{ backgroundColor: 'white' }}
+                                                                        />
+                                                                    </Stack>
                                                                 </Stack>
                                                             </Stack>
 
