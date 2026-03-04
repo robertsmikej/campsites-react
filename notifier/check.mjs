@@ -158,30 +158,7 @@ const main = async () => {
     const prioritySet = new Set(priorityEmails);
     const regularSubscribers = allSubscribers.filter(e => !prioritySet.has(e));
 
-    // --- Check for pending notifications ready to send to regular subscribers ---
-    const pending = loadPending();
-    if (pending?.matches?.length > 0 && pending.savedAt) {
-        const savedAt = new Date(pending.savedAt);
-        const ageMinutes = (Date.now() - savedAt.getTime()) / 60_000;
-        if (ageMinutes >= DELAY_MINUTES) {
-            console.log(`[Pending] ${pending.matches.length} matches are ${Math.round(ageMinutes)}min old — sending to ${regularSubscribers.length} regular subscriber(s)`);
-            for (const email of regularSubscribers) {
-                const { subject, html, unsubscribeLink } = formatEmail(pending.matches, {
-                    unsubscribeUrl: `${subscriberApiUrl}/api/unsubscribe`,
-                    email,
-                    apiSecret: subscriberApiSecret,
-                    siteUrl,
-                });
-                console.log(`[Email] Sending to ${email}: "${subject}"`);
-                await sendEmail(email, subject, html, resendApiKey, unsubscribeLink);
-            }
-            clearPending();
-        } else {
-            console.log(`[Pending] ${pending.matches.length} matches are ${Math.round(ageMinutes)}min old — waiting for ${DELAY_MINUTES}min delay`);
-        }
-    }
-
-    // --- Fetch and check for new availability ---
+    // --- 1. Fetch and check for new availability (always runs first) ---
     const campgrounds = buildCampgroundList();
     console.log(`[Start] Checking ${campgrounds.length} campgrounds`);
 
@@ -203,7 +180,6 @@ const main = async () => {
     }
 
     // Find new matches — favorites + notifyAll campgrounds
-    // Use empty set when force email or no previous state (treats everything as new)
     const allConfigs = Object.values(siteConfigurations).flat();
     const compareAgainst = forceEmail ? new Set() : (previousSignatures ?? new Set());
     const allNewMatches = findNewMatches(results, compareAgainst, allConfigs);
@@ -213,25 +189,28 @@ const main = async () => {
     );
     console.log(`[Diff] ${allNewMatches.length} new matches total, ${newMatches.length} after filtering (${notifyAllIds.size} campground(s) set to notifyAll)`);
 
+    // --- 2. Send priority emails immediately (most important) ---
     if (newMatches.length > 0) {
-        // Send immediately to priority subscribers
         if (priorityEmails.length > 0) {
             console.log(`[Priority] Sending ${newMatches.length} matches to ${priorityEmails.length} priority subscriber(s)`);
             for (const email of priorityEmails) {
-                const { subject, html, unsubscribeLink } = formatEmail(newMatches, {
-                    unsubscribeUrl: `${subscriberApiUrl}/api/unsubscribe`,
-                    email,
-                    apiSecret: subscriberApiSecret,
-                    siteUrl,
-                });
-                console.log(`[Email] Sending to ${email} (priority): "${subject}"`);
-                await sendEmail(email, subject, html, resendApiKey, unsubscribeLink);
+                try {
+                    const { subject, html, unsubscribeLink } = formatEmail(newMatches, {
+                        unsubscribeUrl: `${subscriberApiUrl}/api/unsubscribe`,
+                        email,
+                        apiSecret: subscriberApiSecret,
+                        siteUrl,
+                    });
+                    console.log(`[Email] Sending to ${email} (priority): "${subject}"`);
+                    await sendEmail(email, subject, html, resendApiKey, unsubscribeLink);
+                } catch (err) {
+                    console.error(`[Email] Failed to send to ${email} (priority): ${err.message}`);
+                }
             }
         }
 
         // Queue for regular subscribers (delayed delivery)
         if (regularSubscribers.length > 0) {
-            // Merge with any existing pending matches
             const existingPending = loadPending();
             const merged = [...(existingPending?.matches || []), ...newMatches];
             savePending(merged);
@@ -239,7 +218,40 @@ const main = async () => {
             console.log('[Done] No regular subscribers to queue for.');
         }
     } else {
-        console.log('[Done] No new favorite availability — no email sent.');
+        console.log('[Done] No new availability to notify about.');
+    }
+
+    // --- 3. Process pending queue for regular subscribers ---
+    const pending = loadPending();
+    if (pending?.matches?.length > 0 && pending.savedAt) {
+        const savedAt = new Date(pending.savedAt);
+        const ageMinutes = (Date.now() - savedAt.getTime()) / 60_000;
+        if (ageMinutes >= DELAY_MINUTES) {
+            console.log(`[Pending] ${pending.matches.length} matches are ${Math.round(ageMinutes)}min old — sending to ${regularSubscribers.length} regular subscriber(s)`);
+            let sendFailures = 0;
+            for (const email of regularSubscribers) {
+                try {
+                    const { subject, html, unsubscribeLink } = formatEmail(pending.matches, {
+                        unsubscribeUrl: `${subscriberApiUrl}/api/unsubscribe`,
+                        email,
+                        apiSecret: subscriberApiSecret,
+                        siteUrl,
+                    });
+                    console.log(`[Email] Sending to ${email}: "${subject}"`);
+                    await sendEmail(email, subject, html, resendApiKey, unsubscribeLink);
+                } catch (err) {
+                    sendFailures++;
+                    console.error(`[Email] Failed to send to ${email}: ${err.message}`);
+                }
+            }
+            // Clear pending even if some sends failed — don't retry stale matches forever
+            clearPending();
+            if (sendFailures > 0) {
+                console.warn(`[Pending] ${sendFailures} of ${regularSubscribers.length} subscriber sends failed`);
+            }
+        } else {
+            console.log(`[Pending] ${pending.matches.length} matches are ${Math.round(ageMinutes)}min old — waiting for ${DELAY_MINUTES}min delay`);
+        }
     }
 
     // Save current state for next run
