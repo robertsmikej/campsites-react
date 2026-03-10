@@ -1,15 +1,6 @@
 export const campgroundCatalog = {
     'recreation.gov': [
         {
-            id: '232085',
-            name: 'Point Campground',
-            area: 'Redfish Lake',
-            site: 'recreation.gov',
-            type: 'campground',
-            description: 'West side of Redfish Lake, close to lodge. Smaller Campground.',
-            image: 'point_campground_map.jpg',
-        },
-        {
             id: '232358',
             name: 'Outlet Campground',
             area: 'Redfish Lake',
@@ -17,6 +8,15 @@ export const campgroundCatalog = {
             type: 'campground',
             description: 'East side of Redfish Lake, right on lake.',
             image: 'outlet_campground_map.jpg',
+        },
+        {
+            id: '232085',
+            name: 'Point Campground',
+            area: 'Redfish Lake',
+            site: 'recreation.gov',
+            type: 'campground',
+            description: 'West side of Redfish Lake, close to lodge. Smaller Campground.',
+            image: 'point_campground_map.jpg',
         },
         {
             id: '232050',

@@ -2,9 +2,10 @@ export const defaultCampgroundConfigurations = {
     'recreation.gov': [
         {
             id: '232085',
+            name: 'Point Campground',
             sites: {
-                favorites: ['012', '014', '016'],
-                worthwhile: [],
+                favorites: ['011', '012', '014', '016', '017'],
+                worthwhile: ['010', '013', '015'],
             },
             dates: {
                 startDate: '2026-06-01',
@@ -18,9 +19,10 @@ export const defaultCampgroundConfigurations = {
         },
         {
             id: '232358',
+            name: 'Outlet Campground',
             sites: {
                 favorites: ['013', '015', '011', '008'],
-                worthwhile: [],
+                worthwhile: ['016', '017', '018', '019'],
             },
             dates: {
                 startDate: '2026-06-01',
@@ -35,9 +37,10 @@ export const defaultCampgroundConfigurations = {
         },
         {
             id: '232050',
+            name: 'Glacier View Campground',
             sites: {
-                favorites: ['016', '014', '012', '003'],
-                worthwhile: [],
+                favorites: ['016', '014', '012', '003', '005', '007'],
+                worthwhile: ['019', '021', '023', '060', '031', '038', '039'],
             },
             dates: {
                 startDate: '2026-06-01',
@@ -51,6 +54,7 @@ export const defaultCampgroundConfigurations = {
         },
         {
             id: '234150',
+            name: 'Sunny Gulch Campground',
             sites: {
                 favorites: ['026', '027'],
                 worthwhile: [],
@@ -67,6 +71,7 @@ export const defaultCampgroundConfigurations = {
         },
         {
             id: '232087',
+            name: 'Rainbow Point Campground',
             sites: {
                 favorites: ['007'],
                 worthwhile: [],
@@ -83,6 +88,7 @@ export const defaultCampgroundConfigurations = {
         },
         {
             id: '233858',
+            name: 'Stanley Lake Campground',
             sites: {
                 favorites: ['014', '015', '016', '017', '018'],
                 worthwhile: ['009', '010', '011', '012'],
@@ -99,6 +105,7 @@ export const defaultCampgroundConfigurations = {
         },
         {
             id: '232169',
+            name: 'Mountain View Campground',
             sites: {
                 favorites: ['014', '015'],
                 worthwhile: ['012', '011', '010', '008', '006'],
@@ -115,6 +122,7 @@ export const defaultCampgroundConfigurations = {
         },
         {
             id: '232098',
+            name: 'Shoreline Campground',
             sites: {
                 favorites: ['010', '013', '025'],
                 worthwhile: [],
@@ -131,6 +139,7 @@ export const defaultCampgroundConfigurations = {
         },
         {
             id: '233348',
+            name: 'Redfish Cabin',
             sites: {
                 favorites: ['RF01'],
                 worthwhile: [],
