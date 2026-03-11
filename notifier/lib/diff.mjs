@@ -40,6 +40,7 @@ export const findNewMatches = (currentResults, previousSignatures, siteConfigura
                         campgroundId: result.campgroundId,
                         campgroundName: result.campgroundName,
                         campgroundArea: result.campgroundArea,
+                        campgroundDescription: result.campgroundDescription,
                         siteId,
                         siteName: site.siteName,
                         match,

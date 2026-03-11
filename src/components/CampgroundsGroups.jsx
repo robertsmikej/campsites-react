@@ -24,6 +24,7 @@ import TableRow from '@mui/material/TableRow';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import MapIcon from '@mui/icons-material/Map';
 import TableChartIcon from '@mui/icons-material/TableChart';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 
 import { checkForGroupedAvailability } from '../utils/utils';
 import { Campground } from './Campground';
@@ -163,6 +164,13 @@ export function CampgroundsGroups(props) {
     const handleImageClose = () => setImagePreview({ open: false, src: '', alt: '' });
 
     const getCampgroundId = (campground) => campground?.id ?? campground?.name ?? `${campground?.area ?? 'camp'}-${campground?.description ?? ''}`;
+
+    const getCampgroundUrl = (campground) => {
+        if (campground.type === 'cabin') {
+            return `https://www.recreation.gov/camping/campgrounds/${campground.id}`;
+        }
+        return `https://www.recreation.gov/camping/campgrounds/${campground.id}`;
+    };
 
     const getCampgroundStats = (campground) => {
         const grouped = campground.sitesGroupedByFavorites ?? {};
@@ -325,7 +333,21 @@ export function CampgroundsGroups(props) {
                                                                 justifyContent={'space-between'}
                                                             >
                                                                 <Stack spacing={0}>
-                                                                    <Typography variant='h5'>{campground.name}</Typography>
+                                                                    <Stack direction="row" spacing={0.5} alignItems="center">
+                                                                        <Typography variant='h5'>{campground.name}</Typography>
+                                                                        <Tooltip title="View on recreation.gov">
+                                                                            <Box
+                                                                                component="a"
+                                                                                href={getCampgroundUrl(campground)}
+                                                                                target="_blank"
+                                                                                rel="noopener noreferrer"
+                                                                                onClick={(e) => e.stopPropagation()}
+                                                                                sx={{ display: 'inline-flex', color: 'text.disabled', '&:hover': { color: 'primary.main' } }}
+                                                                            >
+                                                                                <OpenInNewIcon sx={{ fontSize: '0.9rem' }} />
+                                                                            </Box>
+                                                                        </Tooltip>
+                                                                    </Stack>
                                                                     <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.65rem', letterSpacing: 0.5 }}>
                                                                         ID: {campground.id}
                                                                     </Typography>
@@ -475,7 +497,18 @@ export function CampgroundsGroups(props) {
                                                 >
                                                     <TableCell>
                                                         <Stack spacing={0.25}>
-                                                            <Typography variant="body1">{campground.name}</Typography>
+                                                            <Stack direction="row" spacing={0.5} alignItems="center">
+                                                                <Typography variant="body1">{campground.name}</Typography>
+                                                                <Box
+                                                                    component="a"
+                                                                    href={getCampgroundUrl(campground)}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    sx={{ display: 'inline-flex', color: 'text.disabled', '&:hover': { color: 'primary.main' } }}
+                                                                >
+                                                                    <OpenInNewIcon sx={{ fontSize: '0.85rem' }} />
+                                                                </Box>
+                                                            </Stack>
                                                             <Typography variant="caption" color="text.secondary">{campground.area}</Typography>
                                                         </Stack>
                                                     </TableCell>

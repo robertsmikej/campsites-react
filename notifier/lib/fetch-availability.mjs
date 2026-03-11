@@ -174,6 +174,7 @@ export const fetchCampground = async (campground, settings) => {
         campgroundId: campground.id,
         campgroundName: campground.name,
         campgroundArea: campground.area,
+        campgroundDescription: campground.description,
         sites: siteAvailability,
     };
 };

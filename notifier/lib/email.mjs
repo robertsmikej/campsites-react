@@ -32,24 +32,20 @@ export const formatEmail = (newMatches, options = {}) => {
     const { unsubscribeUrl, email, apiSecret, siteUrl } = options;
     const unsubscribeOptions = { unsubscribeUrl, email, apiSecret };
     const count = newMatches.length;
-    const hasFavorite = newMatches.some((m) => m.group === 'favorites');
-
-    // Subject line
+    // Subject line — show campground names so it's easy to scan
+    const uniqueCampgroundNames = [...new Set(newMatches.map((m) => m.campgroundName))];
     let subject;
     if (count === 1) {
-        const m = newMatches[0];
-        const prefix = m.group === 'favorites' ? 'Favorite Site! ' : '';
-        subject = `${prefix}${m.campgroundName} - ${m.siteName} (${m.match.nights}n)`;
+        subject = `1 new: ${uniqueCampgroundNames[0]}`;
     } else {
-        const prefix = hasFavorite ? 'Favorites available! ' : '';
-        subject = `${prefix}${count} New Campsite Openings`;
+        subject = `${count} new: ${uniqueCampgroundNames.join(', ')}`;
     }
 
     // Group by campground
     const byCampground = {};
     for (const m of newMatches) {
         if (!byCampground[m.campgroundName]) {
-            byCampground[m.campgroundName] = { area: m.campgroundArea, matches: [] };
+            byCampground[m.campgroundName] = { area: m.campgroundArea, description: m.campgroundDescription, matches: [] };
         }
         byCampground[m.campgroundName].matches.push(m);
     }
@@ -62,7 +58,7 @@ export const formatEmail = (newMatches, options = {}) => {
 
     // Build HTML
     const campgroundSections = Object.entries(byCampground)
-        .map(([name, { area, matches }]) => {
+        .map(([name, { area, description, matches }]) => {
             const rows = matches
                 .map((m) => {
                     const link = buildReservationLink(m.siteId, m.match.from, m.match.nights);
@@ -85,8 +81,9 @@ export const formatEmail = (newMatches, options = {}) => {
 
             return `
                 <div style="margin-bottom:24px;">
-                    <h2 style="margin:0 0 4px 0;font-size:18px;color:#111;">${name}</h2>
-                    <p style="margin:0 0 12px 0;font-size:13px;color:#6b7280;">${area}</p>
+                    <h2 style="margin:0 0 4px 0;font-size:18px;color:#111;">${name}</h2>${description ? `
+                    <p style="margin:0 0 4px 0;font-size:13px;color:#374151;">${description}</p>` : ''}
+                    <p style="margin:0 0 12px 0;font-size:12px;color:#9ca3af;">${area}</p>
                     <table style="width:100%;border-collapse:collapse;font-size:13px;">
                         <thead>
                             <tr style="background:#f9fafb;">

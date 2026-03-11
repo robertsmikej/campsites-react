@@ -1,23 +1,6 @@
 export const defaultCampgroundConfigurations = {
     'recreation.gov': [
         {
-            id: '232085',
-            name: 'Point Campground',
-            sites: {
-                favorites: ['011', '012', '014', '016', '017'],
-                worthwhile: ['010', '013', '015'],
-            },
-            dates: {
-                startDate: '2026-06-01',
-                endDate: '2026-10-01',
-            },
-            showOrHide: {
-                'Favorites': true,
-                'Worthwhile': true,
-                'All Others': false,
-            },
-        },
-        {
             id: '232358',
             name: 'Outlet Campground',
             sites: {
@@ -34,6 +17,23 @@ export const defaultCampgroundConfigurations = {
                 'All Others': true,
             },
             notifyAll: true,
+        },
+        {
+            id: '232085',
+            name: 'Point Campground',
+            sites: {
+                favorites: ['011', '012', '014', '016', '017'],
+                worthwhile: ['010', '013', '015'],
+            },
+            dates: {
+                startDate: '2026-06-01',
+                endDate: '2026-10-01',
+            },
+            showOrHide: {
+                'Favorites': true,
+                'Worthwhile': true,
+                'All Others': false,
+            },
         },
         {
             id: '232050',
