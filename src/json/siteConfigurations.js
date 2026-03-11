@@ -73,7 +73,7 @@ export const defaultCampgroundConfigurations = {
             id: '232087',
             name: 'Rainbow Point Campground',
             sites: {
-                favorites: ['007'],
+                favorites: [],//'007'
                 worthwhile: [],
             },
             dates: {
