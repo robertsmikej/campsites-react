@@ -300,6 +300,24 @@ export function CampgroundsGroups({ isLoading = false, ...props }) {
                             )}
                         </Stack>
                         <Divider />
+                        {viewMode === 'calendar' && (
+                            <Stack direction="row" spacing={2} alignItems="center" sx={{ flexWrap: 'wrap', rowGap: 0.5 }}>
+                                <Stack direction="row" spacing={0.5} alignItems="center">
+                                    <Box sx={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: 'green' }} />
+                                    <Typography variant="caption" color="text.secondary">Matches filters</Typography>
+                                </Stack>
+                                <Stack direction="row" spacing={0.5} alignItems="center">
+                                    <Box sx={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: '#a5d6a7' }} />
+                                    <Typography variant="caption" color="text.secondary">Available (wrong start day)</Typography>
+                                </Stack>
+                                {Object.values(showExcludedMap).some(Boolean) && (
+                                    <Stack direction="row" spacing={0.5} alignItems="center">
+                                        <Box sx={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: '#e67e22' }} />
+                                        <Typography variant="caption" color="text.secondary">Excluded</Typography>
+                                    </Stack>
+                                )}
+                            </Stack>
+                        )}
                         {viewMode === 'calendar' ? (
                             <Box
                                 sx={{
@@ -437,6 +455,16 @@ export function CampgroundsGroups({ isLoading = false, ...props }) {
                                                                     <Tooltip title={`Only showing stays starting on: ${campground.validStartDays.join(', ')}`}>
                                                                         <Chip
                                                                             label={campground.validStartDays.map(d => d.slice(0, 3)).join(', ')}
+                                                                            size="small"
+                                                                            variant="outlined"
+                                                                            sx={{ fontSize: '0.7rem' }}
+                                                                        />
+                                                                    </Tooltip>
+                                                                )}
+                                                                {campground.stayLengths && (
+                                                                    <Tooltip title={`Custom stay length: ${Math.min(...campground.stayLengths)}–${Math.max(...campground.stayLengths)} nights`}>
+                                                                        <Chip
+                                                                            label={`${Math.min(...campground.stayLengths)}–${Math.max(...campground.stayLengths)}n`}
                                                                             size="small"
                                                                             variant="outlined"
                                                                             sx={{ fontSize: '0.7rem' }}

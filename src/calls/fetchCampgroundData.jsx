@@ -252,8 +252,9 @@ const processApiResults = (allResults, siteFetchMap, settings) => {
                 const excludedRanges = [];
 
                 // Get min/max stay lengths to check for excluded matches
-                const minStay = Math.min(...(settings.dates.stayLengths || [2]));
-                const maxStay = Math.max(...(settings.dates.stayLengths || [5]));
+                const effectiveStayLengths = campground.stayLengths ?? settings.dates.stayLengths;
+                const minStay = Math.min(...(effectiveStayLengths || [2]));
+                const maxStay = Math.max(...(effectiveStayLengths || [5]));
 
                 // Find all possible ranges (1-14 nights) to count exclusions
                 for (let length = 1; length <= 14; length++) {
@@ -342,11 +343,11 @@ const processApiResults = (allResults, siteFetchMap, settings) => {
 // Calculate excluded matches based on current settings
 // This runs on both cached and fresh data so exclusion counts stay accurate when settings change
 const calculateExcludedMatches = (data, settings) => {
-    const minStay = Math.min(...(settings.dates.stayLengths || [2]));
-    const maxStay = Math.max(...(settings.dates.stayLengths || [5]));
-
     for (const system in data) {
         (data[system] || []).forEach(campground => {
+            const effectiveStayLengths = campground.stayLengths ?? settings.dates.stayLengths;
+            const minStay = Math.min(...(effectiveStayLengths || [2]));
+            const maxStay = Math.max(...(effectiveStayLengths || [5]));
             campground.excludedMatches = { byStayLength: 0, byStartDay: 0, sites: {} };
 
             for (const siteId in campground.siteAvailability) {

@@ -30,6 +30,12 @@ import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Paper from '@mui/material/Paper';
+import Autocomplete from '@mui/material/Autocomplete';
+
+import dayjs from 'dayjs';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 
 import AddIcon from '@mui/icons-material/Add';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
@@ -91,14 +97,17 @@ const toEditableCampground = (campground = {}, validCatalogIds = new Set()) => {
         ...merged,
         favoritesText: merged.sites.favorites.join(', '),
         worthwhileText: merged.sites.worthwhile.join(', '),
+        favoritesArray: [...merged.sites.favorites],
+        worthwhileArray: [...merged.sites.worthwhile],
         catalogId: validCatalogIds.has(merged.id) ? merged.id : CUSTOM_CATALOG_OPTION,
         validStartDays: campground?.validStartDays ?? null,
+        stayLengths: campground?.stayLengths ?? null,
     };
 };
 
 const sanitizeCampground = (campground) => {
-    const favorites = parseList(campground.favoritesText);
-    const worthwhile = parseList(campground.worthwhileText);
+    const favorites = campground.favoritesArray != null ? campground.favoritesArray : parseList(campground.favoritesText);
+    const worthwhile = campground.worthwhileArray != null ? campground.worthwhileArray : parseList(campground.worthwhileText);
 
     return {
         name: campground.name.trim(),
@@ -122,6 +131,7 @@ const sanitizeCampground = (campground) => {
             'All Others': campground.showOrHide?.['All Others'] ?? DEFAULT_SHOW_HIDE['All Others'],
         },
         ...(campground.validStartDays ? { validStartDays: campground.validStartDays } : {}),
+        ...(campground.stayLengths ? { stayLengths: campground.stayLengths } : {}),
     };
 };
 
@@ -138,6 +148,7 @@ export function SiteConfigDialog({
     initialData,
     catalogOptions = [],
     globalSettings = {},
+    availableSites = {},
 }) {
     const [campgrounds, setCampgrounds] = useState([createEmptyCampground()]);
     const [newCampgroundSelection, setNewCampgroundSelection] = useState('');
@@ -389,6 +400,27 @@ export function SiteConfigDialog({
         }));
     };
 
+    const handleCampgroundStayReset = (index) => () => {
+        updateCampground(index, campground => ({
+            ...campground,
+            stayLengths: null,
+        }));
+    };
+
+    const handleCampgroundStayCustomize = (index) => () => {
+        updateCampground(index, campground => ({
+            ...campground,
+            stayLengths: buildStayLengthsArray(stayRange),
+        }));
+    };
+
+    const handleCampgroundStayChange = (index) => (event, newValue) => {
+        updateCampground(index, campground => ({
+            ...campground,
+            stayLengths: buildStayLengthsArray(newValue),
+        }));
+    };
+
     const buildStayLengthsArray = (range) => {
         const lengths = [];
         for (let i = range[0]; i <= range[1]; i++) {
@@ -415,6 +447,7 @@ export function SiteConfigDialog({
     );
 
     return (
+        <LocalizationProvider dateAdapter={AdapterDayjs}>
         <Dialog
             open={open}
             onClose={onClose}
@@ -748,39 +781,108 @@ export function SiteConfigDialog({
                                             <ImagePreview image={campground.image} name={campground.name} />
                                         </Stack>
                                         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-                                            <TextField size="small"
-                                                fullWidth
-                                                type="date"
+                                            <DatePicker
                                                 label="Start Date"
-                                                value={campground.dates.startDate}
-                                                onChange={(event) => handleDateChange(index, 'startDate', event.target.value)}
-                                                InputLabelProps={{ shrink: true }}
-                                                helperText="Optional. Leave blank to use global settings."
+                                                value={campground.dates.startDate ? dayjs(campground.dates.startDate) : null}
+                                                onChange={(newValue) => handleDateChange(index, 'startDate', newValue && newValue.isValid() ? newValue.format('YYYY-MM-DD') : '')}
+                                                maxDate={campground.dates.endDate ? dayjs(campground.dates.endDate) : undefined}
+                                                slotProps={{
+                                                    textField: { size: 'small', fullWidth: true, helperText: 'Optional. Leave blank to use global settings.' },
+                                                    field: { clearable: true },
+                                                }}
                                             />
-                                            <TextField size="small"
-                                                fullWidth
-                                                type="date"
+                                            <DatePicker
                                                 label="End Date"
-                                                value={campground.dates.endDate}
-                                                onChange={(event) => handleDateChange(index, 'endDate', event.target.value)}
-                                                InputLabelProps={{ shrink: true }}
+                                                value={campground.dates.endDate ? dayjs(campground.dates.endDate) : null}
+                                                onChange={(newValue) => handleDateChange(index, 'endDate', newValue && newValue.isValid() ? newValue.format('YYYY-MM-DD') : '')}
+                                                minDate={campground.dates.startDate ? dayjs(campground.dates.startDate) : undefined}
+                                                slotProps={{
+                                                    textField: { size: 'small', fullWidth: true },
+                                                    field: { clearable: true },
+                                                }}
                                             />
                                         </Stack>
                                         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-                                            <TextField size="small"
-                                                fullWidth
-                                                label="Favorite Sites"
-                                                value={campground.favoritesText}
-                                                onChange={(event) => handleFieldChange(index, 'favoritesText', event.target.value)}
-                                                helperText="Comma-separated list (e.g., 012, 014, 016)"
-                                            />
-                                            <TextField size="small"
-                                                fullWidth
-                                                label="Worthwhile Sites"
-                                                value={campground.worthwhileText}
-                                                onChange={(event) => handleFieldChange(index, 'worthwhileText', event.target.value)}
-                                                helperText="Comma-separated list"
-                                            />
+                                            {availableSites[campground.id]?.length > 0 ? (
+                                                <Autocomplete
+                                                    multiple
+                                                    fullWidth
+                                                    size="small"
+                                                    disableCloseOnSelect
+                                                    freeSolo
+                                                    options={availableSites[campground.id]}
+                                                    value={campground.favoritesArray || []}
+                                                    onChange={(event, newValue) => {
+                                                        updateCampground(index, c => ({
+                                                            ...c,
+                                                            favoritesArray: newValue,
+                                                            favoritesText: newValue.join(', '),
+                                                        }));
+                                                    }}
+                                                    renderOption={(props, option, { selected }) => (
+                                                        <li {...props}>
+                                                            <Checkbox checked={selected} size="small" sx={{ mr: 1 }} />
+                                                            {option}
+                                                        </li>
+                                                    )}
+                                                    renderInput={(params) => (
+                                                        <TextField
+                                                            {...params}
+                                                            label="Favorite Sites"
+                                                            helperText="Select favorites. Type to add unlisted sites."
+                                                        />
+                                                    )}
+                                                    sx={{ flex: 1 }}
+                                                />
+                                            ) : (
+                                                <TextField size="small"
+                                                    fullWidth
+                                                    label="Favorite Sites"
+                                                    value={campground.favoritesText}
+                                                    onChange={(event) => handleFieldChange(index, 'favoritesText', event.target.value)}
+                                                    helperText={campground.id ? "Loading sites... or enter comma-separated" : "Comma-separated list (e.g., 012, 014, 016)"}
+                                                />
+                                            )}
+                                            {availableSites[campground.id]?.length > 0 ? (
+                                                <Autocomplete
+                                                    multiple
+                                                    fullWidth
+                                                    size="small"
+                                                    disableCloseOnSelect
+                                                    freeSolo
+                                                    options={availableSites[campground.id]}
+                                                    value={campground.worthwhileArray || []}
+                                                    onChange={(event, newValue) => {
+                                                        updateCampground(index, c => ({
+                                                            ...c,
+                                                            worthwhileArray: newValue,
+                                                            worthwhileText: newValue.join(', '),
+                                                        }));
+                                                    }}
+                                                    renderOption={(props, option, { selected }) => (
+                                                        <li {...props}>
+                                                            <Checkbox checked={selected} size="small" sx={{ mr: 1 }} />
+                                                            {option}
+                                                        </li>
+                                                    )}
+                                                    renderInput={(params) => (
+                                                        <TextField
+                                                            {...params}
+                                                            label="Worthwhile Sites"
+                                                            helperText="Select worthwhile sites. Type to add unlisted."
+                                                        />
+                                                    )}
+                                                    sx={{ flex: 1 }}
+                                                />
+                                            ) : (
+                                                <TextField size="small"
+                                                    fullWidth
+                                                    label="Worthwhile Sites"
+                                                    value={campground.worthwhileText}
+                                                    onChange={(event) => handleFieldChange(index, 'worthwhileText', event.target.value)}
+                                                    helperText="Comma-separated list"
+                                                />
+                                            )}
                                         </Stack>
                                         <FormGroup row>
                                             {Object.keys(DEFAULT_SHOW_HIDE).map((key) => (
@@ -844,6 +946,47 @@ export function SiteConfigDialog({
                                                 })}
                                             </FormGroup>
                                         </Box>
+                                        <Box>
+                                            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
+                                                <Typography variant="body2">Stay Length</Typography>
+                                                {campground.stayLengths ? (
+                                                    <Button size="small" onClick={handleCampgroundStayReset(index)}>
+                                                        Use global
+                                                    </Button>
+                                                ) : (
+                                                    <Button size="small" onClick={handleCampgroundStayCustomize(index)}>
+                                                        Customize
+                                                    </Button>
+                                                )}
+                                            </Stack>
+                                            {(() => {
+                                                const isCustom = !!campground.stayLengths;
+                                                const range = isCustom
+                                                    ? [Math.min(...campground.stayLengths), Math.max(...campground.stayLengths)]
+                                                    : stayRange;
+                                                return (
+                                                    <Box sx={{ px: 1, ...(!isCustom ? { opacity: 0.5 } : {}) }}>
+                                                        <Slider
+                                                            value={range}
+                                                            onChange={isCustom ? handleCampgroundStayChange(index) : undefined}
+                                                            disabled={!isCustom}
+                                                            valueLabelDisplay="auto"
+                                                            min={STAY_MIN}
+                                                            max={STAY_MAX}
+                                                            marks={[
+                                                                { value: 1, label: '1' },
+                                                                { value: 7, label: '7' },
+                                                                { value: 14, label: '14' },
+                                                            ]}
+                                                            size="small"
+                                                        />
+                                                        <Typography variant="caption" color="text.secondary">
+                                                            {range[0]} – {range[1]} nights{!isCustom ? ' (global)' : ''}
+                                                        </Typography>
+                                                    </Box>
+                                                );
+                                            })()}
+                                        </Box>
                                     </Stack>
                                 </AccordionDetails>
                             </Accordion>
@@ -868,6 +1011,7 @@ export function SiteConfigDialog({
                 </Button>
             </DialogActions>
         </Dialog >
+        </LocalizationProvider>
     );
 }
 

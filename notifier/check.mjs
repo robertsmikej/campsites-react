@@ -44,6 +44,7 @@ const buildCampgroundList = () => {
                 dates: config?.dates,
                 sites: config?.sites || { favorites: [], worthwhile: [] },
                 validStartDays: config?.validStartDays,
+                stayLengths: config?.stayLengths,
             });
         }
     }

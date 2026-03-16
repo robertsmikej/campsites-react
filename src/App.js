@@ -114,6 +114,22 @@ export default function App() {
     const [campgroundsByAreas, setCampgroundsByAreas] = useState([]);
     const [isFetching, setIsFetching] = useState(true);
 
+    const availableSitesByFacility = useMemo(() => {
+        const map = {};
+        for (const system in campgroundsData) {
+            (campgroundsData[system] || []).forEach(campground => {
+                if (campground.id && campground.siteAvailability) {
+                    const siteNames = Object.values(campground.siteAvailability)
+                        .map(site => site.siteName)
+                        .filter(Boolean)
+                        .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+                    map[campground.id] = [...new Set(siteNames)];
+                }
+            });
+        }
+        return map;
+    }, [campgroundsData]);
+
     // useEffect(() => {
     //     console.clear();
     // }, []);
@@ -372,6 +388,7 @@ export default function App() {
                 initialData={siteConfig}
                 catalogOptions={catalogOptions}
                 globalSettings={globalSettings}
+                availableSites={availableSitesByFacility}
             />
         </ThemeProvider>
     );

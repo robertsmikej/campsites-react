@@ -163,9 +163,11 @@ export const fetchCampground = async (campground, settings) => {
         await delay(DELAY_BETWEEN_REQUESTS_MS);
     }
 
-    const effectiveSettings = campground.validStartDays
-        ? { ...settings, validStartDays: campground.validStartDays }
-        : settings;
+    const effectiveSettings = {
+        ...settings,
+        ...(campground.validStartDays ? { validStartDays: campground.validStartDays } : {}),
+        ...(campground.stayLengths ? { stayLengths: campground.stayLengths } : {}),
+    };
     const siteAvailability = processCampgroundResults(apiResults, allDates, effectiveSettings);
     const totalMatches = Object.values(siteAvailability).reduce(
         (sum, site) => sum + (site.matches?.length || 0),

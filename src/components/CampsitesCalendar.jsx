@@ -334,7 +334,8 @@ export function CampsitesCalendar(props) {
                                         },
                                         '.MuiDateCalendar-root': {
                                             height: 'auto',
-                                            width: '230px',
+                                            width: { xs: '100%', sm: '230px' },
+                                            maxWidth: '230px',
                                         },
                                         '.MuiDayCalendar-weekDayLabel': {
                                             height: '26px',
