@@ -92,6 +92,7 @@ const toEditableCampground = (campground = {}, validCatalogIds = new Set()) => {
         favoritesText: merged.sites.favorites.join(', '),
         worthwhileText: merged.sites.worthwhile.join(', '),
         catalogId: validCatalogIds.has(merged.id) ? merged.id : CUSTOM_CATALOG_OPTION,
+        validStartDays: campground?.validStartDays ?? null,
     };
 };
 
@@ -120,6 +121,7 @@ const sanitizeCampground = (campground) => {
             'Worthwhile': campground.showOrHide?.['Worthwhile'] ?? DEFAULT_SHOW_HIDE['Worthwhile'],
             'All Others': campground.showOrHide?.['All Others'] ?? DEFAULT_SHOW_HIDE['All Others'],
         },
+        ...(campground.validStartDays ? { validStartDays: campground.validStartDays } : {}),
     };
 };
 
@@ -360,6 +362,31 @@ export function SiteConfigDialog({
             }
             return [...prev, day];
         });
+    };
+
+    const handleCampgroundDayToggle = (index, day) => () => {
+        updateCampground(index, campground => {
+            const current = campground.validStartDays ?? [...validStartDays];
+            if (current.includes(day)) {
+                if (current.length === 1) return campground;
+                return { ...campground, validStartDays: current.filter(d => d !== day) };
+            }
+            return { ...campground, validStartDays: [...current, day] };
+        });
+    };
+
+    const handleCampgroundDaysReset = (index) => () => {
+        updateCampground(index, campground => ({
+            ...campground,
+            validStartDays: null,
+        }));
+    };
+
+    const handleCampgroundDaysCustomize = (index) => () => {
+        updateCampground(index, campground => ({
+            ...campground,
+            validStartDays: [...validStartDays],
+        }));
     };
 
     const buildStayLengthsArray = (range) => {
@@ -769,6 +796,54 @@ export function SiteConfigDialog({
                                                 />
                                             ))}
                                         </FormGroup>
+                                        <Box>
+                                            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
+                                                <Typography variant="body2">Start Days</Typography>
+                                                {campground.validStartDays ? (
+                                                    <>
+                                                        <Button size="small" onClick={handleCampgroundDaysReset(index)}>
+                                                            Use global
+                                                        </Button>
+                                                        <Button
+                                                            size="small"
+                                                            onClick={() => updateCampground(index, c => ({ ...c, validStartDays: ['Friday', 'Saturday'] }))}
+                                                        >
+                                                            Prime Days
+                                                        </Button>
+                                                    </>
+                                                ) : (
+                                                    <Button size="small" onClick={handleCampgroundDaysCustomize(index)}>
+                                                        Customize
+                                                    </Button>
+                                                )}
+                                            </Stack>
+                                            <FormGroup row>
+                                                {ALL_DAYS.map(day => {
+                                                    const isCustom = !!campground.validStartDays;
+                                                    const checked = isCustom
+                                                        ? campground.validStartDays.includes(day)
+                                                        : validStartDays.includes(day);
+                                                    return (
+                                                        <FormControlLabel
+                                                            key={day}
+                                                            control={
+                                                                <Checkbox
+                                                                    checked={checked}
+                                                                    onChange={isCustom ? handleCampgroundDayToggle(index, day) : undefined}
+                                                                    disabled={!isCustom}
+                                                                    size="small"
+                                                                />
+                                                            }
+                                                            label={day.slice(0, 3)}
+                                                            sx={{
+                                                                ...(! isCustom ? { opacity: 0.5 } : {}),
+                                                                '& .MuiFormControlLabel-label': { py: 0.5 },
+                                                            }}
+                                                        />
+                                                    );
+                                                })}
+                                            </FormGroup>
+                                        </Box>
                                     </Stack>
                                 </AccordionDetails>
                             </Accordion>

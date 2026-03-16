@@ -30,10 +30,11 @@ dayjs.extend(isSameOrBefore);
 dayjs.extend(isSameOrAfter);
 
 const calendarColors = ['green', 'darkgreen'];
+const softColors = ['#a5d6a7', '#81c784'];
 const excludedColors = ['#e67e22', '#d35400'];
 
 const getRangeStyles = (variant, colors, bgPaper) => {
-    if (variant === 'single' || variant === 'excludedSingle') {
+    if (variant === 'single' || variant === 'excludedSingle' || variant === 'softSingle') {
         return {
             backgroundColor: colors[0],
             color: '#fff',
@@ -41,7 +42,7 @@ const getRangeStyles = (variant, colors, bgPaper) => {
             "&:hover, &:focus": { backgroundColor: colors[1] },
         };
     }
-    if (variant === 'rangeStart' || variant === 'excludedRangeStart') {
+    if (variant === 'rangeStart' || variant === 'excludedRangeStart' || variant === 'softRangeStart') {
         return {
             backgroundColor: colors[0],
             color: '#fff',
@@ -52,7 +53,7 @@ const getRangeStyles = (variant, colors, bgPaper) => {
             "&:hover, &:focus": { backgroundColor: colors[1] },
         };
     }
-    if (variant === 'rangeMiddle' || variant === 'excludedRangeMiddle') {
+    if (variant === 'rangeMiddle' || variant === 'excludedRangeMiddle' || variant === 'softRangeMiddle') {
         return {
             backgroundColor: colors[0],
             color: '#fff',
@@ -60,7 +61,7 @@ const getRangeStyles = (variant, colors, bgPaper) => {
             "&:hover, &:focus": { backgroundColor: colors[1] },
         };
     }
-    if (variant === 'rangeEnd' || variant === 'excludedRangeEnd') {
+    if (variant === 'rangeEnd' || variant === 'excludedRangeEnd' || variant === 'softRangeEnd') {
         return {
             backgroundColor: colors[0],
             color: '#fff',
@@ -88,6 +89,8 @@ const RangeDay = styled(PickersDay, {
     alignItems: 'center',
     ...(variant?.startsWith('excluded')
         ? getRangeStyles(variant, excludedColors, theme.palette.background.paper)
+        : variant?.startsWith('soft')
+        ? getRangeStyles(variant, softColors, theme.palette.background.paper)
         : getRangeStyles(variant, calendarColors, theme.palette.background.paper)
     ),
 }));
@@ -97,10 +100,9 @@ const ServerDay = (props) => {
 
     let variant = 'default';
 
-    // Loop through the values to determine the variant for the day
-    // Check regular matches first, then excluded (regular takes priority)
+    // Check regular matches first (highest priority), then soft (lighter green), then excluded (orange)
     for (let item of highlightedValues) {
-        if (item?.excluded) continue; // skip excluded on first pass
+        if (item?.excluded || item?.soft) continue;
 
         if (dayjs.isDayjs(item) && item.isSame(day, 'day')) {
             variant = 'single';
@@ -117,7 +119,23 @@ const ServerDay = (props) => {
         }
     }
 
-    // If no regular match, check excluded matches
+    // Soft matches — available but wrong start day (lighter green, always shown)
+    if (variant === 'default') {
+        for (let item of highlightedValues) {
+            if (!item?.soft) continue;
+            if (item?.from && item?.to) {
+                const isStart = day.isSame(item.from, 'day');
+                const isEnd = day.isSame(item.to, 'day');
+                const isMiddle = day.isBetween(item.from, item.to, 'day', '()');
+                if (isStart && isEnd) { variant = 'softSingle'; break; }
+                else if (isStart) { variant = 'softRangeStart'; break; }
+                else if (isEnd) { variant = 'softRangeEnd'; break; }
+                else if (isMiddle) { variant = 'softRangeMiddle'; break; }
+            }
+        }
+    }
+
+    // Excluded matches — wrong stay length (orange, only when toggled)
     if (variant === 'default') {
         for (let item of highlightedValues) {
             if (!item?.excluded) continue;
@@ -160,38 +178,39 @@ const buildDateDisplayArray = (site, includeExcluded) => {
         }
     });
 
-    // Build excluded ranges if toggled on
-    const excludedRanges = includeExcluded ? excludedMatches.map(m => ({
-        from: dayjs(m.from),
-        to: dayjs(m.to),
-        excluded: true,
-    })) : [];
+    // Always show startDay-excluded as soft (lighter green)
+    const softRanges = excludedMatches
+        .filter(m => m.reason === 'startDay')
+        .map(m => ({ from: dayjs(m.from), to: dayjs(m.to), soft: true }));
+
+    // Only show stayLength-excluded when toggled (orange)
+    const excludedRanges = includeExcluded
+        ? excludedMatches
+            .filter(m => m.reason !== 'startDay')
+            .map(m => ({ from: dayjs(m.from), to: dayjs(m.to), excluded: true }))
+        : [];
 
     const allMatchDays = new Set();
-    matches.forEach(m => {
+    const addRange = (m) => {
         let current = dayjs(m.from);
         const end = dayjs(m.to);
         while (current.isBefore(end, 'day')) {
             allMatchDays.add(current.format('YYYY-MM-DD'));
             current = current.add(1, 'day');
         }
-    });
+    };
+    matches.forEach(addRange);
+    excludedMatches.filter(m => m.reason === 'startDay').forEach(addRange);
     if (includeExcluded) {
-        excludedMatches.forEach(m => {
-            let current = dayjs(m.from);
-            const end = dayjs(m.to);
-            while (current.isBefore(end, 'day')) {
-                allMatchDays.add(current.format('YYYY-MM-DD'));
-                current = current.add(1, 'day');
-            }
-        });
+        excludedMatches.filter(m => m.reason !== 'startDay').forEach(addRange);
     }
 
+    // Single available dates not covered by any range — also soft
     const singles = dates
         .filter(d => !allMatchDays.has(d))
-        .map(d => ({ from: dayjs(d), to: dayjs(d).add(1, 'day') }));
+        .map(d => ({ from: dayjs(d), to: dayjs(d).add(1, 'day'), soft: true }));
 
-    const combined = [...singles, ...matchRanges, ...excludedRanges].sort((a, b) => {
+    const combined = [...singles, ...matchRanges, ...softRanges, ...excludedRanges].sort((a, b) => {
         const aDate = dayjs(a.from ?? a);
         const bDate = dayjs(b.from ?? b);
         return aDate.diff(bDate);
@@ -202,7 +221,9 @@ const buildDateDisplayArray = (site, includeExcluded) => {
 
 const getMonthsFromSiteData = (site, includeExcluded) => {
     const { dates = [], matches = [], excludedMatches = [] } = site;
-    const allMatches = includeExcluded ? [...matches, ...excludedMatches] : matches;
+    const startDayExcluded = excludedMatches.filter(m => m.reason === 'startDay');
+    const stayLengthExcluded = includeExcluded ? excludedMatches.filter(m => m.reason !== 'startDay') : [];
+    const allMatches = [...matches, ...startDayExcluded, ...stayLengthExcluded];
 
     const monthsSet = new Set();
 

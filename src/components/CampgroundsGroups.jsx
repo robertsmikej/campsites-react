@@ -21,6 +21,9 @@ import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 
+import Skeleton from '@mui/material/Skeleton';
+import CircularProgress from '@mui/material/CircularProgress';
+
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import MapIcon from '@mui/icons-material/Map';
 import TableChartIcon from '@mui/icons-material/TableChart';
@@ -55,7 +58,7 @@ const writeObjectToStorage = (key, value) => {
     }
 };
 
-export function CampgroundsGroups(props) {
+export function CampgroundsGroups({ isLoading = false, ...props }) {
     const storedViewRef = useRef(readObjectFromStorage(VIEW_MODE_STORAGE_KEY, null));
     const shouldSkipSettingsOverrideRef = useRef(storedViewRef.current !== null);
 
@@ -239,7 +242,19 @@ export function CampgroundsGroups(props) {
             </Stack>
             {campgrounds.length === 0 ? (
                 <Paper variant="outlined" sx={{ p: { xs: 2, md: 3 }, borderRadius: 2 }}>
-                    <Typography variant="body1">No campgrounds configured yet.</Typography>
+                    {isLoading ? (
+                        <Stack spacing={2}>
+                            <Stack direction="row" spacing={1.5} alignItems="center">
+                                <CircularProgress size={20} />
+                                <Typography variant="body1">Loading campgrounds...</Typography>
+                            </Stack>
+                            {[1, 2, 3].map((i) => (
+                                <Skeleton key={i} variant="rounded" height={80} sx={{ borderRadius: 1.5 }} />
+                            ))}
+                        </Stack>
+                    ) : (
+                        <Typography variant="body1">No campgrounds configured yet.</Typography>
+                    )}
                 </Paper>
             ) : (
                 <Paper
@@ -249,7 +264,10 @@ export function CampgroundsGroups(props) {
                     <Stack spacing={1.5}>
                         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} justifyContent="space-between" alignItems="flex-start">
                             <Stack spacing={0.5}>
-                                <Typography variant='h3'>Campgrounds</Typography>
+                                <Stack direction="row" spacing={1.5} alignItems="center">
+                                    <Typography variant='h3'>Campgrounds</Typography>
+                                    {isLoading && <CircularProgress size={18} />}
+                                </Stack>
                                 <Stack direction="row" spacing={1} flexWrap="wrap">
                                     <Chip
                                         label={`Total Checked: ${campgrounds.length}`}
@@ -414,6 +432,16 @@ export function CampgroundsGroups(props) {
                                                                         onClick={toggleShowExcluded(campgroundId)}
                                                                         sx={{ cursor: 'pointer' }}
                                                                     />
+                                                                )}
+                                                                {campground.validStartDays && campground.validStartDays.length < 7 && (
+                                                                    <Tooltip title={`Only showing stays starting on: ${campground.validStartDays.join(', ')}`}>
+                                                                        <Chip
+                                                                            label={campground.validStartDays.map(d => d.slice(0, 3)).join(', ')}
+                                                                            size="small"
+                                                                            variant="outlined"
+                                                                            sx={{ fontSize: '0.7rem' }}
+                                                                        />
+                                                                    </Tooltip>
                                                                 )}
                                                             </Stack>
                                                         </Stack>

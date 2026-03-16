@@ -112,6 +112,7 @@ export default function App() {
 
     const [campgroundsData, setCampgroundsData] = useState({});
     const [campgroundsByAreas, setCampgroundsByAreas] = useState([]);
+    const [isFetching, setIsFetching] = useState(true);
 
     // useEffect(() => {
     //     console.clear();
@@ -153,6 +154,7 @@ export default function App() {
 
         setCampgroundsData({});
         setCampgroundsByAreas([]);
+        setIsFetching(true);
         setProgressBarData({
             totalCalls: 0,
             currentCall: 0,
@@ -174,6 +176,7 @@ export default function App() {
                 { useMockData }
             );
             setCampgroundsData(siteData ?? {});
+            setIsFetching(false);
         })();
     }, [settings, useMockData, siteConfig]);
 
@@ -200,6 +203,7 @@ export default function App() {
         }
         setCampgroundsByAreas([]);
         setCampgroundsData({});
+        setIsFetching(true);
         setProgressBarData({
             totalCalls: 0,
             currentCall: 0,
@@ -219,8 +223,9 @@ export default function App() {
             { useMockData }
         );
         setCampgroundsData(siteData ?? {});
+        setIsFetching(false);
     };
-    const isLoading = progressBarData?.progress < 1 && progressBarData?.totalCalls > 0;
+    const isLoading = isFetching;
 
     const handleMockToggle = (event) => {
         setUseMockData(event.target.checked);
@@ -316,6 +321,7 @@ export default function App() {
                             <CampgroundsGroups
                                 campgrounds={campgroundsByAreas}
                                 settings={settings}
+                                isLoading={isLoading}
                             />
                         </Grid>
                         <Box

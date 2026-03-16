@@ -265,7 +265,8 @@ const processApiResults = (allResults, siteFetchMap, settings) => {
                             weekday: 'long',
                             timeZone: 'UTC'
                         });
-                        const isValidStartDay = !settings.dates.validStartDays?.length || settings.dates.validStartDays.includes(startDay);
+                        const effectiveStartDays = campground.validStartDays ?? settings.dates.validStartDays;
+                        const isValidStartDay = !effectiveStartDays?.length || effectiveStartDays.includes(startDay);
                         const isValidStayLength = length >= minStay && length <= maxStay;
 
                         if (isValidStayLength && isValidStartDay) {
@@ -363,7 +364,8 @@ const calculateExcludedMatches = (data, settings) => {
                             weekday: 'long',
                             timeZone: 'UTC'
                         });
-                        const isValidStartDay = !settings.dates.validStartDays?.length || settings.dates.validStartDays.includes(startDay);
+                        const effectiveStartDays = campground.validStartDays ?? settings.dates.validStartDays;
+                        const isValidStartDay = !effectiveStartDays?.length || effectiveStartDays.includes(startDay);
                         const isValidStayLength = length >= minStay && length <= maxStay;
 
                         const sName = site.siteName;
