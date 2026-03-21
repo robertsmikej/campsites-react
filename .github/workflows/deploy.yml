@@ -20,6 +20,9 @@ jobs:
 
       - name: Build React app
         run: npm run build
+        env:
+          REACT_APP_API_URL: ${{ secrets.SITE_URL }}
+          REACT_APP_CONFIG_KEY: ${{ secrets.CONFIG_KEY }}
 
       - name: Deploy to Cloudflare Workers
         uses: cloudflare/wrangler-action@v3
