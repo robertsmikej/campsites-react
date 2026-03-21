@@ -13,7 +13,7 @@ const json = (data, status = 200) =>
 
 const cors = (response) => {
     response.headers.set('Access-Control-Allow-Origin', '*');
-    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, OPTIONS');
     response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     return response;
 };
@@ -123,6 +123,44 @@ const handleListSubscribers = async (request, env) => {
     return json({ subscribers: emails });
 };
 
+// GET /api/config — protected, returns campground config for the notifier
+const handleGetConfig = async (request, env) => {
+    const auth = request.headers.get('Authorization');
+    if (!auth || auth !== `Bearer ${env.API_SECRET}`) {
+        return json({ error: 'Unauthorized' }, 401);
+    }
+
+    const data = await env.SUBSCRIBERS.get('config:campgrounds', 'json');
+    if (!data) {
+        return json({ error: 'No config found' }, 404);
+    }
+
+    return json(data);
+};
+
+// PUT /api/config — saves campground config from the UI
+const handlePutConfig = async (request, env) => {
+    const auth = request.headers.get('Authorization');
+    if (!auth || auth !== `Bearer ${env.CONFIG_KEY}`) {
+        return json({ error: 'Unauthorized' }, 401);
+    }
+
+    let body;
+    try {
+        body = await request.json();
+    } catch {
+        return json({ error: 'Invalid JSON' }, 400);
+    }
+
+    if (!body || typeof body !== 'object' || !body.campgrounds) {
+        return json({ error: 'Request body must include campgrounds' }, 400);
+    }
+
+    await env.SUBSCRIBERS.put('config:campgrounds', JSON.stringify(body));
+
+    return json({ message: 'Config saved' });
+};
+
 // --- Main fetch handler ---
 
 export default {
@@ -143,6 +181,12 @@ export default {
         }
         if (url.pathname === '/api/subscribers' && request.method === 'GET') {
             return cors(await handleListSubscribers(request, env));
+        }
+        if (url.pathname === '/api/config' && request.method === 'GET') {
+            return cors(await handleGetConfig(request, env));
+        }
+        if (url.pathname === '/api/config' && request.method === 'PUT') {
+            return cors(await handlePutConfig(request, env));
         }
 
         // Static assets (existing SPA behavior)
