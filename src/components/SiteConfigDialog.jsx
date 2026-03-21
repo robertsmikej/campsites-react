@@ -132,6 +132,7 @@ const sanitizeCampground = (campground) => {
         },
         ...(campground.validStartDays ? { validStartDays: campground.validStartDays } : {}),
         ...(campground.stayLengths ? { stayLengths: campground.stayLengths } : {}),
+        ...(campground.notifyAll != null ? { notifyAll: campground.notifyAll } : {}),
     };
 };
 
