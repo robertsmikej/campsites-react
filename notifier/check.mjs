@@ -21,17 +21,42 @@ const loadDataFile = (relativePath, exportName) => {
     return fn();
 };
 
-const campgroundCatalog = loadDataFile('../src/json/campgroundCatalog.js', 'campgroundCatalog');
-const siteConfigurations = loadDataFile('../src/json/siteConfigurations.js', 'defaultCampgroundConfigurations');
+// Fetch campground config from the Cloudflare Worker API (KV-backed).
+// Falls back to the committed siteConfigurations.js if the API is unavailable.
+const fetchConfig = async (apiUrl, apiSecret) => {
+    try {
+        const response = await fetch(`${apiUrl}/api/config`, {
+            headers: { Authorization: `Bearer ${apiSecret}` },
+        });
+        if (!response.ok) {
+            if (response.status === 404) {
+                console.log('[Config] No config in KV yet — using defaults from siteConfigurations.js');
+            } else {
+                console.warn(`[Config] API returned ${response.status} — using fallback`);
+            }
+            return null;
+        }
+        const data = await response.json();
+        console.log('[Config] Loaded config from API');
+        return data;
+    } catch (error) {
+        console.warn(`[WARNING] Failed to fetch config from API — using stale fallback from siteConfigurations.js: ${error.message}`);
+        return null;
+    }
+};
 
-// --- Settings (matching the React app's settingsOverrides in App.js) ---
-const settings = {
+const campgroundCatalog = loadDataFile('../src/json/campgroundCatalog.js', 'campgroundCatalog');
+
+// Load config from API, fall back to committed file
+const fallbackSiteConfigurations = loadDataFile('../src/json/siteConfigurations.js', 'defaultCampgroundConfigurations');
+
+const defaultSettings = {
     stayLengths: [2, 3, 4, 5],
     validStartDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
 };
 
 // --- Merge catalog with configurations to build the campground list ---
-const buildCampgroundList = () => {
+const buildCampgroundList = (siteConfigurations) => {
     const campgrounds = [];
 
     for (const [system, catalogEntries] of Object.entries(campgroundCatalog)) {
@@ -129,6 +154,13 @@ const main = async () => {
     const subscriberApiSecret = process.env.SUBSCRIBER_API_SECRET;
     const siteUrl = process.env.SITE_URL || '';
 
+    // Fetch live config from API (KV-backed), fall back to committed file
+    const apiConfig = await fetchConfig(subscriberApiUrl, subscriberApiSecret);
+    const siteConfigurations = apiConfig?.campgrounds || fallbackSiteConfigurations;
+    const settings = apiConfig?.globalSettings
+        ? { ...defaultSettings, ...apiConfig.globalSettings }
+        : defaultSettings;
+
     if (!resendApiKey) {
         console.error('[Error] Missing RESEND_API_KEY');
         process.exit(1);
@@ -161,7 +193,7 @@ const main = async () => {
     const regularSubscribers = allSubscribers.filter(e => !prioritySet.has(e));
 
     // --- 1. Fetch and check for new availability (always runs first) ---
-    const campgrounds = buildCampgroundList();
+    const campgrounds = buildCampgroundList(siteConfigurations);
     console.log(`[Start] Checking ${campgrounds.length} campgrounds`);
 
     const results = await fetchAllCampgrounds(campgrounds, settings);
