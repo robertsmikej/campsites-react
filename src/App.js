@@ -18,6 +18,8 @@ import Box from '@mui/material/Box';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import ToggleButton from '@mui/material/ToggleButton';
 import Typography from '@mui/material/Typography';
+import Snackbar from '@mui/material/Snackbar';
+import Alert from '@mui/material/Alert';
 
 import { sites as defaultSites, getCampgroundOptions } from './json/sites';
 import { fetchCampgrounds, clearCampgroundCache } from './calls/fetchCampgroundData';
@@ -55,6 +57,38 @@ const COLOR_MODE_STORAGE_KEY = 'campgrounds-color-mode';
 const catalogOptions = getCampgroundOptions();
 
 const cloneSitesConfig = (config) => JSON.parse(JSON.stringify(config));
+
+const syncConfigToApi = async (campgroundConfig, globalSettings) => {
+    const apiUrl = process.env.REACT_APP_API_URL || '';
+    const configKey = process.env.REACT_APP_CONFIG_KEY || '';
+    if (!apiUrl || !configKey) {
+        console.warn('[Config Sync] Missing REACT_APP_API_URL or REACT_APP_CONFIG_KEY — skipping sync');
+        return { ok: false, skipped: true };
+    }
+    try {
+        const response = await fetch(`${apiUrl}/api/config`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${configKey}`,
+            },
+            body: JSON.stringify({
+                campgrounds: campgroundConfig,
+                globalSettings: globalSettings || {},
+            }),
+        });
+        if (!response.ok) {
+            const text = await response.text();
+            console.error(`[Config Sync] API returned ${response.status}: ${text}`);
+            return { ok: false };
+        }
+        console.log('[Config Sync] Synced to notification API');
+        return { ok: true };
+    } catch (error) {
+        console.error('[Config Sync] Failed:', error.message);
+        return { ok: false };
+    }
+};
 
 const getInitialGlobalSettings = () => {
     const defaults = {
@@ -95,6 +129,7 @@ export default function App() {
     const [siteConfig, setSiteConfig] = useState(() => cloneSitesConfig(defaultSites));
     const [isConfigDialogOpen, setIsConfigDialogOpen] = useState(false);
     const [colorMode, setColorMode] = useState(getInitialColorMode);
+    const [syncError, setSyncError] = useState(false);
 
     const settings = useMemo(() => {
         if (!settingsObject) return {};
@@ -144,13 +179,11 @@ export default function App() {
                 for (const system in parsed) {
                     if (defaultSites[system]) {
                         parsed[system] = parsed[system].map(storedCampground => {
+                            // Merge any new default fields for known campgrounds,
+                            // but preserve all user-saved settings (including dates)
                             const defaultCampground = defaultSites[system].find(d => d.id === storedCampground.id);
                             if (defaultCampground) {
-                                // Use dates from defaults (code), preserve user's other settings
-                                return {
-                                    ...storedCampground,
-                                    dates: defaultCampground.dates,
-                                };
+                                return storedCampground;
                             }
                             return storedCampground;
                         });
@@ -273,6 +306,13 @@ export default function App() {
             }
         }
         setIsConfigDialogOpen(false);
+
+        // Fire-and-forget sync to notification API
+        syncConfigToApi(cloned, newGlobalSettings || globalSettings).then(({ ok, skipped }) => {
+            if (!ok && !skipped) {
+                setSyncError(true);
+            }
+        });
     };
 
     const handleResetSitesConfig = () => {
@@ -280,9 +320,18 @@ export default function App() {
         clearCampgroundCache();
         localStorage.removeItem(USER_SITES_STORAGE_KEY);
         localStorage.removeItem(USER_GLOBAL_SETTINGS_KEY);
-        setSiteConfig(cloneSitesConfig(defaultSites));
-        setGlobalSettings(getInitialGlobalSettings());
+        const defaults = cloneSitesConfig(defaultSites);
+        const defaultGlobal = getInitialGlobalSettings();
+        setSiteConfig(defaults);
+        setGlobalSettings(defaultGlobal);
         setIsConfigDialogOpen(false);
+
+        // Sync defaults to notification API so notifier picks up the reset
+        syncConfigToApi(defaults, defaultGlobal).then(({ ok, skipped }) => {
+            if (!ok && !skipped) {
+                setSyncError(true);
+            }
+        });
     };
 
     const topBarMenuItems = [
@@ -390,6 +439,16 @@ export default function App() {
                 globalSettings={globalSettings}
                 availableSites={availableSitesByFacility}
             />
+            <Snackbar
+                open={syncError}
+                autoHideDuration={6000}
+                onClose={() => setSyncError(false)}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            >
+                <Alert severity="warning" onClose={() => setSyncError(false)} variant="filled">
+                    Settings saved locally but failed to sync to notifications
+                </Alert>
+            </Snackbar>
         </ThemeProvider>
     );
 };
