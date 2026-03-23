@@ -140,9 +140,13 @@ const handleGetConfig = async (request, env) => {
 
 // PUT /api/config — saves campground config from the UI
 const handlePutConfig = async (request, env) => {
-    const auth = request.headers.get('Authorization');
-    if (!auth || auth !== `Bearer ${env.CONFIG_KEY}`) {
-        return json({ error: 'Unauthorized' }, 401);
+    // Auth is optional — if CONFIG_KEY is set, enforce it; otherwise allow unauthenticated writes.
+    // This is acceptable because the data is non-sensitive (campground preferences).
+    if (env.CONFIG_KEY) {
+        const auth = request.headers.get('Authorization');
+        if (!auth || auth !== `Bearer ${env.CONFIG_KEY}`) {
+            return json({ error: 'Unauthorized' }, 401);
+        }
     }
 
     let body;

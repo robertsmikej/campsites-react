@@ -59,19 +59,15 @@ const catalogOptions = getCampgroundOptions();
 const cloneSitesConfig = (config) => JSON.parse(JSON.stringify(config));
 
 const syncConfigToApi = async (campgroundConfig, globalSettings) => {
-    const apiUrl = process.env.REACT_APP_API_URL || '';
     const configKey = process.env.REACT_APP_CONFIG_KEY || '';
-    if (!apiUrl || !configKey) {
-        console.warn('[Config Sync] Missing REACT_APP_API_URL or REACT_APP_CONFIG_KEY — skipping sync');
-        return { ok: false, skipped: true };
+    const headers = { 'Content-Type': 'application/json' };
+    if (configKey) {
+        headers['Authorization'] = `Bearer ${configKey}`;
     }
     try {
-        const response = await fetch(`${apiUrl}/api/config`, {
+        const response = await fetch('/api/config', {
             method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${configKey}`,
-            },
+            headers,
             body: JSON.stringify({
                 campgrounds: campgroundConfig,
                 globalSettings: globalSettings || {},
