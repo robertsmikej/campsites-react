@@ -125,7 +125,7 @@ export default function App() {
     const [siteConfig, setSiteConfig] = useState(() => cloneSitesConfig(defaultSites));
     const [isConfigDialogOpen, setIsConfigDialogOpen] = useState(false);
     const [colorMode, setColorMode] = useState(getInitialColorMode);
-    const [syncError, setSyncError] = useState(false);
+    const [syncStatus, setSyncStatus] = useState(null); // 'success' | 'error' | null
 
     const settings = useMemo(() => {
         if (!settingsObject) return {};
@@ -305,9 +305,8 @@ export default function App() {
 
         // Fire-and-forget sync to notification API
         syncConfigToApi(cloned, newGlobalSettings || globalSettings).then(({ ok, skipped }) => {
-            if (!ok && !skipped) {
-                setSyncError(true);
-            }
+            if (skipped) return;
+            setSyncStatus(ok ? 'success' : 'error');
         });
     };
 
@@ -324,9 +323,8 @@ export default function App() {
 
         // Sync defaults to notification API so notifier picks up the reset
         syncConfigToApi(defaults, defaultGlobal).then(({ ok, skipped }) => {
-            if (!ok && !skipped) {
-                setSyncError(true);
-            }
+            if (skipped) return;
+            setSyncStatus(ok ? 'success' : 'error');
         });
     };
 
@@ -436,13 +434,19 @@ export default function App() {
                 availableSites={availableSitesByFacility}
             />
             <Snackbar
-                open={syncError}
-                autoHideDuration={6000}
-                onClose={() => setSyncError(false)}
+                open={syncStatus !== null}
+                autoHideDuration={4000}
+                onClose={() => setSyncStatus(null)}
                 anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
             >
-                <Alert severity="warning" onClose={() => setSyncError(false)} variant="filled">
-                    Settings saved locally but failed to sync to notifications
+                <Alert
+                    severity={syncStatus === 'success' ? 'success' : 'warning'}
+                    onClose={() => setSyncStatus(null)}
+                    variant="filled"
+                >
+                    {syncStatus === 'success'
+                        ? 'Settings synced to notifications'
+                        : 'Settings saved locally but failed to sync to notifications'}
                 </Alert>
             </Snackbar>
         </ThemeProvider>
