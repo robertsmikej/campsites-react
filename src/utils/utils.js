@@ -120,15 +120,18 @@ export const formatGroupsByFavorites = (data) => {
         campground.hasAvailability = false;
         campground.sitesGroupedByFavorites = getEmptyGroupedSites();
 
+        const favoritesSet = new Set(campground.sites.favorites);
+        const worthwhileSet = new Set(campground.sites.worthwhile);
+
         for (let siteId in campground.siteAvailability) {
             const site = campground.siteAvailability[siteId];
             if (site.matches?.length > 0 || site.excludedMatches?.length > 0) {
                 if (site.matches?.length > 0) {
                     campground.hasAvailability = true;
                 }
-                if (campground.sites.favorites.includes(site.siteName)) {
+                if (favoritesSet.has(site.siteName)) {
                     campground.sitesGroupedByFavorites[siteGroups.favorites.label].push(site);
-                } else if (campground.sites.worthwhile.includes(site.siteName)) {
+                } else if (worthwhileSet.has(site.siteName)) {
                     campground.sitesGroupedByFavorites[siteGroups.worthwhile.label].push(site);
                 } else {
                     campground.sitesGroupedByFavorites[siteGroups.allOthers.label].push(site);

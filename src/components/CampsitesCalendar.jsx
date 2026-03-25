@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, memo } from 'react';
 
 // Import the dayjs plugins you need
 import dayjs from 'dayjs';
@@ -95,62 +95,67 @@ const RangeDay = styled(PickersDay, {
     ),
 }));
 
-const ServerDay = (props) => {
-    const { highlightedValues = [], day, ...other } = props;
+// Pre-compute a Map<'YYYY-MM-DD', variant> from highlighted values.
+// This runs once per site when data changes, turning O(days × values) per render
+// into O(values) for the build + O(1) per day cell lookup.
+const buildVariantMap = (highlightedValues) => {
+    const map = new Map();
 
-    let variant = 'default';
+    const addRangeToMap = (item, prefix) => {
+        const startStr = item.from.format('YYYY-MM-DD');
+        const endStr = item.to.format('YYYY-MM-DD');
+        if (startStr === endStr) {
+            map.set(startStr, `${prefix}Single`);
+        } else {
+            map.set(startStr, `${prefix}RangeStart`);
+            map.set(endStr, `${prefix}RangeEnd`);
+            let current = item.from.add(1, 'day');
+            while (current.isBefore(item.to, 'day')) {
+                map.set(current.format('YYYY-MM-DD'), `${prefix}RangeMiddle`);
+                current = current.add(1, 'day');
+            }
+        }
+    };
 
-    // Check regular matches first (highest priority), then soft (lighter green), then excluded (orange)
-    for (let item of highlightedValues) {
+    // Process in ascending priority order so higher priority overwrites lower
+    // 1. Excluded (lowest)
+    for (const item of highlightedValues) {
+        if (!item?.excluded) continue;
+        if (item.from && item.to) addRangeToMap(item, 'excluded');
+    }
+    // 2. Soft (medium)
+    for (const item of highlightedValues) {
+        if (!item?.soft) continue;
+        if (item.from && item.to) addRangeToMap(item, 'soft');
+    }
+    // 3. Regular matches (highest)
+    for (const item of highlightedValues) {
         if (item?.excluded || item?.soft) continue;
-
-        if (dayjs.isDayjs(item) && item.isSame(day, 'day')) {
-            variant = 'single';
-            break;
-        }
-        if (item?.from && item?.to) {
-            const isStart = day.isSame(item.from, 'day');
-            const isEnd = day.isSame(item.to, 'day');
-            const isMiddle = day.isBetween(item.from, item.to, 'day', '()');
-            if (isStart && isEnd) { variant = 'single'; break; }
-            else if (isStart) { variant = 'rangeStart'; break; }
-            else if (isEnd) { variant = 'rangeEnd'; break; }
-            else if (isMiddle) { variant = 'rangeMiddle'; break; }
-        }
-    }
-
-    // Soft matches — available but wrong start day (lighter green, always shown)
-    if (variant === 'default') {
-        for (let item of highlightedValues) {
-            if (!item?.soft) continue;
-            if (item?.from && item?.to) {
-                const isStart = day.isSame(item.from, 'day');
-                const isEnd = day.isSame(item.to, 'day');
-                const isMiddle = day.isBetween(item.from, item.to, 'day', '()');
-                if (isStart && isEnd) { variant = 'softSingle'; break; }
-                else if (isStart) { variant = 'softRangeStart'; break; }
-                else if (isEnd) { variant = 'softRangeEnd'; break; }
-                else if (isMiddle) { variant = 'softRangeMiddle'; break; }
+        if (dayjs.isDayjs(item)) {
+            map.set(item.format('YYYY-MM-DD'), 'single');
+        } else if (item?.from && item?.to) {
+            const startStr = item.from.format('YYYY-MM-DD');
+            const endStr = item.to.format('YYYY-MM-DD');
+            if (startStr === endStr) {
+                map.set(startStr, 'single');
+            } else {
+                map.set(startStr, 'rangeStart');
+                map.set(endStr, 'rangeEnd');
+                let current = item.from.add(1, 'day');
+                while (current.isBefore(item.to, 'day')) {
+                    map.set(current.format('YYYY-MM-DD'), 'rangeMiddle');
+                    current = current.add(1, 'day');
+                }
             }
         }
     }
 
-    // Excluded matches — wrong stay length (orange, only when toggled)
-    if (variant === 'default') {
-        for (let item of highlightedValues) {
-            if (!item?.excluded) continue;
-            if (item?.from && item?.to) {
-                const isStart = day.isSame(item.from, 'day');
-                const isEnd = day.isSame(item.to, 'day');
-                const isMiddle = day.isBetween(item.from, item.to, 'day', '()');
-                if (isStart && isEnd) { variant = 'excludedSingle'; break; }
-                else if (isStart) { variant = 'excludedRangeStart'; break; }
-                else if (isEnd) { variant = 'excludedRangeEnd'; break; }
-                else if (isMiddle) { variant = 'excludedRangeMiddle'; break; }
-            }
-        }
-    }
+    return map;
+};
 
+const ServerDay = memo((props) => {
+    const { variantMap, day, ...other } = props;
+    const variant = variantMap?.get(day.format('YYYY-MM-DD')) ?? 'default';
     const isSelected = variant !== 'default';
 
     return (
@@ -162,7 +167,7 @@ const ServerDay = (props) => {
             disableMargin
         />
     );
-};
+});
 
 const buildDateDisplayArray = (site, includeExcluded) => {
     const { dates = [], matches = [], excludedMatches = [] } = site;
@@ -250,7 +255,7 @@ const getMonthsFromSiteData = (site, includeExcluded) => {
         .sort((a, b) => a.diff(b));
 };
 
-export function CampsitesCalendar(props) {
+export const CampsitesCalendar = memo(function CampsitesCalendar(props) {
     const site = props.site || {};
     const [photoPreview, setPhotoPreview] = useState({ open: false, photos: [], siteName: '' });
 
@@ -258,6 +263,8 @@ export function CampsitesCalendar(props) {
         if (!props.site) return [];
         return buildDateDisplayArray(props.site, props.showExcluded);
     }, [props.site, props.showExcluded]);
+
+    const variantMap = useMemo(() => buildVariantMap(values), [values]);
 
     const monthsToShow = useMemo(() => {
         if (!props.site) return [];
@@ -307,14 +314,14 @@ export function CampsitesCalendar(props) {
                         {monthsToShow.map((month) => {
                             return (
                                 <StaticDatePicker
-                                    key={`${month.format('YYYY-MM')}-${props.showExcluded}`}
+                                    key={month.format('YYYY-MM')}
                                     displayStaticWrapperAs="desktop"
                                     value={month}
                                     slots={{
                                         day: ServerDay
                                     }}
                                     slotProps={{
-                                        day: { highlightedValues: values },
+                                        day: { variantMap },
                                         actionBar: {
                                             actions: []
                                         }
@@ -390,4 +397,4 @@ export function CampsitesCalendar(props) {
             </Dialog>
         </>
     );
-}
+});

@@ -15,7 +15,7 @@ export const campgroundCatalog = {
             area: 'Redfish Lake',
             site: 'recreation.gov',
             type: 'campground',
-            description: 'West side of Redfish Lake, close to lodge. Smaller Campground.',
+            description: 'West side, on Redfish Lake, next to lodge. Smaller Campground.',
             image: 'point_campground_map.jpg',
         },
         {
@@ -24,7 +24,7 @@ export const campgroundCatalog = {
             area: 'Redfish Lake',
             site: 'recreation.gov',
             type: 'campground',
-            description: 'North side of Redfish Lake, right off of lake, but still on lake.',
+            description: 'North side of Redfish Lake, right off of lake, walking distance.',
             image: 'glacier_view_campground_map.jpg',
         },
         {
@@ -42,7 +42,7 @@ export const campgroundCatalog = {
             area: 'Cascade',
             site: 'recreation.gov',
             type: 'campground',
-            description: 'On lake, large site, recommended by Matty B.',
+            description: 'On Cascade Lake, large site, recommended by Matty B.',
             image: 'rainbow_point_map.jpg',
         },
         {

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
@@ -23,6 +23,8 @@ import TableRow from '@mui/material/TableRow';
 
 import Skeleton from '@mui/material/Skeleton';
 import CircularProgress from '@mui/material/CircularProgress';
+import useMediaQuery from '@mui/material/useMediaQuery';
+import { useTheme } from '@mui/material/styles';
 
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import MapIcon from '@mui/icons-material/Map';
@@ -59,6 +61,8 @@ const writeObjectToStorage = (key, value) => {
 };
 
 export function CampgroundsGroups({ isLoading = false, ...props }) {
+    const theme = useTheme();
+    const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
     const storedViewRef = useRef(readObjectFromStorage(VIEW_MODE_STORAGE_KEY, null));
     const shouldSkipSettingsOverrideRef = useRef(storedViewRef.current !== null);
 
@@ -216,6 +220,215 @@ export function CampgroundsGroups({ isLoading = false, ...props }) {
 
     const availableCampgroundCount = campgrounds.filter(checkForGroupedAvailability).length;
 
+    const renderCampgroundCard = useCallback((campground, campgroundIndex) => {
+        const hasCampgroundAvailability = checkForGroupedAvailability(campground);
+        const campgroundImage = campground.image?.length > 0 ? '/images/sites/' + campground.image : '/images/sites/bg_default.jpg';
+        const stats = getCampgroundStats(campground);
+        const campgroundId = getCampgroundId(campground);
+        const showingExcluded = !!showExcludedMap[campgroundId];
+        const hasExcludedData = showingExcluded && stats.totalExcluded > 0;
+        const isExpandable = hasCampgroundAvailability || hasExcludedData;
+        const expanded = isExpandable && isCampgroundExpanded(ALL_CAMPGROUNDS_KEY, campgroundId, isExpandable);
+        return (
+            <Box
+                key={`${campground.name}-${campgroundIndex}`}
+            >
+                <Accordion
+                    expanded={expanded}
+                    onChange={isExpandable ? toggleCampground(ALL_CAMPGROUNDS_KEY, campgroundId) : undefined}
+                    disableGutters
+                    sx={{
+                        border: theme => `1px solid ${theme.palette.divider}`,
+                        borderRadius: 1,
+                        // overflow: 'visible',
+                        '&::before': { display: 'none' },
+                        '& .MuiCollapse-root': { overflow: 'visible !important' },
+                        '& .MuiCollapse-wrapper': { overflow: 'visible' },
+                        '& .MuiCollapse-wrapperInner': { overflow: 'visible' },
+                    }}
+                >
+                    <AccordionSummary
+                        expandIcon={<ExpandMoreIcon />}
+                        sx={{
+                            px: 1.5,
+                            py: 1,
+                            position: 'sticky',
+                            top: { xs: 60, sm: 64 },
+                            zIndex: 2,
+                            borderRadius: expanded ? '6px 6px 0 0' : 1,
+                            borderBottom: expanded ? theme => `1px solid ${theme.palette.divider}` : 'none',
+                            backgroundColor: isExpandable
+                                ? 'background.paper'
+                                : 'action.disabledBackground',
+                        }}
+                    >
+                        <Stack direction="row" spacing={1} alignItems="center" sx={{ flexGrow: 1 }}>
+                            <Stack spacing={1} sx={{ flexGrow: 1 }}>
+                                <Stack
+                                    direction={{ xs: 'column', sm: 'row' }}
+                                    spacing={1}
+                                    alignItems={{ xs: 'flex-start' }}
+                                    justifyContent={'space-between'}
+                                >
+                                    <Stack spacing={0}>
+                                        <Stack direction="row" spacing={0.5} alignItems="center">
+                                            <Typography variant='h5'>{campground.name}</Typography>
+                                            <Tooltip title="View on recreation.gov">
+                                                <Box
+                                                    component="a"
+                                                    href={getCampgroundUrl(campground)}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    sx={{ display: 'inline-flex', color: 'text.disabled', '&:hover': { color: 'primary.main' } }}
+                                                >
+                                                    <OpenInNewIcon sx={{ fontSize: '0.9rem' }} />
+                                                </Box>
+                                            </Tooltip>
+                                        </Stack>
+                                        <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.65rem', letterSpacing: 0.5 }}>
+                                            ID: {campground.id}
+                                        </Typography>
+                                    </Stack>
+                                    <Stack
+                                        direction="row"
+                                        spacing={1}
+                                        alignItems={'center'}
+                                        justifyContent={'space-between'}
+                                        sx={{ flex: 1 }}
+                                    >
+                                        {!hasCampgroundAvailability ? (
+                                            <Chip
+                                                label="No availability"
+                                                size="small"
+                                                color="warning"
+                                                variant="filled"
+                                            />
+                                        ) : (
+                                            <span />
+                                        )}
+                                        <Stack direction="row" spacing={0.5}>
+                                            {campground.notifyAll && (
+                                                <Chip
+                                                    label="Notify all"
+                                                    size="small"
+                                                    color="info"
+                                                    variant="outlined"
+                                                />
+                                            )}
+                                            <Chip
+                                                label={campground.area}
+                                                size="small"
+                                                color="secondary"
+                                                variant="outlined"
+                                                sx={{ backgroundColor: 'white' }}
+                                            />
+                                        </Stack>
+                                    </Stack>
+                                </Stack>
+                                <Typography variant='body2' color="text.secondary">
+                                    {campground.description}
+                                </Typography>
+                                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                                    <Chip
+                                        label={`Total matches: ${stats.totalMatches}`}
+                                        size="small"
+                                    />
+                                    <Chip
+                                        label={`Favorites: ${stats.favoriteMatches}`}
+                                        size="small"
+                                        color="success"
+                                        variant="outlined"
+                                    />
+                                    {stats.totalExcluded > 0 && (
+                                        <Chip
+                                            label={showExcludedMap[campgroundId] ? `Hide ${stats.totalExcluded} excluded` : `Show ${stats.totalExcluded} excluded`}
+                                            size="small"
+                                            color="info"
+                                            variant={showExcludedMap[campgroundId] ? 'filled' : 'outlined'}
+                                            onClick={toggleShowExcluded(campgroundId)}
+                                            sx={{ cursor: 'pointer' }}
+                                        />
+                                    )}
+                                    {campground.validStartDays && campground.validStartDays.length < 7 && (
+                                        <Tooltip title={`Only showing stays starting on: ${campground.validStartDays.join(', ')}`}>
+                                            <Chip
+                                                label={campground.validStartDays.map(d => d.slice(0, 3)).join(', ')}
+                                                size="small"
+                                                variant="outlined"
+                                                sx={{ fontSize: '0.7rem' }}
+                                            />
+                                        </Tooltip>
+                                    )}
+                                    {campground.stayLengths && (
+                                        <Tooltip title={`Custom stay length: ${Math.min(...campground.stayLengths)}–${Math.max(...campground.stayLengths)} nights`}>
+                                            <Chip
+                                                label={`${Math.min(...campground.stayLengths)}–${Math.max(...campground.stayLengths)}n`}
+                                                size="small"
+                                                variant="outlined"
+                                                sx={{ fontSize: '0.7rem' }}
+                                            />
+                                        </Tooltip>
+                                    )}
+                                </Stack>
+                            </Stack>
+                            <Tooltip title="View map">
+                                <Box
+                                    component="img"
+                                    src={campgroundImage}
+                                    alt={campground.name}
+                                    loading="lazy"
+                                    onClick={(event) => {
+                                        event.stopPropagation();
+                                        handleImageOpen(campgroundImage, campground.name)();
+                                    }}
+                                    sx={{
+                                        width: 72,
+                                        height: 72,
+                                        borderRadius: 1.5,
+                                        border: theme => `1px solid ${theme.palette.divider}`,
+                                        objectFit: 'cover',
+                                        display: { xs: 'none', md: 'block' },
+                                        cursor: 'pointer',
+                                    }}
+                                />
+                            </Tooltip>
+                        </Stack>
+                    </AccordionSummary>
+                    <AccordionDetails sx={{ pt: 1.2, pb: 1.25 }}>
+                        <Box
+                            component="img"
+                            src={campgroundImage}
+                            alt={campground.name}
+                            loading="lazy"
+                            onClick={(event) => {
+                                event.stopPropagation();
+                                handleImageOpen(campgroundImage, campground.name)();
+                            }}
+                            sx={{
+                                width: '100%',
+                                height: 120,
+                                borderRadius: 1.5,
+                                border: theme => `1px solid ${theme.palette.divider}`,
+                                objectFit: 'cover',
+                                mb: 1.5,
+                                display: { xs: 'block', md: 'none' },
+                                cursor: 'pointer',
+                            }}
+                        />
+                        <Campground
+                            key={`${campground.name}-${viewMode}-${!!showExcludedMap[campgroundId]}`}
+                            campground={campground}
+                            viewMode={viewMode}
+                            showExcluded={!!showExcludedMap[campgroundId]}
+                        />
+                    </AccordionDetails>
+                </Accordion>
+            </Box>
+        );
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [campgrounds, expandedCampgrounds, showExcludedMap, viewMode]);
+
     return (
         <Stack spacing={3}>
             <Stack direction="row" justifyContent="flex-end">
@@ -319,216 +532,24 @@ export function CampgroundsGroups({ isLoading = false, ...props }) {
                             </Stack>
                         )}
                         {viewMode === 'calendar' ? (
-                            <Box
-                                sx={{
-                                    columnCount: { xs: 1, md: 2 },
-                                    columnGap: 4,
-                                }}
-                            >
-                                {campgrounds.map((campground, campgroundIndex) => {
-                                    const hasCampgroundAvailability = checkForGroupedAvailability(campground);
-                                    const campgroundImage = campground.image?.length > 0 ? '/images/sites/' + campground.image : '/images/sites/bg_default.jpg';
-                                    const stats = getCampgroundStats(campground);
-                                    const campgroundId = getCampgroundId(campground);
-                                    const showingExcluded = !!showExcludedMap[campgroundId];
-                                    const hasExcludedData = showingExcluded && stats.totalExcluded > 0;
-                                    const isExpandable = hasCampgroundAvailability || hasExcludedData;
-                                    const expanded = isExpandable && isCampgroundExpanded(ALL_CAMPGROUNDS_KEY, campgroundId, isExpandable);
-                                    return (
-                                        <Box
-                                            key={`${campground.name}-${campgroundIndex}`}
-                                            sx={{ breakInside: 'avoid', mb: 2 }}
-                                        >
-                                            <Accordion
-                                                expanded={expanded}
-                                                onChange={isExpandable ? toggleCampground(ALL_CAMPGROUNDS_KEY, campgroundId) : undefined}
-                                                disableGutters
-                                                sx={{
-                                                    border: theme => `1px solid ${theme.palette.divider}`,
-                                                    borderRadius: 1.5,
-                                                    overflow: 'hidden',
-                                                    '&::before': { display: 'none' },
-                                                }}
-                                            >
-                                                <AccordionSummary
-                                                    expandIcon={<ExpandMoreIcon />}
-                                                    sx={{
-                                                        px: 1.5,
-                                                        py: 1,
-                                                        backgroundColor: isExpandable
-                                                            ? (expanded ? 'action.hover' : 'transparent')
-                                                            : 'action.disabledBackground',
-                                                    }}
-                                                >
-                                                    <Stack direction="row" spacing={1} alignItems="center" sx={{ flexGrow: 1 }}>
-                                                        <Stack spacing={1} sx={{ flexGrow: 1 }}>
-                                                            <Stack
-                                                                direction={{ xs: 'column', sm: 'row' }}
-                                                                spacing={1}
-                                                                alignItems={{ xs: 'flex-start' }}
-                                                                justifyContent={'space-between'}
-                                                            >
-                                                                <Stack spacing={0}>
-                                                                    <Stack direction="row" spacing={0.5} alignItems="center">
-                                                                        <Typography variant='h5'>{campground.name}</Typography>
-                                                                        <Tooltip title="View on recreation.gov">
-                                                                            <Box
-                                                                                component="a"
-                                                                                href={getCampgroundUrl(campground)}
-                                                                                target="_blank"
-                                                                                rel="noopener noreferrer"
-                                                                                onClick={(e) => e.stopPropagation()}
-                                                                                sx={{ display: 'inline-flex', color: 'text.disabled', '&:hover': { color: 'primary.main' } }}
-                                                                            >
-                                                                                <OpenInNewIcon sx={{ fontSize: '0.9rem' }} />
-                                                                            </Box>
-                                                                        </Tooltip>
-                                                                    </Stack>
-                                                                    <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.65rem', letterSpacing: 0.5 }}>
-                                                                        ID: {campground.id}
-                                                                    </Typography>
-                                                                </Stack>
-                                                                <Stack
-                                                                    direction="row"
-                                                                    spacing={1}
-                                                                    alignItems={'center'}
-                                                                    justifyContent={'space-between'}
-                                                                    sx={{ flex: 1 }}
-                                                                >
-                                                                    {!hasCampgroundAvailability ? (
-                                                                        <Chip
-                                                                            label="No availability"
-                                                                            size="small"
-                                                                            color="warning"
-                                                                            variant="filled"
-                                                                        />
-                                                                    ) : (
-                                                                        <span />
-                                                                    )}
-                                                                    <Stack direction="row" spacing={0.5}>
-                                                                        {campground.notifyAll && (
-                                                                            <Chip
-                                                                                label="Notify all"
-                                                                                size="small"
-                                                                                color="info"
-                                                                                variant="outlined"
-                                                                            />
-                                                                        )}
-                                                                        <Chip
-                                                                            label={campground.area}
-                                                                            size="small"
-                                                                            color="secondary"
-                                                                            variant="outlined"
-                                                                            sx={{ backgroundColor: 'white' }}
-                                                                        />
-                                                                    </Stack>
-                                                                </Stack>
-                                                            </Stack>
-
-
-
-                                                            <Typography variant='body2' color="text.secondary">
-                                                                {campground.description}
-                                                            </Typography>
-                                                            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                                                                <Chip
-                                                                    label={`Total matches: ${stats.totalMatches}`}
-                                                                    size="small"
-                                                                />
-                                                                <Chip
-                                                                    label={`Favorites: ${stats.favoriteMatches}`}
-                                                                    size="small"
-                                                                    color="success"
-                                                                    variant="outlined"
-                                                                />
-                                                                {stats.totalExcluded > 0 && (
-                                                                    <Chip
-                                                                        label={showExcludedMap[campgroundId] ? `Hide ${stats.totalExcluded} excluded` : `Show ${stats.totalExcluded} excluded`}
-                                                                        size="small"
-                                                                        color="info"
-                                                                        variant={showExcludedMap[campgroundId] ? 'filled' : 'outlined'}
-                                                                        onClick={toggleShowExcluded(campgroundId)}
-                                                                        sx={{ cursor: 'pointer' }}
-                                                                    />
-                                                                )}
-                                                                {campground.validStartDays && campground.validStartDays.length < 7 && (
-                                                                    <Tooltip title={`Only showing stays starting on: ${campground.validStartDays.join(', ')}`}>
-                                                                        <Chip
-                                                                            label={campground.validStartDays.map(d => d.slice(0, 3)).join(', ')}
-                                                                            size="small"
-                                                                            variant="outlined"
-                                                                            sx={{ fontSize: '0.7rem' }}
-                                                                        />
-                                                                    </Tooltip>
-                                                                )}
-                                                                {campground.stayLengths && (
-                                                                    <Tooltip title={`Custom stay length: ${Math.min(...campground.stayLengths)}–${Math.max(...campground.stayLengths)} nights`}>
-                                                                        <Chip
-                                                                            label={`${Math.min(...campground.stayLengths)}–${Math.max(...campground.stayLengths)}n`}
-                                                                            size="small"
-                                                                            variant="outlined"
-                                                                            sx={{ fontSize: '0.7rem' }}
-                                                                        />
-                                                                    </Tooltip>
-                                                                )}
-                                                            </Stack>
-                                                        </Stack>
-                                                        <Tooltip title="View map">
-                                                            <Box
-                                                                component="img"
-                                                                src={campgroundImage}
-                                                                alt={campground.name}
-                                                                loading="lazy"
-                                                                onClick={(event) => {
-                                                                    event.stopPropagation();
-                                                                    handleImageOpen(campgroundImage, campground.name)();
-                                                                }}
-                                                                sx={{
-                                                                    width: 72,
-                                                                    height: 72,
-                                                                    borderRadius: 1.5,
-                                                                    border: theme => `1px solid ${theme.palette.divider}`,
-                                                                    objectFit: 'cover',
-                                                                    display: { xs: 'none', md: 'block' },
-                                                                    cursor: 'pointer',
-                                                                }}
-                                                            />
-                                                        </Tooltip>
-                                                    </Stack>
-                                                </AccordionSummary>
-                                                <AccordionDetails sx={{ pt: 1.2, pb: 1.25 }}>
-                                                    <Box
-                                                        component="img"
-                                                        src={campgroundImage}
-                                                        alt={campground.name}
-                                                        loading="lazy"
-                                                        onClick={(event) => {
-                                                            event.stopPropagation();
-                                                            handleImageOpen(campgroundImage, campground.name)();
-                                                        }}
-                                                        sx={{
-                                                            width: '100%',
-                                                            height: 120,
-                                                            borderRadius: 1.5,
-                                                            border: theme => `1px solid ${theme.palette.divider}`,
-                                                            objectFit: 'cover',
-                                                            mb: 1.5,
-                                                            display: { xs: 'block', md: 'none' },
-                                                            cursor: 'pointer',
-                                                        }}
-                                                    />
-                                                    <Campground
-                                                        key={`${campground.name}-${viewMode}-${!!showExcludedMap[campgroundId]}`}
-                                                        campground={campground}
-                                                        viewMode={viewMode}
-                                                        showExcluded={!!showExcludedMap[campgroundId]}
-                                                    />
-                                                </AccordionDetails>
-                                            </Accordion>
-                                        </Box>
-                                    );
-                                })}
-                            </Box>
+                            isDesktop ? (
+                                <Stack direction="row" spacing={2} sx={{ alignItems: 'flex-start' }}>
+                                    <Stack spacing={2} sx={{ flex: 1, minWidth: 0 }}>
+                                        {campgrounds.filter((_, i) => i % 2 === 0).map((campground, i) =>
+                                            renderCampgroundCard(campground, i * 2)
+                                        )}
+                                    </Stack>
+                                    <Stack spacing={2} sx={{ flex: 1, minWidth: 0 }}>
+                                        {campgrounds.filter((_, i) => i % 2 === 1).map((campground, i) =>
+                                            renderCampgroundCard(campground, i * 2 + 1)
+                                        )}
+                                    </Stack>
+                                </Stack>
+                            ) : (
+                                <Stack spacing={2}>
+                                    {campgrounds.map((campground, i) => renderCampgroundCard(campground, i))}
+                                </Stack>
+                            )
                         ) : (
                             <TableContainer component={Paper} variant="outlined">
                                 <Table size="small">

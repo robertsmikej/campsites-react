@@ -1,4 +1,4 @@
-import { useEffect, useState, useContext } from 'react';
+import { useEffect, useState, useContext, useMemo, memo } from 'react';
 
 import SiteSettings from '../context/SiteSettingsContext';
 
@@ -25,7 +25,7 @@ import LaunchIcon from '@mui/icons-material/Launch';
 import { formatToMMDDYYYY, getDayOfWeek, getShortenedDayOfWeek, sortByFromDate, sortBySiteName } from '../utils/utils';
 import { getSitesWithMatches, goToPage } from '../utils/utils';
 
-export function CampsitesTable(props) {
+export const CampsitesTable = memo(function CampsitesTable(props) {
     const siteSettings = useContext(SiteSettings);
 
     const [sites, setSites] = useState([]);
@@ -160,62 +160,45 @@ export function CampsitesTable(props) {
         );
     };
 
-    const renderCards = () => {
-        if (sites?.length === 0) {
-            return (
-                <Typography variant="body2" color="text.secondary">
-                    No matching campsites were found.
-                </Typography>
-            );
-        }
+    const cards = useMemo(() => {
+        if (sites?.length === 0) return null;
         const sitesWithMatches = getSitesWithMatches(sites);
         const sortedMatches = sortBySiteName(sitesWithMatches);
-        const cards = [];
+        const result = [];
         sortedMatches.forEach(site => {
             const sortedMatchesByDate = sortByFromDate(site.matches);
-            site.matches = sortedMatchesByDate;
-            site.matches.forEach(match => {
-                cards.push(
-                    <CampsiteCard key={`${site.siteName}-${match.from}-${match.to}`} site={site} match={match} />
-                );
+            sortedMatchesByDate.forEach(match => {
+                result.push({ site, match, key: `${site.siteName}-${match.from}-${match.to}` });
             });
-            // Include excluded matches when toggled on
             if (props.showExcluded && site.excludedMatches?.length > 0) {
-                const sortedExcluded = sortByFromDate(site.excludedMatches);
-                sortedExcluded.forEach(match => {
-                    cards.push(
-                        <CampsiteCard key={`${site.siteName}-excluded-${match.from}-${match.to}`} site={site} match={match} />
-                    );
+                sortByFromDate(site.excludedMatches).forEach(match => {
+                    result.push({ site, match, key: `${site.siteName}-excluded-${match.from}-${match.to}` });
                 });
             }
         });
-        // Also show sites that only have excluded matches (no regular matches)
         if (props.showExcluded) {
             const sitesOnlyExcluded = sites.filter(s =>
                 (!s.matches || s.matches.length === 0) && s.excludedMatches?.length > 0
             );
             sortBySiteName(sitesOnlyExcluded).forEach(site => {
                 sortByFromDate(site.excludedMatches).forEach(match => {
-                    cards.push(
-                        <CampsiteCard key={`${site.siteName}-excluded-${match.from}-${match.to}`} site={site} match={match} />
-                    );
+                    result.push({ site, match, key: `${site.siteName}-excluded-${match.from}-${match.to}` });
                 });
             });
         }
-        if (cards.length === 0) {
-            return (
-                <Typography variant="body2" color="text.secondary">
-                    No matching campsites were found.
-                </Typography>
-            );
-        }
-        return cards;
-    };
+        return result.length > 0 ? result : null;
+    }, [sites, props.showExcluded]);
 
     return (
         <>
             <Stack spacing={2}>
-                {renderCards()}
+                {cards ? cards.map(({ site, match, key }) => (
+                    <CampsiteCard key={key} site={site} match={match} />
+                )) : (
+                    <Typography variant="body2" color="text.secondary">
+                        No matching campsites were found.
+                    </Typography>
+                )}
             </Stack>
             <Dialog
                 open={photoPreview.open}
@@ -250,4 +233,4 @@ export function CampsitesTable(props) {
             </Dialog>
         </>
     );
-}
+});

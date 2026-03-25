@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo, memo } from 'react';
 
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
@@ -10,7 +10,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 
 import { CampsitesCalendar } from './CampsitesCalendar';
 
-export function CampsitesCalendarParent(props) {
+export const CampsitesCalendarParent = memo(function CampsitesCalendarParent(props) {
     const [sites, setSites] = useState([]);
 
     useEffect(() => {
@@ -21,9 +21,17 @@ export function CampsitesCalendarParent(props) {
         }
     }, [props.data]);
 
+    const visibleSites = useMemo(() => {
+        return sites.filter(site =>
+            site.matches?.length > 0 ||
+            site.excludedMatches?.some(m => m.reason === 'startDay') ||
+            (props.showExcluded && site.excludedMatches?.length > 0)
+        );
+    }, [sites, props.showExcluded]);
+
     return (
         <Stack spacing={2}>
-            {sites.filter(site => site.matches?.length > 0 || site.excludedMatches?.some(m => m.reason === 'startDay') || (props.showExcluded && site.excludedMatches?.length > 0)).map((site, siteIndex) => {
+            {visibleSites.map((site, siteIndex) => {
                 const hasMatches = site.matches?.length > 0;
                 return (
                     <Accordion
@@ -81,4 +89,4 @@ export function CampsitesCalendarParent(props) {
             })}
         </Stack>
     );
-}
+});

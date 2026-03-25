@@ -107,8 +107,8 @@ export const defaultCampgroundConfigurations = {
             id: '232169',
             name: 'Mountain View Campground',
             sites: {
-                favorites: ['014', '015'],
-                worthwhile: ['012', '011', '010', '008', '006'],
+                favorites: ['014'],
+                worthwhile: ['012', '011', '010', '008', '006', '015'],
             },
             dates: {
                 startDate: '2026-06-01',
