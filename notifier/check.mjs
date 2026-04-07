@@ -90,6 +90,10 @@ const fetchSubscribers = async (apiUrl, apiSecret) => {
 };
 
 // --- State management ---
+// State now tracks two sets:
+//   signatures        — current availability snapshot (used to detect what changed)
+//   notifiedSignatures — everything we've already emailed about (prevents flap re-alerts)
+// Notified signatures are pruned once their start date is in the past.
 const loadState = () => {
     const path = new URL(STATE_FILE);
     if (!existsSync(path)) {
@@ -97,19 +101,40 @@ const loadState = () => {
     }
     try {
         const data = JSON.parse(readFileSync(path, 'utf-8'));
-        return new Set(data.signatures || []);
+        return {
+            signatures: new Set(data.signatures || []),
+            notifiedSignatures: new Set(data.notifiedSignatures || []),
+        };
     } catch {
         return null;
     }
 };
 
-const saveState = (signatures) => {
+const pruneExpiredNotified = (notifiedSignatures) => {
+    const today = new Date().toISOString().split('T')[0];
+    const pruned = new Set();
+    for (const sig of notifiedSignatures) {
+        // Signature format: campgroundId:siteId:from:to:nights
+        const fromDate = sig.split(':')[2];
+        if (fromDate >= today) {
+            pruned.add(sig);
+        }
+    }
+    const removed = notifiedSignatures.size - pruned.size;
+    if (removed > 0) {
+        console.log(`[State] Pruned ${removed} expired notified signature(s)`);
+    }
+    return pruned;
+};
+
+const saveState = (signatures, notifiedSignatures) => {
     const data = {
         signatures: [...signatures],
+        notifiedSignatures: [...notifiedSignatures],
         checkedAt: new Date().toISOString(),
     };
     writeFileSync(new URL(STATE_FILE), JSON.stringify(data, null, 2));
-    console.log(`[State] Saved ${signatures.size} signatures`);
+    console.log(`[State] Saved ${signatures.size} signatures, ${notifiedSignatures.size} notified`);
 };
 
 // --- Pending notifications (for delayed delivery to non-priority subscribers) ---
@@ -201,21 +226,27 @@ const main = async () => {
     const currentSignatures = buildSignatureSet(results);
     console.log(`[Diff] ${currentSignatures.size} total match signatures`);
 
-    const previousSignatures = loadState();
+    const previousState = loadState();
 
     const forceEmail = process.env.FORCE_EMAIL === 'true';
-    if (previousSignatures === null && !forceEmail) {
+    if (previousState === null && !forceEmail) {
         console.log('[First Run] No previous state found. Seeding state — no email sent.');
-        saveState(currentSignatures);
+        saveState(currentSignatures, new Set());
         return;
     }
     if (forceEmail) {
         console.log('[Force] FORCE_EMAIL is set — treating all current matches as new.');
     }
 
-    // Find new matches — favorites + notifyAll campgrounds
+    const previousSignatures = previousState?.signatures ?? new Set();
+    const notifiedSignatures = previousState
+        ? pruneExpiredNotified(previousState.notifiedSignatures)
+        : new Set();
+
+    // Compare against both previous snapshot AND already-notified set.
+    // A match is "new" only if it wasn't in the last snapshot AND we haven't already emailed about it.
     const allConfigs = Object.values(siteConfigurations).flat();
-    const compareAgainst = forceEmail ? new Set() : (previousSignatures ?? new Set());
+    const compareAgainst = forceEmail ? new Set() : new Set([...previousSignatures, ...notifiedSignatures]);
     const allNewMatches = findNewMatches(results, compareAgainst, allConfigs);
     const notifyAllIds = new Set(allConfigs.filter(c => c.notifyAll).map(c => c.id));
     const newMatches = allNewMatches.filter(
@@ -225,6 +256,11 @@ const main = async () => {
 
     // --- 2. Send priority emails immediately (most important) ---
     if (newMatches.length > 0) {
+        // Mark these matches as notified so flapping won't re-trigger them
+        for (const m of newMatches) {
+            notifiedSignatures.add(`${m.campgroundId}:${m.siteId}:${m.match.from}:${m.match.to}:${m.match.nights}`);
+        }
+
         if (priorityEmails.length > 0) {
             console.log(`[Priority] Sending ${newMatches.length} matches to ${priorityEmails.length} priority subscriber(s)`);
             for (const email of priorityEmails) {
@@ -289,7 +325,7 @@ const main = async () => {
     }
 
     // Save current state for next run
-    saveState(currentSignatures);
+    saveState(currentSignatures, notifiedSignatures);
 };
 
 main().catch((err) => {
