@@ -124,13 +124,14 @@ const handleListSubscribers = async (request, env) => {
 };
 
 // GET /api/config — returns campground config for the notifier and the UI.
-// Accepts either CONFIG_KEY (used by the UI, baked into the client bundle) or
-// API_SECRET (used by the notifier). If neither env var is set, falls open.
+// Auth model mirrors PUT: if CONFIG_KEY is set on the worker, require it;
+// otherwise fall open. Notifier currently calls with API_SECRET, which we also
+// accept so the existing notifier auth keeps working.
 const handleGetConfig = async (request, env) => {
-    const validTokens = [env.CONFIG_KEY, env.API_SECRET].filter(Boolean);
-    if (validTokens.length > 0) {
+    if (env.CONFIG_KEY) {
         const auth = request.headers.get('Authorization');
-        const isAuthorized = auth && validTokens.some(t => auth === `Bearer ${t}`);
+        const acceptedTokens = [env.CONFIG_KEY, env.API_SECRET].filter(Boolean);
+        const isAuthorized = auth && acceptedTokens.some(t => auth === `Bearer ${t}`);
         if (!isAuthorized) {
             return json({ error: 'Unauthorized' }, 401);
         }
