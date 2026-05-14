@@ -54,9 +54,33 @@ const settingsObject = getSitewideDefaultSettings(settingsOverrides);
 const USER_SITES_STORAGE_KEY = 'campsites-react-user-sites';
 const USER_GLOBAL_SETTINGS_KEY = 'campsites-react-global-settings';
 const COLOR_MODE_STORAGE_KEY = 'campgrounds-color-mode';
+const USE_LOCAL_CONFIG_KEY = 'campsites-react-use-local-config';
 const catalogOptions = getCampgroundOptions();
 
 const cloneSitesConfig = (config) => JSON.parse(JSON.stringify(config));
+
+const fetchRemoteConfig = async () => {
+    const configKey = process.env.REACT_APP_CONFIG_KEY || '';
+    const headers = {};
+    if (configKey) {
+        headers['Authorization'] = `Bearer ${configKey}`;
+    }
+    try {
+        const response = await fetch('/api/config', { headers });
+        if (!response.ok) {
+            if (response.status !== 404) {
+                console.error(`[Config Load] API returned ${response.status}`);
+            }
+            return null;
+        }
+        const data = await response.json();
+        if (!data?.campgrounds) return null;
+        return data;
+    } catch (error) {
+        console.error('[Config Load] Failed:', error.message);
+        return null;
+    }
+};
 
 const syncConfigToApi = async (campgroundConfig, globalSettings) => {
     const configKey = process.env.REACT_APP_CONFIG_KEY || '';
@@ -103,6 +127,15 @@ const getInitialGlobalSettings = () => {
     return defaults;
 };
 
+const getInitialUseLocalConfig = () => {
+    if (typeof window === 'undefined') return false;
+    try {
+        return localStorage.getItem(USE_LOCAL_CONFIG_KEY) === 'true';
+    } catch {
+        return false;
+    }
+};
+
 const getInitialColorMode = () => {
     if (typeof window === 'undefined') {
         return settingsObject?.appearance?.mode ?? 'light';
@@ -126,6 +159,8 @@ export default function App() {
     const [isConfigDialogOpen, setIsConfigDialogOpen] = useState(false);
     const [colorMode, setColorMode] = useState(getInitialColorMode);
     const [syncStatus, setSyncStatus] = useState(null); // 'success' | 'error' | null
+    const [useLocalConfig, setUseLocalConfig] = useState(getInitialUseLocalConfig);
+    const [isConfigHydrating, setIsConfigHydrating] = useState(true);
 
     const settings = useMemo(() => {
         if (!settingsObject) return {};
@@ -166,36 +201,55 @@ export default function App() {
     // }, []);
 
     useEffect(() => {
-        const storedSites = localStorage.getItem(USER_SITES_STORAGE_KEY);
-        if (storedSites) {
+        let cancelled = false;
+
+        const loadFromLocalStorage = () => {
+            const storedSites = localStorage.getItem(USER_SITES_STORAGE_KEY);
+            if (!storedSites) return false;
             try {
                 const parsed = JSON.parse(storedSites);
-                // Merge stored config with defaults to get updated dates
-                // but preserve user's favorites/worthwhile/showOrHide settings
-                for (const system in parsed) {
-                    if (defaultSites[system]) {
-                        parsed[system] = parsed[system].map(storedCampground => {
-                            // Merge any new default fields for known campgrounds,
-                            // but preserve all user-saved settings (including dates)
-                            const defaultCampground = defaultSites[system].find(d => d.id === storedCampground.id);
-                            if (defaultCampground) {
-                                return storedCampground;
-                            }
-                            return storedCampground;
-                        });
-                    }
-                }
-                console.log('[Config] Merged stored config with default dates');
+                if (cancelled) return true;
                 setSiteConfig(parsed);
+                return true;
             } catch (error) {
                 console.error('Failed to parse stored site configuration', error);
-                setSiteConfig(cloneSitesConfig(defaultSites));
+                return false;
             }
-        }
-    }, []);
+        };
+
+        const hydrate = async () => {
+            setIsConfigHydrating(true);
+
+            if (useLocalConfig) {
+                loadFromLocalStorage();
+                if (!cancelled) setIsConfigHydrating(false);
+                return;
+            }
+
+            const remote = await fetchRemoteConfig();
+            if (cancelled) return;
+
+            if (remote?.campgrounds) {
+                setSiteConfig(remote.campgrounds);
+                if (remote.globalSettings && Object.keys(remote.globalSettings).length > 0) {
+                    setGlobalSettings(prev => ({ ...prev, ...remote.globalSettings }));
+                }
+                console.log('[Config] Hydrated from shared KV config');
+            } else if (!loadFromLocalStorage()) {
+                console.log('[Config] Using static defaults');
+            }
+            if (!cancelled) setIsConfigHydrating(false);
+        };
+
+        hydrate();
+        return () => {
+            cancelled = true;
+        };
+    }, [useLocalConfig]);
 
     useEffect(() => {
         if (!settings || !siteConfig) return;
+        if (isConfigHydrating) return;
 
         setCampgroundsData({});
         setCampgroundsByAreas([]);
@@ -223,7 +277,7 @@ export default function App() {
             setCampgroundsData(siteData ?? {});
             setIsFetching(false);
         })();
-    }, [settings, useMockData, siteConfig]);
+    }, [settings, useMockData, siteConfig, isConfigHydrating]);
 
     useEffect(() => {
         if (Object.keys(campgroundsData)?.length > 0) {
@@ -303,11 +357,13 @@ export default function App() {
         }
         setIsConfigDialogOpen(false);
 
-        // Fire-and-forget sync to notification API
-        syncConfigToApi(cloned, newGlobalSettings || globalSettings).then(({ ok, skipped }) => {
-            if (skipped) return;
-            setSyncStatus(ok ? 'success' : 'error');
-        });
+        // Fire-and-forget sync to shared KV config (skipped when this device is in local-only mode)
+        if (!useLocalConfig) {
+            syncConfigToApi(cloned, newGlobalSettings || globalSettings).then(({ ok, skipped }) => {
+                if (skipped) return;
+                setSyncStatus(ok ? 'success' : 'error');
+            });
+        }
     };
 
     const handleResetSitesConfig = () => {
@@ -321,11 +377,25 @@ export default function App() {
         setGlobalSettings(defaultGlobal);
         setIsConfigDialogOpen(false);
 
-        // Sync defaults to notification API so notifier picks up the reset
-        syncConfigToApi(defaults, defaultGlobal).then(({ ok, skipped }) => {
-            if (skipped) return;
-            setSyncStatus(ok ? 'success' : 'error');
-        });
+        // Sync defaults to shared KV config (skipped when this device is in local-only mode)
+        if (!useLocalConfig) {
+            syncConfigToApi(defaults, defaultGlobal).then(({ ok, skipped }) => {
+                if (skipped) return;
+                setSyncStatus(ok ? 'success' : 'error');
+            });
+        }
+    };
+
+    const handleToggleUseLocalConfig = (event) => {
+        const next = !!event.target.checked;
+        setUseLocalConfig(next);
+        try {
+            localStorage.setItem(USE_LOCAL_CONFIG_KEY, String(next));
+        } catch (error) {
+            console.error('Failed to persist local-config preference', error);
+        }
+        // The hydration effect re-runs on useLocalConfig change and will re-fetch
+        // from KV when switching back to shared mode.
     };
 
     const topBarMenuItems = [
@@ -334,6 +404,12 @@ export default function App() {
             label: 'Use mock data',
             checked: useMockData,
             onChange: handleMockToggle,
+        },
+        {
+            type: 'toggle',
+            label: 'Use my own settings (this device only)',
+            checked: useLocalConfig,
+            onChange: handleToggleUseLocalConfig,
         },
         {
             label: 'Configure Sites',

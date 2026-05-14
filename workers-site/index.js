@@ -123,11 +123,17 @@ const handleListSubscribers = async (request, env) => {
     return json({ subscribers: emails });
 };
 
-// GET /api/config — protected, returns campground config for the notifier
+// GET /api/config — returns campground config for the notifier and the UI.
+// Accepts either CONFIG_KEY (used by the UI, baked into the client bundle) or
+// API_SECRET (used by the notifier). If neither env var is set, falls open.
 const handleGetConfig = async (request, env) => {
-    const auth = request.headers.get('Authorization');
-    if (!auth || auth !== `Bearer ${env.API_SECRET}`) {
-        return json({ error: 'Unauthorized' }, 401);
+    const validTokens = [env.CONFIG_KEY, env.API_SECRET].filter(Boolean);
+    if (validTokens.length > 0) {
+        const auth = request.headers.get('Authorization');
+        const isAuthorized = auth && validTokens.some(t => auth === `Bearer ${t}`);
+        if (!isAuthorized) {
+            return json({ error: 'Unauthorized' }, 401);
+        }
     }
 
     const data = await env.SUBSCRIBERS.get('config:campgrounds', 'json');
