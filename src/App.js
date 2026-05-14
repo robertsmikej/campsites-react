@@ -400,18 +400,6 @@ export default function App() {
 
     const topBarMenuItems = [
         {
-            type: 'toggle',
-            label: 'Use mock data',
-            checked: useMockData,
-            onChange: handleMockToggle,
-        },
-        {
-            type: 'toggle',
-            label: 'Use my own settings (this device only)',
-            checked: useLocalConfig,
-            onChange: handleToggleUseLocalConfig,
-        },
-        {
             label: 'Configure Sites',
             action: handleOpenConfigDialog,
         },
@@ -508,6 +496,10 @@ export default function App() {
                 catalogOptions={catalogOptions}
                 globalSettings={globalSettings}
                 availableSites={availableSitesByFacility}
+                useMockData={useMockData}
+                onToggleMockData={handleMockToggle}
+                useLocalConfig={useLocalConfig}
+                onToggleUseLocalConfig={handleToggleUseLocalConfig}
             />
             <Snackbar
                 open={syncStatus !== null}

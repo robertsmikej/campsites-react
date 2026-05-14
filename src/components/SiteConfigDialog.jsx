@@ -150,6 +150,10 @@ export function SiteConfigDialog({
     catalogOptions = [],
     globalSettings = {},
     availableSites = {},
+    useMockData = false,
+    onToggleMockData,
+    useLocalConfig = false,
+    onToggleUseLocalConfig,
 }) {
     const [campgrounds, setCampgrounds] = useState([createEmptyCampground()]);
     const [newCampgroundSelection, setNewCampgroundSelection] = useState('');
@@ -458,10 +462,10 @@ export function SiteConfigDialog({
             <DialogTitle>Configure Campgrounds</DialogTitle>
             <DialogContent dividers>
                 <Stack spacing={2}>
-                    {/* Global Settings Section */}
+                    {/* General Settings Section */}
                     <Accordion defaultExpanded={false} disableGutters elevation={0} sx={{ border: theme => `1px solid ${theme.palette.divider}`, borderRadius: 1.5 }}>
                         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                            <Typography variant="subtitle1" fontWeight={500}>Search Settings</Typography>
+                            <Typography variant="subtitle1" fontWeight={500}>General Settings</Typography>
                         </AccordionSummary>
                         <AccordionDetails>
                             <Stack spacing={3}>
@@ -509,6 +513,37 @@ export function SiteConfigDialog({
                                     <Typography variant="caption" color="text.secondary">
                                         Only show stays that start on these days
                                     </Typography>
+                                </Box>
+                                <Box>
+                                    <FormGroup>
+                                        <FormControlLabel
+                                            control={
+                                                <Switch
+                                                    checked={!!useLocalConfig}
+                                                    onChange={onToggleUseLocalConfig}
+                                                    size="small"
+                                                />
+                                            }
+                                            label="Use my own settings (this device only)"
+                                        />
+                                        <Typography variant="caption" color="text.secondary" sx={{ ml: 4, mt: -0.5 }}>
+                                            When on, this device keeps its own configuration and doesn't sync to the shared config.
+                                        </Typography>
+                                        <FormControlLabel
+                                            sx={{ mt: 1 }}
+                                            control={
+                                                <Switch
+                                                    checked={!!useMockData}
+                                                    onChange={onToggleMockData}
+                                                    size="small"
+                                                />
+                                            }
+                                            label="Use mock data"
+                                        />
+                                        <Typography variant="caption" color="text.secondary" sx={{ ml: 4, mt: -0.5 }}>
+                                            Skip the live Recreation.gov calls and render canned data for development.
+                                        </Typography>
+                                    </FormGroup>
                                 </Box>
                             </Stack>
                         </AccordionDetails>
