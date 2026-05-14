@@ -5,10 +5,10 @@ export const defaultCampgroundConfigurations = {
             name: 'Outlet Campground',
             sites: {
                 favorites: ['013', '015', '011', '008'],
-                worthwhile: ['016', '017', '018', '019'],
+                worthwhile: [],
             },
             dates: {
-                startDate: '2026-06-01',
+                startDate: '2026-05-01',
                 endDate: '2026-10-01',
             },
             showOrHide: {
@@ -22,11 +22,11 @@ export const defaultCampgroundConfigurations = {
             id: '232085',
             name: 'Point Campground',
             sites: {
-                favorites: ['011', '012', '014', '016', '017'],
-                worthwhile: ['010', '013', '015'],
+                favorites: ['012', '014', '016'],
+                worthwhile: [],
             },
             dates: {
-                startDate: '2026-06-01',
+                startDate: '2026-05-01',
                 endDate: '2026-10-01',
             },
             showOrHide: {
@@ -39,8 +39,8 @@ export const defaultCampgroundConfigurations = {
             id: '232050',
             name: 'Glacier View Campground',
             sites: {
-                favorites: ['016', '014', '012', '003', '005', '007'],
-                worthwhile: ['019', '021', '023', '060', '031', '038', '039'],
+                favorites: ['016', '014', '012', '003'],
+                worthwhile: [],
             },
             dates: {
                 startDate: '2026-06-01',
@@ -73,7 +73,7 @@ export const defaultCampgroundConfigurations = {
             id: '232087',
             name: 'Rainbow Point Campground',
             sites: {
-                favorites: [],//'007'
+                favorites: ['007'],
                 worthwhile: [],
             },
             dates: {
@@ -85,6 +85,7 @@ export const defaultCampgroundConfigurations = {
                 'Worthwhile': false,
                 'All Others': false,
             },
+            validStartDays: ['Friday', 'Saturday'],
         },
         {
             id: '233858',
@@ -102,13 +103,14 @@ export const defaultCampgroundConfigurations = {
                 'Worthwhile': false,
                 'All Others': false,
             },
+            validStartDays: ['Friday', 'Saturday', 'Thursday', 'Sunday', 'Wednesday', 'Tuesday', 'Monday'],
         },
         {
             id: '232169',
             name: 'Mountain View Campground',
             sites: {
-                favorites: ['014'],
-                worthwhile: ['012', '011', '010', '008', '006', '015'],
+                favorites: ['014', '015'],
+                worthwhile: ['012', '011', '010', '008', '006'],
             },
             dates: {
                 startDate: '2026-06-01',
