@@ -16,8 +16,6 @@ interface GeneralSettingsProps {
     onStayRangeChange: (range: [number, number]) => void;
     validStartDays: string[];
     onValidStartDaysChange: (days: string[]) => void;
-    useLocalConfig: boolean;
-    onToggleUseLocalConfig: (event: React.ChangeEvent<HTMLInputElement>) => void;
     useMockData: boolean;
     onToggleMockData: (event: React.ChangeEvent<HTMLInputElement>) => void;
 }
@@ -28,8 +26,6 @@ export function GeneralSettings(props: GeneralSettingsProps) {
         onStayRangeChange,
         validStartDays,
         onValidStartDaysChange,
-        useLocalConfig,
-        onToggleUseLocalConfig,
         useMockData,
         onToggleMockData,
     } = props;
@@ -88,20 +84,6 @@ export function GeneralSettings(props: GeneralSettingsProps) {
                         </p>
                     </div>
                     <div className="space-y-3">
-                        <label className="flex items-start gap-3">
-                            <Switch
-                                checked={useLocalConfig}
-                                onCheckedChange={(checked) =>
-                                    onToggleUseLocalConfig(synthEvent(checked))
-                                }
-                            />
-                            <span className="flex flex-col">
-                                <span className="text-sm">Use my own settings (this device only)</span>
-                                <span className="text-xs text-muted-foreground">
-                                    When on, this device keeps its own configuration and doesn't sync to the shared config.
-                                </span>
-                            </span>
-                        </label>
                         <label className="flex items-start gap-3">
                             <Switch
                                 checked={useMockData}

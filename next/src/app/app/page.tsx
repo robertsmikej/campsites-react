@@ -146,8 +146,6 @@ export default function AppPage() {
                     availableSites={availableSites}
                     useMockData={useMockData}
                     onToggleMockData={(e) => setUseMockData(e.target.checked)}
-                    useLocalConfig={false}
-                    onToggleUseLocalConfig={() => {}}
                 />
             </ProgressBarContext.Provider>
         </SiteSettingsContext.Provider>
