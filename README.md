@@ -1,149 +1,47 @@
 # CampWatch
 
-A campsite availability tracker that monitors [recreation.gov](https://www.recreation.gov) for openings at popular campgrounds and sends email alerts when your favorite sites become available.
+A campsite availability tracker for recreation.gov. Watches the campgrounds and
+sites you care about and emails you the moment something opens up.
 
-Built with React, deployed on Cloudflare Workers, and automated with GitHub Actions.
-
-## What It Does
-
-Finding campsites at popular campgrounds is notoriously difficult — sites book months in advance and cancellations are gone within minutes. CampWatch solves this by continuously monitoring availability and alerting you the moment a site opens up.
-
-- **Tracks 9+ campgrounds** across Idaho's Sawtooth region (Redfish Lake, Stanley Lake, Warm Lake, and more)
-- **Curated site lists** — mark specific sites as favorites based on location (lakefront, riverside, etc.)
-- **Email notifications** — get alerted within 15 minutes when a favorite site opens
-- **Priority subscribers** — configurable head-start for select emails before general subscribers are notified
-- **Calendar and table views** — visualize availability across date ranges with filtering by stay length and start day
+Live at **https://campwatch.mikeroberts421.workers.dev/app**.
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────┐
-│  GitHub Actions (every 15 min)                      │
-│  ┌───────────────────────────────────────────────┐  │
-│  │  notifier/check.mjs                           │  │
-│  │  → Fetch recreation.gov API                   │  │
-│  │  → Diff against previous state                │  │
-│  │  → Email new matches via Resend               │  │
-│  └───────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────┘
-                        │
-                        ▼
-┌─────────────────────────────────────────────────────┐
-│  Cloudflare Workers                                 │
-│  ┌──────────────┐  ┌────────────────────────────┐   │
-│  │  Static SPA  │  │  Subscriber API             │  │
-│  │  (React app) │  │  POST /api/subscribe        │  │
-│  │              │  │  GET  /api/unsubscribe      │  │
-│  │              │  │  GET  /api/subscribers       │  │
-│  └──────────────┘  └────────────────────────────┘   │
-│                          │                          │
-│                    ┌─────┴─────┐                    │
-│                    │ Workers KV │                    │
-│                    │ (emails)   │                    │
-│                    └───────────┘                    │
-└─────────────────────────────────────────────────────┘
+next/         Next.js 16 + Tailwind v4 + shadcn/ui app.
+              Deploys as the `campwatch` Cloudflare Worker
+              via @opennextjs/cloudflare on every push to main.
+
+notifier/     Node script run as a GitHub Actions cron every 15 minutes.
+              Calls the Worker's /api/* endpoints to read configuration and
+              subscribers, fetches recreation.gov availability, sends emails
+              via Resend on new matches.
+
+workers-site/ Tiny redirect Worker (the legacy `campsites-finder` URL).
+              307-redirects every request to the corresponding path on
+              campwatch.*. Kept alive so old unsubscribe links in
+              already-sent emails continue to work.
+
+legacy/cra/   The previous Create React App build of the same product.
+              Retained for reference and rollback only — not deployed.
 ```
 
-## Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| Frontend | React 19, Material-UI 7, Emotion |
-| Backend | Cloudflare Workers |
-| Storage | Cloudflare Workers KV |
-| Email | Resend API |
-| CI/CD | GitHub Actions |
-| Data Source | recreation.gov API |
-
-## Key Features
-
-**Availability Monitoring**
-- Fetches live availability data from recreation.gov's public API
-- Configurable date ranges, stay lengths (2-5 nights), and valid start days
-- Groups results by campground with favorites highlighted
-
-**Smart Notifications**
-- Signature-based diffing — only alerts on *new* availability, not repeats
-- Cancellation detection — if a site opens up again, you get re-notified
-- Delayed delivery queue — priority subscribers get a 15-minute head start
-- HMAC-secured unsubscribe links
-
-**Performance**
-- 30-minute client-side cache to minimize API calls
-- Rate-limited API requests (50ms between calls) to respect recreation.gov limits
-- State persisted across GitHub Actions runs via cache
-
-## Project Structure
-
-```
-├── src/
-│   ├── components/          # React components (calendar, table, config)
-│   ├── calls/               # recreation.gov API integration
-│   ├── json/                # Campground catalog & site configurations
-│   ├── context/             # React context (settings, progress)
-│   └── utils/               # Shared utilities
-├── notifier/
-│   ├── check.mjs            # Scheduled availability checker
-│   └── lib/
-│       ├── fetch-availability.mjs  # API fetching & match detection
-│       ├── diff.mjs                # Signature-based change detection
-│       └── email.mjs               # Email formatting & Resend integration
-├── workers-site/
-│   └── index.js             # Cloudflare Worker (static + API routes)
-└── .github/workflows/
-    ├── deploy.yml            # Auto-deploy on push to main
-    └── check-campsites.yml   # Scheduled availability checks (every 15 min)
-```
-
-## Setup
-
-### Prerequisites
-- Node.js 20+
-- A [Resend](https://resend.com) account (free tier: 3,000 emails/month)
-- A [Cloudflare](https://cloudflare.com) account
-
-### Local Development
+## Development
 
 ```bash
-npm install
-npm start
+cd next
+pnpm install
+pnpm dev          # http://localhost:3000
+pnpm test         # Vitest
+pnpm run cf:build # local OpenNext build
 ```
 
-The app runs at `http://localhost:3000`. A proxy server handles recreation.gov API calls to avoid CORS issues during development.
+## Deployment
 
-### Deployment
+- **`next/`**: `.github/workflows/deploy-next.yml` deploys the campwatch Worker on every push to main (and feature branches).
+- **`workers-site/`**: `.github/workflows/deploy.yml` deploys the redirect Worker when `workers-site/` or `wrangler.toml` change.
+- **`notifier/`**: `.github/workflows/check-campsites.yml` runs every 15 minutes (cron). It reads `SUBSCRIBER_API_URL`, `SUBSCRIBER_API_SECRET`, `SITE_URL`, `RESEND_API_KEY` from GitHub Secrets.
 
-The app auto-deploys to Cloudflare Workers on push to `main`. Required GitHub secrets:
+## Design docs and plans
 
-| Secret | Purpose |
-|--------|---------|
-| `CLOUDFLARE_API_TOKEN` | Wrangler deployment |
-| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account |
-| `RESEND_API_KEY` | Email sending |
-| `SUBSCRIBER_API_URL` | CF Worker base URL |
-| `SUBSCRIBER_API_SECRET` | API authentication |
-| `PRIORITY_EMAILS` | Comma-separated priority addresses |
-| `SITE_URL` | App URL (for email links) |
-
-### Configuring Campgrounds
-
-Edit `src/json/campgroundCatalog.js` to add campgrounds and `src/json/siteConfigurations.js` to configure favorite sites and date ranges per campground.
-
-## Repository layout (during multi-user rework)
-
-Two apps coexist in this repo during the Phase 0 stack migration:
-
-- **Root (CRA + Cloudflare Worker)** — the currently-deployed production app. Served by the
-    `campsites-finder` Worker at `https://campsites-finder.mikeroberts421.workers.dev/`. Deployed by
-    `.github/workflows/deploy.yml` on push to `main`.
-- **`next/` (Next.js + Tailwind + shadcn on Cloudflare Workers)** — the new stack. Served by the
-    `campwatch` Worker at `https://campwatch.mikeroberts421.workers.dev/` via `@opennextjs/cloudflare`
-    (Workers Static Assets, not Pages). Deployed by `.github/workflows/deploy-next.yml` on push to any
-    branch.
-
-Production traffic moves to the new app at the end of Phase 0d. See
-`docs/superpowers/specs/2026-05-14-multi-user-rework-design.md` for the full design.
-
-## License
-
-MIT
+`docs/superpowers/specs/` and `docs/superpowers/plans/` hold the architectural specs and execution plans for ongoing work. The Phase 0 stack migration (0a scaffold → 0b API → 0c UI → 0d cutover) is complete. Next: Phase 1 (Google OAuth) and Phase 2 (per-user lists) per `docs/superpowers/specs/2026-05-14-multi-user-rework-design.md`.
