@@ -2,8 +2,6 @@ import { getEnv } from "@/lib/cloudflare";
 import type { CampWatchEnv } from "@/lib/cloudflare";
 import { jsonResponse, withCors } from "@/lib/responses";
 
-export const runtime = "edge";
-
 function authorizedForRead(request: Request, env: CampWatchEnv): boolean {
     if (!env.CONFIG_KEY) return true;
     const auth = request.headers.get("Authorization");

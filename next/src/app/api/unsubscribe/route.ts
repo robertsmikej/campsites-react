@@ -2,8 +2,6 @@ import { getEnv } from "@/lib/cloudflare";
 import { normalizeEmail } from "@/lib/email";
 import { verifyUnsubscribeToken } from "@/lib/hmac";
 
-export const runtime = "edge";
-
 function htmlResponse(body: string, status = 200): Response {
     return new Response(body, { status, headers: { "Content-Type": "text/html" } });
 }

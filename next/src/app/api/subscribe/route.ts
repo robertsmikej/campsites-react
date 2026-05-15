@@ -2,8 +2,6 @@ import { getKv } from "@/lib/cloudflare";
 import { isValidEmail, normalizeEmail } from "@/lib/email";
 import { jsonResponse, withCors } from "@/lib/responses";
 
-export const runtime = "edge";
-
 export async function POST(request: Request): Promise<Response> {
     let body: { email?: string };
     try {

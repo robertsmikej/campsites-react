@@ -1,8 +1,6 @@
 import { getEnv } from "@/lib/cloudflare";
 import { jsonResponse, withCors } from "@/lib/responses";
 
-export const runtime = "edge";
-
 export async function GET(request: Request): Promise<Response> {
     const env = getEnv();
     if (!env.API_SECRET) {
