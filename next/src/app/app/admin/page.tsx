@@ -1,18 +1,27 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { UsersTable } from "@/components/admin/users-table";
+import { SiteConfigDialog } from "@/components/site-config-dialog";
+import { getCampgroundOptions } from "@/data/sites";
 import type { UserProfile } from "@/types/user";
+import type { SiteConfig, GlobalSettings } from "@/types/campground";
 
 export default function AdminPage() {
     const auth = useAuth();
     const [users, setUsers] = useState<UserProfile[] | null>(null);
     const [usersError, setUsersError] = useState<string | null>(null);
+
+    const [defaultDialogOpen, setDefaultDialogOpen] = useState(false);
+    const [defaultConfig, setDefaultConfig] = useState<SiteConfig | null>(null);
+    const [defaultGlobalSettings, setDefaultGlobalSettings] = useState<GlobalSettings | null>(null);
+    const catalogOptions = useMemo(() => getCampgroundOptions(), []);
 
     useEffect(() => {
         if (!auth.user || !auth.isCurator) return;
@@ -59,6 +68,42 @@ export default function AdminPage() {
                 </Card>
             </main>
         );
+    }
+
+    async function openDefaultDialog() {
+        try {
+            const r = await fetch("/api/default", { credentials: "include" });
+            if (!r.ok) {
+                toast.error("Couldn't load the default list");
+                return;
+            }
+            const data = (await r.json()) as { campgrounds: SiteConfig; globalSettings?: GlobalSettings };
+            setDefaultConfig(data.campgrounds);
+            setDefaultGlobalSettings(
+                data.globalSettings ?? {
+                    stayLengths: [2, 3, 4, 5],
+                    validStartDays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+                },
+            );
+            setDefaultDialogOpen(true);
+        } catch {
+            toast.error("Couldn't load the default list");
+        }
+    }
+
+    async function saveDefault(config: SiteConfig, settings: GlobalSettings) {
+        const r = await fetch("/api/default", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ campgrounds: config, globalSettings: settings }),
+            credentials: "include",
+        });
+        if (!r.ok) {
+            toast.error("Save failed");
+            return;
+        }
+        toast.success("Default list saved");
+        setDefaultDialogOpen(false);
     }
 
     async function toggleRole(target: UserProfile, makeCurator: boolean) {
@@ -115,7 +160,34 @@ export default function AdminPage() {
                 </CardContent>
             </Card>
 
-            {/* Edit default list card lands in Task C2 */}
+            <Card>
+                <CardHeader>
+                    <CardTitle>Default campground list</CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-col items-start gap-2">
+                    <p className="text-sm text-muted-foreground">
+                        The list new users see on /discover and can clone as their starting watchlist.
+                    </p>
+                    <Button onClick={openDefaultDialog}>Edit default list</Button>
+                </CardContent>
+            </Card>
+
+            {defaultConfig && defaultGlobalSettings ? (
+                <SiteConfigDialog
+                    open={defaultDialogOpen}
+                    onClose={() => setDefaultDialogOpen(false)}
+                    onSave={(config, settings) => {
+                        void saveDefault(config, settings);
+                    }}
+                    onResetToDefaults={() => undefined}
+                    initialData={defaultConfig}
+                    catalogOptions={catalogOptions}
+                    globalSettings={defaultGlobalSettings}
+                    availableSites={{}}
+                    useMockData={false}
+                    onToggleMockData={() => undefined}
+                />
+            ) : null}
         </main>
     );
 }
