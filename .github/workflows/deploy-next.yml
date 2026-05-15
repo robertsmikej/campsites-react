@@ -1,0 +1,42 @@
+name: Deploy Next.js Worker
+
+on:
+    push:
+        branches: ["**"]
+        paths:
+            - "next/**"
+            - ".github/workflows/deploy-next.yml"
+    workflow_dispatch: {}
+
+jobs:
+    deploy:
+        runs-on: ubuntu-latest
+        defaults:
+            run:
+                working-directory: next
+        steps:
+            - uses: actions/checkout@v5
+
+            - uses: pnpm/action-setup@v4
+              with:
+                  version: 9
+
+            - uses: actions/setup-node@v5
+              with:
+                  node-version: 22
+                  cache: pnpm
+                  cache-dependency-path: next/pnpm-lock.yaml
+
+            - name: Install
+              run: pnpm install --frozen-lockfile
+
+            - name: Build for Cloudflare Workers
+              run: pnpm run cf:build
+
+            - name: Deploy Worker
+              uses: cloudflare/wrangler-action@v3
+              with:
+                  apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+                  accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+                  workingDirectory: next
+                  command: deploy

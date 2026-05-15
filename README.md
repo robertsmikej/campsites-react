@@ -129,6 +129,21 @@ The app auto-deploys to Cloudflare Workers on push to `main`. Required GitHub se
 
 Edit `src/json/campgroundCatalog.js` to add campgrounds and `src/json/siteConfigurations.js` to configure favorite sites and date ranges per campground.
 
+## Repository layout (during multi-user rework)
+
+Two apps coexist in this repo during the Phase 0 stack migration:
+
+- **Root (CRA + Cloudflare Worker)** — the currently-deployed production app. Served by the
+    `campsites-finder` Worker at `https://campsites-finder.mikeroberts421.workers.dev/`. Deployed by
+    `.github/workflows/deploy.yml` on push to `main`.
+- **`next/` (Next.js + Tailwind + shadcn on Cloudflare Workers)** — the new stack. Served by the
+    `campwatch` Worker at `https://campwatch.mikeroberts421.workers.dev/` via `@opennextjs/cloudflare`
+    (Workers Static Assets, not Pages). Deployed by `.github/workflows/deploy-next.yml` on push to any
+    branch.
+
+Production traffic moves to the new app at the end of Phase 0d. See
+`docs/superpowers/specs/2026-05-14-multi-user-rework-design.md` for the full design.
+
 ## License
 
 MIT
