@@ -44,7 +44,7 @@ describe("useUserCampgrounds fetch contract", () => {
         globalThis.fetch = fetchMock;
 
         const result = await fetch(ENDPOINT, { credentials: "include" });
-        const data = await result.json();
+        const data = (await result.json()) as typeof record;
 
         expect(fetchMock).toHaveBeenCalledWith(ENDPOINT, { credentials: "include" });
         expect(data.updatedAt).toBe("2024-01-01T00:00:00.000Z");

@@ -12,8 +12,7 @@ import ProgressBarContext from "@/context/progress-bar";
 import { Button } from "@/components/ui/button";
 import { siteData } from "@/data/site-data";
 import { getCampgroundOptions } from "@/data/sites";
-import { useGlobalSettings } from "@/hooks/use-global-settings";
-import { useConfig } from "@/hooks/use-config";
+import { useUserCampgrounds } from "@/hooks/use-user-campgrounds";
 import { useCampgroundsData } from "@/hooks/use-campgrounds-data";
 import { useColorMode } from "@/hooks/use-color-mode";
 import { useAuth } from "@/hooks/use-auth";
@@ -22,17 +21,16 @@ import type { SiteSettingsValue } from "@/context/site-settings";
 
 export default function AppPage() {
     const auth = useAuth();
-    const { globalSettings, setGlobalSettings } = useGlobalSettings();
+    const userCampgrounds = useUserCampgrounds();
     const {
         siteConfig,
-        useLocalConfig,
-        setUseLocalConfig,
+        globalSettings,
         isHydrating,
         syncStatus,
         clearSyncStatus,
         save,
-        resetToDefaults,
-    } = useConfig(globalSettings);
+        cloneDefault,
+    } = userCampgrounds;
     const [useMockData, setUseMockData] = useState(false);
     const [isConfigDialogOpen, setIsConfigDialogOpen] = useState(false);
 
@@ -135,19 +133,18 @@ export default function AppPage() {
                     open={isConfigDialogOpen}
                     onClose={() => setIsConfigDialogOpen(false)}
                     onSave={(config, nextGlobal) => {
-                        save(config, nextGlobal);
-                        setGlobalSettings(nextGlobal);
+                        void save(config, nextGlobal);
                         setIsConfigDialogOpen(false);
                     }}
-                    onResetToDefaults={resetToDefaults}
+                    onResetToDefaults={() => void cloneDefault()}
                     initialData={siteConfig}
                     catalogOptions={getCampgroundOptions()}
                     globalSettings={globalSettings}
                     availableSites={availableSites}
                     useMockData={useMockData}
                     onToggleMockData={(e) => setUseMockData(e.target.checked)}
-                    useLocalConfig={useLocalConfig}
-                    onToggleUseLocalConfig={(e) => setUseLocalConfig(e.target.checked)}
+                    useLocalConfig={false}
+                    onToggleUseLocalConfig={() => {}}
                 />
             </ProgressBarContext.Provider>
         </SiteSettingsContext.Provider>
