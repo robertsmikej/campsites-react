@@ -3,6 +3,7 @@ export type CampgroundSystem = "recreation.gov";
 export interface SiteAvailability {
     siteId: string;
     siteName: string;
+    loop?: string;
     dates: string[];
     matches: StayMatch[];
     excludedMatches: ExcludedStay[];

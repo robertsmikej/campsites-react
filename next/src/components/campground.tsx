@@ -27,7 +27,7 @@ import { CampsitesCalendarParent } from "./campsites-calendar-parent";
 const SECTION_VIEWS_KEY = "campground-section-views";
 const SECTION_EXPANDED_KEY = "campground-section-expanded";
 
-const safeParse = <T>(value: string | null, fallback: T): T => {
+const safeParse = <T,>(value: string | null, fallback: T): T => {
     try {
         return value ? (JSON.parse(value) as T) : fallback;
     } catch {
