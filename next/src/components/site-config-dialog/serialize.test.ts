@@ -71,7 +71,7 @@ describe("sanitizeCampground", () => {
         const editable = createEmptyCampground();
         editable.id = "1";
         editable.name = "Test";
-        const out = sanitizeCampground(editable) as Record<string, unknown>;
+        const out = sanitizeCampground(editable) as unknown as Record<string, unknown>;
         expect("notifyAll" in out).toBe(false);
         expect("validStartDays" in out).toBe(false);
         expect("stayLengths" in out).toBe(false);

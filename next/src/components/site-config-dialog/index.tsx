@@ -53,7 +53,7 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
     useEffect(() => {
         if (!open) return;
         const initial = (initialData["recreation.gov"] ?? []).map((c) =>
-            toEditableCampground(c, catalogIds),
+            toEditableCampground(c as unknown as Record<string, unknown>, catalogIds),
         );
         setCampgrounds(initial.length > 0 ? initial : [createEmptyCampground()]);
         setStayRange(

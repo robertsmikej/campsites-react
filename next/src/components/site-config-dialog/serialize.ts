@@ -34,34 +34,37 @@ export function createEmptyCampground(): EditableCampground {
     };
 }
 
+// Accepts both Campground (from the API/config) and EditableCampground (round-trip editing).
+// We use a loose input type to avoid fighting the showOrHide partial/full mismatch.
 export function toEditableCampground(
-    campground: Partial<Campground & EditableCampground> = {},
+    campground: Record<string, unknown> = {},
     validCatalogIds: Set<string> = new Set(),
 ): EditableCampground {
+    const cg = campground as Partial<EditableCampground>;
     const base = createEmptyCampground();
     const merged: EditableCampground = {
         ...base,
-        ...campground,
+        ...cg,
         dates: {
-            startDate: campground?.dates?.startDate ?? "",
-            endDate: campground?.dates?.endDate ?? "",
+            startDate: cg?.dates?.startDate ?? "",
+            endDate: cg?.dates?.endDate ?? "",
         },
-        site: campground?.site ?? base.site,
-        type: campground?.type ?? base.type,
-        image: campground?.image ?? "",
+        site: cg?.site ?? base.site,
+        type: cg?.type ?? base.type,
+        image: cg?.image ?? "",
         sites: {
-            favorites: campground?.sites?.favorites ?? [],
-            worthwhile: campground?.sites?.worthwhile ?? [],
+            favorites: cg?.sites?.favorites ?? [],
+            worthwhile: cg?.sites?.worthwhile ?? [],
         },
-        showOrHide: { ...DEFAULT_SHOW_HIDE, ...(campground?.showOrHide ?? {}) },
-        enabled: campground?.enabled !== false,
-        favoritesText: (campground?.sites?.favorites ?? []).join(", "),
-        worthwhileText: (campground?.sites?.worthwhile ?? []).join(", "),
-        favoritesArray: [...(campground?.sites?.favorites ?? [])],
-        worthwhileArray: [...(campground?.sites?.worthwhile ?? [])],
-        catalogId: validCatalogIds.has(campground?.id ?? "") ? (campground?.id ?? CUSTOM_CATALOG_OPTION) : CUSTOM_CATALOG_OPTION,
-        validStartDays: campground?.validStartDays ?? undefined,
-        stayLengths: campground?.stayLengths ?? undefined,
+        showOrHide: { ...DEFAULT_SHOW_HIDE, ...(cg?.showOrHide ?? {}) },
+        enabled: cg?.enabled !== false,
+        favoritesText: (cg?.sites?.favorites ?? []).join(", "),
+        worthwhileText: (cg?.sites?.worthwhile ?? []).join(", "),
+        favoritesArray: [...(cg?.sites?.favorites ?? [])],
+        worthwhileArray: [...(cg?.sites?.worthwhile ?? [])],
+        catalogId: validCatalogIds.has(cg?.id ?? "") ? (cg?.id ?? CUSTOM_CATALOG_OPTION) : CUSTOM_CATALOG_OPTION,
+        validStartDays: cg?.validStartDays ?? undefined,
+        stayLengths: cg?.stayLengths ?? undefined,
     };
 
     return merged;
