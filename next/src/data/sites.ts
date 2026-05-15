@@ -30,10 +30,3 @@ export function mergeCatalogWithConfigurations(
 }
 
 export const sites = mergeCatalogWithConfigurations();
-
-export function getCampgroundOptions() {
-    return campgroundCatalog["recreation.gov"].map((c) => ({
-        system: "recreation.gov" as const,
-        ...c,
-    }));
-}
