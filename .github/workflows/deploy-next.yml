@@ -43,6 +43,14 @@ jobs:
                   secrets: |
                       API_SECRET
                       CONFIG_KEY
+                      GOOGLE_CLIENT_ID
+                      GOOGLE_CLIENT_SECRET
+                      SESSION_SECRET
+                      BOOTSTRAP_ADMIN_EMAIL
               env:
                   API_SECRET: ${{ secrets.SUBSCRIBER_API_SECRET }}
                   CONFIG_KEY: ${{ secrets.CONFIG_KEY }}
+                  GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+                  GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+                  SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
+                  BOOTSTRAP_ADMIN_EMAIL: ${{ secrets.BOOTSTRAP_ADMIN_EMAIL }}
