@@ -31,8 +31,6 @@ export interface SiteConfigDialogProps {
     availableSites: Record<string, string[]>;
     useMockData: boolean;
     onToggleMockData: (event: React.ChangeEvent<HTMLInputElement>) => void;
-    useLocalConfig: boolean;
-    onToggleUseLocalConfig: (event: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
 export const ALL_DAYS = [

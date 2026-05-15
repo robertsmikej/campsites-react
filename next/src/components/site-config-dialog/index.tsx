@@ -94,8 +94,6 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
         availableSites,
         useMockData,
         onToggleMockData,
-        useLocalConfig,
-        onToggleUseLocalConfig,
     } = props;
 
     const catalogLookup = useMemo(() => {
@@ -314,8 +312,6 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
                         onStayRangeChange={setStayRange}
                         validStartDays={validStartDays}
                         onValidStartDaysChange={setValidStartDays}
-                        useLocalConfig={useLocalConfig}
-                        onToggleUseLocalConfig={onToggleUseLocalConfig}
                         useMockData={useMockData}
                         onToggleMockData={onToggleMockData}
                     />
