@@ -1,14 +1,19 @@
 "use client";
 
-import { Menu, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { Menu, Loader2, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
     DropdownMenuCheckboxItem,
     DropdownMenuContent,
     DropdownMenuItem,
+    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
+import type { AuthState } from "@/hooks/use-auth";
 
 export interface TopBarMenuItem {
     type?: "toggle";
@@ -28,9 +33,19 @@ export interface TopBarProps {
     menuItems?: TopBarMenuItem[];
     isRefreshing?: boolean;
     actionItems?: React.ReactNode;
+    auth?: AuthState;
     onMenuClick?: () => void;
     onMenuItemSelect?: (item: TopBarMenuItem) => void;
     menuButtonLabel?: string;
+}
+
+async function handleSignOut() {
+    try {
+        await fetch("/auth/logout", { method: "POST", credentials: "include" });
+    } catch {
+        // ignore — we'll reload anyway
+    }
+    window.location.href = "/";
 }
 
 export function TopBar({
@@ -40,6 +55,7 @@ export function TopBar({
     menuItems = [],
     isRefreshing = false,
     actionItems,
+    auth,
     onMenuClick: _onMenuClick,
     onMenuItemSelect,
     menuButtonLabel: _menuButtonLabel = "Menu",
@@ -99,6 +115,42 @@ export function TopBar({
                         <Loader2 className="size-4 animate-spin text-muted-foreground" aria-hidden />
                     ) : null}
                     {actionItems}
+                    {auth !== undefined ? (
+                        auth.isLoading ? (
+                            <Skeleton className="size-8 rounded-full" />
+                        ) : auth.user ? (
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <button className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                                        <Avatar className="size-8">
+                                            <AvatarImage src={auth.user.picture} alt={auth.user.name} />
+                                            <AvatarFallback>{auth.user.name?.[0]?.toUpperCase() ?? "?"}</AvatarFallback>
+                                        </Avatar>
+                                    </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuItem asChild>
+                                        <Link href="/app/account" className="flex items-center gap-2">
+                                            <User className="size-4" />
+                                            Account
+                                        </Link>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                        className="flex items-center gap-2 text-destructive focus:text-destructive"
+                                        onSelect={() => void handleSignOut()}
+                                    >
+                                        <LogOut className="size-4" />
+                                        Sign out
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        ) : (
+                            <Button variant="outline" size="sm" asChild>
+                                <a href="/auth/google/start?returnTo=/app">Sign in</a>
+                            </Button>
+                        )
+                    ) : null}
                     {hasMenu ? (
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>

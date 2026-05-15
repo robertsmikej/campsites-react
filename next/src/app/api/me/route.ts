@@ -1,0 +1,65 @@
+import { readSession, destroySession } from "@/lib/sessions";
+import { jsonResponse, withCors } from "@/lib/responses";
+import { deleteUser, getUserProfile, updateUserProfile } from "@/lib/users";
+import type { UserProfile } from "@/types/user";
+
+export async function GET(request: Request): Promise<Response> {
+    const session = await readSession(request);
+    if (!session) return withCors(jsonResponse({ error: "Unauthorized" }, 401));
+    const profile = await getUserProfile(session.email);
+    if (!profile) return withCors(jsonResponse({ error: "Unauthorized" }, 401));
+    return withCors(jsonResponse(profile));
+}
+
+interface PatchBody {
+    name?: string;
+    notifications?: { enabled: boolean; frequencyMinutes: 15 | 60 | 240 };
+}
+
+function isValidPatch(body: unknown): body is PatchBody {
+    if (!body || typeof body !== "object") return false;
+    const obj = body as Record<string, unknown>;
+    if (Object.keys(obj).some((k) => k !== "name" && k !== "notifications")) return false;
+    if (obj.name !== undefined && typeof obj.name !== "string") return false;
+    if (obj.notifications !== undefined) {
+        const n = obj.notifications as Record<string, unknown>;
+        if (typeof n !== "object" || n === null) return false;
+        if (typeof n.enabled !== "boolean") return false;
+        if (n.frequencyMinutes !== 15 && n.frequencyMinutes !== 60 && n.frequencyMinutes !== 240) return false;
+    }
+    return true;
+}
+
+export async function PATCH(request: Request): Promise<Response> {
+    const session = await readSession(request);
+    if (!session) return withCors(jsonResponse({ error: "Unauthorized" }, 401));
+
+    let body: unknown;
+    try {
+        body = await request.json();
+    } catch {
+        return withCors(jsonResponse({ error: "Invalid JSON" }, 400));
+    }
+    if (!isValidPatch(body)) {
+        return withCors(jsonResponse({ error: "Invalid patch body" }, 400));
+    }
+
+    const patch: Partial<UserProfile> = {};
+    if (body.name !== undefined) patch.name = body.name;
+    if (body.notifications !== undefined) patch.notifications = body.notifications;
+
+    const updated = await updateUserProfile(session.email, patch);
+    if (!updated) return withCors(jsonResponse({ error: "Unauthorized" }, 401));
+    return withCors(jsonResponse(updated));
+}
+
+export async function DELETE(request: Request): Promise<Response> {
+    const session = await readSession(request);
+    if (!session) return withCors(jsonResponse({ error: "Unauthorized" }, 401));
+
+    await deleteUser(session.email);
+    const { cookie } = await destroySession(request);
+    const response = new Response(null, { status: 204 });
+    response.headers.append("Set-Cookie", cookie);
+    return withCors(response);
+}

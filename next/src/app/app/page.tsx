@@ -16,10 +16,12 @@ import { useGlobalSettings } from "@/hooks/use-global-settings";
 import { useConfig } from "@/hooks/use-config";
 import { useCampgroundsData } from "@/hooks/use-campgrounds-data";
 import { useColorMode } from "@/hooks/use-color-mode";
+import { useAuth } from "@/hooks/use-auth";
 import { clearCampgroundCache } from "@/lib/recreation-gov";
 import type { SiteSettingsValue } from "@/context/site-settings";
 
 export default function AppPage() {
+    const auth = useAuth();
     const { globalSettings, setGlobalSettings } = useGlobalSettings();
     const {
         siteConfig,
@@ -105,6 +107,7 @@ export default function AppPage() {
                     logo={{ src: "/images/logos/CampWatch_Logo_trimmed.png", alt: "Camp Watch logo", height: 36 }}
                     menuItems={topBarMenuItems}
                     isRefreshing={isLoading}
+                    auth={auth}
                 />
                 <ProgressBarEl />
 
