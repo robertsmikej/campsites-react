@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Menu, Loader2, User, LogOut } from "lucide-react";
+import { Menu, Loader2, User, LogOut, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
@@ -129,6 +129,14 @@ export function TopBar({
                                     </button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
+                                    {auth.isCurator ? (
+                                        <DropdownMenuItem asChild>
+                                            <Link href="/app/admin" className="flex items-center gap-2">
+                                                <Shield className="size-4" />
+                                                Curator dashboard
+                                            </Link>
+                                        </DropdownMenuItem>
+                                    ) : null}
                                     <DropdownMenuItem asChild>
                                         <Link href="/app/account" className="flex items-center gap-2">
                                             <User className="size-4" />
