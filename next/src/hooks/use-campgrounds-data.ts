@@ -48,7 +48,7 @@ export function useCampgroundsData({
             setIsFetching(true);
             setProgressBarData({ totalCalls: 0, currentCall: 0, progress: 0 });
             const data = await fetchCampgrounds(
-                siteConfig,
+                siteConfig as unknown as Record<string, import("@/types/campground").Campground[]>,
                 settings as never,
                 (current: number, total: number) => {
                     if (cancelled) return;
@@ -77,7 +77,7 @@ export function useCampgroundsData({
             setCampgroundsByAreas([]);
             return;
         }
-        setCampgroundsByAreas(formatGroupsByFavorites(campgroundsData) ?? []);
+        setCampgroundsByAreas(formatGroupsByFavorites(campgroundsData as Record<string, ProcessedCampground[]>) ?? []);
     }, [campgroundsData]);
 
     return { campgroundsData, campgroundsByAreas, isFetching, progressBarData, refresh };
