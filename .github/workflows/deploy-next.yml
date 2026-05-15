@@ -40,3 +40,9 @@ jobs:
                   accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
                   workingDirectory: next
                   command: deploy
+                  secrets: |
+                      API_SECRET
+                      CONFIG_KEY
+              env:
+                  API_SECRET: ${{ secrets.SUBSCRIBER_API_SECRET }}
+                  CONFIG_KEY: ${{ secrets.CONFIG_KEY }}
