@@ -25,7 +25,7 @@ Convert CampWatch from a single-shared-config app into a multi-user product:
 - **Icons**: lucide-react.
 - **Calendar**: shadcn Calendar (react-day-picker) with a custom day-cell renderer for availability variants — replaces the MUI `StaticDatePicker` we use today.
 - **Forms**: react-hook-form + zod for validation.
-- **Deployment**: Cloudflare Pages with `@opennextjs/cloudflare` adapter. The current `campsites-finder` Worker is retired; its API routes move into Next.js Route Handlers running on the Pages Functions runtime, sharing the existing `SUBSCRIBERS` KV namespace via `wrangler.toml` bindings. Single deployment, single domain.
+- **Deployment**: Cloudflare Workers via `@opennextjs/cloudflare` adapter (using Workers Static Assets for the static parts and the generated Worker script for SSR + Route Handlers). Cloudflare Pages is in maintenance and explicitly not used — Workers is the supported path for Next.js on Cloudflare. The current `campsites-finder` Worker is retired; its API routes move into Next.js Route Handlers on the new `campwatch` Worker, sharing the existing `SUBSCRIBERS` KV namespace via `wrangler.jsonc` bindings. Single deployment, single domain.
 - **Notifier**: stays in Node (`notifier/check.mjs`) running under GitHub Actions; talks to the new API the same way it does today.
 
 This replaces the existing CRA + MUI + `workers-site/index.js` setup. The retire-and-rebuild is large enough that it gets its own Phase 0 in the plan below.
@@ -35,7 +35,7 @@ This replaces the existing CRA + MUI + `workers-site/index.js` setup. The retire
 ```
                             ┌─────────────────────────────┐
                             │  Next.js (App Router)       │
-                            │  on Cloudflare Pages        │
+                            │  on Cloudflare Workers      │
                             │  ┌───────────────────────┐  │
    Anonymous visitor ──────►│  │  /  (SSR)             │  │
                             │  │  /discover (SSR)      │  │
@@ -79,7 +79,7 @@ This replaces the existing CRA + MUI + `workers-site/index.js` setup. The retire
                             └─────────────────────────────┘
 ```
 
-Single Cloudflare deployment hosts both the rendered pages and the API routes. The KV namespace is bound to the Pages project via `wrangler.toml`. The notifier process is unchanged in shape (GitHub Actions cron, Node) — it talks to the new API endpoints over HTTP just like it does today.
+Single Worker hosts both the rendered pages (served from the Workers Static Assets bundle) and the API routes (Next.js Route Handlers executed by the Worker script). The KV namespace is bound via `wrangler.jsonc`. The notifier process is unchanged in shape (GitHub Actions cron, Node) — it talks to the new API endpoints over HTTP just like it does today.
 
 ## Data Model
 
@@ -300,7 +300,7 @@ The whole rework is one spec but ships in phases. Each phase is independently sh
 
 - Scaffold a new Next.js (App Router) project alongside the existing CRA app, in the same repo.
 - Configure Tailwind v4 + shadcn/ui. Bring in core components: Button, Card, Dialog, Dropdown, Accordion, Switch, Slider, Tabs, Toast, Calendar (with day-cell variant API), Popover, Form (react-hook-form + zod).
-- Configure Cloudflare Pages deployment via `@opennextjs/cloudflare`. Bind the existing `SUBSCRIBERS` KV namespace.
+- Configure Cloudflare Workers deployment via `@opennextjs/cloudflare` (Workers Static Assets, not Pages — Pages is in maintenance). Bind the existing `SUBSCRIBERS` KV namespace.
 - Re-implement the current app surface (the campground dashboard) in Next.js + Tailwind + shadcn — same data, same behavior, same single shared KV config. No new features yet.
 - Migrate the existing API routes (`/api/config`, `/api/subscribe`, `/api/unsubscribe`, `/api/subscribers`) from `workers-site/index.js` to Next.js Route Handlers, sharing the same KV namespace.
 - Retire `workers-site/index.js` once the new deployment is serving production traffic. Update GitHub Actions deploy workflow.
