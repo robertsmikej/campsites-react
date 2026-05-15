@@ -18,30 +18,40 @@ Convert CampWatch from a single-shared-config app into a multi-user product:
 - Migrating existing anonymous email subscribers (explicit user decision — they'll need to sign in fresh).
 - Image upload to R2 (auto-pull from recreation.gov + optional URL override is enough; see "Image handling").
 
+## Stack
+
+- **Framework**: Next.js (App Router) — chosen for SSR on the public landing page (`/` and `/discover` need real SEO and fast first paint), file-based routing, image optimization, and ecosystem alignment with shadcn/ui.
+- **Styling**: Tailwind CSS v4 + shadcn/ui. Headless components on Radix primitives, styled with Tailwind. Owned in-tree (no library lock-in).
+- **Icons**: lucide-react.
+- **Calendar**: shadcn Calendar (react-day-picker) with a custom day-cell renderer for availability variants — replaces the MUI `StaticDatePicker` we use today.
+- **Forms**: react-hook-form + zod for validation.
+- **Deployment**: Cloudflare Pages with `@opennextjs/cloudflare` adapter. The current `campsites-finder` Worker is retired; its API routes move into Next.js Route Handlers running on the Pages Functions runtime, sharing the existing `SUBSCRIBERS` KV namespace via `wrangler.toml` bindings. Single deployment, single domain.
+- **Notifier**: stays in Node (`notifier/check.mjs`) running under GitHub Actions; talks to the new API the same way it does today.
+
+This replaces the existing CRA + MUI + `workers-site/index.js` setup. The retire-and-rebuild is large enough that it gets its own Phase 0 in the plan below.
+
 ## High-Level Architecture
 
 ```
                             ┌─────────────────────────────┐
-                            │  React SPA (CRA)            │
+                            │  Next.js (App Router)       │
+                            │  on Cloudflare Pages        │
                             │  ┌───────────────────────┐  │
-   Anonymous visitor ──────►│  │  /                    │  │
-                            │  │  /discover            │  │
+   Anonymous visitor ──────►│  │  /  (SSR)             │  │
+                            │  │  /discover (SSR)      │  │
                             │  └───────────────────────┘  │
                             │  ┌───────────────────────┐  │
-   Signed-in user   ───────►│  │  /app, /app/account   │  │
-                            │  │  (session cookie req) │  │
+   Signed-in user   ───────►│  │  /app, /app/account,  │  │
+                            │  │  /app/admin           │  │
+                            │  │  (session middleware) │  │
                             │  └───────────────────────┘  │
-                            └──────────────┬──────────────┘
-                                           │
-                                           ▼
-                            ┌─────────────────────────────┐
-                            │  Cloudflare Worker          │
                             │  ┌───────────────────────┐  │
-                            │  │ /auth/google/*        │  │
-                            │  │ /api/me               │  │
-                            │  │ /api/users/me/*       │  │
-                            │  │ /api/default/*        │  │
-                            │  │ /api/admin/* (curator)│  │
+                            │  │ Route Handlers:       │  │
+                            │  │  /auth/google/*       │  │
+                            │  │  /api/me              │  │
+                            │  │  /api/users/me/*      │  │
+                            │  │  /api/default/*       │  │
+                            │  │  /api/admin/*         │  │
                             │  └───────────────────────┘  │
                             └──────────────┬──────────────┘
                                            │
@@ -52,6 +62,7 @@ Convert CampWatch from a single-shared-config app into a multi-user product:
                             │  config:default             │
                             │  user:<email>:profile       │
                             │  user:<email>:campgrounds   │
+                            │  user:<email>:notifier-state│
                             │  session:<sessionId>        │
                             └─────────────────────────────┘
 
@@ -67,6 +78,8 @@ Convert CampWatch from a single-shared-config app into a multi-user product:
                             │   └───────────────────────┘ │
                             └─────────────────────────────┘
 ```
+
+Single Cloudflare deployment hosts both the rendered pages and the API routes. The KV namespace is bound to the Pages project via `wrangler.toml`. The notifier process is unchanged in shape (GitHub Actions cron, Node) — it talks to the new API endpoints over HTTP just like it does today.
 
 ## Data Model
 
@@ -266,15 +279,16 @@ At 10 users with mostly-overlapping lists (typical for friends watching the same
 
 If the notifier fails to send to one user, others should still get their emails. Implementation: try/catch around each user's send + log.
 
-## UI Refresh Direction
+## UI Direction
 
-Stay on MUI (no framework rewrite) but modernize patterns:
+Built fresh on Tailwind + shadcn/ui (see Stack section). Design language:
 
-- **Cards**: bigger hero image (or generated solid color if no image), name + area in clearer hierarchy, status pill ("3 matches" / "no availability") prominent, calendar collapsed by default in a drawer/expansion. Soft `box-shadow` instead of hard borders.
-- **Typography**: bump the heading scale, lighten body text slightly, add a more generous line-height.
-- **Spacing**: more whitespace between cards and sections. Less dense.
-- **Color**: keep light/dark mode toggle. Add a subtle accent color (a forest green) for primary CTAs.
-- **Landing page**: full-bleed hero image, larger headlines, no navigation chrome — minimal and confident.
+- **Cards**: bigger hero image (or generated gradient if no image), name + area in clearer hierarchy, status pill ("3 matches" / "no availability") prominent, calendar collapsed by default in a drawer/expansion. Soft shadows (`shadow-sm`/`shadow-md`) over hard borders.
+- **Typography**: shadcn's default Inter setup; bump heading scale (`text-3xl` / `text-4xl` on landing), `leading-relaxed` body, slightly muted secondary text.
+- **Spacing**: generous gaps between cards (`gap-6`), section padding `py-12` to `py-20` on landing.
+- **Color**: shadcn's default neutral palette with light/dark toggle (next-themes). Accent: forest green for primary CTAs (`emerald-600` or similar).
+- **Landing page**: full-bleed hero image, oversized headline, minimal nav (just the wordmark + "Sign in" button). Below the fold: sample card preview + 3-step "how it works" + footer.
+- **Icons**: lucide-react throughout (replaces @mui/icons-material).
 
 Specific mocks deferred to implementation phase. The above sets the direction.
 
@@ -282,16 +296,28 @@ Specific mocks deferred to implementation phase. The above sets the direction.
 
 The whole rework is one spec but ships in phases. Each phase is independently shippable to production.
 
+### Phase 0 — Stack migration
+
+- Scaffold a new Next.js (App Router) project alongside the existing CRA app, in the same repo.
+- Configure Tailwind v4 + shadcn/ui. Bring in core components: Button, Card, Dialog, Dropdown, Accordion, Switch, Slider, Tabs, Toast, Calendar (with day-cell variant API), Popover, Form (react-hook-form + zod).
+- Configure Cloudflare Pages deployment via `@opennextjs/cloudflare`. Bind the existing `SUBSCRIBERS` KV namespace.
+- Re-implement the current app surface (the campground dashboard) in Next.js + Tailwind + shadcn — same data, same behavior, same single shared KV config. No new features yet.
+- Migrate the existing API routes (`/api/config`, `/api/subscribe`, `/api/unsubscribe`, `/api/subscribers`) from `workers-site/index.js` to Next.js Route Handlers, sharing the same KV namespace.
+- Retire `workers-site/index.js` once the new deployment is serving production traffic. Update GitHub Actions deploy workflow.
+- The notifier process continues running unchanged against the same API contract.
+
+**Ships as**: same app, new stack. Visually polished (Tailwind/shadcn defaults are already a significant lift). Foundation for everything that follows.
+
 ### Phase 1 — Auth foundation
 
-- Google OAuth in worker (`/auth/google/*`).
-- Session middleware (`requireSession`, `requireCurator`).
-- `user:<email>:profile` storage, bootstrap admin logic.
-- `/api/me` endpoint.
-- Minimal React: sign-in button on existing home page, `/app/account` page with name + sign out.
-- Existing functionality (shared KV config) keeps working unchanged.
+- Google OAuth via Next.js Route Handlers (`/auth/google/start`, `/auth/google/callback`, `/auth/logout`).
+- Session middleware (KV-backed opaque tokens) wired into Next.js middleware.ts for protected routes.
+- `user:<email>:profile` storage, bootstrap admin logic via `BOOTSTRAP_ADMIN_EMAIL` env.
+- `/api/me` GET / PATCH / DELETE.
+- Minimal `/app/account` page with name + email + sign out + delete account.
+- Sign-in button on the top bar; the existing campground dashboard stays as-is (still shared config).
 
-**Ships as**: existing app + login state visible in the top bar.
+**Ships as**: same app, login works. `/app/account` exists.
 
 ### Phase 2 — Per-user lists
 
@@ -299,47 +325,40 @@ The whole rework is one spec but ships in phases. Each phase is independently sh
 - `/api/users/me/campgrounds` GET/PUT.
 - `/api/default` GET (public) and PUT (curator-only).
 - Existing `config:campgrounds` migrates to `config:default`.
-- Routing: `/app` becomes the auth-gated dashboard, reading the user's list.
-- Onboarding: clone-default vs. start-blank modal on first visit.
-- Configure Sites dialog still works, but targets user's list (or, if curator + in admin mode, default).
+- Routing: `/app` becomes the auth-gated dashboard, reading the user's list. Anonymous visitors hitting `/app` redirect to `/?returnTo=/app`.
+- Onboarding modal: "Clone Mike's list" vs. "Start blank" on first authenticated visit with an empty `user:<email>:campgrounds`.
+- Configure Sites dialog targets the user's list by default; curators can switch to editing the default list via `/app/admin`.
 
-**Ships as**: per-user lists work. Anonymous home page still shows the curated default (read-only).
+**Ships as**: per-user lists work. Anonymous visitors still see the curated default on `/` (or get sent to a placeholder until Phase 3 lands).
 
 ### Phase 3 — Public landing + `/discover`
 
-- New `/` landing page with hero + sample cards + CTA.
-- `/discover` page showing the curated default with "Add to my list" buttons.
-- React Router added (or equivalent route gating).
+- New `/` landing page: hero + sample cards + 3-step "how it works" + footer. SSR for SEO.
+- `/discover` page showing the curated default with "Add this campground to my list" buttons that prompt sign-in if needed.
+- `/app/admin` curator dashboard: list users, manage `curator` role grants.
 
 **Ships as**: a real product front door.
 
 ### Phase 4 — UI-driven catalog rework
 
-- The Configure Sites dialog gets the rec.gov-fetch-by-ID flow from the prior brainstorm.
-- Retire `campgroundCatalog.js` and `siteConfigurations.js` as runtime sources. Keep only as one-time seed for the curator's bootstrap.
+- Configure Sites dialog gets the rec.gov-fetch-by-ID flow.
+- Server-side `/api/recgov/facility/:id` proxy with caching.
+- Retire `campgroundCatalog.js` and `siteConfigurations.js` as runtime sources. Keep only as a one-time seed loaded into `config:default` on first deploy.
 - Per-card metadata fully editable in the dialog.
 
 **Ships as**: no more code edits to add campgrounds.
 
 ### Phase 5 — Notifier rewire with dedup
 
-- Notifier reads per-user lists.
+- Notifier reads per-user lists via `/api/admin/notification-targets` (gated by `API_SECRET`).
 - Dedup + fan-out algorithm.
-- Per-user `notifier-state` for diffing.
-- Per-user notification preferences honored.
+- Per-user `notifier-state` for diffing what was already alerted on.
+- Per-user notification preferences honored (frequency, enabled toggle).
 - Old anonymous `email:` keys are deleted (no migration).
 
 **Ships as**: emails are now keyed to user identity, scale-ready.
 
-### Phase 6 — UI refresh
-
-- New card design, typography pass, color tweaks.
-- Calendar moves to a drawer.
-- Mobile polish.
-
-**Ships as**: the app looks like a finished product.
-
-Phases can ship behind feature flags or staggered deploys. Phase 1 + 2 + 5 are the load-bearing changes; 3, 4, 6 are independent UX work that can happen any time after 2 is in.
+Phase 0 has to come first. Phases 1, 2, and 5 are load-bearing for the multi-user concept. Phases 3 and 4 are independent UX work that can happen any time after 2 is in.
 
 ## Error Handling
 
