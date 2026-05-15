@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest";
 import { toEditableCampground, sanitizeCampground, createEmptyCampground } from "./serialize";
-import { CUSTOM_CATALOG_OPTION } from "./types";
 
 describe("toEditableCampground", () => {
     it("populates favoritesArray and worthwhileArray from the input sites", () => {
@@ -13,22 +12,6 @@ describe("toEditableCampground", () => {
         expect(e.worthwhileArray).toEqual(["016"]);
         expect(e.favoritesText).toBe("013, 015");
         expect(e.worthwhileText).toBe("016");
-    });
-
-    it("marks campgrounds not in the catalog as custom", () => {
-        const e = toEditableCampground(
-            { id: "99999", name: "Mystery", sites: { favorites: [], worthwhile: [] } },
-            new Set(["111", "222"]),
-        );
-        expect(e.catalogId).toBe(CUSTOM_CATALOG_OPTION);
-    });
-
-    it("preserves catalogId when the id is in the catalog", () => {
-        const e = toEditableCampground(
-            { id: "222", name: "Listed", sites: { favorites: [], worthwhile: [] } },
-            new Set(["111", "222"]),
-        );
-        expect(e.catalogId).toBe("222");
     });
 
     it("defaults enabled to true when omitted", () => {

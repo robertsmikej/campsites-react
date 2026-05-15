@@ -11,7 +11,6 @@ import SiteSettingsContext from "@/context/site-settings";
 import ProgressBarContext from "@/context/progress-bar";
 import { Button } from "@/components/ui/button";
 import { siteData } from "@/data/site-data";
-import { getCampgroundOptions } from "@/data/sites";
 import { useUserCampgrounds } from "@/hooks/use-user-campgrounds";
 import { useCampgroundsData } from "@/hooks/use-campgrounds-data";
 import { useColorMode } from "@/hooks/use-color-mode";
@@ -141,7 +140,6 @@ export default function AppPage() {
                     }}
                     onResetToDefaults={() => void cloneDefault()}
                     initialData={siteConfig}
-                    catalogOptions={getCampgroundOptions()}
                     globalSettings={globalSettings}
                     availableSites={availableSites}
                     useMockData={useMockData}

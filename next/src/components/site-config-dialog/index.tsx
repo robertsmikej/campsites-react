@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
     DndContext,
     closestCenter,
@@ -34,7 +34,6 @@ import type { Campground, SiteConfig } from "@/types/campground";
 
 import { toEditableCampground, sanitizeCampground, createEmptyCampground } from "./serialize";
 import {
-    CUSTOM_CATALOG_OPTION,
     DEFAULT_STAY_RANGE,
     type EditableCampground,
     type SiteConfigDialogProps,
@@ -89,21 +88,11 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
         onSave,
         onResetToDefaults,
         initialData,
-        catalogOptions,
         globalSettings,
         availableSites,
         useMockData,
         onToggleMockData,
     } = props;
-
-    const catalogLookup = useMemo(() => {
-        return catalogOptions.reduce<Record<string, (typeof catalogOptions)[0]>>((acc, opt) => {
-            if (opt?.id) acc[opt.id] = opt;
-            return acc;
-        }, {});
-    }, [catalogOptions]);
-
-    const catalogIds = useMemo(() => new Set(Object.keys(catalogLookup)), [catalogLookup]);
 
     const [campgrounds, setCampgrounds] = useState<EditableCampground[]>([
         createEmptyCampground(),
@@ -133,7 +122,7 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
     useEffect(() => {
         if (!open) return;
         const initial = (initialData["recreation.gov"] ?? []).map((c) =>
-            toEditableCampground(c as unknown as Record<string, unknown>, catalogIds),
+            toEditableCampground(c as unknown as Record<string, unknown>),
         );
         setCampgrounds(initial.length > 0 ? initial : [createEmptyCampground()]);
         setStayRange(
@@ -147,7 +136,7 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
         setValidStartDays(globalSettings.validStartDays ?? []);
         setExpandedPanels(new Set([0]));
         setViewMode("cards");
-    }, [open, initialData, catalogIds, globalSettings]);
+    }, [open, initialData, globalSettings]);
 
     // Sync expanded panels when view mode changes
     useEffect(() => {
@@ -162,16 +151,6 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
         }
         previousViewMode.current = viewMode;
     }, [viewMode, campgrounds.length]);
-
-    const selectedCatalogIds = useMemo(() => {
-        return new Set(
-            campgrounds
-                .map((c) =>
-                    c.catalogId && c.catalogId !== CUSTOM_CATALOG_OPTION ? c.catalogId : null,
-                )
-                .filter(Boolean) as string[],
-        );
-    }, [campgrounds]);
 
     const updateCampground = (index: number, updater: (c: EditableCampground) => EditableCampground) => {
         setCampgrounds((prev) =>
@@ -212,28 +191,8 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
         });
     };
 
-    const buildCampgroundFromCatalog = (catalogId: string): EditableCampground => {
-        const entry = catalogLookup[catalogId];
-        if (!entry) return createEmptyCampground();
-        return {
-            ...createEmptyCampground(),
-            catalogId,
-            name: entry.name ?? "",
-            area: entry.area ?? "",
-            site: entry.site ?? entry.system ?? "recreation.gov",
-            type: entry.type ?? "campground",
-            description: entry.description ?? "",
-            image: entry.image ?? "",
-            id: entry.id ?? "",
-        };
-    };
-
-    const handleAdd = (catalogId: string) => {
-        if (catalogId === CUSTOM_CATALOG_OPTION) {
-            setCampgrounds((prev) => [...prev, createEmptyCampground()]);
-        } else if (!selectedCatalogIds.has(catalogId)) {
-            setCampgrounds((prev) => [...prev, buildCampgroundFromCatalog(catalogId)]);
-        }
+    const handleAddCampground = (campground: Campground) => {
+        setCampgrounds((prev) => [...prev, toEditableCampground(campground)]);
     };
 
     const handleDragEnd = createDragEndHandler(campgrounds, (next) => {
@@ -322,9 +281,8 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
                     <div className="flex items-end gap-4">
                         <div className="flex-1">
                             <AddCampground
-                                catalogOptions={catalogOptions}
-                                selectedCatalogIds={selectedCatalogIds}
-                                onAdd={handleAdd}
+                                existingIds={new Set(campgrounds.map((c) => c.id).filter(Boolean))}
+                                onAdd={handleAddCampground}
                             />
                         </div>
                         <Tabs
