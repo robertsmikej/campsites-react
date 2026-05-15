@@ -123,6 +123,23 @@ export const defaultCampgroundConfigurations = {
             },
         },
         {
+            id: '232312',
+            name: 'Pine Flats Campground',
+            sites: {
+                favorites: [],
+                worthwhile: [],
+            },
+            dates: {
+                startDate: '2026-06-01',
+                endDate: '2026-10-01',
+            },
+            showOrHide: {
+                'Favorites': true,
+                'Worthwhile': true,
+                'All Others': true,
+            },
+        },
+        {
             id: '232098',
             name: 'Shoreline Campground',
             sites: {
@@ -154,6 +171,40 @@ export const defaultCampgroundConfigurations = {
                 'Favorites': true,
                 'Worthwhile': false,
                 'All Others': false,
+            },
+        },
+        {
+            id: '233881',
+            name: 'Deadwood Lookout',
+            sites: {
+                favorites: [],
+                worthwhile: [],
+            },
+            dates: {
+                startDate: '2026-06-01',
+                endDate: '2026-09-30',
+            },
+            showOrHide: {
+                'Favorites': true,
+                'Worthwhile': true,
+                'All Others': true,
+            },
+        },
+        {
+            id: '233128',
+            name: 'Lookout Butte',
+            sites: {
+                favorites: [],
+                worthwhile: [],
+            },
+            dates: {
+                startDate: '2026-06-01',
+                endDate: '2026-09-30',
+            },
+            showOrHide: {
+                'Favorites': true,
+                'Worthwhile': true,
+                'All Others': true,
             },
         },
     ],

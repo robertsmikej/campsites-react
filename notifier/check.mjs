@@ -64,6 +64,7 @@ const buildCampgroundList = (siteConfigurations) => {
 
         for (const entry of catalogEntries) {
             const config = configs.find((c) => c.id === entry.id);
+            if (config?.enabled === false) continue;
             campgrounds.push({
                 ...entry,
                 dates: config?.dates,

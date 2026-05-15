@@ -69,6 +69,7 @@ const createEmptyCampground = () => ({
         worthwhile: [],
     },
     showOrHide: { ...DEFAULT_SHOW_HIDE },
+    enabled: true,
     favoritesText: '',
     worthwhileText: '',
     catalogId: CUSTOM_CATALOG_OPTION,
@@ -95,6 +96,7 @@ const toEditableCampground = (campground = {}, validCatalogIds = new Set()) => {
 
     return {
         ...merged,
+        enabled: campground?.enabled !== false,
         favoritesText: merged.sites.favorites.join(', '),
         worthwhileText: merged.sites.worthwhile.join(', '),
         favoritesArray: [...merged.sites.favorites],
@@ -133,6 +135,7 @@ const sanitizeCampground = (campground) => {
         ...(campground.validStartDays ? { validStartDays: campground.validStartDays } : {}),
         ...(campground.stayLengths ? { stayLengths: campground.stayLengths } : {}),
         ...(campground.notifyAll != null ? { notifyAll: campground.notifyAll } : {}),
+        ...(campground.enabled === false ? { enabled: false } : {}),
     };
 };
 
@@ -658,7 +661,14 @@ export function SiteConfigDialog({
                                                 <TableCell>{campground.id || '—'}</TableCell>
                                                 <TableCell>{campground.site || '—'}</TableCell>
                                                 <TableCell>
-                                                    <Stack direction="row" spacing={1}>
+                                                    <Stack direction="row" spacing={1} alignItems="center">
+                                                        <Tooltip title={campground.enabled !== false ? 'Watching — turn off to skip API calls' : 'Disabled — no API calls'}>
+                                                            <Switch
+                                                                size="small"
+                                                                checked={campground.enabled !== false}
+                                                                onChange={(event) => handleFieldChange(index, 'enabled', event.target.checked)}
+                                                            />
+                                                        </Tooltip>
                                                         <Button
                                                             size="small"
                                                             onClick={() => openCampgroundInCards(index)}
@@ -689,6 +699,7 @@ export function SiteConfigDialog({
                     {viewMode === 'cards' && campgrounds.map((campground, index) => {
                         const isCustom = campground.catalogId === CUSTOM_CATALOG_OPTION;
                         const isDragging = draggingIndex === index;
+                        const isEnabled = campground.enabled !== false;
                         return (
                             <Accordion
                                 key={index}
@@ -697,7 +708,7 @@ export function SiteConfigDialog({
                                 sx={{
                                     border: theme => `1px solid ${isDragging ? theme.palette.primary.main : theme.palette.divider}`,
                                     borderRadius: 1.5,
-                                    opacity: isDragging ? 0.9 : 1,
+                                    opacity: isDragging ? 0.9 : isEnabled ? 1 : 0.6,
                                     cursor: 'grab',
                                     mb: 0.5,
                                 }}
@@ -724,21 +735,36 @@ export function SiteConfigDialog({
                                         <Typography variant="subtitle1">
                                             {campground.name ? campground.name : `Campground ${index + 1}`}
                                         </Typography>
+                                        {!isEnabled && (
+                                            <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                                                disabled
+                                            </Typography>
+                                        )}
                                     </Stack>
-                                    <Tooltip title="Remove campground">
-                                        <span>
-                                            <IconButton
-                                                aria-label="Remove campground"
-                                                onClick={() => handleRemoveCampground(index)}
-                                                disabled={campgrounds.length === 1}
+                                    <Stack direction="row" spacing={0.5} alignItems="center">
+                                        <Tooltip title={isEnabled ? 'Watching — turn off to skip API calls' : 'Disabled — no API calls'}>
+                                            <Switch
                                                 size="small"
+                                                checked={isEnabled}
+                                                onChange={(event) => handleFieldChange(index, 'enabled', event.target.checked)}
                                                 onClickCapture={(event) => event.stopPropagation()}
-                                                component="span"
-                                            >
-                                                <DeleteOutlineIcon fontSize="small" />
-                                            </IconButton>
-                                        </span>
-                                    </Tooltip>
+                                            />
+                                        </Tooltip>
+                                        <Tooltip title="Remove campground">
+                                            <span>
+                                                <IconButton
+                                                    aria-label="Remove campground"
+                                                    onClick={() => handleRemoveCampground(index)}
+                                                    disabled={campgrounds.length === 1}
+                                                    size="small"
+                                                    onClickCapture={(event) => event.stopPropagation()}
+                                                    component="span"
+                                                >
+                                                    <DeleteOutlineIcon fontSize="small" />
+                                                </IconButton>
+                                            </span>
+                                        </Tooltip>
+                                    </Stack>
                                 </AccordionSummary>
                                 <AccordionDetails sx={{ pt: 0.75, pb: 1.25, px: 1.25 }}>
                                     <Stack spacing={2.5}>

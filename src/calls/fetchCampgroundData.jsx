@@ -154,6 +154,7 @@ export const getSiteFetchMap = (sites, settings) => {
         if (!Array.isArray(campgroundData)) continue;
 
         for (let campground of campgroundData) {
+            if (campground.enabled === false) continue;
             const startDate = campground.dates?.startDate || settings.dates.startDate;
             const endDate = campground.dates?.endDate || settings.dates.endDate;
             const allDates = getAllDatesInRange(startDate, endDate);
@@ -407,12 +408,15 @@ const calculateExcludedMatches = (data, settings) => {
     return data;
 };
 
-// Reorder results to match the order specified in siteConfig
+// Reorder results to match the order specified in siteConfig and drop any
+// campgrounds the user has disabled (stale cached entries get filtered here).
 const reorderResultsByConfig = (results, siteConfig) => {
     const reordered = {};
     for (const system in siteConfig) {
         if (!results[system]) continue;
-        const configOrder = siteConfig[system].map(c => c.id);
+        const configOrder = siteConfig[system]
+            .filter(c => c.enabled !== false)
+            .map(c => c.id);
         reordered[system] = configOrder
             .map(id => results[system].find(c => c.id === id))
             .filter(Boolean);

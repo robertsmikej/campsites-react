@@ -30,9 +30,20 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import MapIcon from '@mui/icons-material/Map';
 import TableChartIcon from '@mui/icons-material/TableChart';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import CabinIcon from '@mui/icons-material/Cabin';
+import LandscapeIcon from '@mui/icons-material/Landscape';
+import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment';
 
 import { checkForGroupedAvailability } from '../utils/utils';
 import { Campground } from './Campground';
+
+const TYPE_BADGES = {
+    cabin: { Icon: CabinIcon, label: 'Cabin', color: '#8d6e63' },
+    lookout: { Icon: LandscapeIcon, label: 'Lookout', color: '#5d4037' },
+    campground: { Icon: LocalFireDepartmentIcon, label: 'Campground', color: '#ef6c00' },
+};
+
+const getTypeBadge = (campground) => TYPE_BADGES[campground?.type] ?? TYPE_BADGES.campground;
 
 const VIEW_MODE_STORAGE_KEY = 'campgrounds-view-mode';
 const EXPANDED_GROUPS_STORAGE_KEY = 'campgrounds-expanded-groups';
@@ -271,7 +282,15 @@ export function CampgroundsGroups({ isLoading = false, ...props }) {
                                     justifyContent={'space-between'}
                                 >
                                     <Stack spacing={0}>
-                                        <Stack direction="row" spacing={0.5} alignItems="center">
+                                        <Stack direction="row" spacing={0.75} alignItems="center">
+                                            {(() => {
+                                                const badge = getTypeBadge(campground);
+                                                return (
+                                                    <Tooltip title={badge.label}>
+                                                        <badge.Icon sx={{ fontSize: '1.25rem', color: badge.color }} />
+                                                    </Tooltip>
+                                                );
+                                            })()}
                                             <Typography variant='h5'>{campground.name}</Typography>
                                             <Tooltip title="View on recreation.gov">
                                                 <Box
@@ -574,7 +593,15 @@ export function CampgroundsGroups({ isLoading = false, ...props }) {
                                                 >
                                                     <TableCell>
                                                         <Stack spacing={0.25}>
-                                                            <Stack direction="row" spacing={0.5} alignItems="center">
+                                                            <Stack direction="row" spacing={0.75} alignItems="center">
+                                                                {(() => {
+                                                                    const badge = getTypeBadge(campground);
+                                                                    return (
+                                                                        <Tooltip title={badge.label}>
+                                                                            <badge.Icon sx={{ fontSize: '1rem', color: badge.color }} />
+                                                                        </Tooltip>
+                                                                    );
+                                                                })()}
                                                                 <Typography variant="body1">{campground.name}</Typography>
                                                                 <Box
                                                                     component="a"
