@@ -131,8 +131,10 @@ export async function verifyIdToken(idToken: string, expectedAudience: string): 
     );
 
     const data = new TextEncoder().encode(`${headerB64}.${payloadB64}`);
-    const signature = base64UrlDecodeBytes(signatureB64);
-    const valid = await crypto.subtle.verify("RSASSA-PKCS1-v1_5", cryptoKey, signature, data);
+    const signatureBytes = base64UrlDecodeBytes(signatureB64);
+    const signatureBuffer = new ArrayBuffer(signatureBytes.byteLength);
+    new Uint8Array(signatureBuffer).set(signatureBytes);
+    const valid = await crypto.subtle.verify("RSASSA-PKCS1-v1_5", cryptoKey, signatureBuffer, data);
     if (!valid) throw new Error("ID token signature invalid");
 
     const payload = base64UrlDecodeJson<GoogleIdTokenPayload>(payloadB64);
