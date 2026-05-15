@@ -1,4 +1,4 @@
-import { getAssetFromKV } from '@cloudflare/kv-asset-handler';
+import { getAssetFromKV, serveSinglePageApp } from '@cloudflare/kv-asset-handler';
 import manifestJSON from '__STATIC_CONTENT_MANIFEST';
 
 const assetManifest = JSON.parse(manifestJSON);
@@ -200,7 +200,7 @@ export default {
             return cors(await handlePutConfig(request, env));
         }
 
-        // Static assets (existing SPA behavior)
+        // Static assets with SPA fallback: unknown paths serve index.html
         try {
             return await getAssetFromKV(
                 {
@@ -210,28 +210,11 @@ export default {
                 {
                     ASSET_NAMESPACE: env.__STATIC_CONTENT,
                     ASSET_MANIFEST: assetManifest,
+                    mapRequestToAsset: serveSinglePageApp,
                 }
             );
-        } catch (e) {
-            // If not found, try serving index.html for SPA routing
-            try {
-                const notFoundResponse = await getAssetFromKV(
-                    {
-                        request: new Request(`${new URL(request.url).origin}/index.html`, request),
-                        waitUntil: ctx.waitUntil.bind(ctx),
-                    },
-                    {
-                        ASSET_NAMESPACE: env.__STATIC_CONTENT,
-                        ASSET_MANIFEST: assetManifest,
-                    }
-                );
-                return new Response(notFoundResponse.body, {
-                    ...notFoundResponse,
-                    status: 200,
-                });
-            } catch {
-                return new Response('Not Found', { status: 404 });
-            }
+        } catch {
+            return new Response('Not Found', { status: 404 });
         }
     },
 };

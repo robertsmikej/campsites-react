@@ -1,0 +1,109 @@
+import type { Campground } from "@/types/campground";
+import { CUSTOM_CATALOG_OPTION, DEFAULT_SHOW_HIDE, type EditableCampground } from "./types";
+
+export const parseList = (value = ""): string[] =>
+    value
+        .split(",")
+        .map((entry) => entry.trim())
+        .filter(Boolean);
+
+export function createEmptyCampground(): EditableCampground {
+    return {
+        name: "",
+        area: "",
+        site: "recreation.gov",
+        type: "campground",
+        id: "",
+        description: "",
+        dates: {
+            startDate: "",
+            endDate: "",
+        },
+        image: "",
+        sites: {
+            favorites: [],
+            worthwhile: [],
+        },
+        showOrHide: { ...DEFAULT_SHOW_HIDE },
+        enabled: true,
+        favoritesText: "",
+        worthwhileText: "",
+        favoritesArray: [],
+        worthwhileArray: [],
+        catalogId: CUSTOM_CATALOG_OPTION,
+    };
+}
+
+// Accepts both Campground (from the API/config) and EditableCampground (round-trip editing).
+// We use a loose input type to avoid fighting the showOrHide partial/full mismatch.
+export function toEditableCampground(
+    campground: Record<string, unknown> = {},
+    validCatalogIds: Set<string> = new Set(),
+): EditableCampground {
+    const cg = campground as Partial<EditableCampground>;
+    const base = createEmptyCampground();
+    const merged: EditableCampground = {
+        ...base,
+        ...cg,
+        dates: {
+            startDate: cg?.dates?.startDate ?? "",
+            endDate: cg?.dates?.endDate ?? "",
+        },
+        site: cg?.site ?? base.site,
+        type: cg?.type ?? base.type,
+        image: cg?.image ?? "",
+        sites: {
+            favorites: cg?.sites?.favorites ?? [],
+            worthwhile: cg?.sites?.worthwhile ?? [],
+        },
+        showOrHide: { ...DEFAULT_SHOW_HIDE, ...(cg?.showOrHide ?? {}) },
+        enabled: cg?.enabled !== false,
+        favoritesText: (cg?.sites?.favorites ?? []).join(", "),
+        worthwhileText: (cg?.sites?.worthwhile ?? []).join(", "),
+        favoritesArray: [...(cg?.sites?.favorites ?? [])],
+        worthwhileArray: [...(cg?.sites?.worthwhile ?? [])],
+        catalogId: validCatalogIds.has(cg?.id ?? "") ? (cg?.id ?? CUSTOM_CATALOG_OPTION) : CUSTOM_CATALOG_OPTION,
+        validStartDays: cg?.validStartDays ?? undefined,
+        stayLengths: cg?.stayLengths ?? undefined,
+    };
+
+    return merged;
+}
+
+export function sanitizeCampground(campground: EditableCampground): Campground {
+    const favorites =
+        campground.favoritesArray != null
+            ? campground.favoritesArray
+            : parseList(campground.favoritesText);
+    const worthwhile =
+        campground.worthwhileArray != null
+            ? campground.worthwhileArray
+            : parseList(campground.worthwhileText);
+
+    return {
+        name: campground.name.trim(),
+        area: campground.area?.trim() ?? "",
+        site: (campground.site || "recreation.gov").trim() || "recreation.gov",
+        type: campground.type?.trim() || "campground",
+        id: campground.id.trim(),
+        description: campground.description ?? "",
+        dates: {
+            startDate: campground.dates?.startDate || "",
+            endDate: campground.dates?.endDate || "",
+        },
+        image: campground.image || "",
+        sites: {
+            favorites,
+            worthwhile,
+        },
+        showOrHide: {
+            Favorites: campground.showOrHide?.["Favorites"] ?? DEFAULT_SHOW_HIDE["Favorites"],
+            Worthwhile: campground.showOrHide?.["Worthwhile"] ?? DEFAULT_SHOW_HIDE["Worthwhile"],
+            "All Others": campground.showOrHide?.["All Others"] ?? DEFAULT_SHOW_HIDE["All Others"],
+        },
+        ...(campground.validStartDays ? { validStartDays: campground.validStartDays } : {}),
+        ...(campground.stayLengths ? { stayLengths: campground.stayLengths } : {}),
+        ...(campground.notifyAll != null ? { notifyAll: campground.notifyAll } : {}),
+        ...(campground.enabled === false ? { enabled: false } : {}),
+    };
+}
