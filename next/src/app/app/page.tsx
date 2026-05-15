@@ -16,6 +16,7 @@ import { useUserCampgrounds } from "@/hooks/use-user-campgrounds";
 import { useCampgroundsData } from "@/hooks/use-campgrounds-data";
 import { useColorMode } from "@/hooks/use-color-mode";
 import { useAuth } from "@/hooks/use-auth";
+import { OnboardingModal } from "@/components/onboarding-modal";
 import { clearCampgroundCache } from "@/lib/recreation-gov";
 import type { SiteSettingsValue } from "@/context/site-settings";
 
@@ -78,6 +79,7 @@ export default function AppPage() {
     }, [syncStatus, clearSyncStatus]);
 
     const isLoading = isFetching || isHydrating;
+    const showOnboarding = !userCampgrounds.isHydrating && userCampgrounds.isEmpty;
 
     const refreshData = () => {
         refresh();
@@ -97,6 +99,7 @@ export default function AppPage() {
     ];
 
     return (
+        <>
         <SiteSettingsContext.Provider value={settings}>
             <ProgressBarContext.Provider value={progressBarData}>
                 <TopBar
@@ -148,6 +151,13 @@ export default function AppPage() {
                 />
             </ProgressBarContext.Provider>
         </SiteSettingsContext.Provider>
+        <OnboardingModal
+            open={showOnboarding}
+            onClone={userCampgrounds.cloneDefault}
+            onStartBlank={userCampgrounds.startBlank}
+            curatorDisplayName="the curator's"
+        />
+        </>
     );
 }
 
