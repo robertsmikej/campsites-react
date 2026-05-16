@@ -5,7 +5,6 @@ import { toast } from "sonner";
 import { TopBar } from "@/components/top-bar";
 import { ProgressBarEl } from "@/components/progress-bar-el";
 import { CampgroundsGroups } from "@/components/campgrounds-groups";
-import { NotificationSubscribe } from "@/components/notification-subscribe";
 import { SiteConfigDialog } from "@/components/site-config-dialog";
 import SiteSettingsContext from "@/context/site-settings";
 import ProgressBarContext from "@/context/progress-bar";
@@ -120,7 +119,6 @@ export default function AppPage() {
 
                     <footer className="mt-8 border-t pt-4">
                         <div className="space-y-3">
-                            <NotificationSubscribe />
                             <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
                                 <p className="text-sm text-muted-foreground">
                                     {useMockData ? "Mock Recreation.gov data" : "Live Recreation.gov data"}
