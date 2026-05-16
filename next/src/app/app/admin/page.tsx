@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { UsersTable } from "@/components/admin/users-table";
 import { SiteConfigDialog } from "@/components/site-config-dialog";
-import { getCampgroundOptions } from "@/data/sites";
 import type { UserProfile } from "@/types/user";
 import type { SiteConfig, GlobalSettings } from "@/types/campground";
 
@@ -21,7 +20,6 @@ export default function AdminPage() {
     const [defaultDialogOpen, setDefaultDialogOpen] = useState(false);
     const [defaultConfig, setDefaultConfig] = useState<SiteConfig | null>(null);
     const [defaultGlobalSettings, setDefaultGlobalSettings] = useState<GlobalSettings | null>(null);
-    const catalogOptions = useMemo(() => getCampgroundOptions(), []);
 
     useEffect(() => {
         if (!auth.user || !auth.isCurator) return;
@@ -181,7 +179,6 @@ export default function AdminPage() {
                     }}
                     onResetToDefaults={() => undefined}
                     initialData={defaultConfig}
-                    catalogOptions={catalogOptions}
                     globalSettings={defaultGlobalSettings}
                     availableSites={{}}
                     useMockData={false}

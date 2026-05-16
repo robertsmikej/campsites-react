@@ -1,5 +1,5 @@
 import type { Campground } from "@/types/campground";
-import { CUSTOM_CATALOG_OPTION, DEFAULT_SHOW_HIDE, type EditableCampground } from "./types";
+import { DEFAULT_SHOW_HIDE, type EditableCampground } from "./types";
 
 export const parseList = (value = ""): string[] =>
     value
@@ -30,15 +30,13 @@ export function createEmptyCampground(): EditableCampground {
         worthwhileText: "",
         favoritesArray: [],
         worthwhileArray: [],
-        catalogId: CUSTOM_CATALOG_OPTION,
     };
 }
 
 // Accepts both Campground (from the API/config) and EditableCampground (round-trip editing).
 // We use a loose input type to avoid fighting the showOrHide partial/full mismatch.
 export function toEditableCampground(
-    campground: Record<string, unknown> = {},
-    validCatalogIds: Set<string> = new Set(),
+    campground: Campground | Record<string, unknown> = {},
 ): EditableCampground {
     const cg = campground as Partial<EditableCampground>;
     const base = createEmptyCampground();
@@ -62,7 +60,6 @@ export function toEditableCampground(
         worthwhileText: (cg?.sites?.worthwhile ?? []).join(", "),
         favoritesArray: [...(cg?.sites?.favorites ?? [])],
         worthwhileArray: [...(cg?.sites?.worthwhile ?? [])],
-        catalogId: validCatalogIds.has(cg?.id ?? "") ? (cg?.id ?? CUSTOM_CATALOG_OPTION) : CUSTOM_CATALOG_OPTION,
         validStartDays: cg?.validStartDays ?? undefined,
         stayLengths: cg?.stayLengths ?? undefined,
     };

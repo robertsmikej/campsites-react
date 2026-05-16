@@ -1,13 +1,10 @@
 import type { Campground, CampgroundShowOrHide, GlobalSettings, SiteConfig } from "@/types/campground";
 
-export const CUSTOM_CATALOG_OPTION = "__custom" as const;
-
 export interface EditableCampground extends Campground {
     favoritesText: string;
     worthwhileText: string;
     favoritesArray: string[];
     worthwhileArray: string[];
-    catalogId: string;
     showOrHide: CampgroundShowOrHide;
 }
 
@@ -17,16 +14,6 @@ export interface SiteConfigDialogProps {
     onSave: (config: SiteConfig, globalSettings: GlobalSettings) => void;
     onResetToDefaults: () => void;
     initialData: SiteConfig;
-    catalogOptions: Array<{
-        system: "recreation.gov";
-        id: string;
-        name: string;
-        area?: string;
-        image?: string;
-        description?: string;
-        type?: string;
-        site?: string;
-    }>;
     globalSettings: GlobalSettings;
     availableSites: Record<string, string[]>;
     useMockData: boolean;

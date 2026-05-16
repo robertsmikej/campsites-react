@@ -34,7 +34,6 @@ import {
     STAY_MAX,
     STAY_MIN,
     DEFAULT_SHOW_HIDE,
-    CUSTOM_CATALOG_OPTION,
     type EditableCampground,
 } from "./types";
 
@@ -239,17 +238,6 @@ function MultiSelectSites({
     );
 }
 
-function DetailField({ label, value, multiline = false }: { label: string; value?: string; multiline?: boolean }) {
-    return (
-        <div className="space-y-0.5">
-            <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</p>
-            <p className={`text-sm text-muted-foreground ${multiline ? "whitespace-pre-line" : ""}`}>
-                {value || "—"}
-            </p>
-        </div>
-    );
-}
-
 export function CampgroundEditor({
     campground,
     index,
@@ -264,7 +252,6 @@ export function CampgroundEditor({
     onShowOrHideChange,
     onRemove,
 }: CampgroundEditorProps) {
-    const isCustom = campground.catalogId === CUSTOM_CATALOG_OPTION;
     const isEnabled = campground.enabled !== false;
 
     const hasCampgroundDays = !!campground.validStartDays;
@@ -366,74 +353,63 @@ export function CampgroundEditor({
                 {/* Basic info */}
                 <div className="flex gap-3">
                     <div className="flex-1 space-y-2">
-                        {isCustom ? (
-                            <>
-                                <div>
-                                    <Label className="text-xs">Campground Name *</Label>
-                                    <Input
-                                        className="mt-1"
-                                        value={campground.name}
-                                        onChange={(e) => onFieldChange("name", e.target.value)}
-                                        placeholder="Campground name"
-                                    />
-                                </div>
-                                <div>
-                                    <Label className="text-xs">Area / Region</Label>
-                                    <Input
-                                        className="mt-1"
-                                        value={campground.area ?? ""}
-                                        onChange={(e) => onFieldChange("area", e.target.value)}
-                                        placeholder="e.g. Tahoe National Forest"
-                                    />
-                                </div>
-                                <div>
-                                    <Label className="text-xs">Facility ID *</Label>
-                                    <Input
-                                        className="mt-1"
-                                        value={campground.id}
-                                        onChange={(e) => onFieldChange("id", e.target.value)}
-                                        placeholder="Recreation.gov facility ID"
-                                    />
-                                    <p className="mt-1 text-xs text-muted-foreground">
-                                        Matches the Recreation.gov facility ID
-                                    </p>
-                                </div>
-                                <div>
-                                    <Label className="text-xs">Source</Label>
-                                    <Input
-                                        className="mt-1"
-                                        value={campground.site ?? ""}
-                                        onChange={(e) => onFieldChange("site", e.target.value)}
-                                        placeholder="recreation.gov"
-                                    />
-                                </div>
-                                <div>
-                                    <Label className="text-xs">Type</Label>
-                                    <Input
-                                        className="mt-1"
-                                        value={campground.type ?? ""}
-                                        onChange={(e) => onFieldChange("type", e.target.value)}
-                                        placeholder="campground"
-                                    />
-                                </div>
-                                <div>
-                                    <Label className="text-xs">Description</Label>
-                                    <Textarea
-                                        className="mt-1"
-                                        value={campground.description ?? ""}
-                                        onChange={(e) => onFieldChange("description", e.target.value)}
-                                        rows={3}
-                                    />
-                                </div>
-                            </>
-                        ) : (
-                            <>
-                                <DetailField label="Area / Region" value={campground.area} />
-                                <DetailField label="Source Site" value={campground.site} />
-                                <DetailField label="Type" value={campground.type} />
-                                <DetailField label="Description" value={campground.description} multiline />
-                            </>
-                        )}
+                        <div>
+                            <Label className="text-xs">Campground Name *</Label>
+                            <Input
+                                className="mt-1"
+                                value={campground.name}
+                                onChange={(e) => onFieldChange("name", e.target.value)}
+                                placeholder="Campground name"
+                            />
+                        </div>
+                        <div>
+                            <Label className="text-xs">Area / Region</Label>
+                            <Input
+                                className="mt-1"
+                                value={campground.area ?? ""}
+                                onChange={(e) => onFieldChange("area", e.target.value)}
+                                placeholder="e.g. Tahoe National Forest"
+                            />
+                        </div>
+                        <div>
+                            <Label className="text-xs">Facility ID *</Label>
+                            <Input
+                                className="mt-1"
+                                value={campground.id}
+                                onChange={(e) => onFieldChange("id", e.target.value)}
+                                placeholder="Recreation.gov facility ID"
+                            />
+                            <p className="mt-1 text-xs text-muted-foreground">
+                                Matches the Recreation.gov facility ID
+                            </p>
+                        </div>
+                        <div>
+                            <Label className="text-xs">Source</Label>
+                            <Input
+                                className="mt-1"
+                                value={campground.site ?? ""}
+                                onChange={(e) => onFieldChange("site", e.target.value)}
+                                placeholder="recreation.gov"
+                            />
+                        </div>
+                        <div>
+                            <Label className="text-xs">Type</Label>
+                            <Input
+                                className="mt-1"
+                                value={campground.type ?? ""}
+                                onChange={(e) => onFieldChange("type", e.target.value)}
+                                placeholder="campground"
+                            />
+                        </div>
+                        <div>
+                            <Label className="text-xs">Description</Label>
+                            <Textarea
+                                className="mt-1"
+                                value={campground.description ?? ""}
+                                onChange={(e) => onFieldChange("description", e.target.value)}
+                                rows={3}
+                            />
+                        </div>
                     </div>
                     {/* Image preview */}
                     {campground.image && (
