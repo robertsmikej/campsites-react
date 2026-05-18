@@ -38,7 +38,7 @@ function Hero() {
                 />
             </div>
 
-            <div className="container mx-auto flex max-w-4xl flex-col items-start px-6 py-32 sm:py-40">
+            <div className="container mx-auto flex max-w-4xl flex-col items-start px-6 py-20 sm:py-32 md:py-40">
                 <Tent className="mb-6 size-12 text-primary" aria-hidden />
                 <h1 className="font-display text-balance text-5xl font-semibold leading-[1.05] tracking-tight sm:text-6xl">
                     Never miss a campsite opening at{" "}
@@ -80,7 +80,7 @@ function SampleCards() {
             </h2>
             <div className="grid gap-5 sm:grid-cols-3">
                 {examples.map((e, i) => (
-                    <Card key={e.name} className="overflow-hidden transition-shadow hover:shadow-md">
+                    <Card key={e.name} className="overflow-hidden transition-shadow duration-200 hover:shadow-lg">
                         {/* gradient placeholder for the hero */}
                         <div
                             className="aspect-[5/3] w-full"

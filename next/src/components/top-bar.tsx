@@ -111,7 +111,7 @@ export function TopBar({
                     ) : null}
                 </div>
 
-                <div className="ml-auto flex items-center gap-2">
+                <div className="ml-auto flex flex-wrap items-center gap-1 sm:gap-2">
                     {isRefreshing ? (
                         <Loader2 className="size-4 animate-spin text-muted-foreground" aria-hidden />
                     ) : null}

@@ -19,6 +19,9 @@ const fraunces = Fraunces({
 export const metadata: Metadata = {
     title: "CampWatch — Never Miss a Campsite Opening",
     description: "Get instant alerts when campsites open up at the places you actually want to camp.",
+    icons: {
+        icon: "/icon.svg",
+    },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

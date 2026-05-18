@@ -24,21 +24,26 @@ import {
 // ---------------------------------------------------------------------------
 
 const VARIANT_CLASS: Record<DayVariant, string> = {
-    single: "rounded-full bg-emerald-600 text-white hover:bg-emerald-700",
-    rangeStart: "rounded-l-full bg-emerald-600 text-white hover:bg-emerald-700",
-    rangeMiddle: "rounded-none bg-emerald-600 text-white hover:bg-emerald-700",
+    // Hard match — solid forest pill
+    single: "rounded-full bg-primary text-primary-foreground transition-colors duration-150 hover:opacity-90",
+    rangeStart: "rounded-l-full bg-primary text-primary-foreground transition-colors duration-150 hover:opacity-90",
+    rangeMiddle: "rounded-none bg-primary text-primary-foreground transition-colors duration-150 hover:opacity-90",
     rangeEnd:
-        "rounded-r-full bg-emerald-600 text-white bg-gradient-to-br from-emerald-600 from-65% to-transparent to-65% hover:from-emerald-700",
-    softSingle: "rounded-full bg-emerald-200 text-emerald-900 hover:bg-emerald-300",
-    softRangeStart: "rounded-l-full bg-emerald-200 text-emerald-900 hover:bg-emerald-300",
-    softRangeMiddle: "rounded-none bg-emerald-200 text-emerald-900 hover:bg-emerald-300",
+        "rounded-r-full bg-primary text-primary-foreground bg-gradient-to-br from-primary from-65% to-transparent to-65% transition-colors duration-150 hover:opacity-90",
+
+    // Soft / single-day availability — muted forest
+    softSingle: "rounded-full bg-primary/20 text-primary transition-colors duration-150 hover:bg-primary/30",
+    softRangeStart: "rounded-l-full bg-primary/20 text-primary transition-colors duration-150 hover:bg-primary/30",
+    softRangeMiddle: "rounded-none bg-primary/20 text-primary transition-colors duration-150 hover:bg-primary/30",
     softRangeEnd:
-        "rounded-r-full bg-emerald-200 text-emerald-900 bg-gradient-to-br from-emerald-200 from-65% to-transparent to-65% hover:from-emerald-300",
-    excludedSingle: "rounded-full bg-orange-500 text-white hover:bg-orange-600",
-    excludedRangeStart: "rounded-l-full bg-orange-500 text-white hover:bg-orange-600",
-    excludedRangeMiddle: "rounded-none bg-orange-500 text-white hover:bg-orange-600",
+        "rounded-r-full bg-primary/20 text-primary bg-gradient-to-br from-primary/20 from-65% to-transparent to-65% transition-colors duration-150 hover:bg-primary/30",
+
+    // Excluded — warm rust
+    excludedSingle: "rounded-full bg-accent text-accent-foreground transition-colors duration-150 hover:opacity-90",
+    excludedRangeStart: "rounded-l-full bg-accent text-accent-foreground transition-colors duration-150 hover:opacity-90",
+    excludedRangeMiddle: "rounded-none bg-accent text-accent-foreground transition-colors duration-150 hover:opacity-90",
     excludedRangeEnd:
-        "rounded-r-full bg-orange-500 text-white bg-gradient-to-br from-orange-500 from-65% to-transparent to-65% hover:from-orange-600",
+        "rounded-r-full bg-accent text-accent-foreground bg-gradient-to-br from-accent from-65% to-transparent to-65% transition-colors duration-150 hover:opacity-90",
 };
 
 // ---------------------------------------------------------------------------
@@ -115,34 +120,56 @@ export function CampsitesCalendar({ site, campground, showExcluded }: CampsitesC
             <div className="flex flex-wrap gap-2">
                 {months.map((monthIso) => {
                     // Use the month ISO string as-is for goToPage
-                    const monthDate = new Date(monthIso + "T00:00:00Z");
+                    const [yearStr, monthStr] = monthIso.split("-");
+                    const monthDate = new Date(Number(yearStr), Number(monthStr) - 1, 15);
 
                     return (
                         <Calendar
                             key={monthIso}
                             mode="single"
                             defaultMonth={monthDate}
-                            className="rounded-lg border p-2"
+                            className="rounded-xl border bg-card p-2 shadow-sm"
                             onSelect={(date) => {
                                 if (date) goToPage(site, monthIso);
                             }}
                             components={{
                                 DayButton: (props: DayButtonProps) => {
-                                    const { day, modifiers, ...rest } = props;
+                                    const { day, modifiers: _modifiers, ...rest } = props;
                                     const key = formatDateKey(day.date);
                                     const variant = variantMap.get(key);
-                                    return (
+                                    const button = (
                                         <button
                                             {...rest}
                                             className={cn(
-                                                "size-8 text-sm",
+                                                "size-8 text-sm transition-colors duration-150",
                                                 variant
                                                     ? VARIANT_CLASS[variant]
-                                                    : "hover:bg-muted",
+                                                    : "rounded-md hover:bg-muted",
                                             )}
                                         >
                                             {day.date.getUTCDate()}
                                         </button>
+                                    );
+                                    if (!variant) return button;
+
+                                    const label = variant.startsWith("excluded")
+                                        ? "Filtered out — site is open but doesn't fit your filters"
+                                        : variant.startsWith("soft")
+                                        ? "Single day available"
+                                        : "Available";
+
+                                    return (
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>{button}</TooltipTrigger>
+                                            <TooltipContent>
+                                                {day.date.toLocaleDateString("en-US", {
+                                                    weekday: "short",
+                                                    month: "short",
+                                                    day: "numeric",
+                                                })}
+                                                : {label}
+                                            </TooltipContent>
+                                        </Tooltip>
                                     );
                                 },
                             }}

@@ -115,6 +115,38 @@ function getCampgroundStats(campground: ProcessedCampground): CampgroundStats {
 }
 
 // ---------------------------------------------------------------------------
+// Loading skeletons
+// ---------------------------------------------------------------------------
+
+function LoadingSkeletons() {
+    return (
+        <div className="space-y-4">
+            {[0, 1, 2].map((i) => (
+                <div key={i} className="overflow-hidden rounded-xl border bg-card">
+                    {/* hero banner skeleton */}
+                    <div className="relative aspect-[3/1] w-full bg-muted sm:aspect-[5/1]">
+                        <Skeleton className="size-full" />
+                        <div className="absolute right-3 top-3">
+                            <Skeleton className="h-7 w-24 rounded-full" />
+                        </div>
+                        <div className="absolute inset-x-3 bottom-3 space-y-1.5">
+                            <Skeleton className="h-5 w-48" />
+                            <Skeleton className="h-3 w-24" />
+                        </div>
+                    </div>
+                    {/* content row skeleton */}
+                    <div className="flex flex-wrap items-center gap-2 p-4">
+                        <Skeleton className="h-6 w-24 rounded-full" />
+                        <Skeleton className="h-6 w-32 rounded-full" />
+                        <Skeleton className="h-6 w-20 rounded-full" />
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+}
+
+// ---------------------------------------------------------------------------
 // Props
 // ---------------------------------------------------------------------------
 
@@ -291,7 +323,7 @@ export function CampgroundsGroups({ isLoading = false, campgrounds: campgroundsP
                     {/* Accordion card */}
                     <div
                         className={cn(
-                            "overflow-hidden rounded-lg border transition-shadow hover:shadow-md",
+                            "overflow-hidden rounded-xl border transition-shadow duration-200 hover:shadow-lg",
                             !isExpandable && "opacity-90",
                         )}
                     >
@@ -306,7 +338,7 @@ export function CampgroundsGroups({ isLoading = false, campgrounds: campgroundsP
                             onClick={isExpandable ? toggleCampground(ALL_CAMPGROUNDS_KEY, campgroundId) : undefined}
                         >
                             {/* Hero image banner */}
-                            <div className="relative aspect-[5/1] w-full overflow-hidden bg-muted">
+                            <div className="relative aspect-[3/1] w-full overflow-hidden bg-muted sm:aspect-[5/1]">
                                 <img
                                     src={imageUrl}
                                     alt=""
@@ -487,21 +519,13 @@ export function CampgroundsGroups({ isLoading = false, campgrounds: campgroundsP
 
             {/* Main content */}
             {flattenedCampgrounds.length === 0 ? (
-                <div className="rounded-xl border p-6">
-                    {isLoading ? (
-                        <div className="flex flex-col gap-4">
-                            <div className="flex items-center gap-3">
-                                <Loader2 className="size-5 animate-spin" />
-                                <span className="text-sm">Loading campgrounds...</span>
-                            </div>
-                            {[1, 2, 3].map((i) => (
-                                <Skeleton key={i} className="h-20 w-full rounded-xl" />
-                            ))}
-                        </div>
-                    ) : (
+                isLoading ? (
+                    <LoadingSkeletons />
+                ) : (
+                    <div className="rounded-xl border p-6">
                         <p className="text-sm text-muted-foreground">No campgrounds configured yet.</p>
-                    )}
-                </div>
+                    </div>
+                )
             ) : (
                 <div className="flex flex-col gap-4 rounded-xl border p-4 md:p-6">
                     {/* Header: title + count chips + expand/collapse */}
@@ -553,18 +577,18 @@ export function CampgroundsGroups({ isLoading = false, campgrounds: campgroundsP
                     {viewMode === "calendar" && (
                         <div className="flex flex-wrap items-center gap-4">
                             <div className="flex items-center gap-1.5">
-                                <span className="size-3 rounded-full bg-green-600" />
+                                <span className="size-3 rounded-full bg-primary" />
                                 <span className="text-xs text-muted-foreground">Matches filters</span>
                             </div>
                             <div className="flex items-center gap-1.5">
-                                <span className="size-3 rounded-full bg-green-200" />
+                                <span className="size-3 rounded-full bg-primary/20 ring-1 ring-primary/30" />
                                 <span className="text-xs text-muted-foreground">
                                     Available (wrong start day)
                                 </span>
                             </div>
                             {Object.values(showExcludedMap).some(Boolean) && (
                                 <div className="flex items-center gap-1.5">
-                                    <span className="size-3 rounded-full bg-orange-500" />
+                                    <span className="size-3 rounded-full bg-accent" />
                                     <span className="text-xs text-muted-foreground">Excluded</span>
                                 </div>
                             )}
