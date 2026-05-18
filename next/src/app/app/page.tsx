@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { TopBar } from "@/components/top-bar";
 import { ProgressBarEl } from "@/components/progress-bar-el";
-import { CampgroundsGroups } from "@/components/campgrounds-groups";
+import { CampgroundsList } from "@/components/campgrounds-list";
 import { SiteConfigDialog } from "@/components/site-config-dialog";
 import SiteSettingsContext from "@/context/site-settings";
 import ProgressBarContext from "@/context/progress-bar";
@@ -111,7 +111,7 @@ export default function AppPage() {
                 <ProgressBarEl />
 
                 <main className="container mx-auto p-5">
-                    <CampgroundsGroups
+                    <CampgroundsList
                         campgrounds={campgroundsByAreas}
                         settings={settings as { views?: { type?: "calendar" | "table" } }}
                         isLoading={isLoading}
