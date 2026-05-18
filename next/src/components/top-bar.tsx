@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Menu, Loader2, User, LogOut, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/theme-toggle";
 import {
     DropdownMenu,
     DropdownMenuCheckboxItem,
@@ -104,7 +105,7 @@ export function TopBar({
             <div className="container mx-auto flex h-16 items-center gap-3 px-4">
                 {renderLogo()}
                 <div className="flex flex-col">
-                    <h1 className="text-base font-semibold leading-none">{title}</h1>
+                    <h1 className="font-display text-lg font-semibold leading-none tracking-tight">{title}</h1>
                     {subtitle ? (
                         <p className="text-xs text-muted-foreground">{subtitle}</p>
                     ) : null}
@@ -115,6 +116,7 @@ export function TopBar({
                         <Loader2 className="size-4 animate-spin text-muted-foreground" aria-hidden />
                     ) : null}
                     {actionItems}
+                    <ThemeToggle />
                     {auth !== undefined ? (
                         auth.isLoading ? (
                             <Skeleton className="size-8 rounded-full" />

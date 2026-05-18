@@ -81,6 +81,12 @@ function getCampgroundUrl(campground: ProcessedCampground): string {
     return `https://www.recreation.gov/camping/campgrounds/${campground.id}`;
 }
 
+function getImageUrl(image: string | null | undefined): string {
+    if (!image) return "/images/sites/bg_default.jpg";
+    if (image.startsWith("http")) return image;
+    return `/images/sites/${image}`;
+}
+
 interface CampgroundStats {
     totalMatches: number;
     favoriteMatches: number;
@@ -268,10 +274,6 @@ export function CampgroundsGroups({ isLoading = false, campgrounds: campgroundsP
     const renderCampgroundCard = useCallback(
         (campground: ProcessedCampground, campgroundIndex: number) => {
             const hasCampgroundAvailability = checkForGroupedAvailability(campground);
-            const campgroundImage =
-                (campground.image?.length ?? 0) > 0
-                    ? "/images/sites/" + campground.image
-                    : "/images/sites/bg_default.jpg";
             const stats = getCampgroundStats(campground);
             const campgroundId = getCampgroundId(campground);
             const showingExcluded = !!showExcludedMap[campgroundId];
@@ -282,113 +284,125 @@ export function CampgroundsGroups({ isLoading = false, campgrounds: campgroundsP
 
             const badge = getTypeBadge(campground);
             const TypeIcon = badge.Icon;
+            const imageUrl = getImageUrl(campground.image);
 
             return (
                 <div key={`${campground.name}-${campgroundIndex}`}>
                     {/* Accordion card */}
                     <div
                         className={cn(
-                            "rounded-lg border",
-                            !isExpandable && "bg-muted/40",
+                            "overflow-hidden rounded-lg border transition-shadow hover:shadow-md",
+                            !isExpandable && "opacity-90",
                         )}
                     >
                         {/* Sticky header */}
                         <div
                             className={cn(
-                                "sticky z-[2] flex cursor-pointer select-none items-start gap-2 rounded-lg px-3 py-2.5",
-                                expanded
-                                    ? "rounded-b-none border-b bg-background"
-                                    : "bg-background",
-                                !isExpandable && "cursor-default bg-muted/40",
+                                "sticky z-[2] cursor-pointer select-none bg-background",
+                                expanded ? "rounded-b-none border-b" : "",
+                                !isExpandable && "cursor-default",
                             )}
-                            // TopBar is h-16 (64px). Control row is ~48px. Total ~112px.
                             style={{ top: "112px" }}
                             onClick={isExpandable ? toggleCampground(ALL_CAMPGROUNDS_KEY, campgroundId) : undefined}
                         >
-                            {/* Main content area */}
-                            <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                                {/* Row 1: name + area chip */}
-                                <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
-                                    {/* Name + id */}
-                                    <div className="flex flex-col gap-0.5">
-                                        <div className="flex items-center gap-1.5">
-                                            <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                    <TypeIcon
-                                                        className="size-4 shrink-0"
-                                                        style={{ color: badge.color }}
-                                                    />
-                                                </TooltipTrigger>
-                                                <TooltipContent>{badge.label}</TooltipContent>
-                                            </Tooltip>
-                                            <span className="text-base font-semibold leading-tight">
-                                                {campground.name}
-                                            </span>
-                                            <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                    <a
-                                                        href={getCampgroundUrl(campground)}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        onClick={(e) => e.stopPropagation()}
-                                                        className="inline-flex text-muted-foreground hover:text-primary"
-                                                    >
-                                                        <ExternalLink className="size-3.5" />
-                                                    </a>
-                                                </TooltipTrigger>
-                                                <TooltipContent>View on recreation.gov</TooltipContent>
-                                            </Tooltip>
-                                        </div>
-                                        <span className="text-[0.65rem] leading-tight tracking-wide text-muted-foreground">
-                                            ID: {campground.id}
-                                        </span>
-                                    </div>
+                            {/* Hero image banner */}
+                            <div className="relative aspect-[5/1] w-full overflow-hidden bg-muted">
+                                <img
+                                    src={imageUrl}
+                                    alt=""
+                                    aria-hidden
+                                    loading="lazy"
+                                    onClick={(e) => { e.stopPropagation(); handleImageOpen(imageUrl, campground.name)(e); }}
+                                    className="absolute inset-0 size-full cursor-pointer object-cover object-center"
+                                />
+                                {/* gradient overlay */}
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/15 to-black/5" />
 
-                                    {/* Status + area badges */}
-                                    <div className="flex flex-1 items-center justify-between gap-2 sm:justify-end">
-                                        {!hasCampgroundAvailability ? (
-                                            <Badge variant="destructive" className="shrink-0">
-                                                No availability
-                                            </Badge>
-                                        ) : (
-                                            <span />
-                                        )}
-                                        <div className="flex items-center gap-1.5">
-                                            {campground.notifyAll && (
-                                                <Badge variant="outline" className="shrink-0 border-blue-400 text-blue-600">
-                                                    Notify all
-                                                </Badge>
-                                            )}
-                                            {campground.area && (
-                                                <Badge variant="secondary" className="shrink-0 bg-white">
-                                                    {campground.area}
-                                                </Badge>
-                                            )}
-                                        </div>
-                                    </div>
+                                {/* type badge top-right with backdrop blur */}
+                                <div className="absolute right-3 top-3">
+                                    <span className="inline-flex items-center gap-1.5 rounded-full bg-background/80 px-2.5 py-1 text-xs font-medium backdrop-blur-md">
+                                        <TypeIcon className="size-3.5 shrink-0" style={{ color: badge.color }} aria-hidden />
+                                        {badge.label}
+                                    </span>
                                 </div>
 
-                                {/* Row 2: description */}
+                                {/* name + area overlaid bottom-left */}
+                                <div className="absolute inset-x-3 bottom-2 flex items-end justify-between gap-2">
+                                    <div className="min-w-0 text-white">
+                                        <h2 className="font-display truncate text-xl font-semibold tracking-tight drop-shadow-sm">
+                                            {campground.name}
+                                        </h2>
+                                        {campground.area ? (
+                                            <p className="truncate text-xs text-white/85">{campground.area}</p>
+                                        ) : null}
+                                    </div>
+                                    <div className="flex shrink-0 items-center gap-2">
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <a
+                                                    href={getCampgroundUrl(campground)}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    className="inline-flex text-white/80 hover:text-white"
+                                                >
+                                                    <ExternalLink className="size-3.5" />
+                                                </a>
+                                            </TooltipTrigger>
+                                            <TooltipContent>View on recreation.gov</TooltipContent>
+                                        </Tooltip>
+                                        {isExpandable && (
+                                            <ChevronDown
+                                                className={cn(
+                                                    "size-4 shrink-0 text-white/80 transition-transform duration-200",
+                                                    expanded ? "rotate-180" : "rotate-0",
+                                                )}
+                                            />
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Stats row below the image */}
+                            <div className="flex flex-col gap-1.5 px-3 py-2.5">
+                                {/* ID + description */}
+                                <span className="text-[0.65rem] leading-tight tracking-wide text-muted-foreground">
+                                    ID: {campground.id}
+                                </span>
                                 {campground.description && (
                                     <p className="text-sm text-muted-foreground">{campground.description}</p>
                                 )}
 
-                                {/* Row 3: stats chips */}
+                                {/* Status + notifyAll */}
                                 <div className="flex flex-wrap items-center gap-1.5">
-                                    <Badge variant="outline">
-                                        Total matches: {stats.totalMatches}
+                                    {!hasCampgroundAvailability ? (
+                                        <Badge variant="secondary" className="shrink-0 text-muted-foreground">
+                                            No availability
+                                        </Badge>
+                                    ) : null}
+                                    {campground.notifyAll && (
+                                        <Badge variant="outline" className="shrink-0 border-blue-400 text-blue-600">
+                                            Notify all
+                                        </Badge>
+                                    )}
+                                </div>
+
+                                {/* Stats chips */}
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                    <Badge variant="secondary">
+                                        Total: {stats.totalMatches}
                                     </Badge>
-                                    <Badge variant="outline" className="border-green-500 text-green-700">
+                                    <Badge className="border-primary/30 bg-primary/10 text-primary hover:bg-primary/10">
                                         Favorites: {stats.favoriteMatches}
                                     </Badge>
                                     {stats.totalExcluded > 0 && (
                                         <Badge
                                             variant={showExcludedMap[campgroundId] ? "default" : "outline"}
                                             className={cn(
-                                                "cursor-pointer border-blue-400",
+                                                "cursor-pointer",
                                                 showExcludedMap[campgroundId]
-                                                    ? "bg-blue-500 text-white"
-                                                    : "text-blue-600",
+                                                    ? "bg-accent text-accent-foreground hover:bg-accent/90"
+                                                    : "border-accent/50 text-accent hover:bg-accent/10",
                                             )}
                                             onClick={toggleShowExcluded(campgroundId)}
                                         >
@@ -430,43 +444,11 @@ export function CampgroundsGroups({ isLoading = false, campgrounds: campgroundsP
                                     )}
                                 </div>
                             </div>
-
-                            {/* Thumbnail (desktop only) + chevron */}
-                            <div className="flex shrink-0 items-center gap-2">
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <img
-                                            src={campgroundImage}
-                                            alt={campground.name}
-                                            loading="lazy"
-                                            onClick={handleImageOpen(campgroundImage, campground.name)}
-                                            className="hidden size-[72px] cursor-pointer rounded-xl border object-cover md:block"
-                                        />
-                                    </TooltipTrigger>
-                                    <TooltipContent>View map</TooltipContent>
-                                </Tooltip>
-                                {isExpandable && (
-                                    <ChevronDown
-                                        className={cn(
-                                            "size-4 shrink-0 text-muted-foreground transition-transform duration-200",
-                                            expanded ? "rotate-180" : "rotate-0",
-                                        )}
-                                    />
-                                )}
-                            </div>
                         </div>
 
                         {/* Expandable body */}
                         {expanded && (
                             <div className="px-3 pt-3 pb-3">
-                                {/* Mobile image banner */}
-                                <img
-                                    src={campgroundImage}
-                                    alt={campground.name}
-                                    loading="lazy"
-                                    onClick={handleImageOpen(campgroundImage, campground.name)}
-                                    className="mb-3 block h-28 w-full cursor-pointer rounded-xl border object-cover md:hidden"
-                                />
                                 <Campground
                                     key={`${campground.name}-${viewMode}-${!!showExcludedMap[campgroundId]}`}
                                     campground={campground}
