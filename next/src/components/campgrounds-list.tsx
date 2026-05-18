@@ -49,6 +49,8 @@ export interface CampgroundsListProps {
     campgrounds: ProcessedCampground[] | Record<string, ProcessedCampground[]>;
     settings: { views?: { type?: "calendar" | "table" } };
     isLoading?: boolean;
+    /** Called when the user toggles a site's rating from the drawer. */
+    onRatingChange?: (campgroundId: string, siteName: string, newRating: "favorite" | "worthwhile" | "unrated") => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -59,6 +61,7 @@ export function CampgroundsList({
     campgrounds: campgroundsProp,
     settings,
     isLoading = false,
+    onRatingChange,
 }: CampgroundsListProps) {
     // Flatten if given a record of groups (matches CampgroundsGroups behaviour)
     const flattenedCampgrounds = useMemo<ProcessedCampground[]>(() => {
@@ -183,17 +186,37 @@ export function CampgroundsList({
 
             {/* Campground rows */}
             <div className="space-y-2">
-                {filtered.map((c) => (
-                    <CampgroundRow
-                        key={c.id ?? c.name}
-                        campground={c}
-                        showExcluded={showExcluded}
-                        isFavorite={!!c.id && favorites.has(c.id)}
-                        onToggleFavorite={() => c.id && toggleFavorite(c.id)}
-                        settings={settings}
-                        imageUrl={getImageUrl(c)}
-                    />
-                ))}
+                {filtered.map((c) => {
+                    // Build a SiteRatingsMap from the campground's stored favorites/worthwhile lists
+                    const siteRatings: Record<string, "favorite" | "worthwhile"> = {};
+                    for (const name of c.sites?.favorites ?? []) {
+                        siteRatings[name] = "favorite";
+                    }
+                    for (const name of c.sites?.worthwhile ?? []) {
+                        // Don't overwrite if already in favorites
+                        if (!(name in siteRatings)) siteRatings[name] = "worthwhile";
+                    }
+                    const hasSiteRatings = Object.keys(siteRatings).length > 0;
+
+                    return (
+                        <CampgroundRow
+                            key={c.id ?? c.name}
+                            campground={c}
+                            showExcluded={showExcluded}
+                            isFavorite={!!c.id && favorites.has(c.id)}
+                            onToggleFavorite={() => c.id && toggleFavorite(c.id)}
+                            settings={settings}
+                            imageUrl={getImageUrl(c)}
+                            siteRatings={hasSiteRatings ? siteRatings : undefined}
+                            onRatingChange={
+                                onRatingChange && c.id
+                                    ? (siteName, newRating) =>
+                                          onRatingChange(c.id!, siteName, newRating)
+                                    : undefined
+                            }
+                        />
+                    );
+                })}
             </div>
 
             {/* Empty state after filtering */}

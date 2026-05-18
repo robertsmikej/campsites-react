@@ -1,25 +1,37 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { AvailabilityStrip } from "@/components/availability-strip";
 import { CampsitesCalendar } from "@/components/campsites-calendar";
 import type { ProcessedCampground, SiteAvailability } from "@/types/campground";
 
+type SiteRating = "favorite" | "worthwhile" | "unrated";
+
 interface SiteRowProps {
     site: SiteAvailability;
     campground: ProcessedCampground;
     showExcluded: boolean;
     defaultOpen?: boolean;
+    rating?: SiteRating;
+    onRatingChange?: (newRating: SiteRating) => void;
 }
+
+const RATING_CYCLE: Record<SiteRating, SiteRating> = {
+    unrated: "worthwhile",
+    worthwhile: "favorite",
+    favorite: "unrated",
+};
 
 export function SiteRow({
     site,
     campground,
     showExcluded,
     defaultOpen = false,
+    rating = "unrated",
+    onRatingChange,
 }: SiteRowProps) {
     const [open, setOpen] = useState(defaultOpen);
 
@@ -65,6 +77,32 @@ export function SiteRow({
                         {site.campsite_type ?? "Standard"}
                     </p>
                 </div>
+                {/* Rating cycle button — stopPropagation so it doesn't open/close the row */}
+                {onRatingChange ? (
+                    <button
+                        type="button"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onRatingChange(RATING_CYCLE[rating]);
+                        }}
+                        aria-label={`Site rating: ${rating}. Click to change.`}
+                        className="shrink-0 rounded p-0.5 hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    >
+                        {rating === "favorite" ? (
+                            <Star
+                                className="size-4"
+                                style={{ color: "oklch(0.55 0.15 145)", fill: "oklch(0.55 0.15 145)" }}
+                            />
+                        ) : rating === "worthwhile" ? (
+                            <Star
+                                className="size-4"
+                                style={{ color: "oklch(0.78 0.16 80)", fill: "oklch(0.78 0.16 80)" }}
+                            />
+                        ) : (
+                            <Star className="size-4 text-muted-foreground" />
+                        )}
+                    </button>
+                ) : null}
                 {availableDays > 0 ? (
                     <Badge className="shrink-0 bg-primary text-primary-foreground text-[10px]">
                         {availableDays}n

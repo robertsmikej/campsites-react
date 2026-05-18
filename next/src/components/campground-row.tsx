@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { AvailabilityStrip } from "@/components/availability-strip";
 import { CampgroundDetail } from "@/components/campground-detail";
+import type { SiteRatingsMap } from "@/components/availability-strip";
 import type { ProcessedCampground } from "@/types/campground";
 
 interface CampgroundRowProps {
@@ -23,6 +24,8 @@ interface CampgroundRowProps {
     onToggleFavorite: () => void;
     settings: { views?: { type?: "calendar" | "table" } };
     imageUrl: string;
+    siteRatings?: SiteRatingsMap;
+    onRatingChange?: (siteName: string, newRating: "favorite" | "worthwhile" | "unrated") => void;
 }
 
 export function CampgroundRow({
@@ -32,6 +35,8 @@ export function CampgroundRow({
     onToggleFavorite,
     settings,
     imageUrl,
+    siteRatings,
+    onRatingChange,
 }: CampgroundRowProps) {
     const [open, setOpen] = useState(false);
 
@@ -95,6 +100,7 @@ export function CampgroundRow({
                     <AvailabilityStrip
                         campground={campground}
                         showExcluded={showExcluded}
+                        siteRatings={siteRatings}
                     />
                 </div>
 
@@ -136,6 +142,8 @@ export function CampgroundRow({
                     showExcluded={showExcluded}
                     settings={settings}
                     imageUrl={imageUrl}
+                    siteRatings={siteRatings}
+                    onRatingChange={onRatingChange}
                 />
             </SheetContent>
         </Sheet>

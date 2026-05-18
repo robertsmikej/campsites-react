@@ -6,6 +6,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { cn } from "@/lib/utils";
 import { getTypeBadge } from "@/components/campground/type-badge";
 import { SiteRow } from "@/components/site-row";
+import type { SiteRatingsMap } from "@/components/availability-strip";
 import type { ProcessedCampground, SiteAvailability } from "@/types/campground";
 
 // ---------------------------------------------------------------------------
@@ -50,6 +51,8 @@ interface CampgroundDetailProps {
     showExcluded: boolean;
     settings: { views?: { type?: "calendar" | "table" } };
     imageUrl: string;
+    siteRatings?: SiteRatingsMap;
+    onRatingChange?: (siteName: string, newRating: "favorite" | "worthwhile" | "unrated") => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -60,6 +63,8 @@ export function CampgroundDetail({
     campground,
     showExcluded,
     imageUrl,
+    siteRatings,
+    onRatingChange,
 }: CampgroundDetailProps) {
     const badge = getTypeBadge(campground);
     const TypeIcon = badge.Icon;
@@ -219,6 +224,16 @@ export function CampgroundDetail({
                                 site={site}
                                 campground={campground}
                                 showExcluded={showExcluded}
+                                rating={
+                                    siteRatings
+                                        ? (siteRatings[site.siteName] ?? "unrated")
+                                        : undefined
+                                }
+                                onRatingChange={
+                                    onRatingChange
+                                        ? (newRating) => onRatingChange(site.siteName, newRating)
+                                        : undefined
+                                }
                             />
                         ))}
                     </>

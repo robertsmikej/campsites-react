@@ -66,6 +66,28 @@ export default function AppPage() {
         return map;
     }, [campgroundsByAreas]);
 
+    /**
+     * Toggle a site's rating for a given campground. Mutates the favorites/worthwhile
+     * arrays in the siteConfig and persists via the existing save path.
+     */
+    const handleRatingChange = (
+        campgroundId: string,
+        siteName: string,
+        newRating: "favorite" | "worthwhile" | "unrated",
+    ) => {
+        const campgrounds = siteConfig["recreation.gov"] ?? [];
+        const updated = campgrounds.map((cg) => {
+            if (cg.id !== campgroundId) return cg;
+            // Remove siteName from both lists first, then add to the appropriate one
+            const favorites = (cg.sites?.favorites ?? []).filter((s) => s !== siteName);
+            const worthwhile = (cg.sites?.worthwhile ?? []).filter((s) => s !== siteName);
+            if (newRating === "favorite") favorites.push(siteName);
+            else if (newRating === "worthwhile") worthwhile.push(siteName);
+            return { ...cg, sites: { favorites, worthwhile } };
+        });
+        void save({ ...siteConfig, "recreation.gov": updated }, globalSettings);
+    };
+
     useEffect(() => {
         if (syncStatus === null) return;
         if (syncStatus === "success") {
@@ -115,6 +137,7 @@ export default function AppPage() {
                         campgrounds={campgroundsByAreas}
                         settings={settings as { views?: { type?: "calendar" | "table" } }}
                         isLoading={isLoading}
+                        onRatingChange={handleRatingChange}
                     />
 
                     <footer className="mt-8 border-t pt-4">
