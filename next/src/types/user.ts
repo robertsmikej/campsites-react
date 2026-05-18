@@ -10,4 +10,5 @@ export interface UserProfile {
         enabled: boolean;
         frequencyMinutes: 15 | 60 | 240;
     };
+    lastNotifiedAt?: string;
 }

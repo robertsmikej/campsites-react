@@ -1,333 +1,274 @@
-// Campsite Availability Notifier
-// Checks recreation.gov for new campsite openings and sends email alerts via Resend.
+// Campsite Availability Notifier — per-user rewire (Phase 5)
+// Pulls per-user campground lists from /api/admin/notification-targets,
+// deduplicates recreation.gov fetches, and emails each user about their own matches.
 // Designed to run as a GitHub Actions scheduled workflow.
 
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
-import { fetchAllCampgrounds } from './lib/fetch-availability.mjs';
-import { buildSignatureSet, findNewMatches } from './lib/diff.mjs';
+import { fetchMonth, processCampgroundResults, getAllDatesInRange } from './lib/fetch-availability.mjs';
+import { findNewMatches, generateSignature } from './lib/diff.mjs';
 import { formatEmail, sendEmail } from './lib/email.mjs';
 
-const STATE_FILE = new URL('./state.json', import.meta.url);
-const PENDING_FILE = new URL('./pending-notifications.json', import.meta.url);
+const DELAY_BETWEEN_FETCHES_MS = 500;
 
-// --- Load campground data from the React app's source files ---
-// These .js files use ES module exports but the project root lacks "type":"module",
-// so Node can't import them directly. Since they're pure data (no imports, no side effects),
-// we strip the `export` keyword and evaluate.
-const loadDataFile = (relativePath, exportName) => {
-    const source = readFileSync(new URL(relativePath, import.meta.url), 'utf-8');
-    const cleaned = source.replace(/^export\s+const\s+/gm, 'const ');
-    const fn = new Function(`${cleaned}\nreturn ${exportName};`);
-    return fn();
-};
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// Fetch campground config from the Cloudflare Worker API (KV-backed).
-// Falls back to the committed siteConfigurations.js if the API is unavailable.
-const fetchConfig = async (apiUrl, apiSecret) => {
-    try {
-        const response = await fetch(`${apiUrl}/api/config`, {
-            headers: { Authorization: `Bearer ${apiSecret}` },
-        });
-        if (!response.ok) {
-            if (response.status === 404) {
-                console.log('[Config] No config in KV yet — using defaults from siteConfigurations.js');
-            } else {
-                console.warn(`[Config] API returned ${response.status} — using fallback`);
-            }
-            return null;
-        }
-        const data = await response.json();
-        console.log('[Config] Loaded config from API');
-        return data;
-    } catch (error) {
-        console.warn(`[WARNING] Failed to fetch config from API — using stale fallback from siteConfigurations.js: ${error.message}`);
-        return null;
+// --- Eligibility ---
+
+function isEligible(target, now, forceEmail) {
+    if (forceEmail) return true;
+    if (!target.notifications?.enabled) return false;
+    const last = target.lastNotifiedAt ? new Date(target.lastNotifiedAt) : null;
+    if (!last) return true;
+    const elapsedMin = (now.getTime() - last.getTime()) / 60000;
+    return elapsedMin >= target.notifications.frequencyMinutes;
+}
+
+// --- Dedup fetch plan ---
+
+function monthsBetween(startIso, endIso) {
+    const start = new Date(startIso + 'T00:00:00Z');
+    const end = new Date(endIso + 'T00:00:00Z');
+    const months = new Set();
+    const cur = new Date(start);
+    while (cur <= end) {
+        const m = `${cur.getUTCFullYear()}-${String(cur.getUTCMonth() + 1).padStart(2, '0')}`;
+        months.add(m);
+        cur.setUTCMonth(cur.getUTCMonth() + 1);
     }
-};
+    return [...months];
+}
 
-const campgroundCatalog = loadDataFile('../src/json/campgroundCatalog.js', 'campgroundCatalog');
-
-// Load config from API, fall back to committed file
-const fallbackSiteConfigurations = loadDataFile('../src/json/siteConfigurations.js', 'defaultCampgroundConfigurations');
-
-const defaultSettings = {
-    stayLengths: [2, 3, 4, 5],
-    validStartDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
-};
-
-// --- Merge catalog with configurations to build the campground list ---
-const buildCampgroundList = (siteConfigurations) => {
-    const campgrounds = [];
-
-    for (const [system, catalogEntries] of Object.entries(campgroundCatalog)) {
-        const configs = siteConfigurations[system] || [];
-
-        for (const entry of catalogEntries) {
-            const config = configs.find((c) => c.id === entry.id);
-            if (config?.enabled === false) continue;
-            campgrounds.push({
-                ...entry,
-                dates: config?.dates,
-                sites: config?.sites || { favorites: [], worthwhile: [] },
-                validStartDays: config?.validStartDays,
-                stayLengths: config?.stayLengths,
-            });
+function buildDedupedFetchPlan(targets) {
+    // campgroundId → Set<"YYYY-MM">
+    const ranges = new Map();
+    for (const target of targets) {
+        for (const c of target.campgrounds['recreation.gov'] ?? []) {
+            if (c.enabled === false) continue;
+            const start = c.dates?.startDate;
+            const end = c.dates?.endDate;
+            if (!start || !end) continue;
+            const months = monthsBetween(start, end);
+            if (!ranges.has(c.id)) ranges.set(c.id, new Set());
+            for (const m of months) ranges.get(c.id).add(m);
         }
     }
-
-    return campgrounds;
-};
-
-// --- Subscriber management ---
-const fetchSubscribers = async (apiUrl, apiSecret) => {
-    const response = await fetch(`${apiUrl}/api/subscribers`, {
-        headers: { Authorization: `Bearer ${apiSecret}` },
-    });
-    if (!response.ok) {
-        throw new Error(`Failed to fetch subscribers: ${response.status} ${await response.text()}`);
+    const plan = [];
+    for (const [campgroundId, monthSet] of ranges) {
+        for (const month of monthSet) plan.push({ campgroundId, month });
     }
-    const data = await response.json();
-    return data.subscribers || [];
-};
+    return plan;
+}
 
-// --- State management ---
-// State now tracks two sets:
-//   signatures        — current availability snapshot (used to detect what changed)
-//   notifiedSignatures — everything we've already emailed about (prevents flap re-alerts)
-// Notified signatures are pruned once their start date is in the past.
-const loadState = () => {
-    const path = new URL(STATE_FILE);
-    if (!existsSync(path)) {
-        return null;
+// --- Fetch deduped: returns { [campgroundId]: [apiResult, ...] } across all months ---
+
+async function fetchDeduped(plan) {
+    // Group months by campgroundId so we can log nicely
+    const byCampground = new Map();
+    for (const { campgroundId, month } of plan) {
+        if (!byCampground.has(campgroundId)) byCampground.set(campgroundId, []);
+        byCampground.get(campgroundId).push(month);
     }
-    try {
-        const data = JSON.parse(readFileSync(path, 'utf-8'));
-        return {
-            signatures: new Set(data.signatures || []),
-            notifiedSignatures: new Set(data.notifiedSignatures || []),
+    for (const [id, months] of byCampground) {
+        console.log(`[Fetch] Campground ${id}: ${months.length} month(s) to fetch`);
+    }
+
+    const rawByCampground = {};
+    for (let i = 0; i < plan.length; i++) {
+        const { campgroundId, month } = plan[i];
+        const result = await fetchMonth(campgroundId, month);
+        if (!rawByCampground[campgroundId]) rawByCampground[campgroundId] = [];
+        rawByCampground[campgroundId].push(result);
+        if (i < plan.length - 1) {
+            await delay(DELAY_BETWEEN_FETCHES_MS);
+        }
+    }
+    return rawByCampground;
+}
+
+// --- Compute matches for a single user from pre-fetched raw API data ---
+// Returns matches in the same shape as findNewMatches (without diff).
+
+function computeMatchesForUser(target, rawByCampground) {
+    const globalSettings = target.globalSettings ?? {};
+    const defaultSettings = {
+        stayLengths: [2, 3, 4, 5],
+        validStartDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+    };
+    const baseSettings = {
+        stayLengths: globalSettings.stayLengths ?? defaultSettings.stayLengths,
+        validStartDays: globalSettings.validStartDays ?? defaultSettings.validStartDays,
+    };
+
+    // Build synthetic fetchCampground-style result objects so we can reuse findNewMatches.
+    const syntheticResults = [];
+
+    for (const c of target.campgrounds['recreation.gov'] ?? []) {
+        if (c.enabled === false) continue;
+        const start = c.dates?.startDate;
+        const end = c.dates?.endDate;
+        if (!start || !end) continue;
+
+        const rawApiResults = rawByCampground[c.id];
+        if (!rawApiResults) continue;
+
+        const allDates = getAllDatesInRange(start, end);
+        const effectiveSettings = {
+            ...baseSettings,
+            ...(c.stayLengths ? { stayLengths: c.stayLengths } : {}),
+            ...(c.validStartDays ? { validStartDays: c.validStartDays } : {}),
         };
-    } catch {
-        return null;
+
+        const siteAvailability = processCampgroundResults(rawApiResults, allDates, effectiveSettings);
+
+        syntheticResults.push({
+            campgroundId: c.id,
+            campgroundName: c.name,
+            campgroundArea: c.area ?? '',
+            campgroundDescription: c.description ?? '',
+            sites: siteAvailability,
+        });
     }
-};
 
-const pruneExpiredNotified = (notifiedSignatures) => {
-    const today = new Date().toISOString().split('T')[0];
-    const pruned = new Set();
-    for (const sig of notifiedSignatures) {
-        // Signature format: campgroundId:siteId:from:to:nights
-        const fromDate = sig.split(':')[2];
-        if (fromDate >= today) {
-            pruned.add(sig);
-        }
-    }
-    const removed = notifiedSignatures.size - pruned.size;
-    if (removed > 0) {
-        console.log(`[State] Pruned ${removed} expired notified signature(s)`);
-    }
-    return pruned;
-};
+    // Build a "siteConfigurations" list in the shape findNewMatches expects.
+    const siteConfigurations = (target.campgrounds['recreation.gov'] ?? []).map((c) => ({
+        id: c.id,
+        sites: {
+            favorites: c.sites?.favorites ?? [],
+            worthwhile: c.sites?.worthwhile ?? [],
+        },
+        notifyAll: c.notifyAll ?? false,
+    }));
 
-const saveState = (signatures, notifiedSignatures) => {
-    const data = {
-        signatures: [...signatures],
-        notifiedSignatures: [...notifiedSignatures],
-        checkedAt: new Date().toISOString(),
-    };
-    writeFileSync(new URL(STATE_FILE), JSON.stringify(data, null, 2));
-    console.log(`[State] Saved ${signatures.size} signatures, ${notifiedSignatures.size} notified`);
-};
+    // findNewMatches with an empty previousSignatures set = all current matches.
+    const allMatches = findNewMatches(syntheticResults, new Set(), siteConfigurations);
 
-// --- Pending notifications (for delayed delivery to non-priority subscribers) ---
-const loadPending = () => {
-    const path = new URL(PENDING_FILE);
-    if (!existsSync(path)) return null;
-    try {
-        return JSON.parse(readFileSync(path, 'utf-8'));
-    } catch {
-        return null;
-    }
-};
+    // Apply the notifyAll / favorites filter (mirrors the old logic).
+    const notifyAllIds = new Set(siteConfigurations.filter((c) => c.notifyAll).map((c) => c.id));
+    const filtered = allMatches.filter(
+        (m) => m.group === 'favorites' || m.group === 'worthwhile' || notifyAllIds.has(m.campgroundId)
+    );
 
-const savePending = (matches) => {
-    const data = {
-        matches,
-        savedAt: new Date().toISOString(),
-    };
-    writeFileSync(new URL(PENDING_FILE), JSON.stringify(data, null, 2));
-    console.log(`[Pending] Saved ${matches.length} matches for delayed delivery`);
-};
+    return filtered;
+}
 
-const clearPending = () => {
-    const path = new URL(PENDING_FILE);
-    if (existsSync(path)) {
-        writeFileSync(path, JSON.stringify({ matches: [], savedAt: null }));
-    }
-};
+// --- Diff per user ---
 
-// --- Parse priority emails from env (comma-separated) ---
-const parsePriorityEmails = () => {
-    const raw = process.env.PRIORITY_EMAILS || '';
-    return raw.split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
-};
+// signatureForMatch wraps diff.mjs's generateSignature to accept the match object shape
+// that findNewMatches returns: { campgroundId, siteId, match: { from, to, nights } }
+function signatureForMatch(m) {
+    return generateSignature(m.campgroundId, m.siteId, m.match);
+}
+
+function diffPerUser(matches, priorState) {
+    const priorSignatures = new Set(priorState?.signatures ?? []);
+    const newMatches = matches.filter((m) => !priorSignatures.has(signatureForMatch(m)));
+    const nextState = { signatures: matches.map(signatureForMatch) };
+    return { newMatches, nextState };
+}
+
+// --- Send email to a single user ---
+
+async function sendEmailToUser({ user, matches, resendApiKey, siteUrl, apiSecret }) {
+    const { subject, html, unsubscribeLink } = formatEmail(matches, {
+        unsubscribeUrl: `${process.env.SUBSCRIBER_API_URL}/api/unsubscribe`,
+        email: user.email,
+        apiSecret,
+        siteUrl,
+    });
+    console.log(`[Email] Sending to ${user.email}: "${subject}"`);
+    await sendEmail(user.email, subject, html, resendApiKey, unsubscribeLink);
+}
 
 // --- Main ---
-const DELAY_MINUTES = 15;
 
-const main = async () => {
-    const resendApiKey = process.env.RESEND_API_KEY;
+async function main() {
     const subscriberApiUrl = process.env.SUBSCRIBER_API_URL;
     const subscriberApiSecret = process.env.SUBSCRIBER_API_SECRET;
+    const resendApiKey = process.env.RESEND_API_KEY;
     const siteUrl = process.env.SITE_URL || '';
+    const forceEmail = process.env.FORCE_EMAIL === 'true';
+    const now = new Date();
 
-    // Fetch live config from API (KV-backed), fall back to committed file
-    const apiConfig = await fetchConfig(subscriberApiUrl, subscriberApiSecret);
-    const siteConfigurations = apiConfig?.campgrounds || fallbackSiteConfigurations;
-    const settings = apiConfig?.globalSettings
-        ? { ...defaultSettings, ...apiConfig.globalSettings }
-        : defaultSettings;
-
-    if (!resendApiKey) {
-        console.error('[Error] Missing RESEND_API_KEY');
-        process.exit(1);
-    }
     if (!subscriberApiUrl || !subscriberApiSecret) {
         console.error('[Error] Missing SUBSCRIBER_API_URL or SUBSCRIBER_API_SECRET');
         process.exit(1);
     }
-
-    const priorityEmails = parsePriorityEmails();
-    console.log(`[Priority] ${priorityEmails.length} priority email(s): ${priorityEmails.join(', ') || '(none)'}`);
-
-    // Fetch subscriber list from the CF Worker
-    let allSubscribers = [];
-    try {
-        allSubscribers = await fetchSubscribers(subscriberApiUrl, subscriberApiSecret);
-    } catch (err) {
-        console.warn(`[Subscribers] Could not fetch subscriber list: ${err.message}`);
-        console.warn('[Subscribers] Continuing with priority emails only');
+    if (!resendApiKey) {
+        console.error('[Error] Missing RESEND_API_KEY');
+        process.exit(1);
     }
-    console.log(`[Subscribers] ${allSubscribers.length} subscriber(s)`);
 
-    if (allSubscribers.length === 0 && priorityEmails.length === 0) {
-        console.log('[Done] No subscribers — skipping check.');
+    // 1. Fetch targets from the new endpoint.
+    const targetsResponse = await fetch(`${subscriberApiUrl}/api/admin/notification-targets`, {
+        headers: { Authorization: `Bearer ${subscriberApiSecret}` },
+    });
+    if (!targetsResponse.ok) {
+        console.error(`[Error] notification-targets returned ${targetsResponse.status}`);
+        process.exit(1);
+    }
+    const { targets } = await targetsResponse.json();
+    console.log(`[Targets] ${targets.length} users with non-empty campground lists`);
+
+    // 2. Filter by enabled + frequency.
+    const eligible = targets.filter((t) => isEligible(t, now, forceEmail));
+    console.log(`[Eligible] ${eligible.length} users due for a check this cycle`);
+    if (eligible.length === 0) {
+        console.log('[Done] Nothing to do');
         return;
     }
 
-    // Split subscribers into priority and regular
-    const prioritySet = new Set(priorityEmails);
-    const regularSubscribers = allSubscribers.filter(e => !prioritySet.has(e));
+    // 3. Build dedup'd fetch plan.
+    const plan = buildDedupedFetchPlan(eligible);
+    console.log(`[Plan] ${plan.length} unique (campground, month) fetches`);
 
-    // --- 1. Fetch and check for new availability (always runs first) ---
-    const campgrounds = buildCampgroundList(siteConfigurations);
-    console.log(`[Start] Checking ${campgrounds.length} campgrounds`);
+    // 4. Fetch each (campgroundId, month) from rec.gov ONCE; accumulate raw API results per campground.
+    const rawByCampground = await fetchDeduped(plan);
 
-    const results = await fetchAllCampgrounds(campgrounds, settings);
+    // 5. Per user: compute matches against their filters, diff against their state.
+    const updates = [];
+    for (const target of eligible) {
+        const userMatches = computeMatchesForUser(target, rawByCampground);
+        const priorState = target.notifierState ?? null;
+        const isFirstRun = priorState === null;
+        const { newMatches, nextState } = diffPerUser(userMatches, priorState);
 
-    const currentSignatures = buildSignatureSet(results);
-    console.log(`[Diff] ${currentSignatures.size} total match signatures`);
+        if (isFirstRun && !forceEmail) {
+            console.log(`[${target.email}] first run — seeding state, no email`);
+            updates.push({ email: target.email, state: nextState, lastNotifiedAt: now.toISOString() });
+            continue;
+        }
 
-    const previousState = loadState();
+        if (newMatches.length === 0) {
+            console.log(`[${target.email}] 0 new matches`);
+            updates.push({ email: target.email, state: nextState });
+            continue;
+        }
 
-    const forceEmail = process.env.FORCE_EMAIL === 'true';
-    if (previousState === null && !forceEmail) {
-        console.log('[First Run] No previous state found. Seeding state — no email sent.');
-        saveState(currentSignatures, new Set());
-        return;
+        console.log(`[${target.email}] ${newMatches.length} new match(es) — sending email`);
+        try {
+            await sendEmailToUser({ user: target, matches: newMatches, resendApiKey, siteUrl, apiSecret: subscriberApiSecret });
+            updates.push({ email: target.email, state: nextState, lastNotifiedAt: now.toISOString() });
+        } catch (err) {
+            console.error(`[${target.email}] email send failed: ${err.message}`);
+            updates.push({ email: target.email, state: nextState });
+        }
     }
-    if (forceEmail) {
-        console.log('[Force] FORCE_EMAIL is set — treating all current matches as new.');
-    }
 
-    const previousSignatures = previousState?.signatures ?? new Set();
-    const notifiedSignatures = previousState
-        ? pruneExpiredNotified(previousState.notifiedSignatures)
-        : new Set();
-
-    // Compare against both previous snapshot AND already-notified set.
-    // A match is "new" only if it wasn't in the last snapshot AND we haven't already emailed about it.
-    const allConfigs = Object.values(siteConfigurations).flat();
-    const compareAgainst = forceEmail ? new Set() : new Set([...previousSignatures, ...notifiedSignatures]);
-    const allNewMatches = findNewMatches(results, compareAgainst, allConfigs);
-    const notifyAllIds = new Set(allConfigs.filter(c => c.notifyAll).map(c => c.id));
-    const newMatches = allNewMatches.filter(
-        m => m.group === 'favorites' || notifyAllIds.has(m.campgroundId)
-    );
-    console.log(`[Diff] ${allNewMatches.length} new matches total, ${newMatches.length} after filtering (${notifyAllIds.size} campground(s) set to notifyAll)`);
-
-    // --- 2. Send priority emails immediately (most important) ---
-    if (newMatches.length > 0) {
-        // Mark these matches as notified so flapping won't re-trigger them
-        for (const m of newMatches) {
-            notifiedSignatures.add(`${m.campgroundId}:${m.siteId}:${m.match.from}:${m.match.to}:${m.match.nights}`);
-        }
-
-        if (priorityEmails.length > 0) {
-            console.log(`[Priority] Sending ${newMatches.length} matches to ${priorityEmails.length} priority subscriber(s)`);
-            for (const email of priorityEmails) {
-                try {
-                    const { subject, html, unsubscribeLink } = formatEmail(newMatches, {
-                        unsubscribeUrl: `${subscriberApiUrl}/api/unsubscribe`,
-                        email,
-                        apiSecret: subscriberApiSecret,
-                        siteUrl,
-                    });
-                    console.log(`[Email] Sending to ${email} (priority): "${subject}"`);
-                    await sendEmail(email, subject, html, resendApiKey, unsubscribeLink);
-                } catch (err) {
-                    console.error(`[Email] Failed to send to ${email} (priority): ${err.message}`);
-                }
-            }
-        }
-
-        // Queue for regular subscribers (delayed delivery)
-        if (regularSubscribers.length > 0) {
-            const existingPending = loadPending();
-            const merged = [...(existingPending?.matches || []), ...newMatches];
-            savePending(merged);
-        } else {
-            console.log('[Done] No regular subscribers to queue for.');
-        }
+    // 6. Push state back to the API.
+    const stateResponse = await fetch(`${subscriberApiUrl}/api/admin/notifier-state`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${subscriberApiSecret}`,
+        },
+        body: JSON.stringify({ updates }),
+    });
+    if (!stateResponse.ok) {
+        console.error(`[Warn] notifier-state PUT returned ${stateResponse.status}`);
     } else {
-        console.log('[Done] No new availability to notify about.');
+        const result = await stateResponse.json();
+        console.log(`[Done] Updated state for ${result.updated} user(s)`);
     }
-
-    // --- 3. Process pending queue for regular subscribers ---
-    const pending = loadPending();
-    if (pending?.matches?.length > 0 && pending.savedAt) {
-        const savedAt = new Date(pending.savedAt);
-        const ageMinutes = (Date.now() - savedAt.getTime()) / 60_000;
-        if (ageMinutes >= DELAY_MINUTES) {
-            console.log(`[Pending] ${pending.matches.length} matches are ${Math.round(ageMinutes)}min old — sending to ${regularSubscribers.length} regular subscriber(s)`);
-            let sendFailures = 0;
-            for (const email of regularSubscribers) {
-                try {
-                    const { subject, html, unsubscribeLink } = formatEmail(pending.matches, {
-                        unsubscribeUrl: `${subscriberApiUrl}/api/unsubscribe`,
-                        email,
-                        apiSecret: subscriberApiSecret,
-                        siteUrl,
-                    });
-                    console.log(`[Email] Sending to ${email}: "${subject}"`);
-                    await sendEmail(email, subject, html, resendApiKey, unsubscribeLink);
-                } catch (err) {
-                    sendFailures++;
-                    console.error(`[Email] Failed to send to ${email}: ${err.message}`);
-                }
-            }
-            // Clear pending even if some sends failed — don't retry stale matches forever
-            clearPending();
-            if (sendFailures > 0) {
-                console.warn(`[Pending] ${sendFailures} of ${regularSubscribers.length} subscriber sends failed`);
-            }
-        } else {
-            console.log(`[Pending] ${pending.matches.length} matches are ${Math.round(ageMinutes)}min old — waiting for ${DELAY_MINUTES}min delay`);
-        }
-    }
-
-    // Save current state for next run
-    saveState(currentSignatures, notifiedSignatures);
-};
+}
 
 main().catch((err) => {
     console.error('[Fatal]', err);
