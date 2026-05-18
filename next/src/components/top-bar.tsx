@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ThemeToggle } from "@/components/theme-toggle";
 import type { AuthState } from "@/hooks/use-auth";
 
 export interface TopBarMenuItem {
@@ -115,6 +116,7 @@ export function TopBar({
                         <Loader2 className="size-4 animate-spin text-muted-foreground" aria-hidden />
                     ) : null}
                     {actionItems}
+                    <ThemeToggle />
                     {auth !== undefined ? (
                         auth.isLoading ? (
                             <Skeleton className="size-8 rounded-full" />

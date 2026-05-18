@@ -8,11 +8,9 @@ import { CampgroundsGroups } from "@/components/campgrounds-groups";
 import { SiteConfigDialog } from "@/components/site-config-dialog";
 import SiteSettingsContext from "@/context/site-settings";
 import ProgressBarContext from "@/context/progress-bar";
-import { Button } from "@/components/ui/button";
 import { siteData } from "@/data/site-data";
 import { useUserCampgrounds } from "@/hooks/use-user-campgrounds";
 import { useCampgroundsData } from "@/hooks/use-campgrounds-data";
-import { useColorMode } from "@/hooks/use-color-mode";
 import { useAuth } from "@/hooks/use-auth";
 import { OnboardingModal } from "@/components/onboarding-modal";
 import { clearCampgroundCache } from "@/lib/recreation-gov";
@@ -118,14 +116,9 @@ export default function AppPage() {
                     />
 
                     <footer className="mt-8 border-t pt-4">
-                        <div className="space-y-3">
-                            <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
-                                <p className="text-sm text-muted-foreground">
-                                    {useMockData ? "Mock Recreation.gov data" : "Live Recreation.gov data"}
-                                </p>
-                                <ColorModeToggle />
-                            </div>
-                        </div>
+                        <p className="text-sm text-muted-foreground">
+                            {useMockData ? "Mock Recreation.gov data" : "Live Recreation.gov data"}
+                        </p>
                     </footer>
                 </main>
 
@@ -152,27 +145,5 @@ export default function AppPage() {
             curatorDisplayName="the curator's"
         />
         </>
-    );
-}
-
-function ColorModeToggle() {
-    const { mode, setMode } = useColorMode();
-    return (
-        <div className="inline-flex rounded-md border p-0.5">
-            <Button
-                variant={mode === "light" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setMode("light")}
-            >
-                Light
-            </Button>
-            <Button
-                variant={mode === "dark" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setMode("dark")}
-            >
-                Dark
-            </Button>
-        </div>
     );
 }
