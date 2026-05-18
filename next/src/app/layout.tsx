@@ -20,7 +20,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     return (
         <html lang="en" suppressHydrationWarning>
             <body className={`${inter.variable} font-sans`}>
-                <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+                <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
                     <TooltipProvider>
                         {children}
                         <Toaster richColors closeButton />

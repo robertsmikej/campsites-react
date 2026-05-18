@@ -114,8 +114,12 @@ export function CampsitesCalendar({ site, campground, showExcluded }: CampsitesC
             {/* One mini-calendar per month with data */}
             <div className="flex flex-wrap gap-2">
                 {months.map((monthIso) => {
-                    // Use the month ISO string as-is for goToPage
-                    const monthDate = new Date(monthIso + "T00:00:00Z");
+                    // Construct a local-time Date pointing at the 15th of the target month.
+                    // Using UTC midnight here would underflow to the previous month for any
+                    // negative-UTC user timezone (e.g., 2026-06-01T00:00:00Z renders in May
+                    // in US Pacific). Mid-month sidesteps that entirely.
+                    const [yearStr, monthStr] = monthIso.split("-");
+                    const monthDate = new Date(Number(yearStr), Number(monthStr) - 1, 15);
 
                     return (
                         <Calendar
