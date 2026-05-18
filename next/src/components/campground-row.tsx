@@ -130,9 +130,9 @@ export function CampgroundRow({
             {/* Side drawer */}
             <SheetContent
                 side="right"
-                className="w-full overflow-y-auto sm:max-w-2xl"
+                className="w-full overflow-y-auto px-6 data-[side=right]:sm:max-w-4xl sm:px-8"
             >
-                <SheetHeader>
+                <SheetHeader className="px-0">
                     <SheetTitle className="font-display text-xl">
                         {campground.name}
                     </SheetTitle>

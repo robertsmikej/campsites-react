@@ -42,6 +42,26 @@ function sortSites(sites: SiteAvailability[]): SiteAvailability[] {
     });
 }
 
+function groupSitesByRating(
+    sites: SiteAvailability[],
+    siteRatings: SiteRatingsMap | undefined,
+): { favorites: SiteAvailability[]; worthwhile: SiteAvailability[]; others: SiteAvailability[] } {
+    const favorites: SiteAvailability[] = [];
+    const worthwhile: SiteAvailability[] = [];
+    const others: SiteAvailability[] = [];
+    for (const site of sites) {
+        const rating = siteRatings?.[site.siteName];
+        if (rating === "favorite") favorites.push(site);
+        else if (rating === "worthwhile") worthwhile.push(site);
+        else others.push(site);
+    }
+    return {
+        favorites: sortSites(favorites),
+        worthwhile: sortSites(worthwhile),
+        others: sortSites(others),
+    };
+}
+
 // ---------------------------------------------------------------------------
 // Props
 // ---------------------------------------------------------------------------
@@ -72,11 +92,26 @@ export function CampgroundDetail({
     const allSites: SiteAvailability[] = Object.values(
         campground.siteAvailability ?? {},
     );
-    const sortedSites = sortSites(allSites);
+    const grouped = groupSitesByRating(allSites, siteRatings);
     const totalNights = countTotalNights(allSites);
     const sitesWithAvailability = allSites.filter(
         (s) => (s.matches?.length ?? 0) > 0,
     ).length;
+
+    const renderSiteRow = (site: SiteAvailability) => (
+        <SiteRow
+            key={site.siteId}
+            site={site}
+            campground={campground}
+            showExcluded={showExcluded}
+            rating={siteRatings ? (siteRatings[site.siteName] ?? "unrated") : undefined}
+            onRatingChange={
+                onRatingChange
+                    ? (newRating) => onRatingChange(site.siteName, newRating)
+                    : undefined
+            }
+        />
+    );
 
     return (
         <div className="flex flex-col gap-4 pb-6">
@@ -134,7 +169,7 @@ export function CampgroundDetail({
             </div>
 
             {/* Stats summary line */}
-            <div className="flex flex-col gap-1.5 px-1">
+            <div className="flex flex-col gap-1.5">
                 <div className="flex flex-wrap items-center gap-1.5">
                     <span className="text-sm text-muted-foreground">
                         {allSites.length} site{allSites.length !== 1 ? "s" : ""}
@@ -201,41 +236,41 @@ export function CampgroundDetail({
                 )}
             </div>
 
-            {/* Site list */}
-            <div
-                className={cn(
-                    "flex flex-col gap-1.5 px-1",
-                )}
-            >
-                {sortedSites.length === 0 ? (
+            {/* Grouped site list */}
+            <div className={cn("flex flex-col gap-4")}>
+                {allSites.length === 0 ? (
                     <p className="py-6 text-center text-sm text-muted-foreground">
                         No availability info loaded yet — try refreshing.
                     </p>
                 ) : (
                     <>
                         {sitesWithAvailability === 0 && (
-                            <p className="mb-1 text-sm text-muted-foreground">
-                                No open sites right now.
-                            </p>
+                            <p className="text-sm text-muted-foreground">No open sites right now.</p>
                         )}
-                        {sortedSites.map((site) => (
-                            <SiteRow
-                                key={site.siteId}
-                                site={site}
-                                campground={campground}
-                                showExcluded={showExcluded}
-                                rating={
-                                    siteRatings
-                                        ? (siteRatings[site.siteName] ?? "unrated")
-                                        : undefined
-                                }
-                                onRatingChange={
-                                    onRatingChange
-                                        ? (newRating) => onRatingChange(site.siteName, newRating)
-                                        : undefined
-                                }
-                            />
-                        ))}
+                        {grouped.favorites.length > 0 && (
+                            <section className="flex flex-col gap-1.5">
+                                <h3 className="text-[11px] font-semibold uppercase tracking-wide text-green-700 dark:text-green-400">
+                                    Favorites · {grouped.favorites.length}
+                                </h3>
+                                {grouped.favorites.map(renderSiteRow)}
+                            </section>
+                        )}
+                        {grouped.worthwhile.length > 0 && (
+                            <section className="flex flex-col gap-1.5">
+                                <h3 className="text-[11px] font-semibold uppercase tracking-wide text-yellow-700 dark:text-yellow-400">
+                                    Worthwhile · {grouped.worthwhile.length}
+                                </h3>
+                                {grouped.worthwhile.map(renderSiteRow)}
+                            </section>
+                        )}
+                        {grouped.others.length > 0 && (
+                            <section className="flex flex-col gap-1.5">
+                                <h3 className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                    Other sites · {grouped.others.length}
+                                </h3>
+                                {grouped.others.map(renderSiteRow)}
+                            </section>
+                        )}
                     </>
                 )}
             </div>
