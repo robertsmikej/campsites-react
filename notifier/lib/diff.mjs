@@ -6,19 +6,6 @@ export const generateSignature = (campgroundId, siteId, match) => {
     return `${campgroundId}:${siteId}:${match.from}:${match.to}:${match.nights}`;
 };
 
-// Build a Set of all match signatures from current results
-export const buildSignatureSet = (results) => {
-    const signatures = new Set();
-    for (const result of results) {
-        for (const [siteId, site] of Object.entries(result.sites)) {
-            for (const match of site.matches || []) {
-                signatures.add(generateSignature(result.campgroundId, siteId, match));
-            }
-        }
-    }
-    return signatures;
-};
-
 // Find matches in current results that weren't in the previous signature set
 export const findNewMatches = (currentResults, previousSignatures, siteConfigurations) => {
     const newMatches = [];

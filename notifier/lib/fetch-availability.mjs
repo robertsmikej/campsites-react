@@ -2,7 +2,6 @@
 // Uses native fetch (Node 18+) instead of axios. No dependencies required.
 
 const DELAY_BETWEEN_REQUESTS_MS = 50;
-const DELAY_BETWEEN_CAMPGROUNDS_MS = 2000;
 const IGNORE_TYPES = ['GROUP SHELTER NONELECTRIC', 'WALK TO', 'DAY USE'];
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -64,7 +63,7 @@ const filterNonOverlapping = (matches) => {
 };
 
 // Fetch a single month of availability data for a campground
-const fetchMonth = async (facilityId, month) => {
+export const fetchMonth = async (facilityId, month) => {
     const formattedMonth = `${month}-01T00%3A00%3A00.000Z`;
     const url = `https://www.recreation.gov/api/camps/availability/campground/${facilityId}/month?start_date=${formattedMonth}`;
     try {
@@ -84,7 +83,7 @@ const fetchMonth = async (facilityId, month) => {
 
 // Process API results for a single campground into site availability + matches
 // Adapted from processApiResults in fetchCampgroundData.jsx (lines 248-326)
-const processCampgroundResults = (apiResults, allDates, settings) => {
+export const processCampgroundResults = (apiResults, allDates, settings) => {
     const siteAvailability = {};
     const minStay = Math.min(...(settings.stayLengths || [2]));
     const maxStay = Math.max(...(settings.stayLengths || [5]));
@@ -147,52 +146,4 @@ const processCampgroundResults = (apiResults, allDates, settings) => {
     return siteAvailability;
 };
 
-// Fetch and process all availability for a single campground
-export const fetchCampground = async (campground, settings) => {
-    const startDate = campground.dates?.startDate || settings.startDate;
-    const endDate = campground.dates?.endDate || settings.endDate;
-    const allDates = getAllDatesInRange(startDate, endDate);
-    const allMonths = [...new Set(allDates.map((date) => date.slice(0, 7)))];
 
-    console.log(`[Check] ${campground.name} (${campground.id}): ${allMonths.length} months to fetch`);
-
-    const apiResults = [];
-    for (const month of allMonths) {
-        const result = await fetchMonth(campground.id, month);
-        apiResults.push(result);
-        await delay(DELAY_BETWEEN_REQUESTS_MS);
-    }
-
-    const effectiveSettings = {
-        ...settings,
-        ...(campground.validStartDays ? { validStartDays: campground.validStartDays } : {}),
-        ...(campground.stayLengths ? { stayLengths: campground.stayLengths } : {}),
-    };
-    const siteAvailability = processCampgroundResults(apiResults, allDates, effectiveSettings);
-    const totalMatches = Object.values(siteAvailability).reduce(
-        (sum, site) => sum + (site.matches?.length || 0),
-        0
-    );
-    console.log(`[Check] ${campground.name}: ${totalMatches} total matches`);
-
-    return {
-        campgroundId: campground.id,
-        campgroundName: campground.name,
-        campgroundArea: campground.area,
-        campgroundDescription: campground.description,
-        sites: siteAvailability,
-    };
-};
-
-// Fetch all campgrounds sequentially with delays between them
-export const fetchAllCampgrounds = async (campgrounds, settings) => {
-    const results = [];
-    for (let i = 0; i < campgrounds.length; i++) {
-        const result = await fetchCampground(campgrounds[i], settings);
-        results.push(result);
-        if (i < campgrounds.length - 1) {
-            await delay(DELAY_BETWEEN_CAMPGROUNDS_MS);
-        }
-    }
-    return results;
-};
