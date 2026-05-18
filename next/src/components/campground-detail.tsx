@@ -5,56 +5,40 @@ import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { getTypeBadge } from "@/components/campground/type-badge";
-import { checkForGroupedAvailability } from "@/lib/campground-utils";
-import type { ProcessedCampground } from "@/types/campground";
-
-import { Campground } from "./campground";
+import { SiteRow } from "@/components/site-row";
+import type { ProcessedCampground, SiteAvailability } from "@/types/campground";
 
 // ---------------------------------------------------------------------------
-// Helpers (mirrors campgrounds-groups.tsx)
+// Helpers
 // ---------------------------------------------------------------------------
 
 function getCampgroundUrl(campground: ProcessedCampground): string {
     return `https://www.recreation.gov/camping/campgrounds/${campground.id}`;
 }
 
-interface CampgroundStats {
-    totalMatches: number;
-    favoriteMatches: number;
-    totalExcluded: number;
+/** Total nights available across all sites (sum of StayMatch.nights). */
+function countTotalNights(sites: SiteAvailability[]): number {
+    return sites.reduce((acc, site) => {
+        return (
+            acc +
+            (site.matches?.reduce((a, m) => {
+                if (typeof m.nights === "number") return a + m.nights;
+                const from = new Date(m.from + "T00:00:00");
+                const to = new Date(m.to + "T00:00:00");
+                return a + Math.max(0, Math.round((to.getTime() - from.getTime()) / 86_400_000));
+            }, 0) ?? 0)
+        );
+    }, 0);
 }
 
-function getCampgroundStats(campground: ProcessedCampground): CampgroundStats {
-    const grouped =
-        campground.sitesGroupedByFavorites ??
-        ({} as NonNullable<typeof campground.sitesGroupedByFavorites>);
-    let totalMatches = 0;
-    let favoriteMatches = 0;
-    let totalExcluded = 0;
-    (
-        Object.entries(grouped) as [
-            string,
-            ProcessedCampground["sitesGroupedByFavorites"] extends Record<
-                string,
-                infer V
-            >
-                ? V
-                : never,
-        ][]
-    ).forEach(([label, sites]) => {
-        if (!Array.isArray(sites)) return;
-        (
-            sites as Array<{ matches?: unknown[]; excludedMatches?: unknown[] }>
-        ).forEach((site) => {
-            const matches = site.matches ?? [];
-            totalMatches += matches.length;
-            if (label === "Favorites") {
-                favoriteMatches += matches.length;
-            }
-            totalExcluded += site.excludedMatches?.length ?? 0;
-        });
+/** Sort sites: those with availability first (by nights desc), then the rest by site name. */
+function sortSites(sites: SiteAvailability[]): SiteAvailability[] {
+    return [...sites].sort((a, b) => {
+        const aNights = countTotalNights([a]);
+        const bNights = countTotalNights([b]);
+        if (aNights !== bNights) return bNights - aNights;
+        return a.siteName.localeCompare(b.siteName, undefined, { numeric: true });
     });
-    return { totalMatches, favoriteMatches, totalExcluded };
 }
 
 // ---------------------------------------------------------------------------
@@ -75,19 +59,25 @@ interface CampgroundDetailProps {
 export function CampgroundDetail({
     campground,
     showExcluded,
-    settings,
     imageUrl,
 }: CampgroundDetailProps) {
-    const hasCampgroundAvailability = checkForGroupedAvailability(campground);
-    const stats = getCampgroundStats(campground);
     const badge = getTypeBadge(campground);
     const TypeIcon = badge.Icon;
-    const viewMode = settings?.views?.type ?? "calendar";
+
+    const allSites: SiteAvailability[] = Object.values(
+        campground.siteAvailability ?? {},
+    );
+    const sortedSites = sortSites(allSites);
+    const totalNights = countTotalNights(allSites);
+    const sitesWithAvailability = allSites.filter(
+        (s) => (s.matches?.length ?? 0) > 0,
+    ).length;
 
     return (
         <div className="flex flex-col gap-4 pb-6">
             {/* Hero image */}
             <div className="relative aspect-[3/1] w-full overflow-hidden rounded-lg bg-muted sm:aspect-[5/1]">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                     src={imageUrl}
                     alt=""
@@ -138,57 +128,27 @@ export function CampgroundDetail({
                 </div>
             </div>
 
-            {/* Stats / info row */}
+            {/* Stats summary line */}
             <div className="flex flex-col gap-1.5 px-1">
-                {campground.id && (
-                    <span className="text-[0.65rem] leading-tight tracking-wide text-muted-foreground">
-                        ID: {campground.id}
-                    </span>
-                )}
-                {campground.description && (
-                    <p className="text-sm text-muted-foreground">
-                        {campground.description}
-                    </p>
-                )}
-
-                {/* Status chips */}
                 <div className="flex flex-wrap items-center gap-1.5">
-                    {!hasCampgroundAvailability ? (
-                        <Badge
-                            variant="secondary"
-                            className="shrink-0 text-muted-foreground"
-                        >
-                            No availability
-                        </Badge>
-                    ) : null}
+                    <span className="text-sm text-muted-foreground">
+                        {allSites.length} site{allSites.length !== 1 ? "s" : ""}
+                        {totalNights > 0 ? (
+                            <>
+                                {" · "}
+                                <span className="font-medium text-foreground">
+                                    {totalNights} night
+                                    {totalNights !== 1 ? "s" : ""} open
+                                </span>
+                            </>
+                        ) : null}
+                    </span>
                     {campground.notifyAll && (
                         <Badge
                             variant="outline"
                             className="shrink-0 border-blue-400 text-blue-600"
                         >
                             Notify all
-                        </Badge>
-                    )}
-                </div>
-
-                {/* Stats chips */}
-                <div className="flex flex-wrap items-center gap-1.5">
-                    <Badge variant="secondary">
-                        Total: {stats.totalMatches}
-                    </Badge>
-                    <Badge className="border-primary/30 bg-primary/10 text-primary hover:bg-primary/10">
-                        Favorites: {stats.favoriteMatches}
-                    </Badge>
-                    {stats.totalExcluded > 0 && (
-                        <Badge
-                            variant={showExcluded ? "default" : "outline"}
-                            className={cn(
-                                showExcluded
-                                    ? "bg-accent text-accent-foreground hover:bg-accent/90"
-                                    : "border-accent/50 text-accent",
-                            )}
-                        >
-                            {stats.totalExcluded} excluded
                         </Badge>
                     )}
                     {campground.validStartDays &&
@@ -229,41 +189,40 @@ export function CampgroundDetail({
                         </Tooltip>
                     )}
                 </div>
-
-                {/* Calendar legend */}
-                {viewMode === "calendar" && (
-                    <div className="flex flex-wrap items-center gap-4 pt-1">
-                        <div className="flex items-center gap-1.5">
-                            <span className="size-3 rounded-full bg-primary" />
-                            <span className="text-xs text-muted-foreground">
-                                Matches filters
-                            </span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                            <span className="size-3 rounded-full bg-primary/20 ring-1 ring-primary/30" />
-                            <span className="text-xs text-muted-foreground">
-                                Available (wrong start day)
-                            </span>
-                        </div>
-                        {showExcluded && (
-                            <div className="flex items-center gap-1.5">
-                                <span className="size-3 rounded-full bg-accent" />
-                                <span className="text-xs text-muted-foreground">
-                                    Excluded
-                                </span>
-                            </div>
-                        )}
-                    </div>
+                {campground.description && (
+                    <p className="text-sm text-muted-foreground">
+                        {campground.description}
+                    </p>
                 )}
             </div>
 
-            {/* Site accordion + calendars — reuse the existing Campground component */}
-            <div className="px-1">
-                <Campground
-                    campground={campground}
-                    viewMode={viewMode}
-                    showExcluded={showExcluded}
-                />
+            {/* Site list */}
+            <div
+                className={cn(
+                    "flex flex-col gap-1.5 px-1",
+                )}
+            >
+                {sortedSites.length === 0 ? (
+                    <p className="py-6 text-center text-sm text-muted-foreground">
+                        No availability info loaded yet — try refreshing.
+                    </p>
+                ) : (
+                    <>
+                        {sitesWithAvailability === 0 && (
+                            <p className="mb-1 text-sm text-muted-foreground">
+                                No open sites right now.
+                            </p>
+                        )}
+                        {sortedSites.map((site) => (
+                            <SiteRow
+                                key={site.siteId}
+                                site={site}
+                                campground={campground}
+                                showExcluded={showExcluded}
+                            />
+                        ))}
+                    </>
+                )}
             </div>
         </div>
     );
