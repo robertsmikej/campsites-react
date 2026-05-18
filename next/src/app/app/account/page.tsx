@@ -9,6 +9,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -22,10 +30,17 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useAuth } from "@/hooks/use-auth";
 
+type Frequency = 15 | 60 | 240;
+
+const DEFAULT_NOTIFICATIONS = { enabled: true, frequencyMinutes: 15 satisfies Frequency };
+
 export default function AccountPage() {
     const auth = useAuth();
     const [name, setName] = useState("");
     const [saving, setSaving] = useState(false);
+    const [notifEnabled, setNotifEnabled] = useState<boolean>(true);
+    const [notifFrequency, setNotifFrequency] = useState<Frequency>(15);
+    const [savingNotif, setSavingNotif] = useState(false);
 
     useEffect(() => {
         if (!auth.isLoading && !auth.user) {
@@ -36,6 +51,12 @@ export default function AccountPage() {
     useEffect(() => {
         if (auth.user?.name) setName(auth.user.name);
     }, [auth.user?.name]);
+
+    useEffect(() => {
+        const n = auth.user?.notifications ?? DEFAULT_NOTIFICATIONS;
+        setNotifEnabled(n.enabled);
+        setNotifFrequency(n.frequencyMinutes as Frequency);
+    }, [auth.user?.notifications?.enabled, auth.user?.notifications?.frequencyMinutes]);
 
     if (auth.isLoading || !auth.user) {
         return (
@@ -66,6 +87,34 @@ export default function AccountPage() {
             await auth.refresh();
         } finally {
             setSaving(false);
+        }
+    }
+
+    const currentNotifEnabled = auth.user.notifications?.enabled ?? DEFAULT_NOTIFICATIONS.enabled;
+    const currentNotifFrequency = auth.user.notifications?.frequencyMinutes ?? DEFAULT_NOTIFICATIONS.frequencyMinutes;
+    const notifDirty = notifEnabled !== currentNotifEnabled || notifFrequency !== currentNotifFrequency;
+
+    async function saveNotifications() {
+        if (!notifDirty) return;
+        setSavingNotif(true);
+        try {
+            const response = await fetch("/api/me", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    notifications: { enabled: notifEnabled, frequencyMinutes: notifFrequency },
+                }),
+                credentials: "include",
+            });
+            if (!response.ok) {
+                const body = (await response.json().catch(() => ({}))) as { error?: string };
+                toast.error(body.error ?? `Save failed (${response.status})`);
+                return;
+            }
+            toast.success("Notifications saved");
+            await auth.refresh();
+        } finally {
+            setSavingNotif(false);
         }
     }
 
@@ -135,6 +184,54 @@ export default function AccountPage() {
                         </Button>
                         <Button variant="outline" onClick={signOut}>
                             Sign out
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>Notifications</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-5">
+                    <div className="flex items-start gap-3">
+                        <Switch
+                            id="notif-enabled"
+                            checked={notifEnabled}
+                            onCheckedChange={setNotifEnabled}
+                        />
+                        <div className="flex flex-col">
+                            <Label htmlFor="notif-enabled" className="text-sm font-medium">
+                                Email me when new sites open up
+                            </Label>
+                            <p className="text-xs text-muted-foreground">
+                                We&apos;ll send one email per cycle with any new matches for your watchlist.
+                            </p>
+                        </div>
+                    </div>
+                    <div className="space-y-1.5">
+                        <Label htmlFor="notif-frequency">Check frequency</Label>
+                        <Select
+                            value={String(notifFrequency)}
+                            onValueChange={(v) => setNotifFrequency(Number(v) as Frequency)}
+                            disabled={!notifEnabled}
+                        >
+                            <SelectTrigger id="notif-frequency" className="max-w-xs">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="15">Every 15 minutes</SelectItem>
+                                <SelectItem value="60">Every hour</SelectItem>
+                                <SelectItem value="240">Every 4 hours</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <p className="text-xs text-muted-foreground">
+                            The notifier runs every 15 minutes. Less frequent means you&apos;ll be skipped on intermediate runs.
+                        </p>
+                    </div>
+                    <div>
+                        <Button onClick={saveNotifications} disabled={!notifDirty || savingNotif}>
+                            {savingNotif ? "Saving…" : "Save notifications"}
                         </Button>
                     </div>
                 </CardContent>
