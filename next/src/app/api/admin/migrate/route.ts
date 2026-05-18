@@ -8,6 +8,8 @@
 // repeatedly: it's idempotent and skips entries already present.
 
 import { getEnv, getKv } from "@/lib/cloudflare";
+import { readSession } from "@/lib/sessions";
+import { getUserProfile } from "@/lib/users";
 import { jsonResponse, withCors } from "@/lib/responses";
 import { campgroundCatalog } from "@/data/campground-catalog";
 import { defaultCampgroundConfigurations } from "@/data/site-configurations";
@@ -31,13 +33,20 @@ function mergeCatalogEntry(id: string): Campground | null {
     };
 }
 
-export async function POST(request: Request): Promise<Response> {
+async function isAuthorized(request: Request): Promise<boolean> {
     const env = getEnv();
-    if (!env.API_SECRET) {
-        return withCors(jsonResponse({ error: "Server misconfigured: API_SECRET not set" }, 500));
-    }
+    // Accept Bearer API_SECRET (notifier-style) OR a signed-in curator session.
     const auth = request.headers.get("Authorization");
-    if (!auth || auth !== `Bearer ${env.API_SECRET}`) {
+    if (env.API_SECRET && auth === `Bearer ${env.API_SECRET}`) return true;
+
+    const session = await readSession(request);
+    if (!session) return false;
+    const profile = await getUserProfile(session.email);
+    return !!profile?.roles?.includes("curator");
+}
+
+export async function POST(request: Request): Promise<Response> {
+    if (!(await isAuthorized(request))) {
         return withCors(jsonResponse({ error: "Unauthorized" }, 401));
     }
 
