@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ExternalLink, Filter } from "lucide-react";
+import { Filter, Map as MapIcon, Satellite } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -9,6 +9,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { cn } from "@/lib/utils";
 import { getTypeBadge } from "@/components/campground/type-badge";
 import { SiteRow } from "@/components/site-row";
+import { useCampgroundDetails } from "@/hooks/use-campground-details";
 import type { SiteRatingsMap } from "@/components/availability-strip";
 import type { ProcessedCampground, SiteAvailability, GlobalSettings } from "@/types/campground";
 
@@ -142,6 +143,7 @@ export function CampgroundDetail({
 }: CampgroundDetailProps) {
     const badge = getTypeBadge(campground);
     const TypeIcon = badge.Icon;
+    const details = useCampgroundDetails(campground.id);
 
     // Per-drawer "show without filters" toggle — additive on top of the global toggle
     const [localShowExcluded, setLocalShowExcluded] = useState(false);
@@ -200,7 +202,7 @@ export function CampgroundDetail({
                     </span>
                 </div>
 
-                {/* name + area overlaid bottom-left */}
+                {/* name + area overlaid bottom-left, map buttons bottom-right */}
                 <div className="absolute inset-x-3 bottom-2 flex items-end justify-between gap-2">
                     <div className="min-w-0 text-white">
                         <h2 className="font-display truncate text-xl font-semibold tracking-tight drop-shadow-sm">
@@ -212,19 +214,38 @@ export function CampgroundDetail({
                             </p>
                         ) : null}
                     </div>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <a
-                                href={getCampgroundUrl(campground)}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex text-white/80 hover:text-white"
-                            >
-                                <ExternalLink className="size-3.5" />
-                            </a>
-                        </TooltipTrigger>
-                        <TooltipContent>View on recreation.gov</TooltipContent>
-                    </Tooltip>
+                    <div className="flex items-center gap-1.5">
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <a
+                                    href={getCampgroundUrl(campground)}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 rounded-full bg-background/80 px-2.5 py-1 text-xs font-medium backdrop-blur-md hover:bg-background"
+                                >
+                                    <MapIcon className="size-3.5" aria-hidden />
+                                    Layout
+                                </a>
+                            </TooltipTrigger>
+                            <TooltipContent>Campground layout on recreation.gov</TooltipContent>
+                        </Tooltip>
+                        {details?.latitude != null && details?.longitude != null && (
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <a
+                                        href={`https://www.google.com/maps/@${details.latitude},${details.longitude},17z/data=!3m1!1e3`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-1 rounded-full bg-background/80 px-2.5 py-1 text-xs font-medium backdrop-blur-md hover:bg-background"
+                                    >
+                                        <Satellite className="size-3.5" aria-hidden />
+                                        Satellite
+                                    </a>
+                                </TooltipTrigger>
+                                <TooltipContent>Google Maps satellite view</TooltipContent>
+                            </Tooltip>
+                        )}
+                    </div>
                 </div>
             </div>
 

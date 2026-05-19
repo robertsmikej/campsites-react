@@ -14,8 +14,11 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { AvailabilityStrip } from "@/components/availability-strip";
 import { CampgroundDetail } from "@/components/campground-detail";
+import { useCampgroundDetails } from "@/hooks/use-campground-details";
 import type { SiteRatingsMap } from "@/components/availability-strip";
 import type { ProcessedCampground, GlobalSettings } from "@/types/campground";
+
+const DEFAULT_IMAGE = "/images/sites/bg_default.jpg";
 
 interface CampgroundRowProps {
     campground: ProcessedCampground;
@@ -41,6 +44,13 @@ export function CampgroundRow({
     onRatingChange,
 }: CampgroundRowProps) {
     const [open, setOpen] = useState(false);
+
+    // When the local image is the generic fallback, try to use the
+    // recreation.gov preview image fetched server-side and cached in KV.
+    const isLocalDefault = imageUrl === DEFAULT_IMAGE;
+    const details = useCampgroundDetails(isLocalDefault ? campground.id : undefined);
+    const effectiveImageUrl =
+        isLocalDefault && details?.previewImageUrl ? details.previewImageUrl : imageUrl;
 
     // Count total available stays (match ranges, not excluded)
     const totalAvailable = Object.values(
@@ -69,7 +79,7 @@ export function CampgroundRow({
                 {/* Thumbnail */}
                 <div
                     className="size-12 shrink-0 overflow-hidden rounded-md bg-muted bg-cover bg-center"
-                    style={{ backgroundImage: `url(${imageUrl})` }}
+                    style={{ backgroundImage: `url(${effectiveImageUrl})` }}
                     aria-hidden
                 />
 
@@ -144,7 +154,7 @@ export function CampgroundRow({
                     showExcluded={showExcluded}
                     settings={settings}
                     globalSettings={globalSettings}
-                    imageUrl={imageUrl}
+                    imageUrl={effectiveImageUrl}
                     siteRatings={siteRatings}
                     onRatingChange={onRatingChange}
                 />
