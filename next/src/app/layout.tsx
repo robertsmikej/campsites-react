@@ -1,19 +1,14 @@
 import type { Metadata } from "next";
-import { Fraunces, Inter_Tight } from "next/font/google";
+import { GeistSans } from "geist/font/sans";
+import { Inter } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
-const inter = Inter_Tight({
+const inter = Inter({
     variable: "--font-sans",
     subsets: ["latin"],
-});
-
-const fraunces = Fraunces({
-    variable: "--font-serif",
-    subsets: ["latin"],
-    axes: ["opsz", "SOFT", "WONK"],
 });
 
 export const metadata: Metadata = {
@@ -27,7 +22,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
     return (
         <html lang="en" suppressHydrationWarning>
-            <body className={`${inter.variable} ${fraunces.variable} font-sans antialiased`}>
+            <body className={`${inter.variable} ${GeistSans.variable} font-sans antialiased`}>
                 <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
                     <TooltipProvider>
                         {children}

@@ -6,8 +6,8 @@
 
 /* Base font wiring */
 :root {
-    --font-sans: var(--font-inter-tight), var(--font-sans), ui-sans-serif, system-ui;
-    --font-serif: var(--font-fraunces), var(--font-serif), ui-serif, Georgia, serif;
+    --font-sans: var(--font-inter), ui-sans-serif, system-ui;
+    --font-display: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
 }
 
 /* Light palette (default) */
@@ -152,8 +152,8 @@
     --radius-4xl: calc(var(--radius) * 2.6);
 
     --font-sans: var(--font-sans);
-    --font-serif: var(--font-serif);
-    --font-heading: var(--font-serif);
+    --font-display: var(--font-display);
+    --font-heading: var(--font-display);
 }
 
 @layer base {
@@ -162,10 +162,15 @@
 
     html { @apply font-sans; }
 
-    /* Headings use the serif by default; consumers can override with `font-sans` */
+    /* Headings use Geist Sans; consumers can override with `font-sans` */
     h1, h2, h3, .font-display {
-        font-family: var(--font-serif);
+        font-family: var(--font-display);
         letter-spacing: -0.02em;
+        font-weight: 600;
+    }
+
+    body {
+        font-feature-settings: "cv11", "ss01";
     }
 }
 
