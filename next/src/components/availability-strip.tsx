@@ -11,6 +11,10 @@ interface AvailabilityStripProps {
     campground?: ProcessedCampground;
     site?: SiteAvailability;
     days?: number; // default 60
+    /** Explicit window start — overrides `days` when provided (used with date chips). */
+    windowStart?: Date;
+    /** Explicit window end — used alongside `windowStart`. */
+    windowEnd?: Date;
     showExcluded: boolean;
     /** When provided in campground mode, colors each day by the best tier of any open site. */
     siteRatings?: SiteRatingsMap;
@@ -33,14 +37,32 @@ function toLocalIso(d: Date): string {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-function buildWindowBounds(days: number): { today: Date; firstIso: string; lastIso: string } {
+function buildWindowBounds(
+    days: number,
+    windowStart?: Date,
+    windowEnd?: Date,
+): { today: Date; firstIso: string; lastIso: string; effectiveDays: number } {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+
+    if (windowStart && windowEnd) {
+        const start = new Date(windowStart);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(windowEnd);
+        end.setHours(0, 0, 0, 0);
+        const firstIso = toLocalIso(start);
+        const lastIso = toLocalIso(end);
+        // Calculate effectiveDays for the loop below
+        const msPerDay = 1000 * 60 * 60 * 24;
+        const effectiveDays = Math.max(1, Math.round((end.getTime() - start.getTime()) / msPerDay) + 1);
+        return { today: start, firstIso, lastIso, effectiveDays };
+    }
+
     const firstIso = toLocalIso(today);
     const lastDate = new Date(today);
     lastDate.setDate(today.getDate() + days - 1);
     const lastIso = toLocalIso(lastDate);
-    return { today, firstIso, lastIso };
+    return { today, firstIso, lastIso, effectiveDays: days };
 }
 
 function accumulateMatchDays(
@@ -67,6 +89,8 @@ function buildStripForCampground(
     campground: ProcessedCampground,
     days: number,
     siteRatings?: SiteRatingsMap,
+    windowStart?: Date,
+    windowEnd?: Date,
 ): DayCell[] {
     // Pre-compute per-date counts across all sites.
     // SiteAvailability.matches: StayMatch[] — each match covers a range [from, to).
@@ -74,7 +98,7 @@ function buildStripForCampground(
     // We count a date as "available" if it falls within a match range (from <= date < to).
     // We count it as "excluded" if it falls within an excludedMatch range.
 
-    const { today, firstIso, lastIso } = buildWindowBounds(days);
+    const { today, firstIso, lastIso, effectiveDays } = buildWindowBounds(days, windowStart, windowEnd);
     const availableMap = new Map<string, number>();
     const excludedMap = new Map<string, number>();
     // Per-day best tier tracking (only used when siteRatings is provided)
@@ -109,7 +133,7 @@ function buildStripForCampground(
     }
 
     const cells: DayCell[] = [];
-    for (let i = 0; i < days; i++) {
+    for (let i = 0; i < effectiveDays; i++) {
         const d = new Date(today);
         d.setDate(today.getDate() + i);
         const iso = toLocalIso(d);
@@ -131,9 +155,11 @@ function buildStripForCampground(
 function buildStripForSite(
     site: SiteAvailability,
     days: number,
+    windowStart?: Date,
+    windowEnd?: Date,
 ): DayCell[] {
     // For a single site, counts are binary: 0 or 1 per day.
-    const { today, firstIso, lastIso } = buildWindowBounds(days);
+    const { today, firstIso, lastIso, effectiveDays } = buildWindowBounds(days, windowStart, windowEnd);
     const availableMap = new Map<string, number>();
     const excludedMap = new Map<string, number>();
 
@@ -141,7 +167,7 @@ function buildStripForSite(
     accumulateMatchDays(site.excludedMatches ?? [], firstIso, lastIso, excludedMap);
 
     const cells: DayCell[] = [];
-    for (let i = 0; i < days; i++) {
+    for (let i = 0; i < effectiveDays; i++) {
         const d = new Date(today);
         d.setDate(today.getDate() + i);
         const iso = toLocalIso(d);
@@ -170,15 +196,17 @@ export function AvailabilityStrip({
     campground,
     site,
     days = 60,
+    windowStart,
+    windowEnd,
     showExcluded,
     siteRatings,
     className,
 }: AvailabilityStripProps) {
     const cells = useMemo(() => {
-        if (site) return buildStripForSite(site, days);
-        if (campground) return buildStripForCampground(campground, days, siteRatings);
+        if (site) return buildStripForSite(site, days, windowStart, windowEnd);
+        if (campground) return buildStripForCampground(campground, days, siteRatings, windowStart, windowEnd);
         return [];
-    }, [campground, site, days, siteRatings]);
+    }, [campground, site, days, siteRatings, windowStart, windowEnd]);
 
     // Normalize intensity against the max available count
     const maxAvail = Math.max(1, ...cells.map((c) => c.availableCount));
@@ -189,7 +217,7 @@ export function AvailabilityStrip({
                 "flex h-8 items-end gap-px overflow-hidden rounded-md bg-muted/40 p-1",
                 className,
             )}
-            aria-label={`Availability over next ${days} days`}
+            aria-label={`Availability over ${windowStart && windowEnd ? `selected date range` : `next ${days} days`}`}
         >
             {cells.map((cell) => {
                 const isWeekStart =

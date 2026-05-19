@@ -20,6 +20,11 @@ import type { ProcessedCampground, GlobalSettings } from "@/types/campground";
 
 const DEFAULT_IMAGE = "/images/sites/bg_default.jpg";
 
+// Format a local date as YYYY-MM-DD without timezone drift.
+function toLocalIso(d: Date): string {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 interface CampgroundRowProps {
     campground: ProcessedCampground;
     showExcluded: boolean;
@@ -31,6 +36,10 @@ interface CampgroundRowProps {
     siteRatings?: SiteRatingsMap;
     onRatingChange?: (siteName: string, newRating: "favorite" | "worthwhile" | "unrated") => void;
     onEditSettings?: () => void;
+    density?: "comfortable" | "compact";
+    /** Narrows the availability strip and open-badge count to this window. */
+    windowStart?: Date;
+    windowEnd?: Date;
 }
 
 export function CampgroundRow({
@@ -44,6 +53,9 @@ export function CampgroundRow({
     siteRatings,
     onRatingChange,
     onEditSettings,
+    density = "comfortable",
+    windowStart,
+    windowEnd,
 }: CampgroundRowProps) {
     const [open, setOpen] = useState(false);
 
@@ -54,18 +66,32 @@ export function CampgroundRow({
     const effectiveImageUrl =
         isLocalDefault && details?.previewImageUrl ? details.previewImageUrl : imageUrl;
 
-    // Count total available stays (match ranges, not excluded)
+    const isCompact = density === "compact";
+
+    // Count available stays within the active window (or all if no window).
     const totalAvailable = Object.values(
         campground.siteAvailability ?? {},
-    ).reduce((acc, site) => acc + (site.matches?.length ?? 0), 0);
+    ).reduce((acc, site) => {
+        if (!windowStart || !windowEnd) {
+            return acc + (site.matches?.length ?? 0);
+        }
+        // Count only matches whose range overlaps the window
+        const winStartIso = toLocalIso(windowStart);
+        const winEndIso = toLocalIso(windowEnd);
+        const count = (site.matches ?? []).filter(
+            (m) => m.from <= winEndIso && m.to > winStartIso,
+        ).length;
+        return acc + count;
+    }, 0);
 
     return (
         <Sheet open={open} onOpenChange={setOpen}>
             {/* Row — clicking anywhere opens the drawer */}
             <div
                 className={cn(
-                    "group flex items-center gap-3 rounded-lg border bg-card p-3 transition-all",
+                    "group flex items-center gap-3 rounded-lg border bg-card transition-all",
                     "cursor-pointer hover:border-primary/30 hover:shadow-sm",
+                    isCompact ? "p-2" : "p-3",
                 )}
                 role="button"
                 tabIndex={0}
@@ -80,7 +106,10 @@ export function CampgroundRow({
             >
                 {/* Thumbnail */}
                 <div
-                    className="size-12 shrink-0 overflow-hidden rounded-md bg-muted bg-cover bg-center"
+                    className={cn(
+                        "shrink-0 overflow-hidden rounded-md bg-muted bg-cover bg-center",
+                        isCompact ? "size-9" : "size-12",
+                    )}
                     style={{ backgroundImage: `url(${effectiveImageUrl})` }}
                     aria-hidden
                 />
@@ -88,25 +117,30 @@ export function CampgroundRow({
                 {/* Name + area */}
                 <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                        <h3 className="truncate font-display text-base font-semibold leading-tight">
+                        <h3 className={cn(
+                            "truncate font-display font-semibold leading-tight",
+                            isCompact ? "text-sm" : "text-base",
+                        )}>
                             {campground.name}
                         </h3>
                         {totalAvailable === 0 ? (
                             <Badge
                                 variant="secondary"
-                                className="shrink-0 text-[10px]"
+                                className={cn("shrink-0", isCompact ? "text-[9px]" : "text-[10px]")}
                             >
                                 Nothing open
                             </Badge>
                         ) : (
-                            <Badge className="shrink-0 bg-primary text-primary-foreground text-[10px]">
+                            <Badge className={cn("shrink-0 bg-primary text-primary-foreground", isCompact ? "text-[9px]" : "text-[10px]")}>
                                 {totalAvailable} open
                             </Badge>
                         )}
                     </div>
-                    <p className="truncate text-xs text-muted-foreground">
-                        {campground.area ?? ""}
-                    </p>
+                    {!isCompact && (
+                        <p className="truncate text-xs text-muted-foreground">
+                            {campground.area ?? ""}
+                        </p>
+                    )}
                 </div>
 
                 {/* Availability strip — hidden on mobile */}
@@ -115,6 +149,9 @@ export function CampgroundRow({
                         campground={campground}
                         showExcluded={showExcluded}
                         siteRatings={siteRatings}
+                        windowStart={windowStart}
+                        windowEnd={windowEnd}
+                        className={isCompact ? "h-6" : "h-8"}
                     />
                 </div>
 
