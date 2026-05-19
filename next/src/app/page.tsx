@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { Tent, CalendarRange, Mail, ArrowRight, MapPin, ChevronRight } from "lucide-react";
+import { Tent, CalendarRange, Mail, MapPin, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { HomeHeroCta } from "@/components/home-hero-cta";
 
 export default function HomePage() {
     return (
@@ -50,17 +51,7 @@ function Hero() {
                     CampWatch checks recreation.gov every 5 minutes and emails you the moment a site
                     you actually want comes available.
                 </p>
-                <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                    <Button size="lg" asChild>
-                        <Link href="/auth/google/start?returnTo=/app">
-                            Sign in with Google
-                            <ArrowRight className="ml-1 size-4" />
-                        </Link>
-                    </Button>
-                    <Button variant="outline" size="lg" asChild>
-                        <Link href="/discover">Browse picks</Link>
-                    </Button>
-                </div>
+                <HomeHeroCta />
             </div>
         </section>
     );
