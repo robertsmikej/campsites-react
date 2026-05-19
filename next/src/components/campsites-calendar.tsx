@@ -185,7 +185,7 @@ export function CampsitesCalendar({ site, campground, showExcluded }: CampsitesC
                     !open && setPhotoPreview({ open: false, photos: [], siteName: "" })
                 }
             >
-                <DialogContent>
+                <DialogContent className="max-h-[90vh] w-[95vw] max-w-[95vw] overflow-y-auto sm:max-w-4xl">
                     <DialogHeader>
                         <DialogTitle>{photoPreview.siteName}</DialogTitle>
                     </DialogHeader>

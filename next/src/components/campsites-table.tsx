@@ -251,7 +251,7 @@ export function CampsitesTable({ data, campground, showExcluded }: CampsitesTabl
                     !open && setPhotoPreview({ open: false, photos: [], siteName: "" })
                 }
             >
-                <DialogContent className="max-w-sm">
+                <DialogContent className="max-h-[90vh] w-[95vw] max-w-[95vw] overflow-y-auto sm:max-w-3xl">
                     <DialogHeader>
                         <DialogTitle>{photoPreview.siteName}</DialogTitle>
                     </DialogHeader>

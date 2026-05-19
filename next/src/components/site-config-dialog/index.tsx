@@ -278,7 +278,7 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
 
     return (
         <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-            <DialogContent className="flex max-h-[90vh] max-w-3xl flex-col overflow-hidden">
+            <DialogContent className="flex max-h-[90vh] w-[95vw] max-w-[95vw] flex-col overflow-hidden sm:max-w-6xl">
                 <DialogHeader>
                     <DialogTitle>Configure Campgrounds</DialogTitle>
                 </DialogHeader>

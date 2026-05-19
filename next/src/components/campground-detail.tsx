@@ -276,7 +276,7 @@ export function CampgroundDetail({
 
             {/* Map modal */}
             <Dialog open={mapOpen} onOpenChange={setMapOpen}>
-                <DialogContent className="max-w-3xl">
+                <DialogContent className="max-h-[90vh] w-[95vw] max-w-[95vw] overflow-y-auto sm:max-w-5xl">
                     <DialogHeader>
                         <DialogTitle>{campground.name} — campground map</DialogTitle>
                     </DialogHeader>
