@@ -103,13 +103,19 @@ export function TopBar({
     return (
         <header className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="container mx-auto flex h-16 items-center gap-3 px-4">
-                {renderLogo()}
-                <div className="flex flex-col">
-                    <h1 className="font-display text-lg font-semibold leading-none tracking-tight">{title}</h1>
-                    {subtitle ? (
-                        <p className="text-xs text-muted-foreground">{subtitle}</p>
-                    ) : null}
-                </div>
+                <Link
+                    href="/"
+                    aria-label={`${title} — home`}
+                    className="flex items-center gap-3 rounded-md outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                    {renderLogo()}
+                    <div className="flex flex-col">
+                        <h1 className="font-display text-lg font-semibold leading-none tracking-tight">{title}</h1>
+                        {subtitle ? (
+                            <p className="text-xs text-muted-foreground">{subtitle}</p>
+                        ) : null}
+                    </div>
+                </Link>
 
                 <div className="ml-auto flex flex-wrap items-center gap-1 sm:gap-2">
                     {isRefreshing ? (
