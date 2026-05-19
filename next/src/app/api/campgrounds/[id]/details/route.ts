@@ -1,8 +1,6 @@
 import { getKv } from "@/lib/cloudflare";
 import { jsonResponse, withCors } from "@/lib/responses";
 
-export const runtime = "edge";
-
 export interface CampgroundDetails {
     facilityId: string;
     name: string | null;
