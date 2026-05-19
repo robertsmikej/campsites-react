@@ -136,6 +136,7 @@ export default function AppPage() {
                     <CampgroundsList
                         campgrounds={campgroundsByAreas}
                         settings={settings as { views?: { type?: "calendar" | "table" } }}
+                        globalSettings={globalSettings}
                         isLoading={isLoading}
                         onRatingChange={handleRatingChange}
                     />

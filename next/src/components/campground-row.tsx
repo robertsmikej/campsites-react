@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 import { AvailabilityStrip } from "@/components/availability-strip";
 import { CampgroundDetail } from "@/components/campground-detail";
 import type { SiteRatingsMap } from "@/components/availability-strip";
-import type { ProcessedCampground } from "@/types/campground";
+import type { ProcessedCampground, GlobalSettings } from "@/types/campground";
 
 interface CampgroundRowProps {
     campground: ProcessedCampground;
@@ -23,6 +23,7 @@ interface CampgroundRowProps {
     isFavorite: boolean;
     onToggleFavorite: () => void;
     settings: { views?: { type?: "calendar" | "table" } };
+    globalSettings?: GlobalSettings;
     imageUrl: string;
     siteRatings?: SiteRatingsMap;
     onRatingChange?: (siteName: string, newRating: "favorite" | "worthwhile" | "unrated") => void;
@@ -34,6 +35,7 @@ export function CampgroundRow({
     isFavorite,
     onToggleFavorite,
     settings,
+    globalSettings,
     imageUrl,
     siteRatings,
     onRatingChange,
@@ -141,6 +143,7 @@ export function CampgroundRow({
                     campground={campground}
                     showExcluded={showExcluded}
                     settings={settings}
+                    globalSettings={globalSettings}
                     imageUrl={imageUrl}
                     siteRatings={siteRatings}
                     onRatingChange={onRatingChange}

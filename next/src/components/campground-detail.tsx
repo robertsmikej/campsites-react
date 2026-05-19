@@ -1,16 +1,68 @@
 "use client";
 
-import { ExternalLink } from "lucide-react";
+import { useState } from "react";
+import { ExternalLink, Filter } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { getTypeBadge } from "@/components/campground/type-badge";
 import { SiteRow } from "@/components/site-row";
 import type { SiteRatingsMap } from "@/components/availability-strip";
-import type { ProcessedCampground, SiteAvailability } from "@/types/campground";
+import type { ProcessedCampground, SiteAvailability, GlobalSettings } from "@/types/campground";
 
 // ---------------------------------------------------------------------------
-// Helpers
+// Filter summary helpers
+// ---------------------------------------------------------------------------
+
+type FilterSummaryItem = { label: string; value: string; source: "global" | "campground" };
+
+interface FilterSummary {
+    items: FilterSummaryItem[];
+    notifyAll: boolean;
+}
+
+function buildFilterSummary(
+    campground: ProcessedCampground,
+    globalSettings: GlobalSettings | undefined,
+): FilterSummary {
+    const items: FilterSummaryItem[] = [];
+
+    // Stay length — campground-level overrides global
+    const cgStayLengths = campground.stayLengths;
+    const stayLengths = cgStayLengths ?? globalSettings?.stayLengths;
+    if (stayLengths && stayLengths.length > 0) {
+        const min = Math.min(...stayLengths);
+        const max = Math.max(...stayLengths);
+        const value =
+            min === max
+                ? `${min} night${min === 1 ? "" : "s"}`
+                : `${min}–${max} nights`;
+        items.push({
+            label: "Stay length",
+            value,
+            source: cgStayLengths ? "campground" : "global",
+        });
+    }
+
+    // Valid start days — campground-level overrides global; skip if all 7 days
+    const cgValidDays = campground.validStartDays;
+    const validDays = cgValidDays ?? globalSettings?.validStartDays;
+    if (validDays && validDays.length > 0 && validDays.length < 7) {
+        const value = validDays.map((d) => d.slice(0, 3)).join(", ");
+        items.push({
+            label: "Start days",
+            value,
+            source: cgValidDays ? "campground" : "global",
+        });
+    }
+
+    return { items, notifyAll: !!campground.notifyAll };
+}
+
+// ---------------------------------------------------------------------------
+// Other helpers
 // ---------------------------------------------------------------------------
 
 function getCampgroundUrl(campground: ProcessedCampground): string {
@@ -70,6 +122,7 @@ interface CampgroundDetailProps {
     campground: ProcessedCampground;
     showExcluded: boolean;
     settings: { views?: { type?: "calendar" | "table" } };
+    globalSettings?: GlobalSettings;
     imageUrl: string;
     siteRatings?: SiteRatingsMap;
     onRatingChange?: (siteName: string, newRating: "favorite" | "worthwhile" | "unrated") => void;
@@ -82,12 +135,19 @@ interface CampgroundDetailProps {
 export function CampgroundDetail({
     campground,
     showExcluded,
+    globalSettings,
     imageUrl,
     siteRatings,
     onRatingChange,
 }: CampgroundDetailProps) {
     const badge = getTypeBadge(campground);
     const TypeIcon = badge.Icon;
+
+    // Per-drawer "show without filters" toggle — additive on top of the global toggle
+    const [localShowExcluded, setLocalShowExcluded] = useState(false);
+    const effectiveShowExcluded = showExcluded || localShowExcluded;
+
+    const filterSummary = buildFilterSummary(campground, globalSettings);
 
     const allSites: SiteAvailability[] = Object.values(
         campground.siteAvailability ?? {},
@@ -103,7 +163,7 @@ export function CampgroundDetail({
             key={site.siteId}
             site={site}
             campground={campground}
-            showExcluded={showExcluded}
+            showExcluded={effectiveShowExcluded}
             rating={siteRatings ? (siteRatings[site.siteName] ?? "unrated") : undefined}
             onRatingChange={
                 onRatingChange
@@ -191,43 +251,6 @@ export function CampgroundDetail({
                             Notify all
                         </Badge>
                     )}
-                    {campground.validStartDays &&
-                        campground.validStartDays.length < 7 && (
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Badge
-                                        variant="outline"
-                                        className="text-[0.7rem]"
-                                    >
-                                        {campground.validStartDays
-                                            .map((d) => d.slice(0, 3))
-                                            .join(", ")}
-                                    </Badge>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    Only showing stays starting on:{" "}
-                                    {campground.validStartDays.join(", ")}
-                                </TooltipContent>
-                            </Tooltip>
-                        )}
-                    {campground.stayLengths && (
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Badge
-                                    variant="outline"
-                                    className="text-[0.7rem]"
-                                >
-                                    {Math.min(...campground.stayLengths)}–
-                                    {Math.max(...campground.stayLengths)}n
-                                </Badge>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                Custom stay length:{" "}
-                                {Math.min(...campground.stayLengths)}–
-                                {Math.max(...campground.stayLengths)} nights
-                            </TooltipContent>
-                        </Tooltip>
-                    )}
                 </div>
                 {campground.description && (
                     <p className="text-sm text-muted-foreground">
@@ -235,6 +258,64 @@ export function CampgroundDetail({
                     </p>
                 )}
             </div>
+
+            {/* Filters-applied callout — only rendered when there are active filters */}
+            {filterSummary.items.length > 0 && (
+                <div className="rounded-lg border border-border bg-muted/30 p-3 text-sm">
+                    <div className="mb-2 flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5">
+                            <Filter className="size-3.5 text-muted-foreground" aria-hidden />
+                            <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                Filters applied
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Switch
+                                id={`show-without-filters-${campground.id}`}
+                                checked={localShowExcluded}
+                                onCheckedChange={setLocalShowExcluded}
+                            />
+                            <Label
+                                htmlFor={`show-without-filters-${campground.id}`}
+                                className="text-xs text-muted-foreground"
+                            >
+                                Show without filters
+                            </Label>
+                        </div>
+                    </div>
+                    <ul className="space-y-1">
+                        {filterSummary.items.map((item) => (
+                            <li
+                                key={item.label}
+                                className="flex items-center justify-between gap-2 text-xs"
+                            >
+                                <span className="text-muted-foreground">{item.label}</span>
+                                <span className="flex items-center gap-1.5">
+                                    <span className="font-medium text-foreground">
+                                        {item.value}
+                                    </span>
+                                    <Badge
+                                        variant="outline"
+                                        className="h-4 text-[9px] uppercase tracking-wide"
+                                    >
+                                        {item.source}
+                                    </Badge>
+                                </span>
+                            </li>
+                        ))}
+                        {filterSummary.notifyAll && (
+                            <li className="flex items-center justify-between gap-2 text-xs">
+                                <span className="text-muted-foreground">Notifications</span>
+                                <span className="font-medium text-foreground">All matches</span>
+                            </li>
+                        )}
+                    </ul>
+                    <p className="mt-2 text-[11px] text-muted-foreground">
+                        Filtered dates are hidden until you toggle &ldquo;Show without
+                        filters&rdquo; on.
+                    </p>
+                </div>
+            )}
 
             {/* Grouped site list */}
             <div className={cn("flex flex-col gap-4")}>

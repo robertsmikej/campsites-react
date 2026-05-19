@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { CampgroundRow } from "@/components/campground-row";
-import type { ProcessedCampground } from "@/types/campground";
+import type { ProcessedCampground, GlobalSettings } from "@/types/campground";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -48,6 +48,7 @@ function LoadingSkeletons() {
 export interface CampgroundsListProps {
     campgrounds: ProcessedCampground[] | Record<string, ProcessedCampground[]>;
     settings: { views?: { type?: "calendar" | "table" } };
+    globalSettings?: GlobalSettings;
     isLoading?: boolean;
     /** Called when the user toggles a site's rating from the drawer. */
     onRatingChange?: (campgroundId: string, siteName: string, newRating: "favorite" | "worthwhile" | "unrated") => void;
@@ -60,6 +61,7 @@ export interface CampgroundsListProps {
 export function CampgroundsList({
     campgrounds: campgroundsProp,
     settings,
+    globalSettings,
     isLoading = false,
     onRatingChange,
 }: CampgroundsListProps) {
@@ -206,6 +208,7 @@ export function CampgroundsList({
                             isFavorite={!!c.id && favorites.has(c.id)}
                             onToggleFavorite={() => c.id && toggleFavorite(c.id)}
                             settings={settings}
+                            globalSettings={globalSettings}
                             imageUrl={getImageUrl(c)}
                             siteRatings={hasSiteRatings ? siteRatings : undefined}
                             onRatingChange={
