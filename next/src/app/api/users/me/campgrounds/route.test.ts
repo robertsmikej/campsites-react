@@ -11,8 +11,13 @@ vi.mock("@/lib/sessions", () => ({
     SESSION_COOKIE: "campwatch_session",
 }));
 
+vi.mock("@/lib/users", () => ({
+    getUserProfile: vi.fn(),
+}));
+
 import * as sessions from "@/lib/sessions";
 import * as cloudflare from "@/lib/cloudflare";
+import * as users from "@/lib/users";
 
 beforeEach(() => {
     vi.resetModules();
@@ -158,12 +163,18 @@ describe("PUT /api/users/me/campgrounds", () => {
         expect(body.error).toContain("globalSettings");
     });
 
-    it("returns 200 with stored record on valid body", async () => {
+    it("returns 200 with stored record on valid body (non-curator)", async () => {
         vi.mocked(sessions.readSession).mockResolvedValue({
             id: "x",
             email: "user@example.com",
             createdAt: "x",
             expiresAt: "x",
+        });
+        vi.mocked(users.getUserProfile).mockResolvedValue({
+            email: "user@example.com",
+            name: "User",
+            roles: [],
+            createdAt: "x",
         });
         const kv = createMockKv();
         vi.mocked(cloudflare.getKv).mockReturnValue(kv);
@@ -180,8 +191,89 @@ describe("PUT /api/users/me/campgrounds", () => {
         expect(body.globalSettings).toEqual(payload.globalSettings);
         expect(typeof body.updatedAt).toBe("string");
 
-        // KV should match
+        // User KV record should be written.
         const raw = await kv.get("user:user@example.com:campgrounds");
         expect(JSON.parse(raw as string)).toEqual(body);
+
+        // Default config should NOT be touched for a non-curator.
+        const defaultRaw = await kv.get("config:campgrounds");
+        expect(defaultRaw).toBeNull();
+    });
+
+    it("non-curator PUT updates user record and leaves default untouched", async () => {
+        vi.mocked(sessions.readSession).mockResolvedValue({
+            id: "x",
+            email: "regular@example.com",
+            createdAt: "x",
+            expiresAt: "x",
+        });
+        vi.mocked(users.getUserProfile).mockResolvedValue({
+            email: "regular@example.com",
+            name: "Regular User",
+            roles: [],
+            createdAt: "x",
+        });
+        const kv = createMockKv({
+            "config:campgrounds": JSON.stringify({
+                campgrounds: { "recreation.gov": [{ id: "old", name: "Old Camp", sites: { favorites: [], worthwhile: [] } }] },
+                globalSettings: { stayLengths: [2], validStartDays: ["Friday"] },
+            }),
+        });
+        vi.mocked(cloudflare.getKv).mockReturnValue(kv);
+
+        const payload = {
+            campgrounds: { "recreation.gov": [{ id: "new", name: "New Camp", sites: { favorites: [], worthwhile: [] } }] },
+            globalSettings: { stayLengths: [3], validStartDays: ["Saturday"] },
+        };
+
+        const res = await doPut(payload);
+        expect(res.status).toBe(200);
+
+        // User record is updated.
+        const userRaw = await kv.get("user:regular@example.com:campgrounds");
+        expect(JSON.parse(userRaw as string).campgrounds["recreation.gov"][0].id).toBe("new");
+
+        // Default config is unchanged.
+        const defaultRaw = await kv.get("config:campgrounds");
+        expect(JSON.parse(defaultRaw as string).campgrounds["recreation.gov"][0].id).toBe("old");
+    });
+
+    it("curator PUT updates user record AND writes through to default config", async () => {
+        vi.mocked(sessions.readSession).mockResolvedValue({
+            id: "x",
+            email: "curator@example.com",
+            createdAt: "x",
+            expiresAt: "x",
+        });
+        vi.mocked(users.getUserProfile).mockResolvedValue({
+            email: "curator@example.com",
+            name: "Curator",
+            roles: ["curator"],
+            createdAt: "x",
+        });
+        const kv = createMockKv();
+        vi.mocked(cloudflare.getKv).mockReturnValue(kv);
+
+        const payload = {
+            campgrounds: { "recreation.gov": [{ id: "232312", name: "Pine Flats", sites: { favorites: [], worthwhile: [] } }] },
+            globalSettings: { stayLengths: [2, 3, 4], validStartDays: ["Friday", "Saturday", "Sunday"] },
+        };
+
+        const res = await doPut(payload);
+        expect(res.status).toBe(200);
+
+        // User record is updated.
+        const userRaw = await kv.get("user:curator@example.com:campgrounds");
+        expect(JSON.parse(userRaw as string).campgrounds["recreation.gov"][0].id).toBe("232312");
+
+        // Default config is also written with the same campgrounds + globalSettings.
+        const defaultRaw = await kv.get("config:campgrounds");
+        expect(defaultRaw).not.toBeNull();
+        const defaultParsed = JSON.parse(defaultRaw as string) as {
+            campgrounds: { "recreation.gov": { id: string }[] };
+            globalSettings: { stayLengths: number[] };
+        };
+        expect(defaultParsed.campgrounds["recreation.gov"][0].id).toBe("232312");
+        expect(defaultParsed.globalSettings.stayLengths).toEqual([2, 3, 4]);
     });
 });

@@ -112,10 +112,13 @@ export function useUserCampgrounds(): UseUserCampgroundsState {
             const stored = (await r.json()) as ApiRecord;
             setRecord(stored);
             setSyncStatus("success");
+            // Re-fetch the default so missingFromDefault reflects any write-through
+            // the server performed (curator saves update the default KV key).
+            void fetchDefault();
         } catch {
             setSyncStatus("error");
         }
-    }, []);
+    }, [fetchDefault]);
 
     const cloneDefault = useCallback(async () => {
         try {
