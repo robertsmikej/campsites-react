@@ -9,7 +9,7 @@ export const campgroundCatalog: SiteConfig = {
             site: "recreation.gov",
             type: "campground",
             description: "East side of Redfish Lake, right on lake.",
-            image: "outlet_campground_map.jpg",
+            mapImage: "outlet_campground_map.jpg",
             sites: { favorites: [], worthwhile: [] },
         },
         {
@@ -19,7 +19,8 @@ export const campgroundCatalog: SiteConfig = {
             site: "recreation.gov",
             type: "campground",
             description: "West side, on Redfish Lake, next to lodge. Smaller Campground.",
-            image: "point_campground_map.jpg",
+            image: "point_campground.jpeg",
+            mapImage: "point_campground_map.jpg",
             sites: { favorites: [], worthwhile: [] },
         },
         {
@@ -29,7 +30,7 @@ export const campgroundCatalog: SiteConfig = {
             site: "recreation.gov",
             type: "campground",
             description: "North side of Redfish Lake, right off of lake, walking distance.",
-            image: "glacier_view_campground_map.jpg",
+            mapImage: "glacier_view_campground_map.jpg",
             sites: { favorites: [], worthwhile: [] },
         },
         {
@@ -39,7 +40,7 @@ export const campgroundCatalog: SiteConfig = {
             site: "recreation.gov",
             type: "campground",
             description: "Off of highway right across from Redfish Lake, but not walking distance.",
-            image: "sunny_gulch_campground_map1.jpg",
+            mapImage: "sunny_gulch_campground_map1.jpg",
             sites: { favorites: [], worthwhile: [] },
         },
         {
@@ -49,7 +50,7 @@ export const campgroundCatalog: SiteConfig = {
             site: "recreation.gov",
             type: "campground",
             description: "On Cascade Lake, large site, recommended by Matty B.",
-            image: "rainbow_point_map.jpg",
+            mapImage: "rainbow_point_map.jpg",
             sites: { favorites: [], worthwhile: [] },
         },
         {
@@ -59,7 +60,7 @@ export const campgroundCatalog: SiteConfig = {
             site: "recreation.gov",
             type: "campground",
             description: 'At Stanley Lake, "favorites" are all campsites on shoreline.',
-            image: "stanley_lake_campground_map.jpg",
+            mapImage: "stanley_lake_campground_map.jpg",
             sites: { favorites: [], worthwhile: [] },
         },
         {
@@ -69,7 +70,7 @@ export const campgroundCatalog: SiteConfig = {
             site: "recreation.gov",
             type: "campground",
             description: "Favorite sites are right on river",
-            image: "mountain_view_campground_map.jpg",
+            mapImage: "mountain_view_campground_map.jpg",
             sites: { favorites: [], worthwhile: [] },
         },
         {
@@ -79,7 +80,6 @@ export const campgroundCatalog: SiteConfig = {
             site: "recreation.gov",
             type: "campground",
             description: "On the South Fork Payette River, west of Lowman.",
-            image: "",
             sites: { favorites: [], worthwhile: [] },
         },
         {
@@ -89,7 +89,7 @@ export const campgroundCatalog: SiteConfig = {
             site: "recreation.gov",
             type: "campground",
             description: "North Shore of Warm Lake",
-            image: "shoreline_campground_map.jpg",
+            mapImage: "shoreline_campground_map.jpg",
             sites: { favorites: [], worthwhile: [] },
         },
         {
@@ -99,7 +99,7 @@ export const campgroundCatalog: SiteConfig = {
             site: "recreation.gov",
             type: "cabin",
             description: "Cabin only available during fall and winter.",
-            image: "redfish_cabin_map.jpg",
+            mapImage: "redfish_cabin_map.jpg",
             sites: { favorites: [], worthwhile: [] },
         },
         {
@@ -109,7 +109,6 @@ export const campgroundCatalog: SiteConfig = {
             site: "recreation.gov",
             type: "lookout",
             description: "Historic Forest Service fire lookout on Deadwood Mountain with panoramic views.",
-            image: "",
             sites: { favorites: [], worthwhile: [] },
         },
         {
@@ -119,7 +118,6 @@ export const campgroundCatalog: SiteConfig = {
             site: "recreation.gov",
             type: "lookout",
             description: "Historic fire lookout tower above the Clearwater near Kooskia, ID.",
-            image: "",
             sites: { favorites: [], worthwhile: [] },
         },
     ],

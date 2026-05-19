@@ -3,6 +3,8 @@
 //   Lookout Butte) to the curated default if they aren't already there.
 // - Wipes orphan `email:*` KV records left over from the retired anonymous
 //   subscribe flow.
+// - Migrates any campground whose `image` matches `*_map*.jpg` to carry that
+//   value in `mapImage` instead, clearing `image`.
 //
 // Gated by API_SECRET (same Bearer token the notifier uses). Safe to call
 // repeatedly: it's idempotent and skips entries already present.
@@ -16,6 +18,7 @@ import { defaultCampgroundConfigurations } from "@/data/site-configurations";
 import type { Campground, GlobalSettings, SiteConfig } from "@/types/campground";
 
 const SEED_IDS = ["232312", "233881", "233128"] as const;
+const MAP_IMAGE_RE = /_map.*\.jpg$/i;
 
 interface DefaultConfig {
     campgrounds?: SiteConfig;
@@ -80,7 +83,34 @@ export async function POST(request: Request): Promise<Response> {
         defaultUpdated = true;
     }
 
-    // --- 2. Wipe orphan email:* records. ---
+    // --- 2. Migrate _map image values from `image` → `mapImage`. ---
+    // Re-read in case step 1 just wrote a new record.
+    const afterSeed = (await kv.get("config:campgrounds", "json")) as DefaultConfig | null;
+    const afterSeedList = afterSeed?.campgrounds?.["recreation.gov"] ?? [];
+    let mapImagesBackfilled = 0;
+    const migratedList: Campground[] = afterSeedList.map((c) => {
+        if (c.image && MAP_IMAGE_RE.test(c.image)) {
+            const { image, ...rest } = c;
+            mapImagesBackfilled++;
+            return { ...rest, mapImage: image };
+        }
+        return c;
+    });
+    if (mapImagesBackfilled > 0) {
+        await kv.put(
+            "config:campgrounds",
+            JSON.stringify({
+                campgrounds: { "recreation.gov": migratedList },
+                globalSettings: afterSeed?.globalSettings ?? {
+                    stayLengths: [2, 3, 4, 5],
+                    validStartDays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+                },
+            }),
+        );
+        defaultUpdated = true;
+    }
+
+    // --- 3. Wipe orphan email:* records. ---
     let emailsDeleted = 0;
     let cursor: string | undefined;
     do {
@@ -96,6 +126,7 @@ export async function POST(request: Request): Promise<Response> {
         jsonResponse({
             defaultUpdated,
             addedCampgrounds: additions.map((c) => ({ id: c.id, name: c.name })),
+            mapImagesBackfilled,
             emailsDeleted,
         }),
     );

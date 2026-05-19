@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Filter, Map as MapIcon, Satellite } from "lucide-react";
+import { Filter, Map as MapIcon, Satellite, Settings } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { getTypeBadge } from "@/components/campground/type-badge";
 import { SiteRow } from "@/components/site-row";
@@ -127,6 +128,7 @@ interface CampgroundDetailProps {
     imageUrl: string;
     siteRatings?: SiteRatingsMap;
     onRatingChange?: (siteName: string, newRating: "favorite" | "worthwhile" | "unrated") => void;
+    onEditSettings?: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -140,10 +142,20 @@ export function CampgroundDetail({
     imageUrl,
     siteRatings,
     onRatingChange,
+    onEditSettings,
 }: CampgroundDetailProps) {
     const badge = getTypeBadge(campground);
     const TypeIcon = badge.Icon;
     const details = useCampgroundDetails(campground.id);
+
+    // Map modal state
+    const [mapOpen, setMapOpen] = useState(false);
+    const mapImg = campground.mapImage;
+    const mapImageSrc = mapImg
+        ? (mapImg.startsWith("http") || mapImg.startsWith("/images/")
+            ? mapImg
+            : `/images/sites/${mapImg}`)
+        : null;
 
     // Per-drawer "show without filters" toggle — additive on top of the global toggle
     const [localShowExcluded, setLocalShowExcluded] = useState(false);
@@ -217,17 +229,30 @@ export function CampgroundDetail({
                     <div className="flex items-center gap-1.5">
                         <Tooltip>
                             <TooltipTrigger asChild>
-                                <a
-                                    href={getCampgroundUrl(campground)}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-1 rounded-full bg-background/80 px-2.5 py-1 text-xs font-medium backdrop-blur-md hover:bg-background"
-                                >
-                                    <MapIcon className="size-3.5" aria-hidden />
-                                    Layout
-                                </a>
+                                {mapImageSrc ? (
+                                    <button
+                                        type="button"
+                                        onClick={() => setMapOpen(true)}
+                                        className="inline-flex items-center gap-1 rounded-full bg-background/80 px-2.5 py-1 text-xs font-medium backdrop-blur-md hover:bg-background"
+                                    >
+                                        <MapIcon className="size-3.5" aria-hidden />
+                                        Layout
+                                    </button>
+                                ) : (
+                                    <a
+                                        href={getCampgroundUrl(campground)}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-1 rounded-full bg-background/80 px-2.5 py-1 text-xs font-medium backdrop-blur-md hover:bg-background"
+                                    >
+                                        <MapIcon className="size-3.5" aria-hidden />
+                                        Layout
+                                    </a>
+                                )}
                             </TooltipTrigger>
-                            <TooltipContent>Campground layout on recreation.gov</TooltipContent>
+                            <TooltipContent>
+                                {mapImageSrc ? "View campground layout map" : "Campground layout on recreation.gov"}
+                            </TooltipContent>
                         </Tooltip>
                         {details?.latitude != null && details?.longitude != null && (
                             <Tooltip>
@@ -248,6 +273,29 @@ export function CampgroundDetail({
                     </div>
                 </div>
             </div>
+
+            {/* Map modal */}
+            <Dialog open={mapOpen} onOpenChange={setMapOpen}>
+                <DialogContent className="max-w-3xl">
+                    <DialogHeader>
+                        <DialogTitle>{campground.name} — campground map</DialogTitle>
+                    </DialogHeader>
+                    {mapImageSrc && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={mapImageSrc} alt="Campground layout map" className="w-full rounded-lg border" />
+                    )}
+                    <div className="flex justify-end pt-2">
+                        <a
+                            href={getCampgroundUrl(campground)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-muted-foreground underline-offset-2 hover:underline"
+                        >
+                            View on recreation.gov →
+                        </a>
+                    </div>
+                </DialogContent>
+            </Dialog>
 
             {/* Stats summary line */}
             <div className="flex flex-col gap-1.5">
@@ -277,6 +325,16 @@ export function CampgroundDetail({
                     <p className="text-sm text-muted-foreground">
                         {campground.description}
                     </p>
+                )}
+                {onEditSettings && (
+                    <button
+                        type="button"
+                        onClick={onEditSettings}
+                        className="inline-flex items-center gap-1 self-start text-xs text-primary underline-offset-2 hover:underline"
+                    >
+                        <Settings className="size-3.5" aria-hidden />
+                        Edit settings
+                    </button>
                 )}
             </div>
 

@@ -33,6 +33,7 @@ export default function AppPage() {
     } = userCampgrounds;
     const [useMockData, setUseMockData] = useState(false);
     const [isConfigDialogOpen, setIsConfigDialogOpen] = useState(false);
+    const [focusedCampgroundId, setFocusedCampgroundId] = useState<string | null>(null);
     const [dismissedSync, setDismissedSync] = useState(false);
 
     const settings = useMemo<SiteSettingsValue>(
@@ -176,6 +177,10 @@ export default function AppPage() {
                         globalSettings={globalSettings}
                         isLoading={isLoading}
                         onRatingChange={handleRatingChange}
+                        onEditSettings={(campgroundId) => {
+                            setFocusedCampgroundId(campgroundId);
+                            setIsConfigDialogOpen(true);
+                        }}
                     />
 
                     <footer className="mt-8 border-t pt-4">
@@ -192,10 +197,14 @@ export default function AppPage() {
 
                 <SiteConfigDialog
                     open={isConfigDialogOpen}
-                    onClose={() => setIsConfigDialogOpen(false)}
+                    onClose={() => {
+                        setIsConfigDialogOpen(false);
+                        setFocusedCampgroundId(null);
+                    }}
                     onSave={(config, nextGlobal) => {
                         void save(config, nextGlobal);
                         setIsConfigDialogOpen(false);
+                        setFocusedCampgroundId(null);
                     }}
                     onResetToDefaults={() => void cloneDefault()}
                     initialData={siteConfig}
@@ -203,6 +212,7 @@ export default function AppPage() {
                     availableSites={availableSites}
                     useMockData={useMockData}
                     onToggleMockData={(e) => setUseMockData(e.target.checked)}
+                    focusedCampgroundId={focusedCampgroundId}
                 />
             </ProgressBarContext.Provider>
         </SiteSettingsContext.Provider>

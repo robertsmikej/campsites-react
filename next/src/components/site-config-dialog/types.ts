@@ -18,6 +18,8 @@ export interface SiteConfigDialogProps {
     availableSites: Record<string, string[]>;
     useMockData: boolean;
     onToggleMockData: (event: React.ChangeEvent<HTMLInputElement>) => void;
+    /** When set, the dialog scrolls to and expands this campground on open. */
+    focusedCampgroundId?: string | null;
 }
 
 export const ALL_DAYS = [

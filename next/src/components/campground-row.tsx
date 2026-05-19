@@ -30,6 +30,7 @@ interface CampgroundRowProps {
     imageUrl: string;
     siteRatings?: SiteRatingsMap;
     onRatingChange?: (siteName: string, newRating: "favorite" | "worthwhile" | "unrated") => void;
+    onEditSettings?: () => void;
 }
 
 export function CampgroundRow({
@@ -42,6 +43,7 @@ export function CampgroundRow({
     imageUrl,
     siteRatings,
     onRatingChange,
+    onEditSettings,
 }: CampgroundRowProps) {
     const [open, setOpen] = useState(false);
 
@@ -157,6 +159,7 @@ export function CampgroundRow({
                     imageUrl={effectiveImageUrl}
                     siteRatings={siteRatings}
                     onRatingChange={onRatingChange}
+                    onEditSettings={onEditSettings}
                 />
             </SheetContent>
         </Sheet>

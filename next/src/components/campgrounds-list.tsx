@@ -12,9 +12,12 @@ import type { ProcessedCampground, GlobalSettings } from "@/types/campground";
 // ---------------------------------------------------------------------------
 
 function getImageUrl(c: ProcessedCampground): string {
-    if (!c.image) return "/images/sites/bg_default.jpg";
-    if (c.image.startsWith("http")) return c.image;
-    return c.image.startsWith("/images/") ? c.image : `/images/sites/${c.image}`;
+    const img = c.image;
+    if (img && !/_map.*\.jpg$/i.test(img)) {
+        if (img.startsWith("http")) return img;
+        return img.startsWith("/images/") ? img : `/images/sites/${img}`;
+    }
+    return "/images/sites/bg_default.jpg";
 }
 
 // ---------------------------------------------------------------------------
@@ -52,6 +55,8 @@ export interface CampgroundsListProps {
     isLoading?: boolean;
     /** Called when the user toggles a site's rating from the drawer. */
     onRatingChange?: (campgroundId: string, siteName: string, newRating: "favorite" | "worthwhile" | "unrated") => void;
+    /** Called when the user clicks "Edit settings" in the drawer. */
+    onEditSettings?: (campgroundId: string) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -64,6 +69,7 @@ export function CampgroundsList({
     globalSettings,
     isLoading = false,
     onRatingChange,
+    onEditSettings,
 }: CampgroundsListProps) {
     // Flatten if given a record of groups (matches CampgroundsGroups behaviour)
     const flattenedCampgrounds = useMemo<ProcessedCampground[]>(() => {
@@ -215,6 +221,11 @@ export function CampgroundsList({
                                 onRatingChange && c.id
                                     ? (siteName, newRating) =>
                                           onRatingChange(c.id!, siteName, newRating)
+                                    : undefined
+                            }
+                            onEditSettings={
+                                onEditSettings && c.id
+                                    ? () => onEditSettings(c.id!)
                                     : undefined
                             }
                         />
