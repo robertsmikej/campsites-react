@@ -9,6 +9,7 @@ export interface CampWatchEnv {
     GOOGLE_CLIENT_SECRET?: string;
     SESSION_SECRET?: string;
     BOOTSTRAP_ADMIN_EMAIL?: string;
+    DEV_USER?: string;
 }
 
 /**

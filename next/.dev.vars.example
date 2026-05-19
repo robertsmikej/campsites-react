@@ -1,0 +1,19 @@
+# Local development secrets. Copy to .dev.vars and fill in.
+# .dev.vars is gitignored.
+
+# Required for dev: any email you want to log in as.
+# Setting this triggers an auto-login bypass in next dev only.
+DEV_USER=you@example.com
+
+# The email that gets curator role on bootstrap. Should match DEV_USER
+# if you want curator powers locally.
+BOOTSTRAP_ADMIN_EMAIL=you@example.com
+
+# Optional — only needed for real Google OAuth flow. Leave blank to use
+# the dev bypass.
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+
+# Optional — only used by OAuth + admin-protected endpoints.
+SESSION_SECRET=dev-session-secret-change-me
+API_SECRET=dev-api-secret-change-me
