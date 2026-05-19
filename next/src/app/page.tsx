@@ -72,15 +72,15 @@ function StatsBand() {
             <div className="container mx-auto max-w-5xl px-6 py-6">
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-3 sm:divide-x sm:divide-border">
                     <div className="text-center sm:px-6">
-                        <div className="font-display text-3xl font-semibold tracking-tight text-primary">5 min</div>
+                        <div className="font-display text-4xl font-light tracking-tight text-primary tabular-nums">5 min</div>
                         <div className="text-xs text-muted-foreground">Polling cadence</div>
                     </div>
                     <div className="text-center sm:px-6">
-                        <div className="font-display text-3xl font-semibold tracking-tight text-primary">Email</div>
+                        <div className="font-display text-4xl font-light tracking-tight text-primary tabular-nums">Email</div>
                         <div className="text-xs text-muted-foreground">The moment a site opens</div>
                     </div>
                     <div className="text-center sm:px-6">
-                        <div className="font-display text-3xl font-semibold tracking-tight text-primary">Free</div>
+                        <div className="font-display text-4xl font-light tracking-tight text-primary tabular-nums">Free</div>
                         <div className="text-xs text-muted-foreground">Forever. Built as a hobby.</div>
                     </div>
                 </div>

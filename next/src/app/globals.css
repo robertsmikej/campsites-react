@@ -165,8 +165,8 @@
     /* Headings use Geist Sans; consumers can override with `font-sans` */
     h1, h2, h3, .font-display {
         font-family: var(--font-display);
-        letter-spacing: -0.02em;
-        font-weight: 600;
+        letter-spacing: -0.025em;
+        font-weight: 500;
     }
 
     body {
