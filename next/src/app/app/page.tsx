@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { Sparkles, X } from "lucide-react";
 import { TopBar } from "@/components/top-bar";
 import { ProgressBarEl } from "@/components/progress-bar-el";
 import { CampgroundsList } from "@/components/campgrounds-list";
@@ -32,6 +33,7 @@ export default function AppPage() {
     } = userCampgrounds;
     const [useMockData, setUseMockData] = useState(false);
     const [isConfigDialogOpen, setIsConfigDialogOpen] = useState(false);
+    const [dismissedSync, setDismissedSync] = useState(false);
 
     const settings = useMemo<SiteSettingsValue>(
         () => ({
@@ -133,6 +135,41 @@ export default function AppPage() {
                 <ProgressBarEl />
 
                 <main className="container mx-auto p-5">
+                    {userCampgrounds.missingFromDefault.length > 0 && !dismissedSync && (
+                        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm">
+                            <Sparkles className="size-4 shrink-0 text-primary" aria-hidden />
+                            <div className="min-w-0 flex-1">
+                                <p className="font-medium">
+                                    {userCampgrounds.missingFromDefault.length} new campground
+                                    {userCampgrounds.missingFromDefault.length === 1 ? "" : "s"} in the default config
+                                </p>
+                                <p className="truncate text-xs text-muted-foreground">
+                                    {userCampgrounds.missingFromDefault.map((c) => c.name).join(", ")}
+                                </p>
+                            </div>
+                            <div className="flex shrink-0 items-center gap-2">
+                                <Button
+                                    size="sm"
+                                    onClick={async () => {
+                                        const result = await userCampgrounds.syncMissing();
+                                        setDismissedSync(true);
+                                        toast.success(`Added ${result.added} campground${result.added === 1 ? "" : "s"}`);
+                                    }}
+                                >
+                                    Add to my list
+                                </Button>
+                                <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    onClick={() => setDismissedSync(true)}
+                                    aria-label="Dismiss"
+                                >
+                                    <X className="size-4" />
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+
                     <CampgroundsList
                         campgrounds={campgroundsByAreas}
                         settings={settings as { views?: { type?: "calendar" | "table" } }}
