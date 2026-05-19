@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useAuth } from "@/hooks/use-auth";
 
-type Frequency = 15 | 60 | 240;
+type Frequency = 5 | 15 | 60 | 240;
 
 const DEFAULT_NOTIFICATIONS = { enabled: true, frequencyMinutes: 15 satisfies Frequency };
 
@@ -220,13 +220,14 @@ export default function AccountPage() {
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
+                                <SelectItem value="5">Every 5 minutes</SelectItem>
                                 <SelectItem value="15">Every 15 minutes</SelectItem>
                                 <SelectItem value="60">Every hour</SelectItem>
                                 <SelectItem value="240">Every 4 hours</SelectItem>
                             </SelectContent>
                         </Select>
                         <p className="text-xs text-muted-foreground">
-                            The notifier runs every 15 minutes. Less frequent means you&apos;ll be skipped on intermediate runs.
+                            The notifier runs every 5 minutes. Faster cadence = faster alerts.
                         </p>
                     </div>
                     <div>

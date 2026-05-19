@@ -9,6 +9,10 @@ import { formatEmail, sendEmail } from './lib/email.mjs';
 
 const DELAY_BETWEEN_FETCHES_MS = 500;
 
+// Non-curator users don't receive an email about a new match until this many
+// milliseconds after the global first-sighting. Curators are notified immediately.
+const LEAD_TIME_MS = 15 * 60 * 1000;
+
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // --- Eligibility ---
@@ -178,6 +182,33 @@ async function sendEmailToUser({ user, matches, resendApiKey, siteUrl, apiSecret
     await sendEmail(user.email, subject, html, resendApiKey, unsubscribeLink);
 }
 
+// --- First-seen map helpers ---
+
+async function fetchFirstSeenMap(subscriberApiUrl, subscriberApiSecret) {
+    const res = await fetch(`${subscriberApiUrl}/api/admin/first-seen`, {
+        headers: { Authorization: `Bearer ${subscriberApiSecret}` },
+    });
+    if (!res.ok) {
+        console.error(`[Warn] first-seen GET returned ${res.status} — starting with empty map`);
+        return {};
+    }
+    return res.json();
+}
+
+async function putFirstSeenMap(subscriberApiUrl, subscriberApiSecret, map) {
+    const res = await fetch(`${subscriberApiUrl}/api/admin/first-seen`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${subscriberApiSecret}`,
+        },
+        body: JSON.stringify({ map }),
+    });
+    if (!res.ok) {
+        console.error(`[Warn] first-seen PUT returned ${res.status}`);
+    }
+}
+
 // --- Main ---
 
 async function main() {
@@ -223,13 +254,44 @@ async function main() {
     // 4. Fetch each (campgroundId, month) from rec.gov ONCE; accumulate raw API results per campground.
     const rawByCampground = await fetchDeduped(plan);
 
-    // 5. Per user: compute matches against their filters, diff against their state.
+    // 5. Fetch the existing global first-seen map.
+    const existingFirstSeenMap = await fetchFirstSeenMap(subscriberApiUrl, subscriberApiSecret);
+
+    // 6. Compute all currently-visible match signatures across all eligible users.
+    //    For each signature: record first-seen timestamp if not already present; keep existing if so.
+    //    Only retain signatures still visible this cycle (stale ones drop naturally).
+    const newFirstSeenMap = {};
+    for (const target of eligible) {
+        const userMatches = computeMatchesForUser(target, rawByCampground);
+        for (const m of userMatches) {
+            const sig = signatureForMatch(m);
+            if (!newFirstSeenMap[sig]) {
+                newFirstSeenMap[sig] = existingFirstSeenMap[sig] ?? now.toISOString();
+            }
+        }
+    }
+
+    // 7. Per user: apply lead-time filter (non-curators only), diff against their state.
     const updates = [];
     for (const target of eligible) {
         const userMatches = computeMatchesForUser(target, rawByCampground);
+        const isCurator = (target.roles ?? []).includes('curator');
+
+        // Apply curator lead-time: non-curators only see matches whose global first-sighting
+        // is at least LEAD_TIME_MS in the past. This filter runs BEFORE the diff so that a
+        // match that hasn't elapsed lead-time doesn't silently land in the user's prior state.
+        const visible = isCurator
+            ? userMatches
+            : userMatches.filter((m) => {
+                  const sig = signatureForMatch(m);
+                  const firstSeen = newFirstSeenMap[sig];
+                  if (!firstSeen) return false; // defensive; shouldn't happen
+                  return now.getTime() - new Date(firstSeen).getTime() >= LEAD_TIME_MS;
+              });
+
         const priorState = target.notifierState ?? null;
         const isFirstRun = priorState === null;
-        const { newMatches, nextState } = diffPerUser(userMatches, priorState);
+        const { newMatches, nextState } = diffPerUser(visible, priorState);
 
         if (isFirstRun && !forceEmail) {
             console.log(`[${target.email}] first run — seeding state, no email`);
@@ -253,7 +315,7 @@ async function main() {
         }
     }
 
-    // 6. Push state back to the API.
+    // 8. Push state back to the API.
     const stateResponse = await fetch(`${subscriberApiUrl}/api/admin/notifier-state`, {
         method: 'PUT',
         headers: {
@@ -268,6 +330,9 @@ async function main() {
         const result = await stateResponse.json();
         console.log(`[Done] Updated state for ${result.updated} user(s)`);
     }
+
+    // 9. Persist the updated first-seen map (pruned to only currently-visible signatures).
+    await putFirstSeenMap(subscriberApiUrl, subscriberApiSecret, newFirstSeenMap);
 }
 
 main().catch((err) => {

@@ -120,6 +120,29 @@ describe("GET /api/admin/notification-targets", () => {
         expect(body.targets[0].lastNotifiedAt).toBe("2026-05-15T01:00:00.000Z");
     });
 
+    it("includes roles in each target", async () => {
+        vi.mocked(cloudflare.getEnv).mockReturnValue({ API_SECRET: SECRET } as never);
+        const kv = createMockKv({
+            "user:curator@x.com:profile": JSON.stringify({
+                email: "curator@x.com",
+                name: "Curator",
+                roles: ["curator"],
+                createdAt: "2026-01-01T00:00:00.000Z",
+            }),
+            "user:curator@x.com:campgrounds": JSON.stringify({
+                campgrounds: { "recreation.gov": [{ id: "1", name: "X", sites: { favorites: [], worthwhile: [] } }] },
+                globalSettings: { stayLengths: [2], validStartDays: ["Monday"] },
+                updatedAt: "2026-01-02T00:00:00.000Z",
+            }),
+        });
+        vi.mocked(cloudflare.getKv).mockReturnValue(kv);
+
+        const res = await get(`Bearer ${SECRET}`);
+        expect(res.status).toBe(200);
+        const body = (await res.json()) as { targets: Array<{ roles: string[] }> };
+        expect(body.targets[0].roles).toEqual(["curator"]);
+    });
+
     it("returns notifierState: null when no state has been stored", async () => {
         vi.mocked(cloudflare.getEnv).mockReturnValue({ API_SECRET: SECRET } as never);
         const kv = createMockKv({

@@ -8,7 +8,7 @@ export interface UserProfile {
     createdAt: string;
     notifications?: {
         enabled: boolean;
-        frequencyMinutes: 15 | 60 | 240;
+        frequencyMinutes: 5 | 15 | 60 | 240;
     };
     lastNotifiedAt?: string;
 }
