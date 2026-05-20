@@ -260,13 +260,28 @@ async function main() {
     // 6. Compute all currently-visible match signatures across all eligible users.
     //    For each signature: record first-seen timestamp if not already present; keep existing if so.
     //    Only retain signatures still visible this cycle (stale ones drop naturally).
+    //
+    //    Also build a global enrichment map (sig → enriched fields) so step 9.5 can
+    //    populate the recent-openings log without re-walking per-user data.
     const newFirstSeenMap = {};
+    const globalMatchesBySig = {};
     for (const target of eligible) {
         const userMatches = computeMatchesForUser(target, rawByCampground);
         for (const m of userMatches) {
             const sig = signatureForMatch(m);
             if (!newFirstSeenMap[sig]) {
                 newFirstSeenMap[sig] = existingFirstSeenMap[sig] ?? now.toISOString();
+            }
+            if (!globalMatchesBySig[sig]) {
+                globalMatchesBySig[sig] = {
+                    campgroundId: m.campgroundId,
+                    campgroundName: m.campgroundName,
+                    siteId: m.siteId,
+                    siteName: m.siteName,
+                    from: m.match.from,
+                    to: m.match.to,
+                    nights: m.match.nights,
+                };
             }
         }
     }
@@ -344,6 +359,52 @@ async function main() {
 
     // 9. Persist the updated first-seen map (pruned to only currently-visible signatures).
     await putFirstSeenMap(subscriberApiUrl, subscriberApiSecret, newFirstSeenMap);
+
+    // 9.5: Maintain recent-openings log.
+    // Fetch the prior log from the public endpoint (no auth needed, falls back to []).
+    const RECENT_WINDOW_MS = 24 * 60 * 60 * 1000;
+    const recentResp = await fetch(`${subscriberApiUrl}/api/openings/recent`).catch(() => null);
+    const priorRecent = recentResp && recentResp.ok ? await recentResp.json() : [];
+
+    // Prune entries older than 24h.
+    const recent = priorRecent.filter(
+        (r) => r.detectedAt && Date.now() - new Date(r.detectedAt).getTime() < RECENT_WINDOW_MS,
+    );
+    const existingSigs = new Set(recent.map((r) => r.signature));
+
+    // Signatures whose first-seen timestamp was recorded this cycle are new.
+    // We use a 60s window to catch timestamps stamped during the current run;
+    // signatures that were already in existingFirstSeenMap predate this cycle.
+    const cycleStartMs = now.getTime() - 60 * 1000;
+    for (const [sig, firstSeen] of Object.entries(newFirstSeenMap)) {
+        if (existingSigs.has(sig)) continue;
+        if (new Date(firstSeen).getTime() < cycleStartMs) continue;
+        const enriched = globalMatchesBySig[sig];
+        if (!enriched) continue;
+        recent.push({ signature: sig, ...enriched, detectedAt: firstSeen });
+    }
+
+    // Sort descending by detectedAt; keep at most 200 entries.
+    recent.sort((a, b) => b.detectedAt.localeCompare(a.detectedAt));
+    const trimmedRecent = recent.slice(0, 200);
+
+    try {
+        const recentPutResp = await fetch(`${subscriberApiUrl}/api/admin/openings/recent`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${subscriberApiSecret}`,
+            },
+            body: JSON.stringify(trimmedRecent),
+        });
+        if (!recentPutResp.ok) {
+            console.error(`[Warn] /api/admin/openings/recent PUT returned ${recentPutResp.status}`);
+        } else {
+            console.log(`[Recent] ${trimmedRecent.length} entries in log (${recent.length - (priorRecent.filter((r) => r.detectedAt && Date.now() - new Date(r.detectedAt).getTime() < RECENT_WINDOW_MS).length)} new this cycle)`);
+        }
+    } catch (err) {
+        console.error(`[Warn] /api/admin/openings/recent PUT failed: ${err.message}`);
+    }
 
     // 10. Compute and PUT stats.
     const todayKeyUtc = now.toISOString().slice(0, 10); // "YYYY-MM-DD" UTC
