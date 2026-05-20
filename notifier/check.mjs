@@ -273,6 +273,8 @@ async function main() {
 
     // 7. Per user: apply lead-time filter (non-curators only), diff against their state.
     const updates = [];
+    // Tracks latency (ms from first-seen to email-sent) for each match emailed this cycle.
+    const sentLatenciesMs = [];
     for (const target of eligible) {
         const userMatches = computeMatchesForUser(target, rawByCampground);
         const isCurator = (target.roles ?? []).includes('curator');
@@ -307,7 +309,16 @@ async function main() {
 
         console.log(`[${target.email}] ${newMatches.length} new match(es) — sending email`);
         try {
+            const sentAtMs = Date.now();
             await sendEmailToUser({ user: target, matches: newMatches, resendApiKey, siteUrl, apiSecret: subscriberApiSecret });
+            // Record latency for each match in this email.
+            for (const m of newMatches) {
+                const sig = signatureForMatch(m);
+                const firstSeenIso = newFirstSeenMap[sig];
+                if (firstSeenIso) {
+                    sentLatenciesMs.push(sentAtMs - new Date(firstSeenIso).getTime());
+                }
+            }
             updates.push({ email: target.email, state: nextState, lastNotifiedAt: now.toISOString() });
         } catch (err) {
             console.error(`[${target.email}] email send failed: ${err.message}`);
@@ -333,6 +344,78 @@ async function main() {
 
     // 9. Persist the updated first-seen map (pruned to only currently-visible signatures).
     await putFirstSeenMap(subscriberApiUrl, subscriberApiSecret, newFirstSeenMap);
+
+    // 10. Compute and PUT stats.
+    const todayKeyUtc = now.toISOString().slice(0, 10); // "YYYY-MM-DD" UTC
+
+    // Campgrounds tracked: unique campground IDs across ALL targets (not just eligible),
+    // matching only enabled entries. Gives a stable "currently watched" count each cycle.
+    const trackedIds = new Set();
+    for (const t of targets) {
+        for (const c of t.campgrounds['recreation.gov'] ?? []) {
+            if (c.enabled === false) continue;
+            if (c.id) trackedIds.add(c.id);
+        }
+    }
+
+    // Read prior stats so we can accumulate the daily counter and the latency window.
+    let priorStats = null;
+    try {
+        const priorStatsResponse = await fetch(`${subscriberApiUrl}/api/stats`);
+        if (priorStatsResponse.ok) {
+            priorStats = await priorStatsResponse.json();
+        }
+    } catch (err) {
+        console.error(`[Warn] Could not fetch prior stats: ${err.message}`);
+    }
+
+    // Daily counter: reset to 0 if the date has rolled over; otherwise accumulate.
+    const priorOpenings = priorStats?.todayKey === todayKeyUtc ? Number(priorStats.openingsSentToday) || 0 : 0;
+    const openingsSentToday = priorOpenings + sentLatenciesMs.length;
+
+    // Latency window: carry forward up to 200 prior samples, then append this cycle's.
+    const priorWindow = (priorStats?.todayKey === todayKeyUtc && Array.isArray(priorStats._latencyWindow))
+        ? priorStats._latencyWindow.slice(-200)
+        : [];
+    const latencyWindow = [...priorWindow, ...sentLatenciesMs].slice(-200);
+
+    // Compute median.
+    const sortedLatencies = [...latencyWindow].sort((a, b) => a - b);
+    const medianLatencyMs = sortedLatencies.length === 0
+        ? (Number(priorStats?.medianLatencyMs) || 0)
+        : sortedLatencies.length % 2 === 1
+            ? sortedLatencies[(sortedLatencies.length - 1) / 2]
+            : Math.round(
+                (sortedLatencies[sortedLatencies.length / 2 - 1] + sortedLatencies[sortedLatencies.length / 2]) / 2,
+              );
+
+    const statsBody = {
+        lastPollAt: now.toISOString(),
+        campgroundsTracked: trackedIds.size,
+        openingsSentToday,
+        medianLatencyMs,
+        sampleSize: sortedLatencies.length,
+        todayKey: todayKeyUtc,
+        _latencyWindow: latencyWindow,
+    };
+
+    try {
+        const statsResponse = await fetch(`${subscriberApiUrl}/api/admin/stats`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${subscriberApiSecret}`,
+            },
+            body: JSON.stringify(statsBody),
+        });
+        if (!statsResponse.ok) {
+            console.error(`[Warn] /api/admin/stats PUT returned ${statsResponse.status}`);
+        } else {
+            console.log(`[Stats] ${trackedIds.size} cgs tracked, ${sentLatenciesMs.length} sent this cycle, ${medianLatencyMs}ms median`);
+        }
+    } catch (err) {
+        console.error(`[Warn] /api/admin/stats PUT failed: ${err.message}`);
+    }
 }
 
 main().catch((err) => {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@/hooks/use-auth";
+import { useState, useEffect } from "react";
 
 // ─── Color palette ───────────────────────────────────────────────────────────
 const C = {
@@ -296,9 +297,71 @@ function DBars({ pattern, accent = C.forest, secondary = C.mustard }: { pattern:
     );
 }
 
+// ─── Stats types ──────────────────────────────────────────────────────────────
+interface NotifierStats {
+    lastPollAt: string;
+    campgroundsTracked: number;
+    openingsSentToday: number;
+    medianLatencyMs: number;
+    sampleSize: number;
+    todayKey: string;
+}
+
+// ─── Hooks ────────────────────────────────────────────────────────────────────
+function useStats(): NotifierStats | null {
+    const [stats, setStats] = useState<NotifierStats | null>(null);
+    useEffect(() => {
+        let cancelled = false;
+        fetch("/api/stats")
+            .then((r) => (r.ok ? r.json() : null))
+            .then((data: unknown) => {
+                if (cancelled) return;
+                setStats(data as NotifierStats | null);
+            })
+            .catch(() => {});
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+    return stats;
+}
+
+function useNowTick(): number {
+    const [now, setNow] = useState(() => Date.now());
+    useEffect(() => {
+        const id = setInterval(() => setNow(Date.now()), 1000);
+        return () => clearInterval(id);
+    }, []);
+    return now;
+}
+
+// ─── Stat formatters ──────────────────────────────────────────────────────────
+function formatTimeAgo(ms: number): string {
+    if (!Number.isFinite(ms) || ms < 0) return "—";
+    const s = Math.floor(ms / 1000);
+    if (s < 60) return `${s}s`;
+    const m = Math.floor(s / 60);
+    if (m < 60) return `${m}m`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}h`;
+    return `${Math.floor(h / 24)}d`;
+}
+
+function formatLatency(ms: number): string {
+    if (ms === 0) return "—";
+    if (ms < 1000) return `${ms}ms`;
+    return `${(ms / 1000).toFixed(1)}s`;
+}
+
+function formatCount(n: number): string {
+    return n.toLocaleString();
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function HomePage() {
     const auth = useAuth();
+    const stats = useStats();
+    const nowMs = useNowTick();
 
     // Nav link style (shared)
     const navLinkStyle: React.CSSProperties = {
@@ -403,22 +466,10 @@ export default function HomePage() {
                             Field Notes
                         </a>
                         <span style={{ width: 1, height: 14, background: "rgba(251,246,234,0.3)" }} />
-                        {auth.isLoading ? (
-                            <div style={{ width: 28, height: 28, borderRadius: 14, background: "rgba(251,246,234,0.15)" }} />
-                        ) : auth.user ? (
-                            <>
-                                <span
-                                    style={{
-                                        font: `400 11px/1 ${FM}`,
-                                        opacity: 0.85,
-                                        letterSpacing: "0.08em",
-                                        textTransform: "none",
-                                    }}
-                                >
-                                    {auth.user.email}
-                                </span>
+                        {auth.isLoading ? null : auth.user ? (
+                            <a href="/app/account" aria-label="Account" style={{ textDecoration: "none" }}>
                                 <div style={navAvatarStyle}>{auth.user.name?.[0]?.toUpperCase() ?? "?"}</div>
-                            </>
+                            </a>
                         ) : (
                             <a
                                 href="/auth/google/start?returnTo=/app"
@@ -449,30 +500,6 @@ export default function HomePage() {
                     }}
                 >
                     <div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 28 }}>
-                            <span
-                                style={{
-                                    font: `700 11px/1 ${FM}`,
-                                    letterSpacing: "0.18em",
-                                    color: C.cream,
-                                    border: "1px solid rgba(251,246,234,0.6)",
-                                    padding: "5px 8px",
-                                    textTransform: "uppercase",
-                                }}
-                            >
-                                FIELD BULLETIN · No. 0142
-                            </span>
-                            <div style={{ flex: 1, height: 1, background: "rgba(251,246,234,0.35)" }} />
-                            <span
-                                style={{
-                                    font: `500 11px/1 ${FM}`,
-                                    color: "rgba(251,246,234,0.85)",
-                                    letterSpacing: "0.14em",
-                                }}
-                            >
-                                RECREATION.GOV · LIVE
-                            </span>
-                        </div>
                         <h1 style={{ margin: "0 0 26px", color: C.cream, textShadow: "0 1px 30px rgba(0,0,0,0.25)" }}>
                             <span
                                 style={{
@@ -513,9 +540,8 @@ export default function HomePage() {
                                 margin: "0 0 32px",
                             }}
                         >
-                            A small bot pings <em>recreation.gov</em> every five minutes for the campgrounds on your watchlist.
-                            When a site opens — a release, a cancellation, anything — an email finds you. That&apos;s the whole
-                            thing.
+                            Recreation.gov sells out in minutes. CampWatch watches the sites you actually want, every five
+                            minutes, and emails you the second one opens. No app, no notifications to babysit.
                         </p>
                         <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
                             {auth.isLoading ? (
@@ -678,10 +704,30 @@ export default function HomePage() {
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 48 }}>
                     {(
                         [
-                            ["Last poll", "47s ago", C.mustard, "ago"],
-                            ["Campgrounds tracked", "1,284", C.cream, "sites"],
-                            ["Openings sent today", "127", C.cream, "emails"],
-                            ["Median latency", "9.2s", C.cream, "to inbox"],
+                            [
+                                "Last poll",
+                                stats ? formatTimeAgo(nowMs - new Date(stats.lastPollAt).getTime()) : "—",
+                                C.mustard,
+                                "ago",
+                            ],
+                            [
+                                "Campgrounds tracked",
+                                stats ? formatCount(stats.campgroundsTracked) : "—",
+                                C.cream,
+                                "sites",
+                            ],
+                            [
+                                "Openings sent today",
+                                stats ? formatCount(stats.openingsSentToday) : "—",
+                                C.cream,
+                                "emails",
+                            ],
+                            [
+                                "Median latency",
+                                stats ? formatLatency(stats.medianLatencyMs) : "—",
+                                C.cream,
+                                "to inbox",
+                            ],
                         ] as const
                     ).map(([k, v, color, sub]) => (
                         <div key={k}>
@@ -1302,7 +1348,7 @@ export default function HomePage() {
                                         CampWatch &lt;alerts@campwatch.app&gt;
                                     </div>
                                     <div style={{ color: C.inkSoft, marginTop: 8 }}>TO</div>
-                                    <div style={{ color: C.ink, marginTop: 2 }}>you@example.com</div>
+                                    <div style={{ color: C.ink, marginTop: 2 }}>{auth.user?.email ?? "you@trail.example"}</div>
                                 </div>
                                 <div
                                     style={{
