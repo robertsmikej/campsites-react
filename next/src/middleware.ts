@@ -13,8 +13,14 @@ function requiresAuth(pathname: string): boolean {
 }
 
 export function middleware(request: NextRequest) {
-    const { pathname, search } = request.nextUrl;
+    const { pathname } = request.nextUrl;
     if (!requiresAuth(pathname)) return NextResponse.next();
+
+    // In dev, the DEV_USER bypass authenticates via env var without ever
+    // setting a session cookie — so the cookie check below would always
+    // bounce a dev user. Skip the redirect entirely in non-production;
+    // the page itself still calls /api/me and renders correctly.
+    if (process.env.NODE_ENV !== "production") return NextResponse.next();
 
     const session = request.cookies.get(SESSION_COOKIE);
     if (session?.value) return NextResponse.next();

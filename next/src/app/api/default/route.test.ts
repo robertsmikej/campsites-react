@@ -41,13 +41,25 @@ async function doPut(body: unknown): Promise<Response> {
 }
 
 describe("GET /api/default", () => {
-    it("returns 404 when KV is empty", async () => {
+    it("returns 404 when KV is empty in production", async () => {
         vi.mocked(cloudflare.getKv).mockReturnValue(createMockKv());
+        vi.stubEnv("NODE_ENV", "production");
 
         const res = await doGet();
         expect(res.status).toBe(404);
         const body = (await res.json()) as { error: string };
         expect(body.error).toBe("No default config found");
+
+        vi.unstubAllEnvs();
+    });
+
+    it("falls back to seed catalog when KV is empty in development", async () => {
+        vi.mocked(cloudflare.getKv).mockReturnValue(createMockKv());
+
+        const res = await doGet();
+        expect(res.status).toBe(200);
+        const body = (await res.json()) as { campgrounds: { "recreation.gov": { id: string }[] } };
+        expect(body.campgrounds["recreation.gov"].length).toBeGreaterThan(0);
     });
 
     it("returns 200 with the stored config", async () => {
