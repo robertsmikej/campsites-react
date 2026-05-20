@@ -1,5 +1,16 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Local development
+
+1. Copy `.dev.vars.example` to `.dev.vars` and fill in `DEV_USER` with the email you want to sign in as.
+2. `pnpm install`
+3. `pnpm dev`
+4. Visit http://localhost:3000. The dev bypass auto-signs you in.
+
+The bypass only activates when `NODE_ENV !== "production"`. Production deployments ignore `DEV_USER`.
+
+For real Google OAuth locally, leave `DEV_USER` empty and fill in the Google + session secrets in `.dev.vars`. You'll also need to add `http://localhost:3000/auth/google/callback` to your Google Cloud OAuth client's allowed redirect URIs.
+
 ## Getting Started
 
 First, run the development server:

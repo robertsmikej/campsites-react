@@ -2,7 +2,7 @@ name: Check Campsite Availability
 
 on:
   schedule:
-    - cron: '*/15 * * * *' # Every 15 minutes
+    - cron: '*/5 * * * *' # Every 5 minutes (GH Actions minimum)
   workflow_dispatch:
     inputs:
       force_email:

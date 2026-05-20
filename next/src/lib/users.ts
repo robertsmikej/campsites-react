@@ -50,6 +50,7 @@ export async function deleteUser(email: string): Promise<void> {
     const kv = getKv();
     await kv.delete(profileKey(email));
     await kv.delete(campgroundsKey(email));
+    await kv.delete(`user:${email}:notifier-state`);
 
     let cursor: string | undefined;
     do {

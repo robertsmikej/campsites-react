@@ -72,7 +72,11 @@ function SortableCampgroundEditor(props: {
     };
 
     return (
-        <div ref={setNodeRef} style={style}>
+        <div
+            ref={setNodeRef}
+            style={style}
+            id={`campground-panel-${sortableId}`}
+        >
             <CampgroundEditor
                 {...props}
                 dragHandleProps={{ ...attributes, ...listeners }}
@@ -92,6 +96,7 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
         availableSites,
         useMockData,
         onToggleMockData,
+        focusedCampgroundId,
     } = props;
 
     const [campgrounds, setCampgrounds] = useState<EditableCampground[]>([
@@ -137,6 +142,20 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
         setExpandedPanels(new Set([0]));
         setViewMode("cards");
     }, [open, initialData, globalSettings]);
+
+    // Focus a specific campground when the dialog opens with focusedCampgroundId set
+    useEffect(() => {
+        if (!open || !focusedCampgroundId) return;
+        const idx = campgrounds.findIndex((c) => c.id === focusedCampgroundId);
+        if (idx < 0) return;
+        setViewMode("cards");
+        setExpandedPanels(new Set([idx]));
+        // Scroll to the panel after a brief paint delay
+        const id = `campground-panel-${campgrounds[idx].id || `idx-${idx}`}`;
+        requestAnimationFrame(() => {
+            document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        });
+    }, [open, focusedCampgroundId]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Sync expanded panels when view mode changes
     useEffect(() => {
@@ -259,7 +278,7 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
 
     return (
         <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-            <DialogContent className="flex max-h-[90vh] max-w-3xl flex-col overflow-hidden">
+            <DialogContent className="flex max-h-[90vh] w-[95vw] max-w-[95vw] flex-col overflow-hidden sm:max-w-6xl">
                 <DialogHeader>
                     <DialogTitle>Configure Campgrounds</DialogTitle>
                 </DialogHeader>

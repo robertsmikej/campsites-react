@@ -47,6 +47,7 @@ export interface Campground {
     description?: string;
     dates?: CampgroundDates;
     image?: string;
+    mapImage?: string;
     sites: { favorites: string[]; worthwhile: string[] };
     showOrHide?: Partial<CampgroundShowOrHide>;
     notifyAll?: boolean;

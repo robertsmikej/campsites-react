@@ -1,13 +1,14 @@
 import { getEnv, getKv } from "@/lib/cloudflare";
 import { jsonResponse, withCors } from "@/lib/responses";
 import { getUserCampgrounds } from "@/lib/user-campgrounds";
-import type { UserProfile } from "@/types/user";
+import type { UserProfile, UserRole } from "@/types/user";
 import type { GlobalSettings, SiteConfig } from "@/types/campground";
 
 interface NotificationTarget {
     email: string;
     name: string;
-    notifications: { enabled: boolean; frequencyMinutes: 15 | 60 | 240 };
+    roles: UserRole[];
+    notifications: { enabled: boolean; frequencyMinutes: 5 | 15 | 60 | 240 };
     lastNotifiedAt?: string;
     campgrounds: SiteConfig;
     globalSettings: GlobalSettings;
@@ -47,6 +48,7 @@ export async function GET(request: Request): Promise<Response> {
             const target: NotificationTarget = {
                 email: profile.email,
                 name: profile.name ?? profile.email,
+                roles: profile.roles ?? [],
                 notifications: profile.notifications ?? { enabled: true, frequencyMinutes: 15 },
                 campgrounds: userList!.campgrounds,
                 globalSettings: userList!.globalSettings,

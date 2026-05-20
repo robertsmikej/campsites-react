@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- Forest-green background square -->
+  <rect width="32" height="32" rx="6" fill="oklch(0.42 0.09 150)"/>
+  <!-- Tent silhouette in warm stone/white -->
+  <!-- Left slope of tent -->
+  <polygon points="16,6 4,24 16,20" fill="white" opacity="0.95"/>
+  <!-- Right slope of tent -->
+  <polygon points="16,6 28,24 16,20" fill="white" opacity="0.8"/>
+  <!-- Door opening -->
+  <polygon points="16,13 12,24 20,24" fill="oklch(0.42 0.09 150)"/>
+</svg>

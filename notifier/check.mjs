@@ -9,6 +9,10 @@ import { formatEmail, sendEmail } from './lib/email.mjs';
 
 const DELAY_BETWEEN_FETCHES_MS = 500;
 
+// Non-curator users don't receive an email about a new match until this many
+// milliseconds after the global first-sighting. Curators are notified immediately.
+const LEAD_TIME_MS = 15 * 60 * 1000;
+
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // --- Eligibility ---
@@ -178,6 +182,33 @@ async function sendEmailToUser({ user, matches, resendApiKey, siteUrl, apiSecret
     await sendEmail(user.email, subject, html, resendApiKey, unsubscribeLink);
 }
 
+// --- First-seen map helpers ---
+
+async function fetchFirstSeenMap(subscriberApiUrl, subscriberApiSecret) {
+    const res = await fetch(`${subscriberApiUrl}/api/admin/first-seen`, {
+        headers: { Authorization: `Bearer ${subscriberApiSecret}` },
+    });
+    if (!res.ok) {
+        console.error(`[Warn] first-seen GET returned ${res.status} — starting with empty map`);
+        return {};
+    }
+    return res.json();
+}
+
+async function putFirstSeenMap(subscriberApiUrl, subscriberApiSecret, map) {
+    const res = await fetch(`${subscriberApiUrl}/api/admin/first-seen`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${subscriberApiSecret}`,
+        },
+        body: JSON.stringify({ map }),
+    });
+    if (!res.ok) {
+        console.error(`[Warn] first-seen PUT returned ${res.status}`);
+    }
+}
+
 // --- Main ---
 
 async function main() {
@@ -223,13 +254,46 @@ async function main() {
     // 4. Fetch each (campgroundId, month) from rec.gov ONCE; accumulate raw API results per campground.
     const rawByCampground = await fetchDeduped(plan);
 
-    // 5. Per user: compute matches against their filters, diff against their state.
-    const updates = [];
+    // 5. Fetch the existing global first-seen map.
+    const existingFirstSeenMap = await fetchFirstSeenMap(subscriberApiUrl, subscriberApiSecret);
+
+    // 6. Compute all currently-visible match signatures across all eligible users.
+    //    For each signature: record first-seen timestamp if not already present; keep existing if so.
+    //    Only retain signatures still visible this cycle (stale ones drop naturally).
+    const newFirstSeenMap = {};
     for (const target of eligible) {
         const userMatches = computeMatchesForUser(target, rawByCampground);
+        for (const m of userMatches) {
+            const sig = signatureForMatch(m);
+            if (!newFirstSeenMap[sig]) {
+                newFirstSeenMap[sig] = existingFirstSeenMap[sig] ?? now.toISOString();
+            }
+        }
+    }
+
+    // 7. Per user: apply lead-time filter (non-curators only), diff against their state.
+    const updates = [];
+    // Tracks latency (ms from first-seen to email-sent) for each match emailed this cycle.
+    const sentLatenciesMs = [];
+    for (const target of eligible) {
+        const userMatches = computeMatchesForUser(target, rawByCampground);
+        const isCurator = (target.roles ?? []).includes('curator');
+
+        // Apply curator lead-time: non-curators only see matches whose global first-sighting
+        // is at least LEAD_TIME_MS in the past. This filter runs BEFORE the diff so that a
+        // match that hasn't elapsed lead-time doesn't silently land in the user's prior state.
+        const visible = isCurator
+            ? userMatches
+            : userMatches.filter((m) => {
+                  const sig = signatureForMatch(m);
+                  const firstSeen = newFirstSeenMap[sig];
+                  if (!firstSeen) return false; // defensive; shouldn't happen
+                  return now.getTime() - new Date(firstSeen).getTime() >= LEAD_TIME_MS;
+              });
+
         const priorState = target.notifierState ?? null;
         const isFirstRun = priorState === null;
-        const { newMatches, nextState } = diffPerUser(userMatches, priorState);
+        const { newMatches, nextState } = diffPerUser(visible, priorState);
 
         if (isFirstRun && !forceEmail) {
             console.log(`[${target.email}] first run — seeding state, no email`);
@@ -245,7 +309,16 @@ async function main() {
 
         console.log(`[${target.email}] ${newMatches.length} new match(es) — sending email`);
         try {
+            const sentAtMs = Date.now();
             await sendEmailToUser({ user: target, matches: newMatches, resendApiKey, siteUrl, apiSecret: subscriberApiSecret });
+            // Record latency for each match in this email.
+            for (const m of newMatches) {
+                const sig = signatureForMatch(m);
+                const firstSeenIso = newFirstSeenMap[sig];
+                if (firstSeenIso) {
+                    sentLatenciesMs.push(sentAtMs - new Date(firstSeenIso).getTime());
+                }
+            }
             updates.push({ email: target.email, state: nextState, lastNotifiedAt: now.toISOString() });
         } catch (err) {
             console.error(`[${target.email}] email send failed: ${err.message}`);
@@ -253,7 +326,7 @@ async function main() {
         }
     }
 
-    // 6. Push state back to the API.
+    // 8. Push state back to the API.
     const stateResponse = await fetch(`${subscriberApiUrl}/api/admin/notifier-state`, {
         method: 'PUT',
         headers: {
@@ -267,6 +340,81 @@ async function main() {
     } else {
         const result = await stateResponse.json();
         console.log(`[Done] Updated state for ${result.updated} user(s)`);
+    }
+
+    // 9. Persist the updated first-seen map (pruned to only currently-visible signatures).
+    await putFirstSeenMap(subscriberApiUrl, subscriberApiSecret, newFirstSeenMap);
+
+    // 10. Compute and PUT stats.
+    const todayKeyUtc = now.toISOString().slice(0, 10); // "YYYY-MM-DD" UTC
+
+    // Campgrounds tracked: unique campground IDs across ALL targets (not just eligible),
+    // matching only enabled entries. Gives a stable "currently watched" count each cycle.
+    const trackedIds = new Set();
+    for (const t of targets) {
+        for (const c of t.campgrounds['recreation.gov'] ?? []) {
+            if (c.enabled === false) continue;
+            if (c.id) trackedIds.add(c.id);
+        }
+    }
+
+    // Read prior stats so we can accumulate the daily counter and the latency window.
+    let priorStats = null;
+    try {
+        const priorStatsResponse = await fetch(`${subscriberApiUrl}/api/stats`);
+        if (priorStatsResponse.ok) {
+            priorStats = await priorStatsResponse.json();
+        }
+    } catch (err) {
+        console.error(`[Warn] Could not fetch prior stats: ${err.message}`);
+    }
+
+    // Daily counter: reset to 0 if the date has rolled over; otherwise accumulate.
+    const priorOpenings = priorStats?.todayKey === todayKeyUtc ? Number(priorStats.openingsSentToday) || 0 : 0;
+    const openingsSentToday = priorOpenings + sentLatenciesMs.length;
+
+    // Latency window: carry forward up to 200 prior samples, then append this cycle's.
+    const priorWindow = (priorStats?.todayKey === todayKeyUtc && Array.isArray(priorStats._latencyWindow))
+        ? priorStats._latencyWindow.slice(-200)
+        : [];
+    const latencyWindow = [...priorWindow, ...sentLatenciesMs].slice(-200);
+
+    // Compute median.
+    const sortedLatencies = [...latencyWindow].sort((a, b) => a - b);
+    const medianLatencyMs = sortedLatencies.length === 0
+        ? (Number(priorStats?.medianLatencyMs) || 0)
+        : sortedLatencies.length % 2 === 1
+            ? sortedLatencies[(sortedLatencies.length - 1) / 2]
+            : Math.round(
+                (sortedLatencies[sortedLatencies.length / 2 - 1] + sortedLatencies[sortedLatencies.length / 2]) / 2,
+              );
+
+    const statsBody = {
+        lastPollAt: now.toISOString(),
+        campgroundsTracked: trackedIds.size,
+        openingsSentToday,
+        medianLatencyMs,
+        sampleSize: sortedLatencies.length,
+        todayKey: todayKeyUtc,
+        _latencyWindow: latencyWindow,
+    };
+
+    try {
+        const statsResponse = await fetch(`${subscriberApiUrl}/api/admin/stats`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${subscriberApiSecret}`,
+            },
+            body: JSON.stringify(statsBody),
+        });
+        if (!statsResponse.ok) {
+            console.error(`[Warn] /api/admin/stats PUT returned ${statsResponse.status}`);
+        } else {
+            console.log(`[Stats] ${trackedIds.size} cgs tracked, ${sentLatenciesMs.length} sent this cycle, ${medianLatencyMs}ms median`);
+        }
+    } catch (err) {
+        console.error(`[Warn] /api/admin/stats PUT failed: ${err.message}`);
     }
 }
 

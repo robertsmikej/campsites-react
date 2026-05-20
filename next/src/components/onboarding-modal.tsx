@@ -49,7 +49,7 @@ export function OnboardingModal({
     return (
         <Dialog open={open}>
             <DialogContent
-                className="sm:max-w-md"
+                className="sm:max-w-lg"
                 onInteractOutside={(e) => e.preventDefault()}
                 onEscapeKeyDown={(e) => e.preventDefault()}
             >

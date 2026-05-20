@@ -2,9 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { Sparkles, X } from "lucide-react";
 import { TopBar } from "@/components/top-bar";
 import { ProgressBarEl } from "@/components/progress-bar-el";
-import { CampgroundsGroups } from "@/components/campgrounds-groups";
+import { CampgroundsList } from "@/components/campgrounds-list";
 import { SiteConfigDialog } from "@/components/site-config-dialog";
 import SiteSettingsContext from "@/context/site-settings";
 import ProgressBarContext from "@/context/progress-bar";
@@ -32,6 +33,8 @@ export default function AppPage() {
     } = userCampgrounds;
     const [useMockData, setUseMockData] = useState(false);
     const [isConfigDialogOpen, setIsConfigDialogOpen] = useState(false);
+    const [focusedCampgroundId, setFocusedCampgroundId] = useState<string | null>(null);
+    const [dismissedSync, setDismissedSync] = useState(false);
 
     const settings = useMemo<SiteSettingsValue>(
         () => ({
@@ -65,6 +68,28 @@ export default function AppPage() {
         }
         return map;
     }, [campgroundsByAreas]);
+
+    /**
+     * Toggle a site's rating for a given campground. Mutates the favorites/worthwhile
+     * arrays in the siteConfig and persists via the existing save path.
+     */
+    const handleRatingChange = (
+        campgroundId: string,
+        siteName: string,
+        newRating: "favorite" | "worthwhile" | "unrated",
+    ) => {
+        const campgrounds = siteConfig["recreation.gov"] ?? [];
+        const updated = campgrounds.map((cg) => {
+            if (cg.id !== campgroundId) return cg;
+            // Remove siteName from both lists first, then add to the appropriate one
+            const favorites = (cg.sites?.favorites ?? []).filter((s) => s !== siteName);
+            const worthwhile = (cg.sites?.worthwhile ?? []).filter((s) => s !== siteName);
+            if (newRating === "favorite") favorites.push(siteName);
+            else if (newRating === "worthwhile") worthwhile.push(siteName);
+            return { ...cg, sites: { favorites, worthwhile } };
+        });
+        void save({ ...siteConfig, "recreation.gov": updated }, globalSettings);
+    };
 
     useEffect(() => {
         if (syncStatus === null) return;
@@ -111,10 +136,51 @@ export default function AppPage() {
                 <ProgressBarEl />
 
                 <main className="container mx-auto p-5">
-                    <CampgroundsGroups
+                    {userCampgrounds.missingFromDefault.length > 0 && !dismissedSync && (
+                        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm">
+                            <Sparkles className="size-4 shrink-0 text-primary" aria-hidden />
+                            <div className="min-w-0 flex-1">
+                                <p className="font-medium">
+                                    {userCampgrounds.missingFromDefault.length} new campground
+                                    {userCampgrounds.missingFromDefault.length === 1 ? "" : "s"} in the default config
+                                </p>
+                                <p className="truncate text-xs text-muted-foreground">
+                                    {userCampgrounds.missingFromDefault.map((c) => c.name).join(", ")}
+                                </p>
+                            </div>
+                            <div className="flex shrink-0 items-center gap-2">
+                                <Button
+                                    size="sm"
+                                    onClick={async () => {
+                                        const result = await userCampgrounds.syncMissing();
+                                        setDismissedSync(true);
+                                        toast.success(`Added ${result.added} campground${result.added === 1 ? "" : "s"}`);
+                                    }}
+                                >
+                                    Add to my list
+                                </Button>
+                                <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    onClick={() => setDismissedSync(true)}
+                                    aria-label="Dismiss"
+                                >
+                                    <X className="size-4" />
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+
+                    <CampgroundsList
                         campgrounds={campgroundsByAreas}
                         settings={settings as { views?: { type?: "calendar" | "table" } }}
+                        globalSettings={globalSettings}
                         isLoading={isLoading}
+                        onRatingChange={handleRatingChange}
+                        onEditSettings={(campgroundId) => {
+                            setFocusedCampgroundId(campgroundId);
+                            setIsConfigDialogOpen(true);
+                        }}
                     />
 
                     <footer className="mt-8 border-t pt-4">
@@ -131,10 +197,14 @@ export default function AppPage() {
 
                 <SiteConfigDialog
                     open={isConfigDialogOpen}
-                    onClose={() => setIsConfigDialogOpen(false)}
+                    onClose={() => {
+                        setIsConfigDialogOpen(false);
+                        setFocusedCampgroundId(null);
+                    }}
                     onSave={(config, nextGlobal) => {
                         void save(config, nextGlobal);
                         setIsConfigDialogOpen(false);
+                        setFocusedCampgroundId(null);
                     }}
                     onResetToDefaults={() => void cloneDefault()}
                     initialData={siteConfig}
@@ -142,6 +212,7 @@ export default function AppPage() {
                     availableSites={availableSites}
                     useMockData={useMockData}
                     onToggleMockData={(e) => setUseMockData(e.target.checked)}
+                    focusedCampgroundId={focusedCampgroundId}
                 />
             </ProgressBarContext.Provider>
         </SiteSettingsContext.Provider>

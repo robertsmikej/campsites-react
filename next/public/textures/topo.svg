@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200" preserveAspectRatio="none">
+  <defs>
+    <pattern id="topo" patternUnits="userSpaceOnUse" width="200" height="200">
+      <path d="M0,40 Q50,20 100,40 T200,40" fill="none" stroke="currentColor" stroke-width="0.6" opacity="0.45"/>
+      <path d="M0,80 Q50,60 100,80 T200,80" fill="none" stroke="currentColor" stroke-width="0.6" opacity="0.45"/>
+      <path d="M0,120 Q50,100 100,120 T200,120" fill="none" stroke="currentColor" stroke-width="0.6" opacity="0.45"/>
+      <path d="M0,160 Q50,140 100,160 T200,160" fill="none" stroke="currentColor" stroke-width="0.6" opacity="0.45"/>
+    </pattern>
+  </defs>
+  <rect width="200" height="200" fill="url(#topo)"/>
+</svg>
