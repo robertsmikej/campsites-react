@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { C, FH, FI, FB, FM, FN, PAD_M } from "@/components/field-notes/tokens";
 import { DScene, DCompass, DPostmark } from "@/components/field-notes/decorations";
 import { useIsMobile } from "@/hooks/use-is-mobile";
+import { useStats } from "@/contexts/stats-context";
 import type { AuthState } from "@/hooks/use-auth";
 
 // ─── Stat formatters (used in pinned bulletin card) ───────────────────────────
@@ -18,56 +19,13 @@ function formatTimeAgo(ms: number | null | undefined): string {
     return `${Math.floor(h / 24)}d`;
 }
 
-interface NotifierStats {
-    lastPollAt: string;
-    campgroundsTracked: number;
-    openingsSentToday: number;
-    openingsSentLast7Days: number;
-    medianLatencyMs: number;
-    sampleSize: number;
-    todayKey: string;
-}
-
-function useStats(): NotifierStats | null {
-    const [stats, setStats] = useState<NotifierStats | null>(null);
-    useEffect(() => {
-        let cancelled = false;
-        const load = () => {
-            fetch("/api/stats")
-                .then((r) => (r.ok ? r.json() : null))
-                .then((data: unknown) => {
-                    if (cancelled) return;
-                    setStats(data as NotifierStats | null);
-                })
-                .catch(() => {});
-        };
-        load();
-        const id = setInterval(load, 30_000);
-        return () => {
-            cancelled = true;
-            clearInterval(id);
-        };
-    }, []);
-    return stats;
-}
-
-function useNowTick(): number {
-    const [now, setNow] = useState(() => Date.now());
-    useEffect(() => {
-        const id = setInterval(() => setNow(Date.now()), 1000);
-        return () => clearInterval(id);
-    }, []);
-    return now;
-}
-
 interface HeroProps {
     auth: AuthState;
 }
 
 export function Hero({ auth }: HeroProps) {
     const isMobile = useIsMobile();
-    const stats = useStats();
-    const nowMs = useNowTick();
+    const { stats, nowMs } = useStats();
 
     const navLinkStyle: React.CSSProperties = {
         color: "inherit",

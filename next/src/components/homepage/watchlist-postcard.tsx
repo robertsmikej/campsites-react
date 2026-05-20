@@ -1,51 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { C, FH, FI, FB, FM, FN, PAD_M } from "@/components/field-notes/tokens";
 import { DTopo, DPostmark, DStamp, DBars } from "@/components/field-notes/decorations";
 import { useIsMobile } from "@/hooks/use-is-mobile";
-
-interface NotifierStats {
-    lastPollAt: string;
-    campgroundsTracked: number;
-    openingsSentToday: number;
-    openingsSentLast7Days: number;
-    medianLatencyMs: number;
-    sampleSize: number;
-    todayKey: string;
-}
-
-function useStats(): NotifierStats | null {
-    const [stats, setStats] = useState<NotifierStats | null>(null);
-    useEffect(() => {
-        let cancelled = false;
-        const load = () => {
-            fetch("/api/stats")
-                .then((r) => (r.ok ? r.json() : null))
-                .then((data: unknown) => {
-                    if (cancelled) return;
-                    setStats(data as NotifierStats | null);
-                })
-                .catch(() => {});
-        };
-        load();
-        const id = setInterval(load, 30_000);
-        return () => {
-            cancelled = true;
-            clearInterval(id);
-        };
-    }, []);
-    return stats;
-}
-
-function useNowTick(): number {
-    const [now, setNow] = useState(() => Date.now());
-    useEffect(() => {
-        const id = setInterval(() => setNow(Date.now()), 1000);
-        return () => clearInterval(id);
-    }, []);
-    return now;
-}
+import { useStats } from "@/contexts/stats-context";
 
 function formatTimeAgo(ms: number | null | undefined): string {
     if (ms == null || !Number.isFinite(ms) || ms < 0) return "—";
@@ -60,8 +19,7 @@ function formatTimeAgo(ms: number | null | undefined): string {
 
 export function WatchlistPostcard() {
     const isMobile = useIsMobile();
-    const stats = useStats();
-    const nowMs = useNowTick();
+    const { stats, nowMs } = useStats();
 
     return (
         <section style={{ padding: isMobile ? `60px ${PAD_M}px 50px` : "120px 56px 110px", position: "relative" }}>

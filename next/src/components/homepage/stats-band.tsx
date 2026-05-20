@@ -1,54 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { C, FH, FI, FM, PAD_M } from "@/components/field-notes/tokens";
 import { useIsMobile } from "@/hooks/use-is-mobile";
-
-// ─── Stats types ──────────────────────────────────────────────────────────────
-interface NotifierStats {
-    lastPollAt: string;
-    campgroundsTracked: number;
-    openingsSentToday: number;
-    openingsSentLast7Days: number;
-    medianLatencyMs: number;
-    sampleSize: number;
-    todayKey: string;
-}
-
-// ─── Hooks ────────────────────────────────────────────────────────────────────
-function useStats(): NotifierStats | null {
-    const [stats, setStats] = useState<NotifierStats | null>(null);
-    useEffect(() => {
-        let cancelled = false;
-        const load = () => {
-            fetch("/api/stats")
-                .then((r) => (r.ok ? r.json() : null))
-                .then((data: unknown) => {
-                    if (cancelled) return;
-                    setStats(data as NotifierStats | null);
-                })
-                .catch(() => {});
-        };
-        load();
-        // Re-poll every 30s so when the cron writes a new lastPollAt the UI catches up
-        // within a minute (the /api/stats response is also edge-cached for 30s).
-        const id = setInterval(load, 30_000);
-        return () => {
-            cancelled = true;
-            clearInterval(id);
-        };
-    }, []);
-    return stats;
-}
-
-function useNowTick(): number {
-    const [now, setNow] = useState(() => Date.now());
-    useEffect(() => {
-        const id = setInterval(() => setNow(Date.now()), 1000);
-        return () => clearInterval(id);
-    }, []);
-    return now;
-}
+import { useStats } from "@/contexts/stats-context";
 
 // ─── Stat formatters ──────────────────────────────────────────────────────────
 function formatTimeAgo(ms: number | null | undefined): string {
@@ -68,8 +23,7 @@ function formatCount(n: number | null | undefined): string {
 }
 
 export function StatsBand() {
-    const stats = useStats();
-    const nowMs = useNowTick();
+    const { stats, nowMs } = useStats();
     const isMobile = useIsMobile();
 
     return (
