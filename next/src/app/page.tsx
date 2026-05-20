@@ -302,6 +302,7 @@ interface NotifierStats {
     lastPollAt: string;
     campgroundsTracked: number;
     openingsSentToday: number;
+    openingsSentLast7Days: number;
     medianLatencyMs: number;
     sampleSize: number;
     todayKey: string;
@@ -708,10 +709,10 @@ export default function HomePage() {
                                 "emails",
                             ],
                             [
-                                "Median latency",
-                                stats ? formatLatency(stats.medianLatencyMs) : "—",
+                                "Openings this week",
+                                stats ? formatCount(stats.openingsSentLast7Days) : "—",
                                 C.cream,
-                                "to inbox",
+                                "and counting",
                             ],
                         ] as const
                     ).map(([k, v, color, sub]) => (
