@@ -666,7 +666,9 @@ export default function HomePage() {
                                     3 NIGHTS
                                 </span>
                                 <span>LAST POLL</span>
-                                <span style={{ textAlign: "right", color: C.clay }}>00:00:47</span>
+                                <span style={{ textAlign: "right", color: C.clay }}>
+                                    {stats ? formatTimeAgo(nowMs - new Date(stats.lastPollAt).getTime()) : "—"}
+                                </span>
                             </div>
                             <div style={{ margin: "12px 0 6px", height: 1, background: C.ruleSoft }} />
                             <div style={{ font: `600 italic 14px/1.4 ${FN}`, color: C.clay }}>
@@ -1001,7 +1003,9 @@ export default function HomePage() {
                                 }}
                             >
                                 <span style={{ font: `500 italic 15px/1 ${FI}`, color: C.clay }}>
-                                    Last poll · 47 seconds ago. All quiet.
+                                    {stats
+                                        ? `Last poll · ${formatTimeAgo(nowMs - new Date(stats.lastPollAt).getTime())} ago. All quiet.`
+                                        : "Polling resumes shortly."}
                                 </span>
                                 <span
                                     style={{
@@ -1499,7 +1503,17 @@ export default function HomePage() {
                                 },
                                 {
                                     q: "How quickly will I get the alert?",
-                                    a: "Median time from a site opening to an email in your inbox is about nine seconds. Recreation.gov doesn't notify you when your specific sites open — you'd have to keep refreshing the page. CampWatch does the refreshing for you and only emails when one of your starred sites actually comes available.",
+                                    a: (
+                                        <>
+                                            Median time from a site opening to an email in your inbox is currently{" "}
+                                            <span style={{ color: C.mustard, fontFamily: FM, letterSpacing: "0.04em" }}>
+                                                {stats && stats.sampleSize > 0
+                                                    ? formatLatency(stats.medianLatencyMs)
+                                                    : "well under a minute"}
+                                            </span>
+                                            . Recreation.gov doesn&apos;t notify you when your specific sites open — you&apos;d have to keep refreshing the page. CampWatch does the refreshing for you and only emails when one of your starred sites actually comes available.
+                                        </>
+                                    ),
                                 },
                             ] as { q: string; a: React.ReactNode }[]
                         ).map(({ q, a }, i) => (
