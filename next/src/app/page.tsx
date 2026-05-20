@@ -454,13 +454,8 @@ export default function HomePage() {
                             color: C.cream,
                         }}
                     >
-                        {auth.user ? (
-                            <a href="/app" style={navLinkStyle}>
-                                Dashboard
-                            </a>
-                        ) : null}
-                        <a href="/discover" style={{ ...navLinkStyle, opacity: 0.75 }}>
-                            Picks
+                        <a href={auth.user ? "/app" : "/discover"} style={navLinkStyle}>
+                            Dashboard
                         </a>
                         <a href="#faq" style={{ ...navLinkStyle, opacity: 0.75 }}>
                             Field Notes
@@ -591,21 +586,6 @@ export default function HomePage() {
                                                 fill="none"
                                             />
                                         </svg>
-                                    </a>
-                                    <a
-                                        href="/discover"
-                                        style={{
-                                            font: `800 13px/1 ${FH}`,
-                                            letterSpacing: "0.14em",
-                                            textTransform: "uppercase",
-                                            color: C.cream,
-                                            padding: "16px 22px",
-                                            textDecoration: "none",
-                                            border: "1.5px solid rgba(251,246,234,0.6)",
-                                            borderRadius: 2,
-                                        }}
-                                    >
-                                        Browse the Picks
                                     </a>
                                 </>
                             )}

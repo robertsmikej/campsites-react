@@ -129,6 +129,7 @@ interface CampgroundDetailProps {
     siteRatings?: SiteRatingsMap;
     onRatingChange?: (siteName: string, newRating: "favorite" | "worthwhile" | "unrated") => void;
     onEditSettings?: () => void;
+    readOnly?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -143,6 +144,7 @@ export function CampgroundDetail({
     siteRatings,
     onRatingChange,
     onEditSettings,
+    readOnly = false,
 }: CampgroundDetailProps) {
     const badge = getTypeBadge(campground);
     const TypeIcon = badge.Icon;
@@ -184,6 +186,7 @@ export function CampgroundDetail({
                     ? (newRating) => onRatingChange(site.siteName, newRating)
                     : undefined
             }
+            readOnly={readOnly}
         />
     );
 
@@ -227,6 +230,14 @@ export function CampgroundDetail({
                         ) : null}
                     </div>
                     <div className="flex items-center gap-1.5">
+                        {readOnly && (
+                            <a
+                                href="/auth/google/start?returnTo=/app"
+                                className="inline-flex items-center gap-1 rounded-full bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground hover:opacity-90"
+                            >
+                                Add to your list →
+                            </a>
+                        )}
                         <Tooltip>
                             <TooltipTrigger asChild>
                                 {mapImageSrc ? (
@@ -326,7 +337,7 @@ export function CampgroundDetail({
                         {campground.description}
                     </p>
                 )}
-                {onEditSettings && (
+                {!readOnly && onEditSettings && (
                     <button
                         type="button"
                         onClick={onEditSettings}

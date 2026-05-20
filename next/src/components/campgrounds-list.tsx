@@ -235,6 +235,8 @@ export interface CampgroundsListProps {
     onRatingChange?: (campgroundId: string, siteName: string, newRating: "favorite" | "worthwhile" | "unrated") => void;
     /** Called when the user clicks "Edit settings" in the drawer. */
     onEditSettings?: (campgroundId: string) => void;
+    /** When true, hides all mutating controls (favorites, ratings, edit settings, sync banner). */
+    readOnly?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -248,6 +250,7 @@ export function CampgroundsList({
     isLoading = false,
     onRatingChange,
     onEditSettings,
+    readOnly = false,
 }: CampgroundsListProps) {
     // Flatten if given a record of groups (matches CampgroundsGroups behaviour)
     const flattenedCampgrounds = useMemo<ProcessedCampground[]>(() => {
@@ -489,17 +492,19 @@ export function CampgroundsList({
                     </div>
 
                     <div className="ml-auto flex flex-wrap items-center gap-3">
-                        <div className="flex items-center gap-2">
-                            <Switch
-                                id="favorites-only"
-                                checked={favoritesOnly}
-                                onCheckedChange={setFavoritesOnly}
-                                disabled={favorites.size === 0}
-                            />
-                            <Label htmlFor="favorites-only" className="text-xs">
-                                Favorites only
-                            </Label>
-                        </div>
+                        {!readOnly && (
+                            <div className="flex items-center gap-2">
+                                <Switch
+                                    id="favorites-only"
+                                    checked={favoritesOnly}
+                                    onCheckedChange={setFavoritesOnly}
+                                    disabled={favorites.size === 0}
+                                />
+                                <Label htmlFor="favorites-only" className="text-xs">
+                                    Favorites only
+                                </Label>
+                            </div>
+                        )}
                         <div className="flex items-center gap-2">
                             <Switch
                                 id="show-excluded"
@@ -621,6 +626,7 @@ export function CampgroundsList({
                             density={density}
                             windowStart={effectiveWindowStart}
                             windowEnd={effectiveWindowEnd}
+                            readOnly={readOnly}
                         />
                     );
                 })}

@@ -19,10 +19,9 @@ export function middleware(request: NextRequest) {
     const session = request.cookies.get(SESSION_COOKIE);
     if (session?.value) return NextResponse.next();
 
-    const returnTo = pathname + search;
     const url = request.nextUrl.clone();
-    url.pathname = "/auth/google/start";
-    url.search = `?returnTo=${encodeURIComponent(returnTo)}`;
+    url.pathname = "/discover";
+    url.search = "";
     return NextResponse.redirect(url);
 }
 
