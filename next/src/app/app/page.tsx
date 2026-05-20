@@ -185,9 +185,36 @@ function StatusPill({ openCount }: { openCount: number }) {
     );
 }
 
+// ─── "X ago" tick hook ───────────────────────────────────────────────────────
+function useNowTick(intervalMs = 30_000): number {
+    const [now, setNow] = useState(() => Date.now());
+    useEffect(() => {
+        const id = setInterval(() => setNow(Date.now()), intervalMs);
+        return () => clearInterval(id);
+    }, [intervalMs]);
+    return now;
+}
+
+// Days until arrival cutoff: matches whose from-date is within this window
+// are almost certainly cancellations; further out are new releases.
+const CANCEL_THRESHOLD_DAYS = 14;
+
+function formatTimeAgo(nowMs: number, isoTimestamp: string): string {
+    const diffMs = nowMs - new Date(isoTimestamp).getTime();
+    if (diffMs < 0) return "just now";
+    const s = Math.floor(diffMs / 1000);
+    if (s < 60) return `${s}s ago`;
+    const m = Math.floor(s / 60);
+    if (m < 60) return `${m}m ago`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}h ago`;
+    return `${Math.floor(h / 24)}d ago`;
+}
+
 // ─── Opening card ─────────────────────────────────────────────────────────────
 interface OpeningItem {
     id: string;
+    campgroundId: string;
     campgroundName: string;
     siteId: string;
     siteName?: string;
@@ -195,6 +222,7 @@ interface OpeningItem {
     to: string;   // YYYY-MM-DD (exclusive)
     nights: number;
     recGovId?: string;
+    detectedAt: string; // ISO timestamp
     isSnoozed: boolean;
 }
 
@@ -224,10 +252,11 @@ function formatSnoozeLabel(until: string): string {
     return `Until ${fmt.format(d)}`;
 }
 
-function OpeningCard({ item, isMobile, onSnooze }: {
+function OpeningCard({ item, isMobile, onSnooze, nowMs }: {
     item: OpeningItem;
     isMobile: boolean;
     onSnooze: (id: string) => void;
+    nowMs: number;
 }) {
     const recGovUrl = item.recGovId
         ? `https://www.recreation.gov/camping/campgrounds/${item.recGovId}`
@@ -235,6 +264,11 @@ function OpeningCard({ item, isMobile, onSnooze }: {
 
     const snoozedUntil = readStorage<Record<string, string>>("campwatch:snoozed-openings", {});
     const isSnoozedNow = item.id in snoozedUntil;
+
+    const daysUntilArrival = (new Date(item.from).getTime() - nowMs) / 86_400_000;
+    const tag = daysUntilArrival < CANCEL_THRESHOLD_DAYS ? "CANCEL" : "NEW";
+    const tagColor = tag === "CANCEL" ? CW.clay : CW.forest;
+    const timeAgo = formatTimeAgo(nowMs, item.detectedAt);
 
     return (
         <article style={{
@@ -248,9 +282,12 @@ function OpeningCard({ item, isMobile, onSnooze }: {
             flexShrink: isMobile ? 0 : undefined,
         }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <Pulse color={CW.forest} size={6} />
-                <span style={{ font: `700 10px/1 ${FM}`, letterSpacing: "0.18em", color: CW.forest, textTransform: "uppercase" }}>
-                    NEW
+                <Pulse color={tagColor} size={6} />
+                <span style={{ font: `700 10px/1 ${FM}`, letterSpacing: "0.18em", color: tagColor, textTransform: "uppercase" }}>
+                    {tag}
+                </span>
+                <span style={{ font: `500 10px/1 ${FM}`, color: CW.inkSubtle, marginLeft: "auto" }}>
+                    {timeAgo}
                 </span>
             </div>
             <div>
@@ -633,6 +670,44 @@ function saveDateRange(start: Date, end: Date) {
     } catch { /* ignore */ }
 }
 
+// ─── Recent openings hook ─────────────────────────────────────────────────────
+interface RecentOpening {
+    signature: string;
+    campgroundId: string;
+    campgroundName: string;
+    siteId: string;
+    siteName: string;
+    from: string;
+    to: string;
+    nights: number;
+    detectedAt: string;
+}
+
+function useRecentOpenings(): RecentOpening[] {
+    const [openings, setOpenings] = useState<RecentOpening[]>([]);
+
+    const load = useCallback(async () => {
+        try {
+            const resp = await fetch("/api/openings/recent");
+            if (resp.ok) {
+                const data = await resp.json() as RecentOpening[];
+                setOpenings(Array.isArray(data) ? data : []);
+            }
+        } catch {
+            // silently ignore — empty list is fine
+        }
+    }, []);
+
+    useEffect(() => {
+        void load();
+        const onFocus = () => void load();
+        window.addEventListener("focus", onFocus);
+        return () => window.removeEventListener("focus", onFocus);
+    }, [load]);
+
+    return openings;
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function AppPage() {
     const auth = useAuth();
@@ -806,37 +881,55 @@ export default function AppPage() {
         [campgroundsByAreas, openCounts],
     );
 
-    // Openings feed: recent matches
-    const openingItems = useMemo((): OpeningItem[] => {
-        const todayIso = toLocalIso(new Date());
-        const thirtyDaysOut = toLocalIso(new Date(Date.now() + 30 * 86400_000));
-        const items: OpeningItem[] = [];
+    // Openings feed: from recent-openings log, filtered to this user's watched campgrounds
+    // and the selected date window.
+    const nowMs = useNowTick();
+    const recentOpenings = useRecentOpenings();
 
-        for (const c of campgroundsByAreas) {
-            for (const site of Object.values(c.siteAvailability ?? {})) {
-                for (const m of site.matches ?? []) {
-                    if (m.from >= todayIso && m.from <= thirtyDaysOut) {
-                        const id = `${c.id ?? c.name}-${site.siteId}-${m.from}`;
-                        if (id in snoozedOpenings) continue;
-                        items.push({
-                            id,
-                            campgroundName: c.name,
-                            siteId: site.siteId,
-                            siteName: site.siteName,
-                            from: m.from,
-                            to: m.to,
-                            nights: m.nights,
-                            recGovId: c.id,
-                            isSnoozed: id in snoozedOpenings,
-                        });
-                    }
-                }
-            }
+    const userCampgroundIds = useMemo(() => {
+        const ids = new Set<string>();
+        for (const c of siteConfig["recreation.gov"] ?? []) {
+            if (c.id) ids.add(c.id);
         }
+        return ids;
+    }, [siteConfig]);
 
-        items.sort((a, b) => a.from.localeCompare(b.from));
-        return items.slice(0, 6);
-    }, [campgroundsByAreas, snoozedOpenings]);
+    const openingItems = useMemo((): OpeningItem[] => {
+        const winStartIso = toLocalIso(dateRange.start);
+        const winEndIso = toLocalIso(dateRange.end);
+
+        const items: OpeningItem[] = recentOpenings
+            .filter((r) => {
+                // Must be in user's watchlist
+                if (!userCampgroundIds.has(r.campgroundId)) return false;
+                // Date range must intersect user's selected window
+                if (r.to <= winStartIso || r.from > winEndIso) return false;
+                // Skip snoozed
+                const id = `${r.campgroundId}-${r.siteId}-${r.from}`;
+                if (id in snoozedOpenings) return false;
+                return true;
+            })
+            .map((r) => {
+                const id = `${r.campgroundId}-${r.siteId}-${r.from}`;
+                return {
+                    id,
+                    campgroundId: r.campgroundId,
+                    campgroundName: r.campgroundName,
+                    siteId: r.siteId,
+                    siteName: r.siteName,
+                    from: r.from,
+                    to: r.to,
+                    nights: r.nights,
+                    recGovId: r.campgroundId,
+                    detectedAt: r.detectedAt,
+                    isSnoozed: false,
+                };
+            });
+
+        // Sort by detectedAt desc (most recent first)
+        items.sort((a, b) => b.detectedAt.localeCompare(a.detectedAt));
+        return items.slice(0, 8);
+    }, [recentOpenings, userCampgroundIds, dateRange, snoozedOpenings]);
 
     // Watchlist groups
     const watchlistGroups = useMemo(() => {
@@ -987,13 +1080,13 @@ export default function AppPage() {
                                     ) : isMobile ? (
                                         <div style={{ display: "flex", gap: 12, overflowX: "auto", padding: `4px ${PAD}px 16px`, scrollSnapType: "x mandatory" }}>
                                             {openingItems.map((item) => (
-                                                <OpeningCard key={item.id} item={item} isMobile onSnooze={toggleSnoozeOpening} />
+                                                <OpeningCard key={item.id} item={item} isMobile nowMs={nowMs} onSnooze={toggleSnoozeOpening} />
                                             ))}
                                         </div>
                                     ) : (
-                                        <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.min(openingItems.length, 3)}, 1fr)`, gap: 18 }}>
+                                        <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.min(openingItems.length, 4)}, 1fr)`, gap: 18 }}>
                                             {openingItems.map((item) => (
-                                                <OpeningCard key={item.id} item={item} isMobile={false} onSnooze={toggleSnoozeOpening} />
+                                                <OpeningCard key={item.id} item={item} isMobile={false} nowMs={nowMs} onSnooze={toggleSnoozeOpening} />
                                             ))}
                                         </div>
                                     )}
