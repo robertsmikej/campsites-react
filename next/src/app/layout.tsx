@@ -62,6 +62,20 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
     return (
         <html lang="en" suppressHydrationWarning>
+            <head>
+                {/*
+                  Polyfill esbuild's __name helper before next-themes' inline anti-flash
+                  script runs. The script ships with `__name(fn, "name")` calls (a side
+                  effect of keep-names minification) but the helper definition lives in a
+                  later chunk that hasn't loaded yet at head-script time.
+                */}
+                <script
+                    dangerouslySetInnerHTML={{
+                        __html:
+                            "window.__name=window.__name||function(t,n){try{Object.defineProperty(t,'name',{value:n,configurable:true})}catch(e){}return t};",
+                    }}
+                />
+            </head>
             <body
                 className={`${inter.variable} ${GeistSans.variable} ${bigShoulders.variable} ${cormorant.variable} ${sourceSerif.variable} ${dmMono.variable} ${caveat.variable} font-sans antialiased`}
                 suppressHydrationWarning
