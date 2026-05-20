@@ -454,9 +454,11 @@ export default function HomePage() {
                             color: C.cream,
                         }}
                     >
-                        <a href="/app" style={navLinkStyle}>
-                            Dashboard
-                        </a>
+                        {auth.user ? (
+                            <a href="/app" style={navLinkStyle}>
+                                Dashboard
+                            </a>
+                        ) : null}
                         <a href="/discover" style={{ ...navLinkStyle, opacity: 0.75 }}>
                             Picks
                         </a>
