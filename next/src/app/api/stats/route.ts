@@ -15,6 +15,7 @@ function devSyntheticStats(): NotifierStats {
         lastPollAt: new Date(now.getTime() - 30_000).toISOString(),
         campgroundsTracked: 12,
         openingsSentToday: 3,
+        openingsSentLast7Days: 47,
         medianLatencyMs: 9200,
         sampleSize: 18,
         todayKey: now.toISOString().slice(0, 10),

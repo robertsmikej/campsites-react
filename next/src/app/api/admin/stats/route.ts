@@ -5,10 +5,12 @@ export interface NotifierStats {
     lastPollAt: string;
     campgroundsTracked: number;
     openingsSentToday: number;
+    openingsSentLast7Days: number;
     medianLatencyMs: number;
     sampleSize: number;
     todayKey: string;
     _latencyWindow?: number[];
+    _dailyHistory?: { date: string; count: number }[];
 }
 
 const KEY = "notifier:stats";
@@ -36,10 +38,12 @@ export async function PUT(request: Request): Promise<Response> {
         lastPollAt: typeof b.lastPollAt === "string" ? b.lastPollAt : new Date().toISOString(),
         campgroundsTracked: Number(b.campgroundsTracked) || 0,
         openingsSentToday: Number(b.openingsSentToday) || 0,
+        openingsSentLast7Days: Number(b.openingsSentLast7Days) || 0,
         medianLatencyMs: Number(b.medianLatencyMs) || 0,
         sampleSize: Number(b.sampleSize) || 0,
         todayKey: typeof b.todayKey === "string" ? b.todayKey : "",
         _latencyWindow: Array.isArray(b._latencyWindow) ? b._latencyWindow : undefined,
+        _dailyHistory: Array.isArray(b._dailyHistory) ? b._dailyHistory : undefined,
     };
 
     await getKv().put(KEY, JSON.stringify(stats));

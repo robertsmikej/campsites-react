@@ -373,6 +373,11 @@ async function main() {
     const priorOpenings = priorStats?.todayKey === todayKeyUtc ? Number(priorStats.openingsSentToday) || 0 : 0;
     const openingsSentToday = priorOpenings + sentLatenciesMs.length;
 
+    // Daily history for the rolling 7-day window.
+    const priorHistory = Array.isArray(priorStats?._dailyHistory) ? priorStats._dailyHistory : [];
+    const dailyHistory = updateDailyHistory(priorHistory, todayKeyUtc, openingsSentToday);
+    const openingsSentLast7Days = dailyHistory.reduce((acc, entry) => acc + (Number(entry.count) || 0), 0);
+
     // Latency window: carry forward up to 200 prior samples, then append this cycle's.
     const priorWindow = (priorStats?.todayKey === todayKeyUtc && Array.isArray(priorStats._latencyWindow))
         ? priorStats._latencyWindow.slice(-200)
@@ -393,10 +398,12 @@ async function main() {
         lastPollAt: now.toISOString(),
         campgroundsTracked: trackedIds.size,
         openingsSentToday,
+        openingsSentLast7Days,
         medianLatencyMs,
         sampleSize: sortedLatencies.length,
         todayKey: todayKeyUtc,
         _latencyWindow: latencyWindow,
+        _dailyHistory: dailyHistory,
     };
 
     try {
@@ -411,11 +418,30 @@ async function main() {
         if (!statsResponse.ok) {
             console.error(`[Warn] /api/admin/stats PUT returned ${statsResponse.status}`);
         } else {
-            console.log(`[Stats] ${trackedIds.size} cgs tracked, ${sentLatenciesMs.length} sent this cycle, ${medianLatencyMs}ms median`);
+            console.log(`[Stats] ${trackedIds.size} cgs tracked, ${sentLatenciesMs.length} sent this cycle, ${openingsSentLast7Days} last 7d, ${medianLatencyMs}ms median`);
         }
     } catch (err) {
         console.error(`[Warn] /api/admin/stats PUT failed: ${err.message}`);
     }
+}
+
+// Returns a new daily-history array with today's entry updated/inserted and
+// any entries older than 7 days dropped.
+function updateDailyHistory(prior, todayKey, todayCount) {
+    const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+    const todayMs = new Date(todayKey + 'T00:00:00Z').getTime();
+    const cutoff = todayMs - SEVEN_DAYS_MS;
+    const filtered = (prior || [])
+        .filter((entry) => {
+            if (!entry || typeof entry.date !== 'string') return false;
+            const entryMs = new Date(entry.date + 'T00:00:00Z').getTime();
+            if (!Number.isFinite(entryMs)) return false;
+            return entryMs >= cutoff && entry.date !== todayKey;
+        })
+        .map((entry) => ({ date: entry.date, count: Number(entry.count) || 0 }));
+    filtered.push({ date: todayKey, count: Number(todayCount) || 0 });
+    filtered.sort((a, b) => a.date.localeCompare(b.date));
+    return filtered;
 }
 
 main().catch((err) => {
