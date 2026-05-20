@@ -9,13 +9,30 @@ const KEY = "notifier:stats";
 // rendering "20593 days ago".
 const STALE_THRESHOLD_MS = 24 * 60 * 60 * 1000;
 
+function devSyntheticStats(): NotifierStats {
+    const now = new Date();
+    return {
+        lastPollAt: new Date(now.getTime() - 30_000).toISOString(),
+        campgroundsTracked: 12,
+        openingsSentToday: 3,
+        medianLatencyMs: 9200,
+        sampleSize: 18,
+        todayKey: now.toISOString().slice(0, 10),
+    };
+}
+
 export async function GET(): Promise<Response> {
     const stats = (await getKv().get(KEY, "json")) as NotifierStats | null;
     const fresh =
         stats &&
         stats.lastPollAt &&
         Date.now() - new Date(stats.lastPollAt).getTime() < STALE_THRESHOLD_MS;
-    const body = fresh ? stats : null;
+    let body: NotifierStats | null = fresh ? stats : null;
+    // Dev-only synthetic data so the stats bar isn't blank when running against
+    // an empty local miniflare KV.
+    if (!body && process.env.NODE_ENV !== "production") {
+        body = devSyntheticStats();
+    }
     return withCors(
         new Response(JSON.stringify(body), {
             status: 200,
