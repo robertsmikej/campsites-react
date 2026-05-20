@@ -40,6 +40,7 @@ interface CampgroundRowProps {
     /** Narrows the availability strip and open-badge count to this window. */
     windowStart?: Date;
     windowEnd?: Date;
+    readOnly?: boolean;
 }
 
 export function CampgroundRow({
@@ -56,6 +57,7 @@ export function CampgroundRow({
     density = "comfortable",
     windowStart,
     windowEnd,
+    readOnly = false,
 }: CampgroundRowProps) {
     const [open, setOpen] = useState(false);
 
@@ -155,24 +157,26 @@ export function CampgroundRow({
                     />
                 </div>
 
-                {/* Favorite toggle */}
-                <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        onToggleFavorite();
-                    }}
-                    aria-label={
-                        isFavorite ? "Remove favorite" : "Add favorite"
-                    }
-                >
-                    {isFavorite ? (
-                        <Star className="size-4 fill-primary text-primary" />
-                    ) : (
-                        <StarOff className="size-4 text-muted-foreground" />
-                    )}
-                </Button>
+                {/* Favorite toggle — hidden in readOnly mode */}
+                {!readOnly && (
+                    <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onToggleFavorite();
+                        }}
+                        aria-label={
+                            isFavorite ? "Remove favorite" : "Add favorite"
+                        }
+                    >
+                        {isFavorite ? (
+                            <Star className="size-4 fill-primary text-primary" />
+                        ) : (
+                            <StarOff className="size-4 text-muted-foreground" />
+                        )}
+                    </Button>
+                )}
 
                 {/* Chevron caret */}
                 <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
@@ -197,6 +201,7 @@ export function CampgroundRow({
                     siteRatings={siteRatings}
                     onRatingChange={onRatingChange}
                     onEditSettings={onEditSettings}
+                    readOnly={readOnly}
                 />
             </SheetContent>
         </Sheet>

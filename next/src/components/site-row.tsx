@@ -17,6 +17,7 @@ interface SiteRowProps {
     defaultOpen?: boolean;
     rating?: SiteRating;
     onRatingChange?: (newRating: SiteRating) => void;
+    readOnly?: boolean;
 }
 
 const RATING_CYCLE: Record<SiteRating, SiteRating> = {
@@ -32,6 +33,7 @@ export function SiteRow({
     defaultOpen = false,
     rating = "unrated",
     onRatingChange,
+    readOnly = false,
 }: SiteRowProps) {
     const [open, setOpen] = useState(defaultOpen);
 
@@ -77,8 +79,8 @@ export function SiteRow({
                         {site.campsite_type ?? "Standard"}
                     </p>
                 </div>
-                {/* Rating cycle button — stopPropagation so it doesn't open/close the row */}
-                {onRatingChange ? (
+                {/* Rating cycle button — hidden in readOnly mode */}
+                {!readOnly && onRatingChange ? (
                     <button
                         type="button"
                         onClick={(e) => {
