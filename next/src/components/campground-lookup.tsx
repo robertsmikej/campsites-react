@@ -1,10 +1,24 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Campground, SiteConfig, GlobalSettings } from "@/types/campground";
 import { useAuth } from "@/hooks/use-auth";
 import { useUserCampgrounds } from "@/hooks/use-user-campgrounds";
 import type { SearchResult } from "@/app/api/campgrounds/search/route";
+
+function useIsMobile(breakpointPx = 768): boolean {
+    const [isMobile, setIsMobile] = useState(false);
+    useEffect(() => {
+        const mq = window.matchMedia(`(max-width: ${breakpointPx}px)`);
+        setIsMobile(mq.matches);
+        const onChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+        mq.addEventListener("change", onChange);
+        return () => mq.removeEventListener("change", onChange);
+    }, [breakpointPx]);
+    return isMobile;
+}
+
+const PAD_M = 22;
 
 // Heuristic: does this input look like a URL attempt (vs a name search)?
 function looksLikeUrlAttempt(s: string): boolean {
@@ -272,6 +286,7 @@ function ResultSkeleton() {
 export function CampgroundLookup({ variant: _variant = "homepage" }: CampgroundLookupProps) {
     const auth = useAuth();
     const userCampgrounds = useUserCampgrounds();
+    const isMobile = useIsMobile();
 
     const [value, setValue] = useState("");
     const [touched, setTouched] = useState(false);
@@ -439,7 +454,7 @@ export function CampgroundLookup({ variant: _variant = "homepage" }: CampgroundL
     return (
         <section
             style={{
-                padding: "88px 56px",
+                padding: isMobile ? `60px ${PAD_M}px 50px` : "88px 56px",
                 background: C.paper,
                 position: "relative",
                 fontFamily: FB,
@@ -453,7 +468,7 @@ export function CampgroundLookup({ variant: _variant = "homepage" }: CampgroundL
                 .cw-input:focus { outline: none; border-color: ${C.forest}; box-shadow: 0 0 0 3px rgba(31,61,42,0.12); }
             `}</style>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1.1fr 1fr", gap: 56, alignItems: "flex-start" }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1.1fr 1fr", gap: isMobile ? 24 : 56, alignItems: "flex-start" }}>
                 {/* LEFT — copy */}
                 <div>
                     <div style={{ font: `500 11px/1 ${FM}`, letterSpacing: "0.18em", color: C.clay, marginBottom: 14 }}>
@@ -480,38 +495,50 @@ export function CampgroundLookup({ variant: _variant = "homepage" }: CampgroundL
                     {/* Input row */}
                     <div style={{
                         background: C.cream, border: `1.5px solid ${C.ink}`,
-                        display: "grid", gridTemplateColumns: "128px 1fr auto", alignItems: "stretch",
+                        display: isMobile ? "block" : "grid",
+                        gridTemplateColumns: isMobile ? undefined : "128px 1fr auto",
+                        alignItems: "stretch",
                     }}>
-                        <div style={{
-                            background: C.ink, color: C.cream,
-                            display: "flex", alignItems: "center", justifyContent: "center",
-                            font: `700 10px/1.2 ${FM}`, letterSpacing: "0.18em", textTransform: "uppercase",
-                            textAlign: "center", padding: "0 10px",
-                        }}>
-                            URL, ID, or name
+                        {!isMobile && (
+                            <div style={{
+                                background: C.ink, color: C.cream,
+                                display: "flex", alignItems: "center", justifyContent: "center",
+                                font: `700 10px/1.2 ${FM}`, letterSpacing: "0.18em", textTransform: "uppercase",
+                                textAlign: "center", padding: "0 10px",
+                            }}>
+                                URL, ID, or name
+                            </div>
+                        )}
+                        <div style={isMobile ? { display: "flex", alignItems: "stretch" } : { display: "contents" }}>
+                            <input
+                                className="cw-input"
+                                type="text"
+                                value={value}
+                                placeholder={isMobile ? "recreation.gov/…/232358" : "Outlet Campground · 232358 · recreation.gov/camping/campgrounds/232358"}
+                                onChange={(e) => { setValue(e.target.value); setTouched(true); setFetchedResult(null); setSearchResults(null); setAddedSuccess(false); }}
+                                onFocus={() => setTouched(true)}
+                                onKeyDown={(e) => { if (e.key === "Enter") void doLookup(); }}
+                                style={{
+                                    font: `500 ${isMobile ? 13 : 16}px/1 ${FM}`,
+                                    padding: isMobile ? "14px 12px" : "20px 18px",
+                                    background: "transparent",
+                                    border: "none", borderLeft: `1px solid ${C.rule}`,
+                                    color: C.ink, width: "100%",
+                                    minWidth: 0,
+                                }}
+                            />
                         </div>
-                        <input
-                            className="cw-input"
-                            type="text"
-                            value={value}
-                            placeholder="Outlet Campground · 232358 · recreation.gov/camping/campgrounds/232358"
-                            onChange={(e) => { setValue(e.target.value); setTouched(true); setFetchedResult(null); setSearchResults(null); setAddedSuccess(false); }}
-                            onFocus={() => setTouched(true)}
-                            onKeyDown={(e) => { if (e.key === "Enter") void doLookup(); }}
-                            style={{
-                                font: `500 16px/1 ${FM}`,
-                                padding: "20px 18px",
-                                background: "transparent",
-                                border: "none", borderLeft: `1px solid ${C.rule}`,
-                                color: C.ink, width: "100%",
-                            }}
-                        />
                         <button
                             onClick={() => void doLookup()}
                             style={{
                                 font: `800 13px/1 ${FH}`, letterSpacing: "0.14em", textTransform: "uppercase",
-                                background: C.forest, color: C.cream, padding: "0 26px", border: "none", cursor: "pointer",
-                                display: "flex", alignItems: "center", gap: 10,
+                                background: C.forest, color: C.cream,
+                                padding: isMobile ? "16px 0" : "0 26px",
+                                border: "none",
+                                borderTop: isMobile ? `1.5px solid ${C.ink}` : undefined,
+                                cursor: "pointer",
+                                display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+                                width: isMobile ? "100%" : undefined,
                             }}
                         >
                             Check
@@ -522,8 +549,18 @@ export function CampgroundLookup({ variant: _variant = "homepage" }: CampgroundL
                     </div>
 
                     {/* Try chips */}
-                    <div style={{ marginTop: 14, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                        <span style={{ font: `500 10px/1 ${FM}`, letterSpacing: "0.16em", color: C.inkSoft, textTransform: "uppercase" }}>
+                    <div style={{
+                        marginTop: 14,
+                        display: "flex", alignItems: "center", gap: 10,
+                        flexWrap: isMobile ? undefined : "wrap",
+                        overflowX: isMobile ? "auto" : undefined,
+                        paddingBottom: isMobile ? 4 : undefined,
+                        marginLeft: isMobile ? -PAD_M : undefined,
+                        paddingLeft: isMobile ? PAD_M : undefined,
+                        marginRight: isMobile ? -PAD_M : undefined,
+                        paddingRight: isMobile ? PAD_M : undefined,
+                    }}>
+                        <span style={{ font: `500 10px/1 ${FM}`, letterSpacing: "0.16em", color: C.inkSoft, textTransform: "uppercase", flexShrink: 0 }}>
                             Try →
                         </span>
                         {chips.map((ex) => (
@@ -536,6 +573,8 @@ export function CampgroundLookup({ variant: _variant = "homepage" }: CampgroundL
                                     background: "transparent", color: C.ink, padding: "7px 10px",
                                     border: `1px dashed ${C.rule}`, cursor: "pointer",
                                     transition: "background .14s, color .14s, border-color .14s",
+                                    flexShrink: isMobile ? 0 : undefined,
+                                    whiteSpace: isMobile ? "nowrap" : undefined,
                                 }}
                             >
                                 {ex.label}
@@ -632,8 +671,8 @@ export function CampgroundLookup({ variant: _variant = "homepage" }: CampgroundL
                 </div>
             </div>
 
-            {/* ─── States reference panel ─── */}
-            <div style={{ marginTop: 72, borderTop: `1.5px solid ${C.ink}`, paddingTop: 36 }}>
+            {/* ─── States reference panel — desktop only ─── */}
+            {!isMobile && <div style={{ marginTop: 72, borderTop: `1.5px solid ${C.ink}`, paddingTop: 36 }}>
                 <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 24 }}>
                     <h3 style={{ font: `900 22px/1 ${FH}`, textTransform: "uppercase", letterSpacing: "0.005em", margin: 0 }}>
                         Result states
@@ -675,7 +714,7 @@ export function CampgroundLookup({ variant: _variant = "homepage" }: CampgroundL
                         </div>
                     ))}
                 </div>
-            </div>
+            </div>}
         </section>
     );
 }
