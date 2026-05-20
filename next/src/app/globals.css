@@ -183,6 +183,26 @@
     --font-sans: var(--font-sans);
     --font-display: var(--font-display);
     --font-heading: var(--font-display);
+
+    /* CampWatch Field Notes palette — backed by CSS vars so dark mode flips automatically */
+    --color-cw-paper: var(--cw-paper);
+    --color-cw-cream: var(--cw-cream);
+    --color-cw-ink: var(--cw-ink);
+    --color-cw-ink-soft: var(--cw-ink-soft);
+    --color-cw-ink-subtle: var(--cw-ink-subtle);
+    --color-cw-ink-faint: var(--cw-ink-faint);
+    --color-cw-rule: var(--cw-rule);
+    --color-cw-rule-soft: var(--cw-rule-soft);
+    --color-cw-forest: var(--cw-forest);
+    --color-cw-clay: var(--cw-clay);
+    --color-cw-mustard: var(--cw-mustard);
+
+    /* Field Notes fonts — registered as font-* utilities */
+    --font-poster: var(--font-poster);
+    --font-italic-serif: var(--font-italic-serif);
+    --font-body-serif: var(--font-body-serif);
+    --font-mono-field: var(--font-mono-field);
+    --font-hand: var(--font-hand);
 }
 
 @layer base {

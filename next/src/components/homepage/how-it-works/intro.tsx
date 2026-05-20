@@ -1,54 +1,20 @@
 "use client";
 
-import { C, FH, FI, FM } from "@/components/field-notes/tokens";
-
-interface IntroProps {
-    isMobile: boolean;
-}
-
-export function Intro({ isMobile }: IntroProps) {
+export function Intro() {
     return (
         <div>
-            <div
-                style={{
-                    font: `500 11px/1 ${FM}`,
-                    letterSpacing: "0.18em",
-                    color: C.clay,
-                    marginBottom: 10,
-                }}
-            >
+            <div className="font-mono-field text-[11px] leading-none tracking-[0.18em] text-cw-clay mb-[10px] font-medium uppercase">
                 METHOD
             </div>
-            <h2 style={{ margin: 0, letterSpacing: "-0.005em" }}>
-                <span
-                    style={{
-                        font: `900 ${isMobile ? 44 : 56}px/0.95 ${FH}`,
-                        textTransform: "uppercase",
-                        display: "block",
-                    }}
-                >
+            <h2 className="m-0 tracking-[-0.005em]">
+                <span className="font-poster text-[44px] md:text-[56px] leading-[0.95] uppercase block font-black">
                     THREE SMALL THINGS,
                 </span>
-                <span
-                    style={{
-                        font: `500 italic ${isMobile ? 34 : 44}px/1 ${FI}`,
-                        color: C.forest,
-                        display: "block",
-                        marginTop: 4,
-                        letterSpacing: "-0.01em",
-                    }}
-                >
+                <span className="font-italic-serif text-[34px] md:text-[44px] leading-none text-cw-forest block mt-1 tracking-[-0.01em] font-medium italic">
                     then a quiet inbox.
                 </span>
             </h2>
-            <p
-                style={{
-                    font: `400 italic 15px/1.5 ${FI}`,
-                    color: C.inkSoft,
-                    marginTop: 20,
-                    maxWidth: isMobile ? undefined : 240,
-                }}
-            >
+            <p className="font-italic-serif text-[15px] leading-[1.5] text-cw-ink-soft mt-5 md:max-w-[240px] italic">
                 Set it up once, in about a minute. Ignore us forever until summer.
             </p>
         </div>

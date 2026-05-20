@@ -5,46 +5,13 @@ import type { Campground, SiteConfig, GlobalSettings } from "@/types/campground"
 import { useAuth } from "@/hooks/use-auth";
 import { useUserCampgrounds } from "@/hooks/use-user-campgrounds";
 import type { SearchResult } from "@/app/api/campgrounds/search/route";
-
-function useIsMobile(breakpointPx = 768): boolean {
-    const [isMobile, setIsMobile] = useState(false);
-    useEffect(() => {
-        const mq = window.matchMedia(`(max-width: ${breakpointPx}px)`);
-        setIsMobile(mq.matches);
-        const onChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
-        mq.addEventListener("change", onChange);
-        return () => mq.removeEventListener("change", onChange);
-    }, [breakpointPx]);
-    return isMobile;
-}
-
-const PAD_M = 22;
+import { useIsMobile } from "@/hooks/use-is-mobile";
+import { C } from "@/components/field-notes/tokens";
 
 // Heuristic: does this input look like a URL attempt (vs a name search)?
 function looksLikeUrlAttempt(s: string): boolean {
     return /:\/\/|recreation\.gov/i.test(s);
 }
-
-// ─── Color palette (matches page.tsx) ────────────────────────────────────────
-const C = {
-    paper: "#F4EAD8",
-    cream: "#FBF6EA",
-    ink: "#1A1614",
-    inkSoft: "rgba(26,22,20,0.7)",
-    rule: "rgba(26,22,20,0.18)",
-    forest: "#1F3D2A",
-    clay: "#B65C3F",
-    mustard: "#C9A227",
-    red: "#A8412A",
-    warn: "#C9A227",
-};
-
-// ─── Font helpers (CSS variables loaded via layout.tsx) ───────────────────────
-const FH = "var(--font-poster), 'Anton', sans-serif";
-const FI = "var(--font-italic-serif), 'Cormorant', Georgia, serif";
-const FB = "var(--font-body-serif), 'Source Serif Pro', Georgia, serif";
-const FM = "var(--font-mono-field), 'JetBrains Mono', ui-monospace, monospace";
-const FN = "var(--font-hand), 'Kalam', cursive";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type LookupState = "invalid" | "loading" | "on-list" | "watched" | "new" | "not-found";
@@ -107,7 +74,7 @@ function LCheck({ color = C.forest, size = 22 }: { color?: string; size?: number
     );
 }
 
-function LWarn({ color = C.warn, size = 22 }: { color?: string; size?: number }) {
+function LWarn({ color = C.mustard, size = 22 }: { color?: string; size?: number }) {
     return (
         <svg width={size} height={size} viewBox="0 0 22 22" fill="none">
             <circle cx="11" cy="11" r="10" fill={color} />
@@ -116,7 +83,7 @@ function LWarn({ color = C.warn, size = 22 }: { color?: string; size?: number })
     );
 }
 
-function LX({ color = C.red, size = 22 }: { color?: string; size?: number }) {
+function LX({ color = "#A8412A", size = 22 }: { color?: string; size?: number }) {
     return (
         <svg width={size} height={size} viewBox="0 0 22 22" fill="none">
             <circle cx="11" cy="11" r="10" fill={color} />
@@ -136,19 +103,19 @@ interface ResultCardProps {
 }
 
 function ResultCard({ result, compact = false, signedIn = false, onAdd, adding = false, addedSuccess = false }: ResultCardProps) {
-    const padding = compact ? "16px 18px" : "22px 26px";
+    const padding = compact ? "py-4 px-[18px]" : "py-[22px] px-[26px]";
     if (!result) return null;
 
     // "invalid" — not a rec.gov URL at all
     if (result.state === "invalid") {
         return (
-            <div style={{ background: C.cream, border: `1.5px solid ${C.rule}`, padding, display: "flex", gap: 14, alignItems: "flex-start" }}>
+            <div className={`bg-cw-cream border-[1.5px] border-cw-rule ${padding} flex gap-[14px] items-start`}>
                 <LX />
-                <div style={{ flex: 1 }}>
-                    <div style={{ font: `900 18px/1.1 ${FH}`, textTransform: "uppercase", color: C.red }}>NOT A RECREATION.GOV URL</div>
-                    <div style={{ font: `400 italic 15px/1.4 ${FI}`, color: C.inkSoft, marginTop: 6 }}>
+                <div className="flex-1">
+                    <div className="font-poster text-[18px] leading-[1.1] uppercase text-[#A8412A] font-black">NOT A RECREATION.GOV URL</div>
+                    <div className="font-italic-serif text-[15px] leading-[1.4] text-cw-ink-soft mt-[6px] italic">
                         Paste a campground URL (e.g.{" "}
-                        <span style={{ fontFamily: FM, fontStyle: "normal", fontSize: 12 }}>recreation.gov/camping/campgrounds/232358</span>
+                        <span className="font-mono-field not-italic text-[12px]">recreation.gov/camping/campgrounds/232358</span>
                         ) or just the numeric ID.
                     </div>
                 </div>
@@ -159,13 +126,13 @@ function ResultCard({ result, compact = false, signedIn = false, onAdd, adding =
     // "not-found" — valid-looking ID but rec.gov returned nothing
     if (result.state === "not-found") {
         return (
-            <div style={{ background: C.cream, border: `1.5px solid ${C.rule}`, padding, display: "flex", gap: 14, alignItems: "flex-start" }}>
+            <div className={`bg-cw-cream border-[1.5px] border-cw-rule ${padding} flex gap-[14px] items-start`}>
                 <LX />
-                <div style={{ flex: 1 }}>
-                    <div style={{ font: `900 18px/1.1 ${FH}`, textTransform: "uppercase", color: C.red }}>CAMPGROUND NOT FOUND</div>
-                    <div style={{ font: `400 italic 15px/1.4 ${FI}`, color: C.inkSoft, marginTop: 6 }}>
+                <div className="flex-1">
+                    <div className="font-poster text-[18px] leading-[1.1] uppercase text-[#A8412A] font-black">CAMPGROUND NOT FOUND</div>
+                    <div className="font-italic-serif text-[15px] leading-[1.4] text-cw-ink-soft mt-[6px] italic">
                         ID{" "}
-                        <span style={{ fontFamily: FM, fontStyle: "normal", fontSize: 12 }}>#{result.parsedId}</span>{" "}
+                        <span className="font-mono-field not-italic text-[12px]">#{result.parsedId}</span>{" "}
                         doesn&apos;t match a campground on recreation.gov. Double-check the URL.
                     </div>
                 </div>
@@ -189,41 +156,36 @@ function ResultCard({ result, compact = false, signedIn = false, onAdd, adding =
     else bodyText = "New to our index. Polling will begin within five minutes of adding.";
 
     return (
-        <div style={{
-            background: C.cream, border: `1.5px solid ${C.ink}`,
-            boxShadow: compact ? "none" : `6px 6px 0 ${C.forest}`,
-            padding,
-        }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+        <div
+            className={`bg-cw-cream border-[1.5px] border-cw-ink ${padding}`}
+            style={{ boxShadow: compact ? "none" : `6px 6px 0 ${C.forest}` }}
+        >
+            <div className="flex justify-between items-start gap-4">
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-2">
                         {isOnList ? <LCheck /> : (isWatched ? <LCheck color={C.mustard} /> : <LWarn />)}
-                        <span style={{ font: `700 10px/1 ${FM}`, letterSpacing: "0.18em", color: C.forest, textTransform: "uppercase" }}>
+                        <span className="font-mono-field text-[10px] leading-none tracking-[0.18em] text-cw-forest uppercase font-bold">
                             {statusLabel}
                         </span>
                     </div>
-                    <div style={{ font: `900 ${compact ? 22 : 28}px/1 ${FH}`, textTransform: "uppercase", letterSpacing: "0.005em" }}>
+                    <div className={`font-poster ${compact ? "text-[22px]" : "text-[28px]"} leading-none uppercase tracking-[0.005em] font-black`}>
                         {cg.name}
                     </div>
-                    <div style={{ font: `500 italic ${compact ? 15 : 18}px/1.3 ${FI}`, color: C.inkSoft, marginTop: 4 }}>
+                    <div className={`font-italic-serif ${compact ? "text-[15px]" : "text-[18px]"} leading-[1.3] text-cw-ink-soft mt-1 font-medium italic`}>
                         ID {cg.id}
                     </div>
                 </div>
             </div>
 
             {!compact && (
-                <div style={{ borderTop: `1px dashed ${C.rule}`, marginTop: 16, paddingTop: 14, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16 }}>
-                    <div style={{ font: `500 italic 15px/1.4 ${FI}`, color: C.inkSoft, maxWidth: 420 }}>
-                        {isOnList ? bodyText : (isWatched ? bodyText : bodyText)}
+                <div className="border-t border-dashed border-cw-rule mt-4 pt-[14px] flex justify-between items-center gap-4">
+                    <div className="font-italic-serif text-[15px] leading-[1.4] text-cw-ink-soft max-w-[420px] font-medium italic">
+                        {bodyText}
                     </div>
                     {isOnList ? (
                         <a
                             href="/app"
-                            style={{
-                                font: `800 12px/1 ${FH}`, letterSpacing: "0.14em", textTransform: "uppercase",
-                                color: C.ink, border: `1.5px solid ${C.ink}`, padding: "12px 16px",
-                                textDecoration: "none", borderRadius: 2, whiteSpace: "nowrap",
-                            }}
+                            className="font-poster text-[12px] leading-none tracking-[0.14em] uppercase text-cw-ink border-[1.5px] border-cw-ink py-3 px-4 no-underline rounded-[2px] whitespace-nowrap font-extrabold"
                         >
                             Manage in dashboard →
                         </a>
@@ -231,13 +193,8 @@ function ResultCard({ result, compact = false, signedIn = false, onAdd, adding =
                         <button
                             onClick={onAdd}
                             disabled={adding}
-                            style={{
-                                font: `800 12px/1 ${FH}`, letterSpacing: "0.14em", textTransform: "uppercase",
-                                background: adding ? C.inkSoft : C.forest, color: C.cream,
-                                padding: "14px 18px", border: "none", borderRadius: 2,
-                                cursor: adding ? "not-allowed" : "pointer",
-                                display: "inline-flex", alignItems: "center", gap: 8, whiteSpace: "nowrap",
-                            }}
+                            className="font-poster text-[12px] leading-none tracking-[0.14em] uppercase text-cw-cream py-[14px] px-[18px] border-none rounded-[2px] cursor-pointer inline-flex items-center gap-2 whitespace-nowrap font-extrabold"
+                            style={{ background: adding ? C.inkSoft : C.forest, cursor: adding ? "not-allowed" : "pointer" }}
                         >
                             {adding ? "Adding…" : "Add to my watchlist"}
                             {!adding && (
@@ -249,12 +206,7 @@ function ResultCard({ result, compact = false, signedIn = false, onAdd, adding =
                     ) : (
                         <a
                             href="/auth/google/start?returnTo=/"
-                            style={{
-                                font: `800 12px/1 ${FH}`, letterSpacing: "0.14em", textTransform: "uppercase",
-                                background: C.forest, color: C.cream, padding: "14px 18px",
-                                textDecoration: "none", borderRadius: 2,
-                                display: "inline-flex", alignItems: "center", gap: 8, whiteSpace: "nowrap",
-                            }}
+                            className="font-poster text-[12px] leading-none tracking-[0.14em] uppercase bg-cw-forest text-cw-cream py-[14px] px-[18px] no-underline rounded-[2px] inline-flex items-center gap-2 whitespace-nowrap font-extrabold"
                         >
                             Sign in to add
                             <svg width="12" height="12" viewBox="0 0 12 12">
@@ -271,13 +223,10 @@ function ResultCard({ result, compact = false, signedIn = false, onAdd, adding =
 // ─── Loading skeleton ─────────────────────────────────────────────────────────
 function ResultSkeleton() {
     return (
-        <div style={{
-            background: C.cream, border: `1.5px solid ${C.rule}`,
-            padding: "22px 26px", display: "flex", flexDirection: "column", gap: 12,
-        }}>
-            <div style={{ height: 12, width: "40%", background: "rgba(26,22,20,0.08)", borderRadius: 2 }} />
-            <div style={{ height: 22, width: "70%", background: "rgba(26,22,20,0.12)", borderRadius: 2 }} />
-            <div style={{ height: 12, width: "55%", background: "rgba(26,22,20,0.06)", borderRadius: 2 }} />
+        <div className="bg-cw-cream border-[1.5px] border-cw-rule py-[22px] px-[26px] flex flex-col gap-3">
+            <div className="h-3 w-[40%] bg-[rgba(26,22,20,0.08)] rounded-[2px]" />
+            <div className="h-[22px] w-[70%] bg-[rgba(26,22,20,0.12)] rounded-[2px]" />
+            <div className="h-3 w-[55%] bg-[rgba(26,22,20,0.06)] rounded-[2px]" />
         </div>
     );
 }
@@ -311,9 +260,6 @@ export function CampgroundLookup({ variant: _variant = "homepage" }: CampgroundL
             }
 
             // Check default (missingFromDefault reflects what's in default but not user)
-            // We also need what IS in default — use missingFromDefault inverse detection:
-            // We don't have direct access to defaultRecord, but we can check if
-            // it showed up in missingFromDefault (present in default, absent from user).
             const inDefault = userCampgrounds.missingFromDefault.find((c) => c.id === id);
             if (inDefault) {
                 return { state: "watched", parsedId: id, cg: { id, name: inDefault.name } };
@@ -341,8 +287,6 @@ export function CampgroundLookup({ variant: _variant = "homepage" }: CampgroundL
         if (!input) return;
         const id = parseInput(input);
         if (!id) {
-            // Not a URL/ID. If it LOOKS like a URL attempt, bail with invalid.
-            // Otherwise treat as a name search.
             if (looksLikeUrlAttempt(input)) {
                 setFetchedResult({ state: "invalid" });
                 setSearchResults(null);
@@ -367,14 +311,12 @@ export function CampgroundLookup({ variant: _variant = "homepage" }: CampgroundL
             }
             return;
         }
-        // First try memory
         setSearchResults(null);
         const mem = resolve(id);
         if (mem) {
-            setFetchedResult(null); // let memoryResult drive
+            setFetchedResult(null);
             return;
         }
-        // Network: fetch details
         setIsFetching(true);
         setFetchedResult(null);
         setAddedSuccess(false);
@@ -407,12 +349,9 @@ export function CampgroundLookup({ variant: _variant = "homepage" }: CampgroundL
         setFetchedResult(null);
         setSearchResults(null);
         setAddedSuccess(false);
-        // Also run the lookup immediately so chip clicks give instant feedback
-        // even when the ID isn't in the user's in-memory lists.
         void doLookup(v);
     };
 
-    // Picking a name-search candidate behaves like pasting that ID and looking it up.
     const pickSearchResult = (r: SearchResult) => {
         setValue(r.id);
         setTouched(true);
@@ -431,19 +370,17 @@ export function CampgroundLookup({ variant: _variant = "homepage" }: CampgroundL
             ...userCampgrounds.siteConfig,
             "recreation.gov": [...existing, entry],
         };
-        // Preserve globalSettings
         const gs: GlobalSettings = userCampgrounds.globalSettings;
         setAdding(true);
         try {
             await userCampgrounds.save(nextConfig, gs);
             setAddedSuccess(true);
-            setFetchedResult(null); // let memory resolve pick it up as "on-list"
+            setFetchedResult(null);
         } finally {
             setAdding(false);
         }
     }, [displayResult, userCampgrounds]);
 
-    // Try-chips: name search + a couple of real IDs + a bad URL
     const chips = [
         { label: "\"Redfish Lake\" (name)", val: "Redfish Lake" },
         { label: "Outlet (catalog)", val: "232358" },
@@ -451,41 +388,35 @@ export function CampgroundLookup({ variant: _variant = "homepage" }: CampgroundL
         { label: "Bad URL", val: "https://example.com/yosemite" },
     ];
 
+    // PAD_M = 22px
+    const PAD_M = 22;
+
     return (
-        <section
-            style={{
-                padding: isMobile ? `60px ${PAD_M}px 50px` : "88px 56px",
-                background: C.paper,
-                position: "relative",
-                fontFamily: FB,
-                color: C.ink,
-                borderTop: `1.5px solid ${C.ink}`,
-            }}
-        >
+        <section className="relative py-[60px] px-[22px] md:py-[88px] md:px-14 bg-cw-paper font-body-serif text-cw-ink border-t-[1.5px] border-cw-ink">
             {/* Hover style for chips — injected once, no @import */}
             <style>{`
                 .cw-chip:hover { background: ${C.ink} !important; color: ${C.cream} !important; border-color: ${C.ink} !important; }
                 .cw-input:focus { outline: none; border-color: ${C.forest}; box-shadow: 0 0 0 3px rgba(31,61,42,0.12); }
             `}</style>
 
-            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1.1fr 1fr", gap: isMobile ? 24 : 56, alignItems: "flex-start" }}>
+            <div className="grid grid-cols-1 md:grid-cols-[1.1fr_1fr] gap-6 md:gap-14 items-start">
                 {/* LEFT — copy */}
                 <div>
-                    <div style={{ font: `500 11px/1 ${FM}`, letterSpacing: "0.18em", color: C.clay, marginBottom: 14 }}>
+                    <div className="font-mono-field text-[11px] leading-none tracking-[0.18em] text-cw-clay mb-[14px] font-medium uppercase">
                         LOOKUP
                     </div>
-                    <h2 style={{ margin: "0 0 18px", letterSpacing: "-0.005em" }}>
-                        <span style={{ font: `900 56px/0.95 ${FH}`, textTransform: "uppercase", display: "block" }}>
+                    <h2 className="m-0 mb-[18px] tracking-[-0.005em]">
+                        <span className="font-poster text-[56px] leading-[0.95] uppercase block font-black">
                             CHECK A SPOT
                         </span>
-                        <span style={{ font: `500 italic 56px/1 ${FI}`, display: "block", color: C.forest, marginTop: 4, letterSpacing: "-0.01em" }}>
+                        <span className="font-italic-serif text-[56px] leading-none block text-cw-forest mt-1 tracking-[-0.01em] font-medium italic">
                             before you add it.
                         </span>
                     </h2>
-                    <p style={{ font: `400 17px/1.6 ${FB}`, color: C.inkSoft, maxWidth: 460, margin: "0 0 22px" }}>
+                    <p className="font-body-serif text-[17px] leading-[1.6] text-cw-ink-soft max-w-[460px] m-0 mb-[22px]">
                         Paste any campground URL or ID from <em>recreation.gov</em>. We&apos;ll tell you whether it&apos;s already on our watch — and let you add it to your own list in one click.
                     </p>
-                    <div style={{ font: `600 italic 22px/1.2 ${FN}`, color: C.clay, transform: "rotate(-2deg)", display: "inline-block" }}>
+                    <div className="font-hand text-[22px] leading-[1.2] text-cw-clay -rotate-[2deg] inline-block font-semibold italic">
                         ↘ works from any URL on recreation.gov
                     </div>
                 </div>
@@ -493,51 +424,34 @@ export function CampgroundLookup({ variant: _variant = "homepage" }: CampgroundL
                 {/* RIGHT — input + result */}
                 <div>
                     {/* Input row */}
-                    <div style={{
-                        background: C.cream, border: `1.5px solid ${C.ink}`,
-                        display: isMobile ? "block" : "grid",
-                        gridTemplateColumns: isMobile ? undefined : "128px 1fr auto",
-                        alignItems: "stretch",
-                    }}>
+                    <div className="bg-cw-cream border-[1.5px] border-cw-ink block md:grid md:grid-cols-[128px_1fr_auto] items-stretch">
                         {!isMobile && (
-                            <div style={{
-                                background: C.ink, color: C.cream,
-                                display: "flex", alignItems: "center", justifyContent: "center",
-                                font: `700 10px/1.2 ${FM}`, letterSpacing: "0.18em", textTransform: "uppercase",
-                                textAlign: "center", padding: "0 10px",
-                            }}>
+                            <div className="bg-cw-ink text-cw-cream flex items-center justify-center font-mono-field text-[10px] leading-[1.2] tracking-[0.18em] uppercase text-center px-[10px] font-bold">
                                 URL, ID, or name
                             </div>
                         )}
-                        <div style={isMobile ? { display: "flex", alignItems: "stretch" } : { display: "contents" }}>
+                        <div className={isMobile ? "flex items-stretch" : "contents"}>
                             <input
-                                className="cw-input"
+                                className="cw-input font-mono-field bg-transparent border-none border-l border-cw-rule text-cw-ink w-full min-w-0"
+                                style={{
+                                    fontSize: isMobile ? 13 : 16,
+                                    padding: isMobile ? "14px 12px" : "20px 18px",
+                                    borderLeft: `1px solid ${C.rule}`,
+                                }}
                                 type="text"
                                 value={value}
                                 placeholder={isMobile ? "recreation.gov/…/232358" : "Outlet Campground · 232358 · recreation.gov/camping/campgrounds/232358"}
                                 onChange={(e) => { setValue(e.target.value); setTouched(true); setFetchedResult(null); setSearchResults(null); setAddedSuccess(false); }}
                                 onFocus={() => setTouched(true)}
                                 onKeyDown={(e) => { if (e.key === "Enter") void doLookup(); }}
-                                style={{
-                                    font: `500 ${isMobile ? 13 : 16}px/1 ${FM}`,
-                                    padding: isMobile ? "14px 12px" : "20px 18px",
-                                    background: "transparent",
-                                    border: "none", borderLeft: `1px solid ${C.rule}`,
-                                    color: C.ink, width: "100%",
-                                    minWidth: 0,
-                                }}
                             />
                         </div>
                         <button
                             onClick={() => void doLookup()}
+                            className="font-poster text-[13px] leading-none tracking-[0.14em] uppercase bg-cw-forest text-cw-cream border-none cursor-pointer flex items-center justify-center gap-[10px] font-extrabold"
                             style={{
-                                font: `800 13px/1 ${FH}`, letterSpacing: "0.14em", textTransform: "uppercase",
-                                background: C.forest, color: C.cream,
                                 padding: isMobile ? "16px 0" : "0 26px",
-                                border: "none",
                                 borderTop: isMobile ? `1.5px solid ${C.ink}` : undefined,
-                                cursor: "pointer",
-                                display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
                                 width: isMobile ? "100%" : undefined,
                             }}
                         >
@@ -549,33 +463,30 @@ export function CampgroundLookup({ variant: _variant = "homepage" }: CampgroundL
                     </div>
 
                     {/* Try chips */}
-                    <div style={{
-                        marginTop: 14,
-                        display: "flex", alignItems: "center", gap: 10,
-                        flexWrap: isMobile ? undefined : "wrap",
-                        overflowX: isMobile ? "auto" : undefined,
-                        paddingBottom: isMobile ? 4 : undefined,
-                        marginLeft: isMobile ? -PAD_M : undefined,
-                        paddingLeft: isMobile ? PAD_M : undefined,
-                        marginRight: isMobile ? -PAD_M : undefined,
-                        paddingRight: isMobile ? PAD_M : undefined,
-                    }}>
-                        <span style={{ font: `500 10px/1 ${FM}`, letterSpacing: "0.16em", color: C.inkSoft, textTransform: "uppercase", flexShrink: 0 }}>
+                    <div
+                        className="mt-[14px] flex items-center gap-[10px]"
+                        style={{
+                            flexWrap: isMobile ? undefined : "wrap",
+                            overflowX: isMobile ? "auto" : undefined,
+                            paddingBottom: isMobile ? 4 : undefined,
+                            marginLeft: isMobile ? -PAD_M : undefined,
+                            paddingLeft: isMobile ? PAD_M : undefined,
+                            marginRight: isMobile ? -PAD_M : undefined,
+                            paddingRight: isMobile ? PAD_M : undefined,
+                        }}
+                    >
+                        <span className="font-mono-field text-[10px] leading-none tracking-[0.16em] text-cw-ink-soft uppercase flex-shrink-0 font-medium">
                             Try →
                         </span>
                         {chips.map((ex) => (
                             <button
                                 key={ex.val}
-                                className="cw-chip"
-                                onClick={() => fill(ex.val)}
+                                className="cw-chip font-mono-field text-[11px] leading-none tracking-[0.06em] bg-transparent text-cw-ink py-[7px] px-[10px] border border-dashed border-cw-rule cursor-pointer transition-[background,color,border-color] duration-[140ms] font-medium"
                                 style={{
-                                    font: `500 11px/1 ${FM}`, letterSpacing: "0.06em",
-                                    background: "transparent", color: C.ink, padding: "7px 10px",
-                                    border: `1px dashed ${C.rule}`, cursor: "pointer",
-                                    transition: "background .14s, color .14s, border-color .14s",
                                     flexShrink: isMobile ? 0 : undefined,
                                     whiteSpace: isMobile ? "nowrap" : undefined,
                                 }}
+                                onClick={() => fill(ex.val)}
                             >
                                 {ex.label}
                             </button>
@@ -584,39 +495,30 @@ export function CampgroundLookup({ variant: _variant = "homepage" }: CampgroundL
 
                     {/* Search results (name search) */}
                     {(isSearching || (searchResults && searchResults.length > 0)) && (
-                        <div style={{ marginTop: 22, background: C.cream, border: `1.5px solid ${C.ink}` }}>
-                            <div style={{
-                                font: `700 10px/1 ${FM}`, letterSpacing: "0.18em", textTransform: "uppercase",
-                                color: C.clay, padding: "12px 18px", borderBottom: `1px solid ${C.rule}`,
-                            }}>
+                        <div className="mt-[22px] bg-cw-cream border-[1.5px] border-cw-ink">
+                            <div className="font-mono-field text-[10px] leading-none tracking-[0.18em] uppercase text-cw-clay py-3 px-[18px] border-b border-cw-rule font-bold">
                                 {isSearching ? "Searching recreation.gov…" : `${searchResults?.length ?? 0} matches`}
                             </div>
                             {isSearching ? (
-                                <div style={{ padding: 18 }}>
+                                <div className="p-[18px]">
                                     <ResultSkeleton />
                                 </div>
                             ) : (
-                                <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+                                <ul className="list-none m-0 p-0">
                                     {(searchResults ?? []).map((r) => (
                                         <li key={r.id}>
                                             <button
                                                 type="button"
                                                 onClick={() => pickSearchResult(r)}
-                                                style={{
-                                                    display: "block", width: "100%", textAlign: "left",
-                                                    background: "transparent", border: "none",
-                                                    borderTop: `1px dashed ${C.rule}`,
-                                                    padding: "14px 18px", cursor: "pointer",
-                                                    font: `400 16px/1.3 ${FB}`, color: C.ink,
-                                                }}
+                                                className="block w-full text-left bg-transparent border-none border-t border-dashed border-cw-rule py-[14px] px-[18px] cursor-pointer font-body-serif text-[16px] leading-[1.3] text-cw-ink"
                                             >
-                                                <div style={{ font: `900 18px/1.05 ${FH}`, textTransform: "uppercase", letterSpacing: "0.005em" }}>
+                                                <div className="font-poster text-[18px] leading-[1.05] uppercase tracking-[0.005em] font-black">
                                                     {r.name}
                                                 </div>
-                                                <div style={{ font: `500 italic 14px/1.3 ${FI}`, color: C.inkSoft, marginTop: 2 }}>
+                                                <div className="font-italic-serif text-[14px] leading-[1.3] text-cw-ink-soft mt-[2px] font-medium italic">
                                                     {[r.area, r.state].filter(Boolean).join(" · ") || "Recreation.gov"}
                                                 </div>
-                                                <div style={{ font: `500 10px/1 ${FM}`, color: C.inkSoft, letterSpacing: "0.14em", marginTop: 6, textTransform: "uppercase" }}>
+                                                <div className="font-mono-field text-[10px] leading-none text-cw-ink-soft tracking-[0.14em] mt-[6px] uppercase font-medium">
                                                     ID {r.id}
                                                 </div>
                                             </button>
@@ -629,17 +531,13 @@ export function CampgroundLookup({ variant: _variant = "homepage" }: CampgroundL
 
                     {/* No-match hint when search returned empty */}
                     {!isSearching && searchResults && searchResults.length === 0 && !displayResult && (
-                        <div style={{
-                            marginTop: 22, background: "transparent",
-                            border: `1.5px dashed ${C.rule}`, padding: "20px 22px",
-                            font: `500 italic 16px/1.4 ${FI}`, color: C.inkSoft,
-                        }}>
+                        <div className="mt-[22px] bg-transparent border-[1.5px] border-dashed border-cw-rule py-5 px-[22px] font-italic-serif text-[16px] leading-[1.4] text-cw-ink-soft italic">
                             No recreation.gov campgrounds match &ldquo;{value.trim()}&rdquo;. Try a shorter or different name.
                         </div>
                     )}
 
                     {/* Result area */}
-                    <div style={{ marginTop: 22, minHeight: 200 }}>
+                    <div className="mt-[22px] min-h-[200px]">
                         {auth.isLoading && touched ? (
                             <ResultSkeleton />
                         ) : isLoading ? (
@@ -653,17 +551,13 @@ export function CampgroundLookup({ variant: _variant = "homepage" }: CampgroundL
                                 addedSuccess={addedSuccess}
                             />
                         ) : !searchResults && !isSearching ? (
-                            <div style={{
-                                background: "transparent", border: `1.5px dashed ${C.rule}`,
-                                padding: "24px 26px", minHeight: 160,
-                                display: "flex", flexDirection: "column", justifyContent: "center", gap: 8,
-                            }}>
-                                <div style={{ font: `500 italic 18px/1.3 ${FI}`, color: C.inkSoft }}>
+                            <div className="bg-transparent border-[1.5px] border-dashed border-cw-rule py-6 px-[26px] min-h-[160px] flex flex-col justify-center gap-2">
+                                <div className="font-italic-serif text-[18px] leading-[1.3] text-cw-ink-soft font-medium italic">
                                     Waiting on a URL, ID, or name…
                                 </div>
-                                <div style={{ font: `400 14px/1.5 ${FB}`, color: C.inkSoft, maxWidth: 480 }}>
-                                    Search by campground name (e.g. <span style={{ fontFamily: FM, fontSize: 12 }}>Stanley Lake</span>),
-                                    paste a recreation.gov URL, or a bare numeric ID like <span style={{ fontFamily: FM, fontSize: 12 }}>232358</span>.
+                                <div className="font-body-serif text-[14px] leading-[1.5] text-cw-ink-soft max-w-[480px]">
+                                    Search by campground name (e.g. <span className="font-mono-field text-[12px]">Stanley Lake</span>),
+                                    paste a recreation.gov URL, or a bare numeric ID like <span className="font-mono-field text-[12px]">232358</span>.
                                 </div>
                             </div>
                         ) : null}
@@ -672,49 +566,51 @@ export function CampgroundLookup({ variant: _variant = "homepage" }: CampgroundL
             </div>
 
             {/* ─── States reference panel — desktop only ─── */}
-            {!isMobile && <div style={{ marginTop: 72, borderTop: `1.5px solid ${C.ink}`, paddingTop: 36 }}>
-                <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 24 }}>
-                    <h3 style={{ font: `900 22px/1 ${FH}`, textTransform: "uppercase", letterSpacing: "0.005em", margin: 0 }}>
-                        Result states
-                    </h3>
-                    <span style={{ font: `500 italic 16px/1 ${FI}`, color: C.inkSoft }}>
-                        One section, five possible responses.
-                    </span>
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18 }}>
-                    {(
-                        [
-                            {
-                                label: "01 · On your list already",
-                                result: { state: "on-list" as LookupState, parsedId: "232358", cg: { id: "232358", name: "Outlet Campground" } },
-                            },
-                            {
-                                label: "02 · On our watch",
-                                result: { state: "watched" as LookupState, parsedId: "232312", cg: { id: "232312", name: "Pine Flats Campground" } },
-                            },
-                            {
-                                label: "03 · New — we'll start",
-                                result: { state: "new" as LookupState, parsedId: "233858", cg: { id: "233858", name: "Stanley Lake Campground" } },
-                            },
-                            {
-                                label: "04 · Campground not found",
-                                result: { state: "not-found" as LookupState, parsedId: "999999" },
-                            },
-                            {
-                                label: "05 · Invalid URL",
-                                result: { state: "invalid" as LookupState },
-                            },
-                        ] as { label: string; result: LookupResult }[]
-                    ).map((s) => (
-                        <div key={s.label}>
-                            <div style={{ font: `500 10px/1 ${FM}`, letterSpacing: "0.18em", color: C.clay, marginBottom: 8, textTransform: "uppercase" }}>
-                                {s.label}
+            {!isMobile && (
+                <div className="mt-[72px] border-t-[1.5px] border-cw-ink pt-9">
+                    <div className="flex items-baseline justify-between mb-6">
+                        <h3 className="font-poster text-[22px] leading-none uppercase tracking-[0.005em] m-0 font-black">
+                            Result states
+                        </h3>
+                        <span className="font-italic-serif text-[16px] leading-none text-cw-ink-soft font-medium italic">
+                            One section, five possible responses.
+                        </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-[18px]">
+                        {(
+                            [
+                                {
+                                    label: "01 · On your list already",
+                                    result: { state: "on-list" as LookupState, parsedId: "232358", cg: { id: "232358", name: "Outlet Campground" } },
+                                },
+                                {
+                                    label: "02 · On our watch",
+                                    result: { state: "watched" as LookupState, parsedId: "232312", cg: { id: "232312", name: "Pine Flats Campground" } },
+                                },
+                                {
+                                    label: "03 · New — we'll start",
+                                    result: { state: "new" as LookupState, parsedId: "233858", cg: { id: "233858", name: "Stanley Lake Campground" } },
+                                },
+                                {
+                                    label: "04 · Campground not found",
+                                    result: { state: "not-found" as LookupState, parsedId: "999999" },
+                                },
+                                {
+                                    label: "05 · Invalid URL",
+                                    result: { state: "invalid" as LookupState },
+                                },
+                            ] as { label: string; result: LookupResult }[]
+                        ).map((s) => (
+                            <div key={s.label}>
+                                <div className="font-mono-field text-[10px] leading-none tracking-[0.18em] text-cw-clay mb-2 uppercase font-medium">
+                                    {s.label}
+                                </div>
+                                <ResultCard result={s.result} compact />
                             </div>
-                            <ResultCard result={s.result} compact />
-                        </div>
-                    ))}
+                        ))}
+                    </div>
                 </div>
-            </div>}
+            )}
         </section>
     );
 }

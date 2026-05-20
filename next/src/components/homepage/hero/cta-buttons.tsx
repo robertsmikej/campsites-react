@@ -1,56 +1,25 @@
 "use client";
 
-import { C, FH } from "@/components/field-notes/tokens";
+import { C } from "@/components/field-notes/tokens";
 import type { AuthState } from "@/hooks/use-auth";
 
 interface CtaButtonsProps {
     auth: AuthState;
-    isMobile: boolean;
 }
 
-export function CtaButtons({ auth, isMobile }: CtaButtonsProps) {
+export function CtaButtons({ auth }: CtaButtonsProps) {
     return (
-        <div style={isMobile ? { display: "grid", gap: 10 } : { display: "flex", gap: 14, alignItems: "center" }}>
+        <div className="grid md:flex gap-[10px] md:gap-[14px] md:items-center">
             {auth.isLoading ? (
                 <>
-                    <div
-                        style={{
-                            width: isMobile ? undefined : 200,
-                            height: 48,
-                            background: "rgba(251,246,234,0.15)",
-                            borderRadius: 2,
-                        }}
-                    />
-                    <div
-                        style={{
-                            width: isMobile ? undefined : 160,
-                            height: 48,
-                            background: "rgba(251,246,234,0.08)",
-                            borderRadius: 2,
-                            border: "1.5px solid rgba(251,246,234,0.3)",
-                        }}
-                    />
+                    <div className="md:w-[200px] h-12 bg-[rgba(251,246,234,0.15)] rounded-[2px]" />
+                    <div className="md:w-[160px] h-12 bg-[rgba(251,246,234,0.08)] rounded-[2px] border-[1.5px] border-[rgba(251,246,234,0.3)]" />
                 </>
             ) : (
                 <>
                     <a
                         href={auth.user ? "/app" : "/auth/google/start?returnTo=/app"}
-                        style={{
-                            font: `800 13px/1 ${FH}`,
-                            letterSpacing: "0.14em",
-                            textTransform: "uppercase",
-                            background: C.cream,
-                            color: C.ink,
-                            padding: "16px 22px",
-                            textDecoration: "none",
-                            display: isMobile ? "flex" : "inline-flex",
-                            alignItems: "center",
-                            justifyContent: isMobile ? "center" : undefined,
-                            width: isMobile ? "100%" : undefined,
-                            gap: 10,
-                            borderRadius: 2,
-                            boxSizing: isMobile ? "border-box" : undefined,
-                        }}
+                        className="font-poster text-[13px] leading-none tracking-[0.14em] uppercase bg-cw-cream text-cw-ink py-4 px-[22px] no-underline flex md:inline-flex items-center justify-center md:justify-start w-full md:w-auto gap-[10px] rounded-[2px] box-border font-extrabold"
                     >
                         {auth.user ? "Open the Dashboard" : "Sign in with Google"}
                         <svg width="14" height="14" viewBox="0 0 14 14">
@@ -62,26 +31,12 @@ export function CtaButtons({ auth, isMobile }: CtaButtonsProps) {
                             />
                         </svg>
                     </a>
-                    {isMobile && (
-                        <a
-                            href="/discover"
-                            style={{
-                                font: `800 13px/1 ${FH}`,
-                                letterSpacing: "0.14em",
-                                textTransform: "uppercase",
-                                color: C.cream,
-                                padding: "16px 20px",
-                                textDecoration: "none",
-                                border: "1.5px solid rgba(251,246,234,0.6)",
-                                borderRadius: 2,
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                            }}
-                        >
-                            Browse the Picks
-                        </a>
-                    )}
+                    <a
+                        href="/discover"
+                        className="md:hidden font-poster text-[13px] leading-none tracking-[0.14em] uppercase text-cw-cream py-4 px-5 no-underline border-[1.5px] border-[rgba(251,246,234,0.6)] rounded-[2px] flex items-center justify-center font-extrabold"
+                    >
+                        Browse the Picks
+                    </a>
                 </>
             )}
         </div>

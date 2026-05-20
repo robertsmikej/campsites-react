@@ -1,8 +1,6 @@
 "use client";
 
-import { C, PAD_M } from "@/components/field-notes/tokens";
 import { DTopo } from "@/components/field-notes/decorations";
-import { useIsMobile } from "@/hooks/use-is-mobile";
 import { Intro } from "./intro";
 import { StepColumn } from "./step-column";
 
@@ -31,30 +29,12 @@ const STEPS = [
 ] as const;
 
 export function HowItWorks() {
-    const isMobile = useIsMobile();
-
     return (
-        <section
-            style={{
-                padding: isMobile ? `60px ${PAD_M}px` : "88px 56px",
-                background: C.cream,
-                borderTop: `1.5px solid ${C.ink}`,
-                borderBottom: `1.5px solid ${C.ink}`,
-                position: "relative",
-            }}
-        >
+        <section className="relative py-[60px] px-[22px] md:py-[88px] md:px-14 bg-cw-cream border-t-[1.5px] border-b-[1.5px] border-cw-ink">
             <DTopo opacity={0.06} />
-            <div
-                style={{
-                    position: "relative",
-                    display: "grid",
-                    gridTemplateColumns: isMobile ? "1fr" : "260px 1fr",
-                    gap: isMobile ? 28 : 64,
-                    alignItems: "flex-start",
-                }}
-            >
-                <Intro isMobile={isMobile} />
-                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 28 }}>
+            <div className="relative grid grid-cols-1 md:grid-cols-[260px_1fr] gap-7 md:gap-16 items-start">
+                <Intro />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-7">
                     {STEPS.map((step) => (
                         <StepColumn key={step.num} {...step} />
                     ))}

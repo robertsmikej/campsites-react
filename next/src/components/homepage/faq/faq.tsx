@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { C, FM, PAD_M } from "@/components/field-notes/tokens";
+import { C, FM } from "@/components/field-notes/tokens";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { FaqIntro } from "./faq-intro";
 import { FaqItem } from "./faq-item";
@@ -63,7 +63,7 @@ export function Faq() {
                         href="https://github.com/robertsmikej/campsites-react"
                         target="_blank"
                         rel="noopener noreferrer"
-                        style={{ color: C.mustard, textDecoration: "underline", textUnderlineOffset: 2 }}
+                        className="text-cw-mustard underline [text-underline-offset:2px]"
                     >
                         source is on GitHub
                     </a>
@@ -98,21 +98,14 @@ export function Faq() {
     return (
         <section
             id="faq"
-            style={{ padding: isMobile ? `60px ${PAD_M}px` : "80px 56px", background: C.forestDeep, color: C.cream, position: "relative" }}
+            className="relative py-[60px] px-[22px] md:py-20 md:px-14 bg-[#142a1d] text-cw-cream"
         >
             <style>{`
                 details.cw-faq > summary::-webkit-details-marker { display: none; }
                 details.cw-faq > summary { list-style: none; }
             `}</style>
-            <div
-                style={{
-                    display: "grid",
-                    gridTemplateColumns: isMobile ? "1fr" : "300px 1fr",
-                    gap: isMobile ? 28 : 64,
-                    alignItems: "flex-start",
-                }}
-            >
-                <FaqIntro isMobile={isMobile} />
+            <div className="grid grid-cols-1 md:grid-cols-[300px_1fr] gap-7 md:gap-16 items-start">
+                <FaqIntro />
                 <div>
                     {items.map(({ q, a }, i) => (
                         <FaqItem key={i} q={q} a={a} index={i} isMobile={isMobile} />

@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import { C, FI, FB, FM } from "@/components/field-notes/tokens";
 
 interface FaqItemProps {
     q: string;
@@ -14,66 +13,37 @@ export function FaqItem({ q, a, index, isMobile }: FaqItemProps) {
     if (isMobile) {
         return (
             <details
-                className="cw-faq"
-                style={{
-                    padding: "14px 0",
-                    borderTop: index === 0 ? "1px solid rgba(239,230,210,0.18)" : "none",
-                    borderBottom: "1px solid rgba(239,230,210,0.18)",
-                }}
+                className="cw-faq py-[14px] border-b border-[rgba(239,230,210,0.18)]"
+                style={{ borderTop: index === 0 ? "1px solid rgba(239,230,210,0.18)" : "none" }}
             >
-                <summary
-                    style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "flex-start",
-                        gap: 14,
-                        cursor: "pointer",
-                    }}
-                >
-                    <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-                        <span style={{ font: `500 10px/1.6 ${FM}`, color: C.mustard, letterSpacing: "0.12em", flexShrink: 0 }}>Q.0{index + 1}</span>
-                        <h3 style={{ font: `500 italic 19px/1.3 ${FI}`, color: C.cream, margin: 0, letterSpacing: "-0.005em" }}>{q}</h3>
+                <summary className="flex justify-between items-start gap-[14px] cursor-pointer">
+                    <div className="flex items-start gap-[10px]">
+                        <span className="font-mono-field text-[10px] leading-[1.6] text-cw-mustard tracking-[0.12em] flex-shrink-0 font-medium">Q.0{index + 1}</span>
+                        <h3 className="font-italic-serif text-[19px] leading-[1.3] text-cw-cream m-0 tracking-[-0.005em] font-medium italic">{q}</h3>
                     </div>
-                    <span style={{ font: `500 20px/1 ${FM}`, color: C.mustard, flexShrink: 0 }}>+</span>
+                    <span className="font-mono-field text-[20px] leading-none text-cw-mustard flex-shrink-0 font-medium">+</span>
                 </summary>
-                <p style={{ font: `400 14px/1.55 ${FB}`, color: "rgba(239,230,210,0.82)", margin: "12px 0 0 26px" }}>{a}</p>
+                <p className="font-body-serif text-[14px] leading-[1.55] text-[rgba(239,230,210,0.82)] m-0 mt-3 ml-[26px]">{a}</p>
             </details>
         );
     }
 
     return (
         <div
-            style={{
-                padding: "18px 0",
-                borderTop: index === 0 ? "1px solid rgba(239,230,210,0.2)" : "none",
-                borderBottom: "1px solid rgba(239,230,210,0.2)",
-            }}
+            className="py-[18px] border-b border-[rgba(239,230,210,0.2)]"
+            style={{ borderTop: index === 0 ? "1px solid rgba(239,230,210,0.2)" : "none" }}
         >
-            <div style={{ display: "grid", gridTemplateColumns: "48px 1fr", gap: 16 }}>
-                <span
-                    style={{
-                        font: `500 11px/1 ${FM}`,
-                        color: C.mustard,
-                        letterSpacing: "0.12em",
-                        paddingTop: 6,
-                    }}
-                >
+            <div className="grid grid-cols-[48px_1fr] gap-4">
+                <span className="font-mono-field text-[11px] leading-none text-cw-mustard tracking-[0.12em] pt-[6px] font-medium">
                     Q.0{index + 1}
                 </span>
                 <div>
-                    <h3 style={{ margin: "0 0 10px", letterSpacing: "-0.005em" }}>
-                        <span style={{ font: `500 italic 24px/1.2 ${FI}`, color: C.cream }}>
+                    <h3 className="m-0 mb-[10px] tracking-[-0.005em]">
+                        <span className="font-italic-serif text-[24px] leading-[1.2] text-cw-cream font-medium italic">
                             {q}
                         </span>
                     </h3>
-                    <p
-                        style={{
-                            font: `400 15px/1.55 ${FB}`,
-                            color: "rgba(239,230,210,0.82)",
-                            margin: 0,
-                            maxWidth: 640,
-                        }}
-                    >
+                    <p className="font-body-serif text-[15px] leading-[1.55] text-[rgba(239,230,210,0.82)] m-0 max-w-[640px]">
                         {a}
                     </p>
                 </div>

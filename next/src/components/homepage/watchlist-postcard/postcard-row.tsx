@@ -1,6 +1,6 @@
 "use client";
 
-import { C, FI, FB, FM } from "@/components/field-notes/tokens";
+import { C } from "@/components/field-notes/tokens";
 import { DBars } from "@/components/field-notes/decorations";
 
 interface PostcardRowProps {
@@ -16,45 +16,48 @@ interface PostcardRowProps {
 export function PostcardRow({ name, loc, pattern, tag, tagColor, isLast, isMobile }: PostcardRowProps) {
     const isWatching = tagColor === "rgba(26,22,20,0.5)";
 
-    const tagStyle = {
-        font: `600 ${isMobile ? "10px" : "11px"}/1 ${FM}`,
+    const tagStyle: React.CSSProperties = {
+        fontSize: isMobile ? "10px" : "11px",
         letterSpacing: isMobile ? "0.06em" : "0.08em",
-        textTransform: "uppercase" as const,
         color: isWatching ? tagColor : "#fff",
         background: isWatching ? "transparent" : tagColor,
         padding: isMobile ? "5px 8px" : "6px 10px",
-        borderRadius: 999,
         border: isWatching ? `1px solid ${tagColor}` : "none",
-        flexShrink: 0 as const,
-        justifySelf: isMobile ? undefined : ("end" as const),
     };
 
     return (
         <div
-            style={{
-                padding: "12px 0",
-                borderBottom: isLast ? "none" : "1px dotted rgba(26,22,20,0.16)",
-            }}
+            className={`py-3 ${isLast ? "" : "border-b border-dotted border-[rgba(26,22,20,0.16)]"}`}
         >
             {isMobile ? (
                 <>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ font: `500 italic 20px/1.1 ${FI}`, color: C.ink }}>{name}</div>
-                            <div style={{ font: `400 12px/1.2 ${FB}`, color: C.inkSoft, marginTop: 3 }}>{loc}</div>
+                    <div className="flex justify-between items-start gap-2">
+                        <div className="flex-1 min-w-0">
+                            <div className="font-italic-serif text-[20px] leading-[1.1] text-cw-ink font-medium italic">{name}</div>
+                            <div className="font-body-serif text-[12px] leading-[1.2] text-cw-ink-soft mt-[3px]">{loc}</div>
                         </div>
-                        <span style={tagStyle}>{tag}</span>
+                        <span
+                            className="font-mono-field leading-none uppercase rounded-full flex-shrink-0 font-semibold"
+                            style={tagStyle}
+                        >
+                            {tag}
+                        </span>
                     </div>
-                    <div style={{ marginTop: 10 }}><DBars pattern={pattern} /></div>
+                    <div className="mt-[10px]"><DBars pattern={pattern} /></div>
                 </>
             ) : (
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 90px", gap: 12, alignItems: "center" }}>
+                <div className="grid grid-cols-[1fr_1fr_90px] gap-3 items-center">
                     <div>
-                        <div style={{ font: `500 italic 22px/1.1 ${FI}`, color: C.ink }}>{name}</div>
-                        <div style={{ font: `400 12px/1.2 ${FB}`, color: C.inkSoft, marginTop: 3 }}>{loc}</div>
+                        <div className="font-italic-serif text-[22px] leading-[1.1] text-cw-ink font-medium italic">{name}</div>
+                        <div className="font-body-serif text-[12px] leading-[1.2] text-cw-ink-soft mt-[3px]">{loc}</div>
                     </div>
                     <DBars pattern={pattern} />
-                    <span style={tagStyle}>{tag}</span>
+                    <span
+                        className="font-mono-field leading-none uppercase rounded-full justify-self-end font-semibold"
+                        style={tagStyle}
+                    >
+                        {tag}
+                    </span>
                 </div>
             )}
         </div>

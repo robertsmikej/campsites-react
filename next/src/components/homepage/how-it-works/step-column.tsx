@@ -1,6 +1,6 @@
 "use client";
 
-import { C, FH, FI, FB, FM } from "@/components/field-notes/tokens";
+import { C } from "@/components/field-notes/tokens";
 
 type StepIcon = "pin" | "cal" | "mail";
 
@@ -14,18 +14,11 @@ interface StepColumnProps {
 
 export function StepColumn({ rn, num, t, d, ic }: StepColumnProps) {
     return (
-        <div style={{ borderTop: `2px solid ${C.ink}`, paddingTop: 18 }}>
-            <div
-                style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "baseline",
-                    marginBottom: 14,
-                }}
-            >
-                <div style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
-                    <span style={{ font: `900 38px/1 ${FH}`, color: C.forest }}>{num}</span>
-                    <span style={{ font: `500 italic 28px/1 ${FI}`, color: C.clay }}>{rn}</span>
+        <div className="border-t-2 border-cw-ink pt-[18px]">
+            <div className="flex justify-between items-baseline mb-[14px]">
+                <div className="flex items-baseline gap-3">
+                    <span className="font-poster text-[38px] leading-none text-cw-forest font-black">{num}</span>
+                    <span className="font-italic-serif text-[28px] leading-none text-cw-clay font-medium italic">{rn}</span>
                 </div>
                 <svg
                     width="32"
@@ -57,16 +50,10 @@ export function StepColumn({ rn, num, t, d, ic }: StepColumnProps) {
                     )}
                 </svg>
             </div>
-            <h3
-                style={{
-                    margin: "0 0 10px",
-                    font: `900 22px/1.15 ${FH}`,
-                    textTransform: "uppercase",
-                }}
-            >
+            <h3 className="m-0 mb-[10px] font-poster text-[22px] leading-[1.15] uppercase font-black">
                 {t}
             </h3>
-            <p style={{ font: `400 14px/1.55 ${FB}`, color: C.inkSoft, margin: 0 }}>{d}</p>
+            <p className="font-body-serif text-[14px] leading-[1.55] text-cw-ink-soft m-0">{d}</p>
         </div>
     );
 }

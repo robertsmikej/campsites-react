@@ -1,6 +1,5 @@
 "use client";
 
-import { C, FN } from "@/components/field-notes/tokens";
 import { DPostmark } from "@/components/field-notes/decorations";
 
 interface PostcardDecorationsProps {
@@ -12,40 +11,23 @@ export function PostcardDecorations({ isMobile }: PostcardDecorationsProps) {
         <>
             {/* Postmark over the corner — desktop only */}
             {!isMobile && (
-                <div
-                    style={{
-                        position: "absolute",
-                        top: -36,
-                        right: -28,
-                        transform: "rotate(14deg)",
-                        opacity: 0.92,
-                    }}
-                >
+                <div className="absolute top-[-36px] right-[-28px] rotate-[14deg] opacity-[0.92]">
                     <DPostmark />
                 </div>
             )}
 
             {/* Handwritten note */}
-            <div
-                style={isMobile ? {
-                    marginTop: 18,
-                    textAlign: "center",
-                    font: `600 20px/1.2 ${FN}`,
-                    color: C.clay,
-                    transform: "rotate(-1deg)",
-                } : {
-                    position: "absolute",
-                    bottom: -58,
-                    left: -32,
-                    transform: "rotate(-4deg)",
-                    font: `600 22px/1.2 ${FN}`,
-                    color: C.clay,
-                    maxWidth: 240,
-                }}
-            >
-                wish you were here —{isMobile ? " " : <br />}
-                <span style={{ fontSize: 18, color: C.inkSoft }}>your watchlist is.</span>
-            </div>
+            {isMobile ? (
+                <div className="mt-[18px] text-center font-hand text-[20px] leading-[1.2] text-cw-clay -rotate-[1deg] font-semibold italic">
+                    wish you were here —{" "}
+                    <span className="text-[18px] text-cw-ink-soft">your watchlist is.</span>
+                </div>
+            ) : (
+                <div className="absolute bottom-[-58px] left-[-32px] -rotate-[4deg] font-hand text-[22px] leading-[1.2] text-cw-clay max-w-[240px] font-semibold italic">
+                    wish you were here —<br />
+                    <span className="text-[18px] text-cw-ink-soft">your watchlist is.</span>
+                </div>
+            )}
         </>
     );
 }

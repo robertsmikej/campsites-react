@@ -1,6 +1,6 @@
 "use client";
 
-import { C, FH, FI, FB, FM, FN, PAD_M } from "@/components/field-notes/tokens";
+import { C } from "@/components/field-notes/tokens";
 import { DTopo } from "@/components/field-notes/decorations";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useStats } from "@/contexts/stats-context";
@@ -45,93 +45,39 @@ export function WatchlistPostcard() {
     const { stats, nowMs } = useStats();
 
     return (
-        <section style={{ padding: isMobile ? `60px ${PAD_M}px 50px` : "120px 56px 110px", position: "relative" }}>
+        <section className="relative py-[60px] px-[22px] md:py-[120px] md:px-14 md:pb-[110px]">
             <DTopo opacity={0.05} />
 
             {/* Handwritten arrow — desktop only */}
             {!isMobile && (
-                <div
-                    style={{
-                        position: "absolute",
-                        left: 56,
-                        top: 64,
-                        font: `600 italic 20px/1.3 ${FN}`,
-                        color: C.clay,
-                        transform: "rotate(-3deg)",
-                        maxWidth: 220,
-                        zIndex: 2,
-                    }}
-                >
+                <div className="absolute left-14 top-16 font-hand text-[20px] leading-[1.3] text-cw-clay -rotate-[3deg] max-w-[220px] z-[2] font-semibold italic">
                     ↓ what your dashboard looks like
                 </div>
             )}
 
-            <div
-                style={{
-                    position: "relative",
-                    display: isMobile ? "flex" : "grid",
-                    flexDirection: isMobile ? "column" : undefined,
-                    gridTemplateColumns: isMobile ? undefined : "1fr 1fr",
-                    gap: isMobile ? 24 : 64,
-                    alignItems: isMobile ? undefined : "center",
-                }}
-            >
+            <div className="relative flex flex-col md:grid md:grid-cols-2 gap-6 md:gap-16 md:items-center">
                 {/* Left: header + copy + legend */}
                 <div>
-                    <div
-                        style={{
-                            font: `500 11px/1 ${FM}`,
-                            letterSpacing: "0.18em",
-                            color: C.clay,
-                            marginBottom: 14,
-                        }}
-                    >
+                    <div className="font-mono-field text-[11px] leading-none tracking-[0.18em] text-cw-clay mb-[14px] font-medium uppercase">
                         THE WATCHLIST
                     </div>
-                    <h2 style={{ margin: "0 0 24px", letterSpacing: "-0.005em" }}>
-                        <span
-                            style={{
-                                font: `900 ${isMobile ? 44 : 64}px/0.95 ${FH}`,
-                                textTransform: "uppercase",
-                                display: "block",
-                            }}
-                        >
+                    <h2 className="m-0 mb-6 tracking-[-0.005em]">
+                        <span className="font-poster text-[44px] md:text-[64px] leading-[0.95] uppercase block font-black">
                             EVERY PLACE
                         </span>
-                        <span
-                            style={{
-                                font: `900 ${isMobile ? 44 : 64}px/0.95 ${FH}`,
-                                textTransform: "uppercase",
-                                display: "block",
-                            }}
-                        >
+                        <span className="font-poster text-[44px] md:text-[64px] leading-[0.95] uppercase block font-black">
                             YOU&apos;VE FALLEN FOR,
                         </span>
-                        <span
-                            style={{
-                                font: `900 ${isMobile ? 44 : 64}px/0.95 ${FH}`,
-                                textTransform: "uppercase",
-                                display: "block",
-                                color: C.forest,
-                                marginTop: 4,
-                            }}
-                        >
+                        <span className="font-poster text-[44px] md:text-[64px] leading-[0.95] uppercase block font-black text-cw-forest mt-1">
                             WATCHING ITSELF.
                         </span>
                     </h2>
-                    <p
-                        style={{
-                            font: `400 17px/1.6 ${FB}`,
-                            color: C.inkSoft,
-                            maxWidth: 460,
-                            margin: "0 0 28px",
-                        }}
-                    >
+                    <p className="font-body-serif text-[17px] leading-[1.6] text-cw-ink-soft max-w-[460px] m-0 mb-7">
                         Each row is a campground. Each bar is a single night, color-coded by how much you&apos;d want it:
                         dark green for the sites you&apos;ve starred, gold for &ldquo;I&apos;d take it,&rdquo; dimmed for
                         booked. The next eighteen weeks, at a glance.
                     </p>
-                    <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
+                    <div className="flex items-center gap-6">
                         {(
                             [
                                 [C.forest, "favorite"],
@@ -139,35 +85,28 @@ export function WatchlistPostcard() {
                                 ["rgba(26,22,20,0.2)", "booked"],
                             ] as const
                         ).map(([color, label]) => (
-                            <div key={label} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <div key={label} className="flex items-center gap-2">
                                 <span
-                                    style={{
-                                        width: 12,
-                                        height: 12,
-                                        background: color,
-                                        borderRadius: 2,
-                                        display: "inline-block",
-                                    }}
+                                    className="w-3 h-3 rounded-[2px] inline-block"
+                                    style={{ background: color }}
                                 />
-                                <span style={{ font: `500 italic 17px/1 ${FI}`, color: C.inkSoft }}>{label}</span>
+                                <span className="font-italic-serif text-[17px] leading-none text-cw-ink-soft font-medium italic">{label}</span>
                             </div>
                         ))}
                     </div>
                 </div>
 
                 {/* Right: the postcard */}
-                <div style={{ position: "relative", perspective: isMobile ? undefined : "1400px" }}>
+                <div className="relative" style={{ perspective: isMobile ? undefined : "1400px" }}>
                     <div
+                        className="bg-cw-cream relative"
                         style={{
-                            background: C.cream,
                             padding: isMobile ? 18 : "24px 26px 22px",
                             border: "1px solid rgba(26,22,20,0.14)",
-                            boxShadow:
-                                isMobile
-                                    ? "0 14px 30px -12px rgba(26,22,20,0.3)"
-                                    : "0 30px 60px -20px rgba(26,22,20,0.35), 0 2px 0 rgba(26,22,20,0.05) inset",
+                            boxShadow: isMobile
+                                ? "0 14px 30px -12px rgba(26,22,20,0.3)"
+                                : "0 30px 60px -20px rgba(26,22,20,0.35), 0 2px 0 rgba(26,22,20,0.05) inset",
                             transform: isMobile ? undefined : "rotate(-1.4deg)",
-                            position: "relative",
                             backgroundImage:
                                 "radial-gradient(circle at 12px 12px, rgba(26,22,20,0.03) 0.8px, transparent 0.8px)",
                             backgroundSize: "4px 4px",

@@ -1,43 +1,16 @@
 "use client";
 
-import { C, FH, FI, FM } from "@/components/field-notes/tokens";
-
-interface FaqIntroProps {
-    isMobile: boolean;
-}
-
-export function FaqIntro({ isMobile }: FaqIntroProps) {
+export function FaqIntro() {
     return (
         <div>
-            <div
-                style={{
-                    font: `500 11px/1 ${FM}`,
-                    letterSpacing: "0.18em",
-                    color: C.mustard,
-                    marginBottom: 10,
-                }}
-            >
+            <div className="font-mono-field text-[11px] leading-none tracking-[0.18em] text-cw-mustard mb-[10px] font-medium uppercase">
                 COMMON QUESTIONS
             </div>
-            <h2 style={{ margin: 0, letterSpacing: "-0.005em" }}>
-                <span
-                    style={{
-                        font: `900 ${isMobile ? 44 : 52}px/0.95 ${FH}`,
-                        textTransform: "uppercase",
-                        display: "block",
-                    }}
-                >
+            <h2 className="m-0 tracking-[-0.005em]">
+                <span className="font-poster text-[44px] md:text-[52px] leading-[0.95] uppercase block font-black">
                     THINGS PEOPLE
                 </span>
-                <span
-                    style={{
-                        font: `500 italic ${isMobile ? 36 : 44}px/1 ${FI}`,
-                        display: "block",
-                        color: "#f6c79c",
-                        marginTop: 6,
-                        letterSpacing: "-0.01em",
-                    }}
-                >
+                <span className="font-italic-serif text-[36px] md:text-[44px] leading-none block text-[#f6c79c] mt-[6px] tracking-[-0.01em] font-medium italic">
                     ask, mostly around dusk.
                 </span>
             </h2>
