@@ -109,6 +109,35 @@
     --sidebar-ring: oklch(0.65 0.10 150);
 }
 
+/* ── CampWatch Field Notes tokens ── */
+:root {
+    --cw-paper: #F4EAD8;
+    --cw-cream: #FBF6EA;
+    --cw-ink: #1A1614;
+    --cw-ink-soft: rgba(26,22,20,0.7);
+    --cw-ink-subtle: rgba(26,22,20,0.5);
+    --cw-ink-faint: rgba(26,22,20,0.3);
+    --cw-rule: rgba(26,22,20,0.18);
+    --cw-rule-soft: rgba(26,22,20,0.07);
+    --cw-forest: #1F3D2A;
+    --cw-clay: #B65C3F;
+    --cw-mustard: #C9A227;
+}
+
+.dark {
+    --cw-paper: #1A1614;
+    --cw-cream: #241D17;
+    --cw-ink: #F4EAD8;
+    --cw-ink-soft: rgba(244,234,216,0.72);
+    --cw-ink-subtle: rgba(244,234,216,0.5);
+    --cw-ink-faint: rgba(244,234,216,0.3);
+    --cw-rule: rgba(244,234,216,0.16);
+    --cw-rule-soft: rgba(244,234,216,0.07);
+    --cw-forest: #7EB58F;
+    --cw-clay: #D88562;
+    --cw-mustard: #E2BC4E;
+}
+
 @theme inline {
     --color-background: var(--background);
     --color-foreground: var(--foreground);
