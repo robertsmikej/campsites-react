@@ -4,6 +4,12 @@ import { useCallback, useMemo, useState } from "react";
 import type { Campground, SiteConfig, GlobalSettings } from "@/types/campground";
 import { useAuth } from "@/hooks/use-auth";
 import { useUserCampgrounds } from "@/hooks/use-user-campgrounds";
+import type { SearchResult } from "@/app/api/campgrounds/search/route";
+
+// Heuristic: does this input look like a URL attempt (vs a name search)?
+function looksLikeUrlAttempt(s: string): boolean {
+    return /:\/\/|recreation\.gov/i.test(s);
+}
 
 // ─── Color palette (matches page.tsx) ────────────────────────────────────────
 const C = {
@@ -273,6 +279,8 @@ export function CampgroundLookup({ variant: _variant = "homepage" }: CampgroundL
     const [isFetching, setIsFetching] = useState(false);
     const [adding, setAdding] = useState(false);
     const [addedSuccess, setAddedSuccess] = useState(false);
+    const [searchResults, setSearchResults] = useState<SearchResult[] | null>(null);
+    const [isSearching, setIsSearching] = useState(false);
 
     const signedIn = !auth.isLoading && auth.user != null;
 
@@ -315,12 +323,37 @@ export function CampgroundLookup({ variant: _variant = "homepage" }: CampgroundL
 
     const doLookup = useCallback(async (raw?: string) => {
         const input = (raw ?? value).trim();
+        if (!input) return;
         const id = parseInput(input);
         if (!id) {
-            setFetchedResult({ state: "invalid" });
+            // Not a URL/ID. If it LOOKS like a URL attempt, bail with invalid.
+            // Otherwise treat as a name search.
+            if (looksLikeUrlAttempt(input)) {
+                setFetchedResult({ state: "invalid" });
+                setSearchResults(null);
+                return;
+            }
+            setFetchedResult(null);
+            setSearchResults(null);
+            setAddedSuccess(false);
+            setIsSearching(true);
+            try {
+                const resp = await fetch(`/api/campgrounds/search?q=${encodeURIComponent(input)}`);
+                if (resp.ok) {
+                    const data = (await resp.json()) as SearchResult[];
+                    setSearchResults(Array.isArray(data) ? data : []);
+                } else {
+                    setSearchResults([]);
+                }
+            } catch {
+                setSearchResults([]);
+            } finally {
+                setIsSearching(false);
+            }
             return;
         }
         // First try memory
+        setSearchResults(null);
         const mem = resolve(id);
         if (mem) {
             setFetchedResult(null); // let memoryResult drive
@@ -357,10 +390,21 @@ export function CampgroundLookup({ variant: _variant = "homepage" }: CampgroundL
         setValue(v);
         setTouched(true);
         setFetchedResult(null);
+        setSearchResults(null);
         setAddedSuccess(false);
         // Also run the lookup immediately so chip clicks give instant feedback
         // even when the ID isn't in the user's in-memory lists.
         void doLookup(v);
+    };
+
+    // Picking a name-search candidate behaves like pasting that ID and looking it up.
+    const pickSearchResult = (r: SearchResult) => {
+        setValue(r.id);
+        setTouched(true);
+        setFetchedResult(null);
+        setSearchResults(null);
+        setAddedSuccess(false);
+        void doLookup(r.id);
     };
 
     const handleAdd = useCallback(async () => {
@@ -384,11 +428,11 @@ export function CampgroundLookup({ variant: _variant = "homepage" }: CampgroundL
         }
     }, [displayResult, userCampgrounds]);
 
-    // Try-chips: 3 real IDs from default catalog + 1 bad URL
+    // Try-chips: name search + a couple of real IDs + a bad URL
     const chips = [
+        { label: "\"Redfish Lake\" (name)", val: "Redfish Lake" },
         { label: "Outlet (catalog)", val: "232358" },
         { label: "Pine Flats (catalog)", val: "232312" },
-        { label: "Stanley Lake (catalog)", val: "233858" },
         { label: "Bad URL", val: "https://example.com/yosemite" },
     ];
 
@@ -444,14 +488,14 @@ export function CampgroundLookup({ variant: _variant = "homepage" }: CampgroundL
                             font: `700 10px/1.2 ${FM}`, letterSpacing: "0.18em", textTransform: "uppercase",
                             textAlign: "center", padding: "0 10px",
                         }}>
-                            URL or ID
+                            URL, ID, or name
                         </div>
                         <input
                             className="cw-input"
                             type="text"
                             value={value}
-                            placeholder="recreation.gov/camping/campgrounds/232358"
-                            onChange={(e) => { setValue(e.target.value); setTouched(true); setFetchedResult(null); setAddedSuccess(false); }}
+                            placeholder="Outlet Campground · 232358 · recreation.gov/camping/campgrounds/232358"
+                            onChange={(e) => { setValue(e.target.value); setTouched(true); setFetchedResult(null); setSearchResults(null); setAddedSuccess(false); }}
                             onFocus={() => setTouched(true)}
                             onKeyDown={(e) => { if (e.key === "Enter") void doLookup(); }}
                             style={{
@@ -499,6 +543,62 @@ export function CampgroundLookup({ variant: _variant = "homepage" }: CampgroundL
                         ))}
                     </div>
 
+                    {/* Search results (name search) */}
+                    {(isSearching || (searchResults && searchResults.length > 0)) && (
+                        <div style={{ marginTop: 22, background: C.cream, border: `1.5px solid ${C.ink}` }}>
+                            <div style={{
+                                font: `700 10px/1 ${FM}`, letterSpacing: "0.18em", textTransform: "uppercase",
+                                color: C.clay, padding: "12px 18px", borderBottom: `1px solid ${C.rule}`,
+                            }}>
+                                {isSearching ? "Searching recreation.gov…" : `${searchResults?.length ?? 0} matches`}
+                            </div>
+                            {isSearching ? (
+                                <div style={{ padding: 18 }}>
+                                    <ResultSkeleton />
+                                </div>
+                            ) : (
+                                <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+                                    {(searchResults ?? []).map((r) => (
+                                        <li key={r.id}>
+                                            <button
+                                                type="button"
+                                                onClick={() => pickSearchResult(r)}
+                                                style={{
+                                                    display: "block", width: "100%", textAlign: "left",
+                                                    background: "transparent", border: "none",
+                                                    borderTop: `1px dashed ${C.rule}`,
+                                                    padding: "14px 18px", cursor: "pointer",
+                                                    font: `400 16px/1.3 ${FB}`, color: C.ink,
+                                                }}
+                                            >
+                                                <div style={{ font: `900 18px/1.05 ${FH}`, textTransform: "uppercase", letterSpacing: "0.005em" }}>
+                                                    {r.name}
+                                                </div>
+                                                <div style={{ font: `500 italic 14px/1.3 ${FI}`, color: C.inkSoft, marginTop: 2 }}>
+                                                    {[r.area, r.state].filter(Boolean).join(" · ") || "Recreation.gov"}
+                                                </div>
+                                                <div style={{ font: `500 10px/1 ${FM}`, color: C.inkSoft, letterSpacing: "0.14em", marginTop: 6, textTransform: "uppercase" }}>
+                                                    ID {r.id}
+                                                </div>
+                                            </button>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                        </div>
+                    )}
+
+                    {/* No-match hint when search returned empty */}
+                    {!isSearching && searchResults && searchResults.length === 0 && !displayResult && (
+                        <div style={{
+                            marginTop: 22, background: "transparent",
+                            border: `1.5px dashed ${C.rule}`, padding: "20px 22px",
+                            font: `500 italic 16px/1.4 ${FI}`, color: C.inkSoft,
+                        }}>
+                            No recreation.gov campgrounds match &ldquo;{value.trim()}&rdquo;. Try a shorter or different name.
+                        </div>
+                    )}
+
                     {/* Result area */}
                     <div style={{ marginTop: 22, minHeight: 200 }}>
                         {auth.isLoading && touched ? (
@@ -513,21 +613,21 @@ export function CampgroundLookup({ variant: _variant = "homepage" }: CampgroundL
                                 adding={adding}
                                 addedSuccess={addedSuccess}
                             />
-                        ) : (
+                        ) : !searchResults && !isSearching ? (
                             <div style={{
                                 background: "transparent", border: `1.5px dashed ${C.rule}`,
                                 padding: "24px 26px", minHeight: 160,
                                 display: "flex", flexDirection: "column", justifyContent: "center", gap: 8,
                             }}>
                                 <div style={{ font: `500 italic 18px/1.3 ${FI}`, color: C.inkSoft }}>
-                                    Waiting on a URL…
+                                    Waiting on a URL, ID, or name…
                                 </div>
                                 <div style={{ font: `400 14px/1.5 ${FB}`, color: C.inkSoft, maxWidth: 480 }}>
-                                    Anything from recreation.gov works — campground pages, gateway pages, or a bare numeric ID like{" "}
-                                    <span style={{ fontFamily: FM, fontSize: 12 }}>232358</span>.
+                                    Search by campground name (e.g. <span style={{ fontFamily: FM, fontSize: 12 }}>Stanley Lake</span>),
+                                    paste a recreation.gov URL, or a bare numeric ID like <span style={{ fontFamily: FM, fontSize: 12 }}>232358</span>.
                                 </div>
                             </div>
-                        )}
+                        ) : null}
                     </div>
                 </div>
             </div>
