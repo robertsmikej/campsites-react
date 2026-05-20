@@ -2,6 +2,7 @@
 
 import { useAuth } from "@/hooks/use-auth";
 import { useState, useEffect } from "react";
+import { CampgroundLookup } from "@/components/campground-lookup";
 
 // ─── Color palette ───────────────────────────────────────────────────────────
 const C = {
@@ -1052,6 +1053,9 @@ export default function HomePage() {
                     </div>
                 </div>
             </section>
+
+            {/* ====== CAMPGROUND LOOKUP ====== */}
+            <CampgroundLookup />
 
             {/* ====== HOW IT WORKS ====== */}
             <section
