@@ -345,8 +345,8 @@ function useNowTick(): number {
 }
 
 // ─── Stat formatters ──────────────────────────────────────────────────────────
-function formatTimeAgo(ms: number): string {
-    if (!Number.isFinite(ms) || ms < 0) return "—";
+function formatTimeAgo(ms: number | null | undefined): string {
+    if (ms == null || !Number.isFinite(ms) || ms < 0) return "—";
     const s = Math.floor(ms / 1000);
     if (s < 60) return `${s}s`;
     const m = Math.floor(s / 60);
@@ -356,13 +356,14 @@ function formatTimeAgo(ms: number): string {
     return `${Math.floor(h / 24)}d`;
 }
 
-function formatLatency(ms: number): string {
-    if (ms === 0) return "—";
+function formatLatency(ms: number | null | undefined): string {
+    if (ms == null || !Number.isFinite(ms) || ms <= 0) return "—";
     if (ms < 1000) return `${ms}ms`;
     return `${(ms / 1000).toFixed(1)}s`;
 }
 
-function formatCount(n: number): string {
+function formatCount(n: number | null | undefined): string {
+    if (n == null || !Number.isFinite(n)) return "—";
     return n.toLocaleString();
 }
 
