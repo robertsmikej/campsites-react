@@ -313,8 +313,9 @@ export function CampgroundLookup({ variant: _variant = "homepage" }: CampgroundL
     const displayResult = fetchedResult ?? memoryResult;
     const isLoading = isFetching || (touched && value.trim() && memoryResult === null && !fetchedResult && auth.isLoading);
 
-    const doLookup = useCallback(async () => {
-        const id = parseInput(value);
+    const doLookup = useCallback(async (raw?: string) => {
+        const input = (raw ?? value).trim();
+        const id = parseInput(input);
         if (!id) {
             setFetchedResult({ state: "invalid" });
             return;
@@ -357,6 +358,9 @@ export function CampgroundLookup({ variant: _variant = "homepage" }: CampgroundL
         setTouched(true);
         setFetchedResult(null);
         setAddedSuccess(false);
+        // Also run the lookup immediately so chip clicks give instant feedback
+        // even when the ID isn't in the user's in-memory lists.
+        void doLookup(v);
     };
 
     const handleAdd = useCallback(async () => {
