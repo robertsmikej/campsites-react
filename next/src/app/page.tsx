@@ -212,7 +212,7 @@ function DPostmark({
                     {date}
                 </textPath>
             </text>
-            <text x="60" y="55" textAnchor="middle" style={{ font: `900 16px ${FH}`, fill: C.clay, letterSpacing: "0.02em" }}>
+            <text x="60" y="55" textAnchor="middle" style={{ font: `900 16px ${FH}`, fill: C.clay }}>
                 CAMPWATCH
             </text>
             <text x="60" y="70" textAnchor="middle" style={{ font: `500 italic 11px ${FI}`, fill: C.clay }}>
@@ -312,15 +312,22 @@ function useStats(): NotifierStats | null {
     const [stats, setStats] = useState<NotifierStats | null>(null);
     useEffect(() => {
         let cancelled = false;
-        fetch("/api/stats")
-            .then((r) => (r.ok ? r.json() : null))
-            .then((data: unknown) => {
-                if (cancelled) return;
-                setStats(data as NotifierStats | null);
-            })
-            .catch(() => {});
+        const load = () => {
+            fetch("/api/stats")
+                .then((r) => (r.ok ? r.json() : null))
+                .then((data: unknown) => {
+                    if (cancelled) return;
+                    setStats(data as NotifierStats | null);
+                })
+                .catch(() => {});
+        };
+        load();
+        // Re-poll every 30s so when the cron writes a new lastPollAt the UI catches up
+        // within a minute (the /api/stats response is also edge-cached for 30s).
+        const id = setInterval(load, 30_000);
         return () => {
             cancelled = true;
+            clearInterval(id);
         };
     }, []);
     return stats;
@@ -684,19 +691,6 @@ export default function HomePage() {
                 </div>
 
                 {/* Hero attribution */}
-                <div
-                    style={{
-                        position: "absolute",
-                        right: 56,
-                        bottom: 24,
-                        color: "rgba(251,246,234,0.65)",
-                        font: `400 italic 13px/1.4 ${FI}`,
-                        textAlign: "right",
-                        zIndex: 3,
-                    }}
-                >
-                    Stanley Lake at dusk · pen-and-ink, MMXXVI
-                </div>
             </section>
 
             {/* ====== LIVE STRIP ====== */}
@@ -799,7 +793,7 @@ export default function HomePage() {
                                 marginBottom: 14,
                             }}
                         >
-                            § I — THE WATCHLIST
+                            THE WATCHLIST
                         </div>
                         <h2 style={{ margin: "0 0 24px", letterSpacing: "-0.005em" }}>
                             <span
@@ -818,28 +812,18 @@ export default function HomePage() {
                                     display: "block",
                                 }}
                             >
-                                YOU&apos;VE
+                                YOU&apos;VE FALLEN FOR,
                             </span>
                             <span
                                 style={{
-                                    font: `500 italic 60px/1 ${FI}`,
+                                    font: `900 64px/0.95 ${FH}`,
+                                    textTransform: "uppercase",
                                     display: "block",
                                     color: C.forest,
-                                    letterSpacing: "-0.01em",
                                     marginTop: 4,
                                 }}
                             >
-                                fallen for,
-                            </span>
-                            <span
-                                style={{
-                                    font: `500 italic 60px/1 ${FI}`,
-                                    display: "block",
-                                    color: C.forest,
-                                    letterSpacing: "-0.01em",
-                                }}
-                            >
-                                watching itself.
+                                WATCHING ITSELF.
                             </span>
                         </h2>
                         <p
@@ -1104,7 +1088,7 @@ export default function HomePage() {
                                 marginBottom: 10,
                             }}
                         >
-                            § II — METHOD
+                            METHOD
                         </div>
                         <h2 style={{ margin: 0, letterSpacing: "-0.005em" }}>
                             <span
@@ -1248,7 +1232,7 @@ export default function HomePage() {
                                 marginBottom: 10,
                             }}
                         >
-                            § III — DISPATCH
+                            DISPATCH
                         </div>
                         <h2 style={{ margin: "0 0 24px", letterSpacing: "-0.005em" }}>
                             <span
@@ -1479,7 +1463,7 @@ export default function HomePage() {
                                 marginBottom: 10,
                             }}
                         >
-                            § IV — COMMON QUESTIONS
+                            COMMON QUESTIONS
                         </div>
                         <h2 style={{ margin: 0, letterSpacing: "-0.005em" }}>
                             <span
