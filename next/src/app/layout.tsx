@@ -22,6 +22,7 @@ const bigShoulders = Big_Shoulders({
     variable: "--font-poster",
     subsets: ["latin"],
     weight: ["500", "700", "800", "900"],
+    adjustFontFallback: false,
 });
 
 const cormorant = Cormorant_Garamond({
