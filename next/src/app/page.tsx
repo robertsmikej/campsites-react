@@ -1245,7 +1245,7 @@ export default function HomePage() {
                             you&apos;d actually take opens up — direct link, two-sentence body, one-click unsubscribe.
                         </p>
                         <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-                            <DBadge color={C.forest}>Median Send · 9.2s</DBadge>
+                            <DBadge color={C.forest}>Direct Booking Link</DBadge>
                             <DBadge color={C.forest}>One-click Unsubscribe</DBadge>
                             <DBadge color={C.forest}>Plain Text · No Tracking</DBadge>
                         </div>
@@ -1468,25 +1468,41 @@ export default function HomePage() {
                     <div>
                         {(
                             [
-                                [
-                                    "How does CampWatch know when a site opens?",
-                                    "It polls recreation.gov every 5 minutes for the campgrounds on your watchlist and diffs the response against the previous cycle. Anything new triggers an email.",
-                                ],
-                                ["Is it really free?", "Yes. Side project, not a business. Runs on Cloudflare and GitHub Actions free tiers. No paid features planned."],
-                                [
-                                    "Why Google sign-in only?",
-                                    "Simpler than maintaining a password system, and gives us the email to notify. Your address is never used for anything else.",
-                                ],
-                                [
-                                    "Can I add any recreation.gov campground?",
-                                    "Yes — once signed in, paste the campground ID from its recreation.gov URL into the configure dialog.",
-                                ],
-                                [
-                                    "How quickly will I get the alert?",
-                                    "Median time from site opening to email in your inbox is about nine seconds. Won't beat the recreation.gov hotsheet, but easily beats your refresh habit.",
-                                ],
-                            ] as const
-                        ).map(([q, a], i) => (
+                                {
+                                    q: "How does CampWatch know when a site opens?",
+                                    a: "It checks recreation.gov every 5 minutes for the campgrounds on your watchlist and compares what's available now against what was available last cycle. Anything new triggers an email.",
+                                },
+                                {
+                                    q: "Is it really free?",
+                                    a: (
+                                        <>
+                                            Yes. Side project, not a business. Runs on Cloudflare and GitHub Actions free tiers, no paid features planned. If you're curious how it works, the{" "}
+                                            <a
+                                                href="https://github.com/robertsmikej/campsites-react"
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                style={{ color: C.mustard, textDecoration: "underline", textUnderlineOffset: 2 }}
+                                            >
+                                                source is on GitHub
+                                            </a>
+                                            .
+                                        </>
+                                    ),
+                                },
+                                {
+                                    q: "Why Google sign-in only?",
+                                    a: "Simpler than maintaining a password system, and gives us the email to notify. Your address is never used for anything else.",
+                                },
+                                {
+                                    q: "Can I add any recreation.gov campground?",
+                                    a: "Yes — once signed in, paste the campground ID from its recreation.gov URL into the configure dialog.",
+                                },
+                                {
+                                    q: "How quickly will I get the alert?",
+                                    a: "Median time from a site opening to an email in your inbox is about nine seconds. Recreation.gov doesn't notify you when your specific sites open — you'd have to keep refreshing the page. CampWatch does the refreshing for you and only emails when one of your starred sites actually comes available.",
+                                },
+                            ] as { q: string; a: React.ReactNode }[]
+                        ).map(({ q, a }, i) => (
                             <div
                                 key={i}
                                 style={{
@@ -1590,7 +1606,25 @@ export default function HomePage() {
                             textTransform: "uppercase",
                         }}
                     >
+                        <div
+                            style={{
+                                font: `500 10px/1 ${FM}`,
+                                color: "rgba(251,246,234,0.5)",
+                                letterSpacing: "0.18em",
+                                marginBottom: 4,
+                            }}
+                        >
+                            Get in touch
+                        </div>
                         <div>
+                            <a
+                                href="mailto:hello@campwatch.app"
+                                style={{ color: "inherit", textDecoration: "none" }}
+                            >
+                                hello@campwatch.app
+                            </a>
+                        </div>
+                        <div style={{ marginTop: 12 }}>
                             <a
                                 href="https://github.com/robertsmikej/campsites-react"
                                 target="_blank"
