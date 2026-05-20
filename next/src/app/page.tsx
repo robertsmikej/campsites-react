@@ -440,17 +440,6 @@ export default function HomePage() {
                         >
                             CampWatch
                         </span>
-                        <span
-                            style={{
-                                font: `500 10px/1 ${FM}`,
-                                color: "rgba(251,246,234,0.7)",
-                                letterSpacing: "0.18em",
-                                marginLeft: 4,
-                                marginTop: 2,
-                            }}
-                        >
-                            EST · MMXXVI
-                        </span>
                     </div>
                     <nav
                         style={{
