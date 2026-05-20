@@ -1119,21 +1119,21 @@ export default function HomePage() {
                                     rn: "i.",
                                     num: "01",
                                     t: "Choose the places",
-                                    d: "Paste any recreation.gov campground ID — or pick from our hand-curated Sunday list. No limit; watch as many as you like.",
+                                    d: "Paste any recreation.gov campground ID — or pick from our hand-curated site list. No limit; watch as many as you like.",
                                     ic: "pin",
                                 },
                                 {
                                     rn: "ii.",
                                     num: "02",
                                     t: "Tell us your window",
-                                    d: "Date ranges, minimum nights, weekday vs weekend, party size. We only bother you about openings that actually fit.",
+                                    d: "Date ranges, minimum nights, weekday vs weekend. We only bother you about openings that actually fit.",
                                     ic: "cal",
                                 },
                                 {
                                     rn: "iii.",
                                     num: "03",
                                     t: "Wait for mail",
-                                    d: "A short, plain email — site, dates, link to book. One per cycle. One-click unsubscribe whenever you've had enough.",
+                                    d: "A short, plain email — site, dates, link to book. Only when your sites come open. One-click unsubscribe whenever you've had enough.",
                                     ic: "mail",
                                 },
                             ] as const
@@ -1181,26 +1181,14 @@ export default function HomePage() {
                                         )}
                                     </svg>
                                 </div>
-                                <h3 style={{ margin: "0 0 10px" }}>
-                                    <span
-                                        style={{
-                                            font: `900 22px/1.1 ${FH}`,
-                                            textTransform: "uppercase",
-                                            display: "block",
-                                        }}
-                                    >
-                                        {step.t.split(" ").slice(0, 1).join(" ")}
-                                    </span>
-                                    <span
-                                        style={{
-                                            font: `500 italic 24px/1.1 ${FI}`,
-                                            color: C.forest,
-                                            display: "block",
-                                            marginTop: 2,
-                                        }}
-                                    >
-                                        {step.t.split(" ").slice(1).join(" ")}
-                                    </span>
+                                <h3
+                                    style={{
+                                        margin: "0 0 10px",
+                                        font: `900 22px/1.15 ${FH}`,
+                                        textTransform: "uppercase",
+                                    }}
+                                >
+                                    {step.t}
                                 </h3>
                                 <p style={{ font: `400 14px/1.55 ${FB}`, color: C.inkSoft, margin: 0 }}>{step.d}</p>
                             </div>
