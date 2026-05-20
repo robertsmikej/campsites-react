@@ -367,11 +367,27 @@ function formatCount(n: number | null | undefined): string {
     return n.toLocaleString();
 }
 
+// ─── Mobile breakpoint hook ───────────────────────────────────────────────────
+function useIsMobile(breakpointPx = 768): boolean {
+    const [isMobile, setIsMobile] = useState(false);
+    useEffect(() => {
+        const mq = window.matchMedia(`(max-width: ${breakpointPx}px)`);
+        setIsMobile(mq.matches);
+        const onChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+        mq.addEventListener("change", onChange);
+        return () => mq.removeEventListener("change", onChange);
+    }, [breakpointPx]);
+    return isMobile;
+}
+
+const PAD_M = 22;
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function HomePage() {
     const auth = useAuth();
     const stats = useStats();
     const nowMs = useNowTick();
+    const isMobile = useIsMobile();
 
     // Nav link style (shared)
     const navLinkStyle: React.CSSProperties = {
@@ -405,7 +421,7 @@ export default function HomePage() {
             }}
         >
             {/* ====== HERO ====== */}
-            <section style={{ position: "relative", height: 980, overflow: "hidden" }}>
+            <section style={{ position: "relative", minHeight: isMobile ? 760 : 980, overflow: "hidden" }}>
                 <DScene />
                 <div
                     style={{
@@ -424,7 +440,7 @@ export default function HomePage() {
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "space-between",
-                        padding: "24px 56px",
+                        padding: isMobile ? `14px ${PAD_M}px` : "24px 56px",
                         zIndex: 3,
                     }}
                 >
@@ -455,13 +471,17 @@ export default function HomePage() {
                             color: C.cream,
                         }}
                     >
-                        <a href={auth.user ? "/app" : "/discover"} style={navLinkStyle}>
-                            Dashboard
-                        </a>
-                        <a href="#faq" style={{ ...navLinkStyle, opacity: 0.75 }}>
-                            Field Notes
-                        </a>
-                        <span style={{ width: 1, height: 14, background: "rgba(251,246,234,0.3)" }} />
+                        {!isMobile && (
+                            <>
+                                <a href={auth.user ? "/app" : "/discover"} style={navLinkStyle}>
+                                    Dashboard
+                                </a>
+                                <a href="#faq" style={{ ...navLinkStyle, opacity: 0.75 }}>
+                                    Field Notes
+                                </a>
+                                <span style={{ width: 1, height: 14, background: "rgba(251,246,234,0.3)" }} />
+                            </>
+                        )}
                         {auth.isLoading ? null : auth.user ? (
                             <a href="/app/account" aria-label="Account" style={{ textDecoration: "none" }}>
                                 <div style={navAvatarStyle}>{auth.user.name?.[0]?.toUpperCase() ?? "?"}</div>
@@ -485,21 +505,21 @@ export default function HomePage() {
                 {/* Hero content */}
                 <div
                     style={{
-                        position: "absolute",
-                        inset: 0,
-                        padding: "0 56px",
+                        position: isMobile ? "relative" : "absolute",
+                        inset: isMobile ? undefined : 0,
+                        padding: isMobile ? `40px ${PAD_M}px 36px` : "0 56px",
                         zIndex: 2,
-                        display: "grid",
-                        gridTemplateColumns: "1fr 360px",
-                        gap: 56,
-                        alignItems: "center",
+                        display: isMobile ? "block" : "grid",
+                        gridTemplateColumns: isMobile ? undefined : "1fr 360px",
+                        gap: isMobile ? undefined : 56,
+                        alignItems: isMobile ? undefined : "center",
                     }}
                 >
                     <div>
-                        <h1 style={{ margin: "0 0 26px", color: C.cream, textShadow: "0 1px 30px rgba(0,0,0,0.25)" }}>
+                        <h1 style={{ margin: isMobile ? "0 0 18px" : "0 0 26px", color: C.cream, textShadow: "0 1px 30px rgba(0,0,0,0.25)" }}>
                             <span
                                 style={{
-                                    font: `900 124px/0.86 ${FH}`,
+                                    font: `900 ${isMobile ? 58 : 124}px/0.86 ${FH}`,
                                     letterSpacing: "-0.01em",
                                     textTransform: "uppercase",
                                     display: "block",
@@ -509,7 +529,7 @@ export default function HomePage() {
                             </span>
                             <span
                                 style={{
-                                    font: `900 124px/0.86 ${FH}`,
+                                    font: `900 ${isMobile ? 58 : 124}px/0.86 ${FH}`,
                                     letterSpacing: "-0.01em",
                                     textTransform: "uppercase",
                                     display: "block",
@@ -519,7 +539,7 @@ export default function HomePage() {
                             </span>
                             <span
                                 style={{
-                                    font: `500 italic 88px/1 ${FI}`,
+                                    font: `500 italic ${isMobile ? 38 : 88}px/1 ${FI}`,
                                     letterSpacing: "-0.015em",
                                     display: "block",
                                     marginTop: 4,
@@ -530,21 +550,21 @@ export default function HomePage() {
                         </h1>
                         <p
                             style={{
-                                font: `400 18px/1.55 ${FB}`,
+                                font: `400 ${isMobile ? 15.5 : 18}px/1.55 ${FB}`,
                                 color: "rgba(251,246,234,0.92)",
-                                maxWidth: 540,
-                                margin: "0 0 32px",
+                                maxWidth: isMobile ? undefined : 540,
+                                margin: isMobile ? "0 0 22px" : "0 0 32px",
                             }}
                         >
                             Recreation.gov sells out in minutes. CampWatch watches the sites you actually want, every five
                             minutes, and emails you the second one opens. No app, no notifications to babysit.
                         </p>
-                        <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+                        <div style={isMobile ? { display: "grid", gap: 10 } : { display: "flex", gap: 14, alignItems: "center" }}>
                             {auth.isLoading ? (
                                 <>
                                     <div
                                         style={{
-                                            width: 200,
+                                            width: isMobile ? undefined : 200,
                                             height: 48,
                                             background: "rgba(251,246,234,0.15)",
                                             borderRadius: 2,
@@ -552,7 +572,7 @@ export default function HomePage() {
                                     />
                                     <div
                                         style={{
-                                            width: 160,
+                                            width: isMobile ? undefined : 160,
                                             height: 48,
                                             background: "rgba(251,246,234,0.08)",
                                             borderRadius: 2,
@@ -572,10 +592,13 @@ export default function HomePage() {
                                             color: C.ink,
                                             padding: "16px 22px",
                                             textDecoration: "none",
-                                            display: "inline-flex",
+                                            display: isMobile ? "flex" : "inline-flex",
                                             alignItems: "center",
+                                            justifyContent: isMobile ? "center" : undefined,
+                                            width: isMobile ? "100%" : undefined,
                                             gap: 10,
                                             borderRadius: 2,
+                                            boxSizing: isMobile ? "border-box" : undefined,
                                         }}
                                     >
                                         {auth.user ? "Open the Dashboard" : "Sign in with Google"}
@@ -588,13 +611,33 @@ export default function HomePage() {
                                             />
                                         </svg>
                                     </a>
+                                    {isMobile && (
+                                        <a
+                                            href="/discover"
+                                            style={{
+                                                font: `800 13px/1 ${FH}`,
+                                                letterSpacing: "0.14em",
+                                                textTransform: "uppercase",
+                                                color: C.cream,
+                                                padding: "16px 20px",
+                                                textDecoration: "none",
+                                                border: "1.5px solid rgba(251,246,234,0.6)",
+                                                borderRadius: 2,
+                                                display: "flex",
+                                                alignItems: "center",
+                                                justifyContent: "center",
+                                            }}
+                                        >
+                                            Browse the Picks
+                                        </a>
+                                    )}
                                 </>
                             )}
                         </div>
                     </div>
 
-                    {/* Pinned bulletin card */}
-                    <div style={{ position: "relative" }}>
+                    {/* Pinned bulletin card — desktop only */}
+                    {!isMobile && <div style={{ position: "relative" }}>
                         <div
                             style={{
                                 background: C.cream,
@@ -663,15 +706,15 @@ export default function HomePage() {
                         <div style={{ position: "absolute", bottom: -28, left: -34, transform: "rotate(-14deg)" }}>
                             <DPostmark />
                         </div>
-                    </div>
+                    </div>}
                 </div>
 
                 {/* Hero attribution */}
             </section>
 
             {/* ====== LIVE STRIP ====== */}
-            <section style={{ background: C.forestDeep, color: C.cream, padding: "32px 56px", position: "relative" }}>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 48 }}>
+            <section style={{ background: C.forestDeep, color: C.cream, padding: isMobile ? `28px ${PAD_M}px` : "32px 56px", position: "relative" }}>
+                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr 1fr", gap: isMobile ? 24 : 48 }}>
                     {(
                         [
                             [
@@ -714,7 +757,7 @@ export default function HomePage() {
                             <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginTop: 8 }}>
                                 <span
                                     style={{
-                                        font: `900 36px/1 ${FH}`,
+                                        font: `900 ${isMobile ? 32 : 36}px/1 ${FH}`,
                                         color,
                                         fontVariantNumeric: "tabular-nums",
                                     }}
@@ -731,32 +774,35 @@ export default function HomePage() {
             </section>
 
             {/* ====== DASHBOARD — postcard layout ====== */}
-            <section style={{ padding: "120px 56px 110px", position: "relative" }}>
+            <section style={{ padding: isMobile ? `60px ${PAD_M}px 50px` : "120px 56px 110px", position: "relative" }}>
                 <DTopo opacity={0.05} />
 
-                {/* Handwritten arrow */}
-                <div
-                    style={{
-                        position: "absolute",
-                        left: 56,
-                        top: 64,
-                        font: `600 italic 20px/1.3 ${FN}`,
-                        color: C.clay,
-                        transform: "rotate(-3deg)",
-                        maxWidth: 220,
-                        zIndex: 2,
-                    }}
-                >
-                    ↓ what your dashboard looks like
-                </div>
+                {/* Handwritten arrow — desktop only */}
+                {!isMobile && (
+                    <div
+                        style={{
+                            position: "absolute",
+                            left: 56,
+                            top: 64,
+                            font: `600 italic 20px/1.3 ${FN}`,
+                            color: C.clay,
+                            transform: "rotate(-3deg)",
+                            maxWidth: 220,
+                            zIndex: 2,
+                        }}
+                    >
+                        ↓ what your dashboard looks like
+                    </div>
+                )}
 
                 <div
                     style={{
                         position: "relative",
-                        display: "grid",
-                        gridTemplateColumns: "1fr 1fr",
-                        gap: 64,
-                        alignItems: "center",
+                        display: isMobile ? "flex" : "grid",
+                        flexDirection: isMobile ? "column" : undefined,
+                        gridTemplateColumns: isMobile ? undefined : "1fr 1fr",
+                        gap: isMobile ? 24 : 64,
+                        alignItems: isMobile ? undefined : "center",
                     }}
                 >
                     {/* Left: header + copy + legend */}
@@ -774,7 +820,7 @@ export default function HomePage() {
                         <h2 style={{ margin: "0 0 24px", letterSpacing: "-0.005em" }}>
                             <span
                                 style={{
-                                    font: `900 64px/0.95 ${FH}`,
+                                    font: `900 ${isMobile ? 44 : 64}px/0.95 ${FH}`,
                                     textTransform: "uppercase",
                                     display: "block",
                                 }}
@@ -783,7 +829,7 @@ export default function HomePage() {
                             </span>
                             <span
                                 style={{
-                                    font: `900 64px/0.95 ${FH}`,
+                                    font: `900 ${isMobile ? 44 : 64}px/0.95 ${FH}`,
                                     textTransform: "uppercase",
                                     display: "block",
                                 }}
@@ -792,7 +838,7 @@ export default function HomePage() {
                             </span>
                             <span
                                 style={{
-                                    font: `900 64px/0.95 ${FH}`,
+                                    font: `900 ${isMobile ? 44 : 64}px/0.95 ${FH}`,
                                     textTransform: "uppercase",
                                     display: "block",
                                     color: C.forest,
@@ -839,15 +885,17 @@ export default function HomePage() {
                     </div>
 
                     {/* Right: the postcard */}
-                    <div style={{ position: "relative", perspective: "1400px" }}>
+                    <div style={{ position: "relative", perspective: isMobile ? undefined : "1400px" }}>
                         <div
                             style={{
                                 background: C.cream,
-                                padding: "24px 26px 22px",
+                                padding: isMobile ? 18 : "24px 26px 22px",
                                 border: "1px solid rgba(26,22,20,0.14)",
                                 boxShadow:
-                                    "0 30px 60px -20px rgba(26,22,20,0.35), 0 2px 0 rgba(26,22,20,0.05) inset",
-                                transform: "rotate(-1.4deg)",
+                                    isMobile
+                                        ? "0 14px 30px -12px rgba(26,22,20,0.3)"
+                                        : "0 30px 60px -20px rgba(26,22,20,0.35), 0 2px 0 rgba(26,22,20,0.05) inset",
+                                transform: isMobile ? undefined : "rotate(-1.4deg)",
                                 position: "relative",
                                 backgroundImage:
                                     "radial-gradient(circle at 12px 12px, rgba(26,22,20,0.03) 0.8px, transparent 0.8px)",
@@ -925,54 +973,60 @@ export default function HomePage() {
                                 <div
                                     key={row.name}
                                     style={{
-                                        display: "grid",
-                                        gridTemplateColumns: "1fr 1fr 90px",
-                                        gap: 12,
-                                        padding: "14px 0",
-                                        alignItems: "center",
+                                        padding: "12px 0",
                                         borderBottom:
                                             i === arr.length - 1 ? "none" : "1px dotted rgba(26,22,20,0.16)",
                                     }}
                                 >
-                                    <div>
-                                        <div style={{ font: `500 italic 22px/1.1 ${FI}`, color: C.ink }}>
-                                            {row.name}
+                                    {isMobile ? (
+                                        <>
+                                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                    <div style={{ font: `500 italic 20px/1.1 ${FI}`, color: C.ink }}>{row.name}</div>
+                                                    <div style={{ font: `400 12px/1.2 ${FB}`, color: C.inkSoft, marginTop: 3 }}>{row.loc}</div>
+                                                </div>
+                                                <span
+                                                    style={{
+                                                        font: `600 10px/1 ${FM}`,
+                                                        letterSpacing: "0.06em",
+                                                        textTransform: "uppercase",
+                                                        color: row.tagColor === "rgba(26,22,20,0.5)" ? row.tagColor : "#fff",
+                                                        background: row.tagColor === "rgba(26,22,20,0.5)" ? "transparent" : row.tagColor,
+                                                        padding: "5px 8px",
+                                                        borderRadius: 999,
+                                                        border: row.tagColor === "rgba(26,22,20,0.5)" ? `1px solid ${row.tagColor}` : "none",
+                                                        flexShrink: 0,
+                                                    }}
+                                                >
+                                                    {row.tag}
+                                                </span>
+                                            </div>
+                                            <div style={{ marginTop: 10 }}><DBars pattern={row.pattern} /></div>
+                                        </>
+                                    ) : (
+                                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 90px", gap: 12, alignItems: "center" }}>
+                                            <div>
+                                                <div style={{ font: `500 italic 22px/1.1 ${FI}`, color: C.ink }}>{row.name}</div>
+                                                <div style={{ font: `400 12px/1.2 ${FB}`, color: C.inkSoft, marginTop: 3 }}>{row.loc}</div>
+                                            </div>
+                                            <DBars pattern={row.pattern} />
+                                            <span
+                                                style={{
+                                                    justifySelf: "end",
+                                                    font: `600 11px/1 ${FM}`,
+                                                    letterSpacing: "0.08em",
+                                                    textTransform: "uppercase",
+                                                    color: row.tagColor === "rgba(26,22,20,0.5)" ? row.tagColor : "#fff",
+                                                    background: row.tagColor === "rgba(26,22,20,0.5)" ? "transparent" : row.tagColor,
+                                                    padding: "6px 10px",
+                                                    borderRadius: 999,
+                                                    border: row.tagColor === "rgba(26,22,20,0.5)" ? `1px solid ${row.tagColor}` : "none",
+                                                }}
+                                            >
+                                                {row.tag}
+                                            </span>
                                         </div>
-                                        <div
-                                            style={{
-                                                font: `400 12px/1.2 ${FB}`,
-                                                color: C.inkSoft,
-                                                marginTop: 3,
-                                            }}
-                                        >
-                                            {row.loc}
-                                        </div>
-                                    </div>
-                                    <DBars pattern={row.pattern} />
-                                    <span
-                                        style={{
-                                            justifySelf: "end",
-                                            font: `600 11px/1 ${FM}`,
-                                            letterSpacing: "0.08em",
-                                            textTransform: "uppercase",
-                                            color:
-                                                row.tagColor === "rgba(26,22,20,0.5)"
-                                                    ? row.tagColor
-                                                    : "#fff",
-                                            background:
-                                                row.tagColor === "rgba(26,22,20,0.5)"
-                                                    ? "transparent"
-                                                    : row.tagColor,
-                                            padding: "6px 10px",
-                                            borderRadius: 999,
-                                            border:
-                                                row.tagColor === "rgba(26,22,20,0.5)"
-                                                    ? `1px solid ${row.tagColor}`
-                                                    : "none",
-                                        }}
-                                    >
-                                        {row.tag}
-                                    </span>
+                                    )}
                                 </div>
                             ))}
 
@@ -1005,22 +1059,30 @@ export default function HomePage() {
                             </div>
                         </div>
 
-                        {/* Postmark over the corner */}
-                        <div
-                            style={{
-                                position: "absolute",
-                                top: -36,
-                                right: -28,
-                                transform: "rotate(14deg)",
-                                opacity: 0.92,
-                            }}
-                        >
-                            <DPostmark />
-                        </div>
+                        {/* Postmark over the corner — desktop only */}
+                        {!isMobile && (
+                            <div
+                                style={{
+                                    position: "absolute",
+                                    top: -36,
+                                    right: -28,
+                                    transform: "rotate(14deg)",
+                                    opacity: 0.92,
+                                }}
+                            >
+                                <DPostmark />
+                            </div>
+                        )}
 
                         {/* Handwritten note */}
                         <div
-                            style={{
+                            style={isMobile ? {
+                                marginTop: 18,
+                                textAlign: "center",
+                                font: `600 20px/1.2 ${FN}`,
+                                color: C.clay,
+                                transform: "rotate(-1deg)",
+                            } : {
                                 position: "absolute",
                                 bottom: -58,
                                 left: -32,
@@ -1030,7 +1092,7 @@ export default function HomePage() {
                                 maxWidth: 240,
                             }}
                         >
-                            wish you were here —<br />
+                            wish you were here —{isMobile ? " " : <br />}
                             <span style={{ fontSize: 18, color: C.inkSoft }}>your watchlist is.</span>
                         </div>
                     </div>
@@ -1043,7 +1105,7 @@ export default function HomePage() {
             {/* ====== HOW IT WORKS ====== */}
             <section
                 style={{
-                    padding: "88px 56px",
+                    padding: isMobile ? `60px ${PAD_M}px` : "88px 56px",
                     background: C.cream,
                     borderTop: `1.5px solid ${C.ink}`,
                     borderBottom: `1.5px solid ${C.ink}`,
@@ -1055,8 +1117,8 @@ export default function HomePage() {
                     style={{
                         position: "relative",
                         display: "grid",
-                        gridTemplateColumns: "260px 1fr",
-                        gap: 64,
+                        gridTemplateColumns: isMobile ? "1fr" : "260px 1fr",
+                        gap: isMobile ? 28 : 64,
                         alignItems: "flex-start",
                     }}
                 >
@@ -1074,7 +1136,7 @@ export default function HomePage() {
                         <h2 style={{ margin: 0, letterSpacing: "-0.005em" }}>
                             <span
                                 style={{
-                                    font: `900 56px/0.95 ${FH}`,
+                                    font: `900 ${isMobile ? 44 : 56}px/0.95 ${FH}`,
                                     textTransform: "uppercase",
                                     display: "block",
                                 }}
@@ -1083,7 +1145,7 @@ export default function HomePage() {
                             </span>
                             <span
                                 style={{
-                                    font: `500 italic 44px/1 ${FI}`,
+                                    font: `500 italic ${isMobile ? 34 : 44}px/1 ${FI}`,
                                     color: C.forest,
                                     display: "block",
                                     marginTop: 4,
@@ -1098,13 +1160,13 @@ export default function HomePage() {
                                 font: `400 italic 15px/1.5 ${FI}`,
                                 color: C.inkSoft,
                                 marginTop: 20,
-                                maxWidth: 240,
+                                maxWidth: isMobile ? undefined : 240,
                             }}
                         >
                             Set it up once, in about a minute. Ignore us forever until summer.
                         </p>
                     </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 28 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 28 }}>
                         {(
                             [
                                 {
@@ -1190,8 +1252,8 @@ export default function HomePage() {
             </section>
 
             {/* ====== LETTER / EMAIL ====== */}
-            <section style={{ padding: "96px 56px 80px", position: "relative" }}>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 72, alignItems: "center" }}>
+            <section style={{ padding: isMobile ? `60px ${PAD_M}px` : "96px 56px 80px", position: "relative" }}>
+                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: isMobile ? 28 : 72, alignItems: "center" }}>
                     <div>
                         <div
                             style={{
@@ -1206,7 +1268,7 @@ export default function HomePage() {
                         <h2 style={{ margin: "0 0 24px", letterSpacing: "-0.005em" }}>
                             <span
                                 style={{
-                                    font: `900 56px/0.95 ${FH}`,
+                                    font: `900 ${isMobile ? 44 : 56}px/0.95 ${FH}`,
                                     textTransform: "uppercase",
                                     display: "block",
                                 }}
@@ -1215,7 +1277,7 @@ export default function HomePage() {
                             </span>
                             <span
                                 style={{
-                                    font: `500 italic 56px/1 ${FI}`,
+                                    font: `500 italic ${isMobile ? 38 : 56}px/1 ${FI}`,
                                     color: C.forest,
                                     display: "block",
                                     marginTop: 4,
@@ -1252,15 +1314,15 @@ export default function HomePage() {
                         </div>
                     </div>
 
-                    {/* The letter, tilted */}
+                    {/* The letter, tilted on desktop */}
                     <div style={{ position: "relative" }}>
                         <div
                             style={{
                                 background: C.cream,
-                                padding: "28px 32px",
+                                padding: isMobile ? "20px 18px" : "28px 32px",
                                 border: `1.5px solid ${C.ink}`,
-                                boxShadow: `10px 10px 0 ${C.forest}`,
-                                transform: "rotate(1.8deg)",
+                                boxShadow: isMobile ? `6px 6px 0 ${C.forest}` : `10px 10px 0 ${C.forest}`,
+                                transform: isMobile ? undefined : "rotate(1.8deg)",
                                 position: "relative",
                             }}
                         >
@@ -1413,13 +1475,17 @@ export default function HomePage() {
             {/* ====== FAQ ====== */}
             <section
                 id="faq"
-                style={{ padding: "80px 56px", background: C.forestDeep, color: C.cream, position: "relative" }}
+                style={{ padding: isMobile ? `60px ${PAD_M}px` : "80px 56px", background: C.forestDeep, color: C.cream, position: "relative" }}
             >
+                <style>{`
+                    details.cw-faq > summary::-webkit-details-marker { display: none; }
+                    details.cw-faq > summary { list-style: none; }
+                `}</style>
                 <div
                     style={{
                         display: "grid",
-                        gridTemplateColumns: "300px 1fr",
-                        gap: 64,
+                        gridTemplateColumns: isMobile ? "1fr" : "300px 1fr",
+                        gap: isMobile ? 28 : 64,
                         alignItems: "flex-start",
                     }}
                 >
@@ -1437,7 +1503,7 @@ export default function HomePage() {
                         <h2 style={{ margin: 0, letterSpacing: "-0.005em" }}>
                             <span
                                 style={{
-                                    font: `900 52px/0.95 ${FH}`,
+                                    font: `900 ${isMobile ? 44 : 52}px/0.95 ${FH}`,
                                     textTransform: "uppercase",
                                     display: "block",
                                 }}
@@ -1446,7 +1512,7 @@ export default function HomePage() {
                             </span>
                             <span
                                 style={{
-                                    font: `500 italic 44px/1 ${FI}`,
+                                    font: `500 italic ${isMobile ? 36 : 44}px/1 ${FI}`,
                                     display: "block",
                                     color: "#f6c79c",
                                     marginTop: 6,
@@ -1504,7 +1570,34 @@ export default function HomePage() {
                                     ),
                                 },
                             ] as { q: string; a: React.ReactNode }[]
-                        ).map(({ q, a }, i) => (
+                        ).map(({ q, a }, i) => isMobile ? (
+                            <details
+                                key={i}
+                                className="cw-faq"
+                                style={{
+                                    padding: "14px 0",
+                                    borderTop: i === 0 ? "1px solid rgba(239,230,210,0.18)" : "none",
+                                    borderBottom: "1px solid rgba(239,230,210,0.18)",
+                                }}
+                            >
+                                <summary
+                                    style={{
+                                        display: "flex",
+                                        justifyContent: "space-between",
+                                        alignItems: "flex-start",
+                                        gap: 14,
+                                        cursor: "pointer",
+                                    }}
+                                >
+                                    <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+                                        <span style={{ font: `500 10px/1.6 ${FM}`, color: C.mustard, letterSpacing: "0.12em", flexShrink: 0 }}>Q.0{i + 1}</span>
+                                        <h3 style={{ font: `500 italic 19px/1.3 ${FI}`, color: C.cream, margin: 0, letterSpacing: "-0.005em" }}>{q}</h3>
+                                    </div>
+                                    <span style={{ font: `500 20px/1 ${FH}`, color: C.mustard, flexShrink: 0 }}>+</span>
+                                </summary>
+                                <p style={{ font: `400 14px/1.55 ${FB}`, color: "rgba(239,230,210,0.82)", margin: "12px 0 0 26px" }}>{a}</p>
+                            </details>
+                        ) : (
                             <div
                                 key={i}
                                 style={{
@@ -1553,7 +1646,7 @@ export default function HomePage() {
                 style={{
                     background: C.waterDeep,
                     color: C.cream,
-                    padding: "64px 56px 40px",
+                    padding: isMobile ? `48px ${PAD_M}px 32px` : "64px 56px 40px",
                     position: "relative",
                     overflow: "hidden",
                 }}
@@ -1573,15 +1666,15 @@ export default function HomePage() {
                     style={{
                         position: "relative",
                         marginTop: 60,
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "flex-end",
+                        display: isMobile ? "block" : "flex",
+                        justifyContent: isMobile ? undefined : "space-between",
+                        alignItems: isMobile ? undefined : "flex-end",
                     }}
                 >
                     <div>
                         <div
                             style={{
-                                font: `900 72px/0.9 ${FH}`,
+                                font: `900 ${isMobile ? 48 : 72}px/0.9 ${FH}`,
                                 color: C.cream,
                                 textTransform: "uppercase",
                                 letterSpacing: "0.005em",
@@ -1601,11 +1694,12 @@ export default function HomePage() {
                     </div>
                     <div
                         style={{
-                            textAlign: "right",
+                            textAlign: isMobile ? "left" : "right",
                             font: `500 11px/1.8 ${FM}`,
                             color: "rgba(251,246,234,0.7)",
                             letterSpacing: "0.12em",
                             textTransform: "uppercase",
+                            marginTop: isMobile ? 24 : undefined,
                         }}
                     >
                         <div
