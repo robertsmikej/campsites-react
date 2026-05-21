@@ -2,7 +2,6 @@
 
 import { CW } from "@/components/field-notes/cw-tokens";
 import { formatTimeAgo } from "@/components/dashboard/helpers";
-import { OpeningSnoozeButton } from "./opening-snooze-button";
 import type { OpeningItem } from "./openings-feed";
 
 const CANCEL_THRESHOLD_DAYS = 14;
@@ -33,11 +32,10 @@ function formatOpeningDates(from: string, to: string): string {
 interface OpeningCardProps {
     item: OpeningItem;
     isMobile: boolean;
-    onSnooze: (id: string) => void;
     nowMs: number;
 }
 
-export function OpeningCard({ item, isMobile, onSnooze, nowMs }: OpeningCardProps) {
+export function OpeningCard({ item, isMobile, nowMs }: OpeningCardProps) {
     const recGovUrl = item.recGovId
         ? `https://www.recreation.gov/camping/campgrounds/${item.recGovId}`
         : "https://www.recreation.gov";
@@ -98,7 +96,6 @@ export function OpeningCard({ item, isMobile, onSnooze, nowMs }: OpeningCardProp
             >
                 Book on rec.gov ↗
             </a>
-            <OpeningSnoozeButton itemId={item.id} onSnooze={onSnooze} />
         </article>
     );
 }

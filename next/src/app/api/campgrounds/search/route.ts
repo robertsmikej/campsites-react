@@ -1,4 +1,5 @@
 import { withCors } from "@/lib/responses";
+import { withErrorLogging } from "@/lib/route-helpers";
 
 export interface SearchResult {
     id: string;
@@ -19,7 +20,7 @@ interface RecGovSearchResult {
 
 // Public name search. Proxies recreation.gov's search endpoint and returns the
 // top campground matches. No auth required; cached at the edge briefly.
-export async function GET(request: Request): Promise<Response> {
+async function getHandler(request: Request): Promise<Response> {
     const url = new URL(request.url);
     const q = (url.searchParams.get("q") || "").trim();
     if (q.length < 2) {
@@ -71,3 +72,4 @@ export async function GET(request: Request): Promise<Response> {
         );
     }
 }
+export const GET = withErrorLogging(getHandler, "GET /api/campgrounds/search");

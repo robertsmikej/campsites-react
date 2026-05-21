@@ -1,5 +1,6 @@
 import { getEnv, getKv } from "@/lib/cloudflare";
 import { jsonResponse, withCors } from "@/lib/responses";
+import { withErrorLogging } from "@/lib/route-helpers";
 
 export interface RecentOpening {
     signature: string;
@@ -39,7 +40,7 @@ function isValidBlob(value: unknown): value is RecentOpening[] {
     });
 }
 
-export async function GET(request: Request): Promise<Response> {
+async function getHandler(request: Request): Promise<Response> {
     const env = getEnv();
     if (!env.API_SECRET) {
         return withCors(jsonResponse({ error: "Server misconfigured: API_SECRET not set" }, 500));
@@ -51,8 +52,9 @@ export async function GET(request: Request): Promise<Response> {
     const stored = (await getKv().get(KV_KEY, "json")) as RecentOpening[] | null;
     return withCors(jsonResponse(stored ?? []));
 }
+export const GET = withErrorLogging(getHandler, "GET /api/admin/openings/recent");
 
-export async function PUT(request: Request): Promise<Response> {
+async function putHandler(request: Request): Promise<Response> {
     const env = getEnv();
     if (!env.API_SECRET) {
         return withCors(jsonResponse({ error: "Server misconfigured: API_SECRET not set" }, 500));
@@ -75,3 +77,4 @@ export async function PUT(request: Request): Promise<Response> {
     await getKv().put(KV_KEY, JSON.stringify(body));
     return withCors(jsonResponse({ ok: true, count: body.length }));
 }
+export const PUT = withErrorLogging(putHandler, "PUT /api/admin/openings/recent");

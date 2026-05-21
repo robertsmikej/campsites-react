@@ -14,18 +14,16 @@ export interface OpeningItem {
     nights: number;
     recGovId?: string;
     detectedAt: string;
-    isSnoozed: boolean;
 }
 
 interface OpeningsFeedProps {
     openingItems: OpeningItem[];
     isMobile: boolean;
     nowMs: number;
-    onSnooze: (id: string) => void;
     PAD: number;
 }
 
-export function OpeningsFeed({ openingItems, isMobile, nowMs, onSnooze, PAD }: OpeningsFeedProps) {
+export function OpeningsFeed({ openingItems, isMobile, nowMs, PAD }: OpeningsFeedProps) {
     return (
         <section style={{ padding: isMobile ? `28px 0 12px` : `40px ${PAD}px 28px` }}>
             <div style={{ padding: isMobile ? `0 ${PAD}px` : 0 }} className="mb-5">
@@ -49,13 +47,13 @@ export function OpeningsFeed({ openingItems, isMobile, nowMs, onSnooze, PAD }: O
             ) : isMobile ? (
                 <div style={{ display: "flex", gap: 12, overflowX: "auto", padding: `4px ${PAD}px 16px`, scrollSnapType: "x mandatory" }}>
                     {openingItems.map((item) => (
-                        <OpeningCard key={item.id} item={item} isMobile nowMs={nowMs} onSnooze={onSnooze} />
+                        <OpeningCard key={item.id} item={item} isMobile nowMs={nowMs} />
                     ))}
                 </div>
             ) : (
                 <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.min(openingItems.length, 4)}, 1fr)`, gap: 18 }}>
                     {openingItems.map((item) => (
-                        <OpeningCard key={item.id} item={item} isMobile={false} nowMs={nowMs} onSnooze={onSnooze} />
+                        <OpeningCard key={item.id} item={item} isMobile={false} nowMs={nowMs} />
                     ))}
                 </div>
             )}

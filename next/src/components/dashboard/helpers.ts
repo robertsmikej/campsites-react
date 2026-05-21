@@ -18,18 +18,6 @@ export function toLocalIso(d: Date): string {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-export function snoozeUntilDate(): string {
-    const d = new Date();
-    d.setMonth(d.getMonth() + 1);
-    return toLocalIso(d);
-}
-
-export function formatSnoozeLabel(until: string): string {
-    const d = new Date(until + "T00:00:00");
-    const fmt = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" });
-    return `Until ${fmt.format(d)}`;
-}
-
 export function formatTimeAgo(nowMs: number, isoTimestamp: string): string {
     const diffMs = nowMs - new Date(isoTimestamp).getTime();
     if (diffMs < 0) return "just now";

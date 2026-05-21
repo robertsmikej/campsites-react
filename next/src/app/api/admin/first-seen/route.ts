@@ -1,5 +1,6 @@
 import { getEnv, getKv } from "@/lib/cloudflare";
 import { jsonResponse, withCors } from "@/lib/responses";
+import { withErrorLogging } from "@/lib/route-helpers";
 
 const KV_KEY = "notifier:first-seen";
 
@@ -15,7 +16,7 @@ function auth(request: Request, secret: string): boolean {
     return header === `Bearer ${secret}`;
 }
 
-export async function GET(request: Request): Promise<Response> {
+async function getHandler(request: Request): Promise<Response> {
     const env = getEnv();
     if (!env.API_SECRET) {
         return withCors(jsonResponse({ error: "Server misconfigured: API_SECRET not set" }, 500));
@@ -28,8 +29,9 @@ export async function GET(request: Request): Promise<Response> {
     const stored = (await kv.get(KV_KEY, "json")) as FirstSeenMap | null;
     return withCors(jsonResponse(stored ?? {}));
 }
+export const GET = withErrorLogging(getHandler, "GET /api/admin/first-seen");
 
-export async function PUT(request: Request): Promise<Response> {
+async function putHandler(request: Request): Promise<Response> {
     const env = getEnv();
     if (!env.API_SECRET) {
         return withCors(jsonResponse({ error: "Server misconfigured: API_SECRET not set" }, 500));
@@ -58,3 +60,4 @@ export async function PUT(request: Request): Promise<Response> {
     await kv.put(KV_KEY, JSON.stringify((body as { map: FirstSeenMap }).map));
     return withCors(jsonResponse({ ok: true }));
 }
+export const PUT = withErrorLogging(putHandler, "PUT /api/admin/first-seen");

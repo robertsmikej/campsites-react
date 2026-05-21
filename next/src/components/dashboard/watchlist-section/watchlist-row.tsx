@@ -2,7 +2,6 @@
 
 import { CampgroundRow } from "@/components/campground-row";
 import { CW } from "@/components/field-notes/cw-tokens";
-import { readStorage, snoozeUntilDate, formatSnoozeLabel } from "@/components/dashboard/helpers";
 import { toLocalIso } from "@/components/dashboard/helpers";
 import type { ProcessedCampground, GlobalSettings } from "@/types/campground";
 
@@ -71,8 +70,6 @@ interface WatchlistRowProps {
     settings: { views?: { type?: "calendar" | "table" } };
     globalSettings?: GlobalSettings;
     isMobile: boolean;
-    snoozedCgs: Set<string>;
-    onSnoozeCg: (id: string) => void;
     onRatingChange?: (campgroundId: string, siteName: string, rating: "favorite" | "worthwhile" | "unrated") => void;
     onEditSettings?: (campgroundId: string) => void;
 }
@@ -87,13 +84,9 @@ export function WatchlistRow({
     settings,
     globalSettings,
     isMobile,
-    snoozedCgs,
-    onSnoozeCg,
     onRatingChange,
     onEditSettings,
 }: WatchlistRowProps) {
-    const isSnoozed = !!campground.id && snoozedCgs.has(campground.id);
-
     if (isMobile) {
         return (
             <CampgroundRow
@@ -120,7 +113,7 @@ export function WatchlistRow({
         <div
             className="grid gap-6 px-[22px] py-4 items-center border-b border-cw-rule-soft"
             style={{
-                gridTemplateColumns: "1fr 110px minmax(0,1fr) 70px 140px",
+                gridTemplateColumns: "1fr 110px minmax(0,1fr) 70px",
                 background: openCount > 0 ? `rgba(31,61,42,0.04)` : "transparent",
             }}
         >
@@ -155,27 +148,6 @@ export function WatchlistRow({
             {/* Open count */}
             <div className="text-right font-poster text-[22px] font-black leading-none" style={{ color: openCount === 0 ? CW.inkFaint : CW.forest, fontVariantNumeric: "tabular-nums" }}>
                 {openCount}
-            </div>
-
-            {/* Snooze */}
-            <div className="flex justify-end">
-                {isSnoozed ? (
-                    <button
-                        onClick={() => campground.id && onSnoozeCg(campground.id)}
-                        className="font-mono-field text-[10px] font-bold leading-none tracking-[0.12em] uppercase bg-cw-mustard text-cw-ink border-none px-[9px] py-[7px] cursor-pointer rounded-[2px] inline-flex items-center gap-[5px]"
-                    >
-                        <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M6 3 V6 L8 7" /><circle cx="6" cy="6" r="4.5" /></svg>
-                        Until {formatSnoozeLabel(readStorage<Record<string, string>>("campwatch:snoozed-cgs", {})[campground.id ?? ""] ?? snoozeUntilDate())}
-                    </button>
-                ) : (
-                    <button
-                        onClick={() => campground.id && onSnoozeCg(campground.id)}
-                        className="font-mono-field text-[10px] font-bold leading-none tracking-[0.12em] uppercase bg-transparent text-cw-ink-subtle border border-cw-rule px-[9px] py-[7px] cursor-pointer rounded-[2px] inline-flex items-center gap-[5px]"
-                    >
-                        Snooze
-                        <svg width="8" height="8" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M2 4 L5 7 L8 4" /></svg>
-                    </button>
-                )}
             </div>
         </div>
     );

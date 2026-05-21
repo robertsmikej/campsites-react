@@ -20,6 +20,10 @@ jobs:
         with:
           node-version: 22
 
+      - name: Install notifier dependencies
+        working-directory: notifier
+        run: npm install
+
       - name: Check availability and notify
         working-directory: notifier
         env:
@@ -28,4 +32,4 @@ jobs:
           SUBSCRIBER_API_SECRET: ${{ secrets.SUBSCRIBER_API_SECRET }}
           SITE_URL: ${{ secrets.SITE_URL }}
           FORCE_EMAIL: ${{ github.event.inputs.force_email }}
-        run: node check.mjs
+        run: npx tsx check.ts

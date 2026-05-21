@@ -2,14 +2,16 @@ import { readSession, destroySession } from "@/lib/sessions";
 import { jsonResponse, withCors } from "@/lib/responses";
 import { deleteUser, getUserProfile, updateUserProfile } from "@/lib/users";
 import type { UserProfile } from "@/types/user";
+import { withErrorLogging } from "@/lib/route-helpers";
 
-export async function GET(request: Request): Promise<Response> {
+async function getHandler(request: Request): Promise<Response> {
     const session = await readSession(request);
     if (!session) return withCors(jsonResponse({ error: "Unauthorized" }, 401));
     const profile = await getUserProfile(session.email);
     if (!profile) return withCors(jsonResponse({ error: "Unauthorized" }, 401));
     return withCors(jsonResponse(profile));
 }
+export const GET = withErrorLogging(getHandler, "GET /api/me");
 
 interface PatchBody {
     name?: string;
@@ -30,7 +32,7 @@ function isValidPatch(body: unknown): body is PatchBody {
     return true;
 }
 
-export async function PATCH(request: Request): Promise<Response> {
+async function patchHandler(request: Request): Promise<Response> {
     const session = await readSession(request);
     if (!session) return withCors(jsonResponse({ error: "Unauthorized" }, 401));
 
@@ -52,8 +54,9 @@ export async function PATCH(request: Request): Promise<Response> {
     if (!updated) return withCors(jsonResponse({ error: "Unauthorized" }, 401));
     return withCors(jsonResponse(updated));
 }
+export const PATCH = withErrorLogging(patchHandler, "PATCH /api/me");
 
-export async function DELETE(request: Request): Promise<Response> {
+async function deleteHandler(request: Request): Promise<Response> {
     const session = await readSession(request);
     if (!session) return withCors(jsonResponse({ error: "Unauthorized" }, 401));
 
@@ -63,3 +66,4 @@ export async function DELETE(request: Request): Promise<Response> {
     response.headers.append("Set-Cookie", cookie);
     return withCors(response);
 }
+export const DELETE = withErrorLogging(deleteHandler, "DELETE /api/me");

@@ -1,6 +1,7 @@
 "use client";
 
 import { DatePickerStrip } from "@/components/dashboard/date-picker-strip/date-picker-strip";
+import { LoadingGhostRow } from "@/components/field-notes/loading";
 import { GroupHeader } from "./group-header";
 import { WatchlistTable } from "./watchlist-table";
 import type { DateRange } from "react-day-picker";
@@ -24,8 +25,6 @@ interface WatchlistSectionProps {
     settings: { views?: { type?: "calendar" | "table" } };
     globalSettings?: GlobalSettings;
     isMobile: boolean;
-    snoozedCgs: Set<string>;
-    onSnoozeCg: (id: string) => void;
     onRatingChange?: (campgroundId: string, siteName: string, rating: "favorite" | "worthwhile" | "unrated") => void;
     onEditSettings?: (campgroundId: string) => void;
     PAD: number;
@@ -47,8 +46,6 @@ export function WatchlistSection({
     settings,
     globalSettings,
     isMobile,
-    snoozedCgs,
-    onSnoozeCg,
     onRatingChange,
     onEditSettings,
     PAD,
@@ -105,7 +102,7 @@ export function WatchlistSection({
             {isLoading && campgroundsByAreas.length === 0 ? (
                 <div className="flex flex-col gap-2">
                     {[0, 1, 2, 3, 4].map((i) => (
-                        <div key={i} className="animate-pulse h-14 bg-cw-cream border border-cw-rule rounded-[2px]" />
+                        <LoadingGhostRow key={i} height={56} />
                     ))}
                 </div>
             ) : (
@@ -128,8 +125,6 @@ export function WatchlistSection({
                                     settings={settings}
                                     globalSettings={globalSettings}
                                     isMobile={isMobile}
-                                    snoozedCgs={snoozedCgs}
-                                    onSnoozeCg={onSnoozeCg}
                                     onRatingChange={onRatingChange}
                                     onEditSettings={onEditSettings}
                                 />

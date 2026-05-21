@@ -1,6 +1,7 @@
 import { getEnv, getKv } from "@/lib/cloudflare";
 import { jsonResponse, withCors } from "@/lib/responses";
 import { updateUserProfile } from "@/lib/users";
+import { withErrorLogging } from "@/lib/route-helpers";
 
 interface UpdateEntry {
     email: string;
@@ -20,7 +21,7 @@ function isValidBody(body: unknown): body is { updates: UpdateEntry[] } {
     });
 }
 
-export async function PUT(request: Request): Promise<Response> {
+async function putHandler(request: Request): Promise<Response> {
     const env = getEnv();
     if (!env.API_SECRET) {
         return withCors(jsonResponse({ error: "Server misconfigured: API_SECRET not set" }, 500));
@@ -52,3 +53,4 @@ export async function PUT(request: Request): Promise<Response> {
 
     return withCors(jsonResponse({ updated }));
 }
+export const PUT = withErrorLogging(putHandler, "PUT /api/admin/notifier-state");

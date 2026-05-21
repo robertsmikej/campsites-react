@@ -5,6 +5,7 @@ import { getEnv } from "@/lib/cloudflare";
 import { readSession } from "@/lib/sessions";
 import { deleteUser, getUserProfile } from "@/lib/users";
 import { jsonResponse, withCors } from "@/lib/responses";
+import { withErrorLogging } from "@/lib/route-helpers";
 
 async function isAuthorized(request: Request): Promise<boolean> {
     const env = getEnv();
@@ -17,7 +18,7 @@ async function isAuthorized(request: Request): Promise<boolean> {
     return !!profile?.roles?.includes("curator");
 }
 
-export async function DELETE(
+async function deleteHandler(
     request: Request,
     context: { params: Promise<{ email: string }> },
 ): Promise<Response> {
@@ -36,3 +37,4 @@ export async function DELETE(
 
     return withCors(jsonResponse({ email, existed, deleted: true }));
 }
+export const DELETE = withErrorLogging(deleteHandler, "DELETE /api/admin/users/[email]");

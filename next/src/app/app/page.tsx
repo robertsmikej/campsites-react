@@ -14,12 +14,12 @@ import { clearCampgroundCache } from "@/lib/recreation-gov";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useNowTick } from "@/hooks/use-now-tick";
 import { useRecentOpenings } from "@/hooks/use-recent-openings";
-import { useDateRange } from "@/hooks/use-date-range";
-import { useSnoozed } from "@/hooks/use-snoozed";
-import { toLocalIso, readStorage, writeStorage } from "@/components/dashboard/helpers";
+import { useDashboardPrefs } from "@/hooks/use-dashboard-prefs";
+import { toLocalIso, writeStorage } from "@/components/dashboard/helpers";
 import { getCampgroundOpenCount } from "@/components/campground/get-open-count";
 import { DashboardTopBar } from "@/components/dashboard/dashboard-top-bar";
 import { AddCampgroundDialog } from "@/components/dashboard/add-campground-dialog";
+import { DashboardErrorBoundary } from "@/components/dashboard/error-boundary";
 import { Greeting } from "@/components/dashboard/greeting";
 import { OpeningsFeed } from "@/components/dashboard/openings-feed";
 import { WatchlistSection } from "@/components/dashboard/watchlist-section";
@@ -27,7 +27,7 @@ import { EmptyState } from "@/components/dashboard/empty-state";
 import { siteData } from "@/data/site-data";
 import type { SiteSettingsValue } from "@/context/site-settings";
 import type { OpeningItem } from "@/components/dashboard/openings-feed";
-import type { GroupBy } from "@/components/dashboard/watchlist-section";
+import type { GroupBy } from "@/hooks/use-dashboard-prefs";
 
 export default function AppPage() {
     const auth = useAuth();
@@ -49,17 +49,17 @@ export default function AppPage() {
     const [dismissedSync, setDismissedSync] = useState(false);
     const [addModalOpen, setAddModalOpen] = useState(false);
 
-    // Date range + date picker
-    const { dateRange, calRange, datePickerOpen, setDatePickerOpen, handleCalSelect } = useDateRange();
-
-    // Grouping toggle
-    const [groupBy, setGroupBy] = useState<GroupBy>(() =>
-        readStorage<GroupBy>("campwatch:watchlist-grouping", "region"),
-    );
-    const handleGroupBy = (v: GroupBy) => {
-        setGroupBy(v);
-        writeStorage("campwatch:watchlist-grouping", v);
-    };
+    // Dashboard preferences (date range + grouping) — single persisted blob.
+    const {
+        dateRange,
+        calRange,
+        datePickerOpen,
+        setDatePickerOpen,
+        handleCalSelect,
+        groupBy,
+        setGroupBy,
+    } = useDashboardPrefs();
+    const handleGroupBy = setGroupBy;
 
     // Favorites
     const [favorites, setFavorites] = useState<Set<string>>(() => {
@@ -77,9 +77,6 @@ export default function AppPage() {
             return next;
         });
     };
-
-    // Snoozed openings + campgrounds
-    const { snoozedOpenings, toggleSnoozeOpening, snoozedCgs, toggleSnoozeCg } = useSnoozed();
 
     const settings = useMemo<SiteSettingsValue>(
         () => ({
@@ -168,8 +165,6 @@ export default function AppPage() {
             .filter((r) => {
                 if (!userCampgroundIds.has(r.campgroundId)) return false;
                 if (r.to <= winStartIso || r.from > winEndIso) return false;
-                const id = `${r.campgroundId}-${r.siteId}-${r.from}`;
-                if (id in snoozedOpenings) return false;
                 return true;
             })
             .map((r) => {
@@ -185,13 +180,12 @@ export default function AppPage() {
                     nights: r.nights,
                     recGovId: r.campgroundId,
                     detectedAt: r.detectedAt,
-                    isSnoozed: false,
                 };
             });
 
         items.sort((a, b) => b.detectedAt.localeCompare(a.detectedAt));
         return items.slice(0, 8);
-    }, [recentOpenings, userCampgroundIds, dateRange, snoozedOpenings]);
+    }, [recentOpenings, userCampgroundIds, dateRange]);
 
     // PAD kept for components that still use it for dynamic scroll containers / section padding
     const PAD = isMobile ? 22 : 36;
@@ -247,48 +241,53 @@ export default function AppPage() {
                         )}
 
                         {isEmpty ? (
-                            <EmptyState onClone={cloneDefault} />
+                            <DashboardErrorBoundary section="Empty state">
+                                <EmptyState onClone={cloneDefault} />
+                            </DashboardErrorBoundary>
                         ) : (
                             <>
-                                <Greeting
-                                    auth={auth}
-                                    isLoading={isLoading}
-                                    campgroundsWithOpenings={campgroundsWithOpenings}
-                                />
+                                <DashboardErrorBoundary section="Greeting">
+                                    <Greeting
+                                        auth={auth}
+                                        isLoading={isLoading}
+                                        campgroundsWithOpenings={campgroundsWithOpenings}
+                                    />
+                                </DashboardErrorBoundary>
 
-                                <OpeningsFeed
-                                    openingItems={openingItems}
-                                    isMobile={isMobile}
-                                    nowMs={nowMs}
-                                    onSnooze={toggleSnoozeOpening}
-                                    PAD={PAD}
-                                />
+                                <DashboardErrorBoundary section="Openings feed">
+                                    <OpeningsFeed
+                                        openingItems={openingItems}
+                                        isMobile={isMobile}
+                                        nowMs={nowMs}
+                                        PAD={PAD}
+                                    />
+                                </DashboardErrorBoundary>
 
-                                <WatchlistSection
-                                    campgroundsByAreas={campgroundsByAreas}
-                                    openCounts={openCounts}
-                                    isLoading={isLoading}
-                                    groupBy={groupBy}
-                                    onGroupBy={handleGroupBy}
-                                    dateRange={dateRange}
-                                    calRange={calRange}
-                                    datePickerOpen={datePickerOpen}
-                                    setDatePickerOpen={setDatePickerOpen}
-                                    handleCalSelect={handleCalSelect}
-                                    favorites={favorites}
-                                    onToggleFavorite={toggleFavorite}
-                                    settings={settings as { views?: { type?: "calendar" | "table" } }}
-                                    globalSettings={globalSettings}
-                                    isMobile={isMobile}
-                                    snoozedCgs={snoozedCgs}
-                                    onSnoozeCg={toggleSnoozeCg}
-                                    onRatingChange={handleRatingChange}
-                                    onEditSettings={(id) => {
-                                        setFocusedCampgroundId(id);
-                                        setIsConfigDialogOpen(true);
-                                    }}
-                                    PAD={PAD}
-                                />
+                                <DashboardErrorBoundary section="Watchlist">
+                                    <WatchlistSection
+                                        campgroundsByAreas={campgroundsByAreas}
+                                        openCounts={openCounts}
+                                        isLoading={isLoading}
+                                        groupBy={groupBy}
+                                        onGroupBy={handleGroupBy}
+                                        dateRange={dateRange}
+                                        calRange={calRange}
+                                        datePickerOpen={datePickerOpen}
+                                        setDatePickerOpen={setDatePickerOpen}
+                                        handleCalSelect={handleCalSelect}
+                                        favorites={favorites}
+                                        onToggleFavorite={toggleFavorite}
+                                        settings={settings as { views?: { type?: "calendar" | "table" } }}
+                                        globalSettings={globalSettings}
+                                        isMobile={isMobile}
+                                        onRatingChange={handleRatingChange}
+                                        onEditSettings={(id) => {
+                                            setFocusedCampgroundId(id);
+                                            setIsConfigDialogOpen(true);
+                                        }}
+                                        PAD={PAD}
+                                    />
+                                </DashboardErrorBoundary>
                             </>
                         )}
 

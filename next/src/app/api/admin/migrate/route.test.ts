@@ -12,6 +12,7 @@ vi.mock("@/lib/sessions", () => ({
 
 import * as cloudflare from "@/lib/cloudflare";
 import * as sessions from "@/lib/sessions";
+import { campgroundCatalog } from "@/data/campground-catalog";
 
 beforeEach(() => {
     vi.resetModules();
@@ -19,6 +20,7 @@ beforeEach(() => {
 });
 
 const SECRET = "test-api-secret";
+const ALL_CATALOG_IDS = (campgroundCatalog["recreation.gov"] ?? []).map((c) => c.id);
 
 async function post(authHeader?: string): Promise<Response> {
     const headers: Record<string, string> = {};
@@ -70,7 +72,7 @@ describe("POST /api/admin/migrate", () => {
         expect(res.status).toBe(200);
     });
 
-    it("adds the 3 seed campgrounds when KV is empty", async () => {
+    it("seeds all catalog campgrounds when KV is empty", async () => {
         vi.mocked(cloudflare.getEnv).mockReturnValue({ API_SECRET: SECRET } as never);
         const kv = createMockKv();
         vi.mocked(cloudflare.getKv).mockReturnValue(kv);
@@ -79,25 +81,25 @@ describe("POST /api/admin/migrate", () => {
         expect(res.status).toBe(200);
         const body = (await res.json()) as { defaultUpdated: boolean; addedCampgrounds: Array<{ id: string }> };
         expect(body.defaultUpdated).toBe(true);
-        expect(body.addedCampgrounds.map((c) => c.id).sort()).toEqual(["232312", "233128", "233881"]);
+        expect(body.addedCampgrounds.map((c) => c.id).sort()).toEqual([...ALL_CATALOG_IDS].sort());
 
         const stored = (await kv.get("config:campgrounds", "json")) as { campgrounds: { "recreation.gov": Array<{ id: string }> } };
-        const ids = stored.campgrounds["recreation.gov"].map((c) => c.id);
-        expect(ids).toContain("232312");
-        expect(ids).toContain("233881");
-        expect(ids).toContain("233128");
+        const storedIds = stored.campgrounds["recreation.gov"].map((c) => c.id);
+        for (const id of ALL_CATALOG_IDS) {
+            expect(storedIds).toContain(id);
+        }
     });
 
-    it("does not duplicate when all 3 seeds are already present", async () => {
+    it("does not duplicate when all catalog entries are already present", async () => {
         vi.mocked(cloudflare.getEnv).mockReturnValue({ API_SECRET: SECRET } as never);
         const kv = createMockKv({
             "config:campgrounds": JSON.stringify({
                 campgrounds: {
-                    "recreation.gov": [
-                        { id: "232312", name: "Pine Flats", sites: { favorites: [], worthwhile: [] } },
-                        { id: "233881", name: "Deadwood Lookout", sites: { favorites: [], worthwhile: [] } },
-                        { id: "233128", name: "Lookout Butte", sites: { favorites: [], worthwhile: [] } },
-                    ],
+                    "recreation.gov": ALL_CATALOG_IDS.map((id) => ({
+                        id,
+                        name: "Campground",
+                        sites: { favorites: [], worthwhile: [] },
+                    })),
                 },
                 globalSettings: { stayLengths: [2], validStartDays: ["Monday"] },
             }),
@@ -110,15 +112,19 @@ describe("POST /api/admin/migrate", () => {
         expect(body.addedCampgrounds).toEqual([]);
     });
 
-    it("appends only the seeds that aren't present yet", async () => {
+    it("appends only catalog entries that aren't in KV yet", async () => {
         vi.mocked(cloudflare.getEnv).mockReturnValue({ API_SECRET: SECRET } as never);
+        // Seed KV with only the first two catalog entries.
+        const presentIds = ALL_CATALOG_IDS.slice(0, 2);
+        const missingIds = ALL_CATALOG_IDS.slice(2);
         const kv = createMockKv({
             "config:campgrounds": JSON.stringify({
                 campgrounds: {
-                    "recreation.gov": [
-                        { id: "232358", name: "Outlet", sites: { favorites: [], worthwhile: [] } },
-                        { id: "232312", name: "Pine Flats", sites: { favorites: [], worthwhile: [] } },
-                    ],
+                    "recreation.gov": presentIds.map((id) => ({
+                        id,
+                        name: "Campground",
+                        sites: { favorites: [], worthwhile: [] },
+                    })),
                 },
                 globalSettings: { stayLengths: [2], validStartDays: ["Monday"] },
             }),
@@ -127,27 +133,71 @@ describe("POST /api/admin/migrate", () => {
 
         const res = await post(`Bearer ${SECRET}`);
         const body = (await res.json()) as { addedCampgrounds: Array<{ id: string }> };
-        expect(body.addedCampgrounds.map((c) => c.id).sort()).toEqual(["233128", "233881"]);
+        expect(body.addedCampgrounds.map((c) => c.id).sort()).toEqual([...missingIds].sort());
     });
 
-    it("wipes email:* records", async () => {
+    it("preserves existing curator-edited campground entries verbatim", async () => {
+        vi.mocked(cloudflare.getEnv).mockReturnValue({ API_SECRET: SECRET } as never);
+        const curatorEntry = {
+            id: ALL_CATALOG_IDS[0],
+            name: "Curator-Renamed",
+            sites: { favorites: ["001"], worthwhile: ["002"] },
+            notifyAll: true,
+        };
+        const kv = createMockKv({
+            "config:campgrounds": JSON.stringify({
+                campgrounds: { "recreation.gov": [curatorEntry] },
+                globalSettings: { stayLengths: [2], validStartDays: ["Monday"] },
+            }),
+        });
+        vi.mocked(cloudflare.getKv).mockReturnValue(kv);
+
+        await post(`Bearer ${SECRET}`);
+
+        const stored = (await kv.get("config:campgrounds", "json")) as {
+            campgrounds: { "recreation.gov": Array<{ id: string; name: string; notifyAll?: boolean }> };
+        };
+        const entry = stored.campgrounds["recreation.gov"].find((c) => c.id === curatorEntry.id);
+        expect(entry?.name).toBe("Curator-Renamed");
+        expect(entry?.notifyAll).toBe(true);
+    });
+
+    it("backfills mapImage from old image:*_map*.jpg pattern", async () => {
         vi.mocked(cloudflare.getEnv).mockReturnValue({ API_SECRET: SECRET } as never);
         const kv = createMockKv({
-            "email:a@x.com": JSON.stringify({ email: "a@x.com" }),
-            "email:b@x.com": JSON.stringify({ email: "b@x.com" }),
-            "email:c@x.com": JSON.stringify({ email: "c@x.com" }),
-            "user:keep@x.com:profile": "{}",
-            "config:campgrounds": JSON.stringify({ campgrounds: { "recreation.gov": [] } }),
+            "config:campgrounds": JSON.stringify({
+                campgrounds: {
+                    "recreation.gov": [
+                        { id: "232358", name: "Outlet", image: "outlet_campground_map.jpg", sites: { favorites: [], worthwhile: [] } },
+                        { id: "232085", name: "Point", image: "point_campground.jpeg", sites: { favorites: [], worthwhile: [] } },
+                    ],
+                },
+                globalSettings: { stayLengths: [2], validStartDays: ["Monday"] },
+            }),
         });
         vi.mocked(cloudflare.getKv).mockReturnValue(kv);
 
         const res = await post(`Bearer ${SECRET}`);
-        const body = (await res.json()) as { emailsDeleted: number };
-        expect(body.emailsDeleted).toBe(3);
+        expect(res.status).toBe(200);
 
-        expect(await kv.get("email:a@x.com")).toBeNull();
-        expect(await kv.get("email:b@x.com")).toBeNull();
-        expect(await kv.get("email:c@x.com")).toBeNull();
-        expect(await kv.get("user:keep@x.com:profile")).not.toBeNull();
+        const stored = (await kv.get("config:campgrounds", "json")) as {
+            campgrounds: { "recreation.gov": Array<{ id: string; image?: string; mapImage?: string }> };
+        };
+        const outlet = stored.campgrounds["recreation.gov"].find((c) => c.id === "232358");
+        expect(outlet?.mapImage).toBe("outlet_campground_map.jpg");
+        expect(outlet?.image).toBeUndefined();
+
+        // Non-map image is left alone.
+        const point = stored.campgrounds["recreation.gov"].find((c) => c.id === "232085");
+        expect(point?.image).toBe("point_campground.jpeg");
+    });
+
+    it("response does not include emailsDeleted", async () => {
+        vi.mocked(cloudflare.getEnv).mockReturnValue({ API_SECRET: SECRET } as never);
+        vi.mocked(cloudflare.getKv).mockReturnValue(createMockKv());
+
+        const res = await post(`Bearer ${SECRET}`);
+        const body = (await res.json()) as Record<string, unknown>;
+        expect("emailsDeleted" in body).toBe(false);
     });
 });

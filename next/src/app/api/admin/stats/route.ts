@@ -1,5 +1,6 @@
 import { getEnv, getKv } from "@/lib/cloudflare";
 import { jsonResponse, withCors } from "@/lib/responses";
+import { withErrorLogging } from "@/lib/route-helpers";
 
 export interface NotifierStats {
     lastPollAt: string;
@@ -9,6 +10,11 @@ export interface NotifierStats {
     medianLatencyMs: number;
     sampleSize: number;
     todayKey: string;
+}
+
+// Internal-only fields used by the notifier for rolling computations.
+// Stored alongside NotifierStats in the same KV blob but NEVER exposed publicly.
+export interface NotifierStatsInternal extends NotifierStats {
     _latencyWindow?: number[];
     _dailyHistory?: { date: string; count: number }[];
 }
@@ -21,7 +27,7 @@ function isAuthorized(request: Request): boolean {
     return !!env.API_SECRET && auth === `Bearer ${env.API_SECRET}`;
 }
 
-export async function PUT(request: Request): Promise<Response> {
+async function putHandler(request: Request): Promise<Response> {
     if (!isAuthorized(request)) {
         return withCors(jsonResponse({ error: "Unauthorized" }, 401));
     }
@@ -33,8 +39,8 @@ export async function PUT(request: Request): Promise<Response> {
         return withCors(jsonResponse({ error: "Invalid JSON" }, 400));
     }
 
-    const b = body as Partial<NotifierStats>;
-    const stats: NotifierStats = {
+    const b = body as Partial<NotifierStatsInternal>;
+    const stats: NotifierStatsInternal = {
         lastPollAt: typeof b.lastPollAt === "string" ? b.lastPollAt : new Date().toISOString(),
         campgroundsTracked: Number(b.campgroundsTracked) || 0,
         openingsSentToday: Number(b.openingsSentToday) || 0,
@@ -49,3 +55,4 @@ export async function PUT(request: Request): Promise<Response> {
     await getKv().put(KEY, JSON.stringify(stats));
     return withCors(jsonResponse({ ok: true, stats }));
 }
+export const PUT = withErrorLogging(putHandler, "PUT /api/admin/stats");

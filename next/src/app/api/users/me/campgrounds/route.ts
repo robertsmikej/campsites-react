@@ -4,6 +4,7 @@ import { getUserCampgrounds, putUserCampgrounds } from "@/lib/user-campgrounds";
 import { getSitewideDefaultSettings } from "@/lib/settings";
 import { getUserProfile } from "@/lib/users";
 import { getKv } from "@/lib/cloudflare";
+import { withErrorLogging } from "@/lib/route-helpers";
 
 const DEFAULT_CONFIG_KEY = "config:campgrounds";
 
@@ -37,15 +38,16 @@ function isValidBody(
     return true;
 }
 
-export async function GET(request: Request): Promise<Response> {
+async function getHandler(request: Request): Promise<Response> {
     const session = await readSession(request);
     if (!session) return withCors(jsonResponse({ error: "Unauthorized" }, 401));
 
     const record = await getUserCampgrounds(session.email);
     return withCors(jsonResponse(record ?? emptyRecord()));
 }
+export const GET = withErrorLogging(getHandler, "GET /api/users/me/campgrounds");
 
-export async function PUT(request: Request): Promise<Response> {
+async function putHandler(request: Request): Promise<Response> {
     const session = await readSession(request);
     if (!session) return withCors(jsonResponse({ error: "Unauthorized" }, 401));
 
@@ -74,3 +76,4 @@ export async function PUT(request: Request): Promise<Response> {
 
     return withCors(jsonResponse(stored));
 }
+export const PUT = withErrorLogging(putHandler, "PUT /api/users/me/campgrounds");

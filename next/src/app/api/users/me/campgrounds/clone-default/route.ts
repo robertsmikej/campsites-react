@@ -5,8 +5,9 @@ import { putUserCampgrounds } from "@/lib/user-campgrounds";
 import { sites as staticSites } from "@/data/sites";
 import { getSitewideDefaultSettings } from "@/lib/settings";
 import type { SiteConfig } from "@/types/campground";
+import { withErrorLogging } from "@/lib/route-helpers";
 
-export async function POST(request: Request): Promise<Response> {
+async function postHandler(request: Request): Promise<Response> {
     const session = await readSession(request);
     if (!session) return withCors(jsonResponse({ error: "Unauthorized" }, 401));
 
@@ -25,3 +26,4 @@ export async function POST(request: Request): Promise<Response> {
     const stored = await putUserCampgrounds(session.email, { campgrounds, globalSettings });
     return withCors(jsonResponse(stored));
 }
+export const POST = withErrorLogging(postHandler, "POST /api/users/me/campgrounds/clone-default");

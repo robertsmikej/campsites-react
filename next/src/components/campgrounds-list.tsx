@@ -18,6 +18,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { CampgroundRow } from "@/components/campground-row";
 import { getCampgroundImageUrl } from "@/components/campground/get-image-url";
 import { getCampgroundOpenCount } from "@/components/campground/get-open-count";
+import { LoadingGhostRow } from "@/components/field-notes/loading";
 import type { ProcessedCampground, GlobalSettings, SiteAvailability, StayMatch } from "@/types/campground";
 
 // ---------------------------------------------------------------------------
@@ -192,24 +193,15 @@ function formatMatchDateRange(match: StayMatch): string {
 }
 
 // ---------------------------------------------------------------------------
-// Loading skeletons
+// Loading ghost rows
 // ---------------------------------------------------------------------------
 
 function LoadingSkeletons() {
     return (
         <div className="space-y-2">
             {[0, 1, 2, 3, 4].map((i) => (
-                <div
-                    key={i}
-                    className="flex items-center gap-3 rounded-lg border bg-card p-3"
-                >
-                    <div className="size-12 shrink-0 animate-pulse rounded-md bg-muted" />
-                    <div className="min-w-0 flex-1 space-y-1.5">
-                        <div className="h-4 w-1/3 animate-pulse rounded bg-muted" />
-                        <div className="h-3 w-1/4 animate-pulse rounded bg-muted" />
-                    </div>
-                    <div className="hidden h-8 flex-1 max-w-md animate-pulse rounded-md bg-muted md:block" />
-                </div>
+                // Single ghost bar per row at the same height as a real CampgroundRow card (p-3 + content ≈ 66px)
+                <LoadingGhostRow key={i} height={66} />
             ))}
         </div>
     );

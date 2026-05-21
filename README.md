@@ -42,6 +42,17 @@ pnpm run cf:build # local OpenNext build
 - **`workers-site/`**: `.github/workflows/deploy.yml` deploys the redirect Worker when `workers-site/` or `wrangler.toml` change.
 - **`notifier/`**: `.github/workflows/check-campsites.yml` runs every 15 minutes (cron). It reads `SUBSCRIBER_API_URL`, `SUBSCRIBER_API_SECRET`, `SITE_URL`, `RESEND_API_KEY` from GitHub Secrets.
 
+## Analytics
+
+Page views: Cloudflare Web Analytics (free, no cookies). Enable in the
+Cloudflare dashboard → campwatch.dev → Analytics & Logs → Web Analytics
+→ Add a site. Copy the beacon token into the Cloudflare Worker's
+NEXT_PUBLIC_CLOUDFLARE_BEACON_TOKEN environment variable.
+
+Errors: API route handlers are wrapped with `withErrorLogging` which
+console.errors structured context on unhandled exceptions. View in the
+Cloudflare dashboard → Workers & Pages → campwatch → Logs (live tail).
+
 ## Design docs and plans
 
 `docs/superpowers/specs/` and `docs/superpowers/plans/` hold the architectural specs and execution plans for ongoing work. The Phase 0 stack migration (0a scaffold → 0b API → 0c UI → 0d cutover) is complete. Next: Phase 1 (Google OAuth) and Phase 2 (per-user lists) per `docs/superpowers/specs/2026-05-14-multi-user-rework-design.md`.

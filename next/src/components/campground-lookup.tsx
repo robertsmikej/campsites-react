@@ -7,6 +7,7 @@ import { useUserCampgrounds } from "@/hooks/use-user-campgrounds";
 import type { SearchResult } from "@/app/api/campgrounds/search/route";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { C } from "@/components/field-notes/tokens";
+import { LoadingGhostRow } from "@/components/field-notes/loading";
 
 // Heuristic: does this input look like a URL attempt (vs a name search)?
 function looksLikeUrlAttempt(s: string): boolean {
@@ -224,9 +225,9 @@ function ResultCard({ result, compact = false, signedIn = false, onAdd, adding =
 function ResultSkeleton() {
     return (
         <div className="bg-cw-cream border-[1.5px] border-cw-rule py-[22px] px-[26px] flex flex-col gap-3">
-            <div className="h-3 w-[40%] bg-[rgba(26,22,20,0.08)] rounded-[2px]" />
-            <div className="h-[22px] w-[70%] bg-[rgba(26,22,20,0.12)] rounded-[2px]" />
-            <div className="h-3 w-[55%] bg-[rgba(26,22,20,0.06)] rounded-[2px]" />
+            <LoadingGhostRow height={12} className="w-[40%]" />
+            <LoadingGhostRow height={22} className="w-[70%]" />
+            <LoadingGhostRow height={12} className="w-[55%]" />
         </div>
     );
 }

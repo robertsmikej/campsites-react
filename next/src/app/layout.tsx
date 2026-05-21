@@ -75,6 +75,21 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                             "window.__name=window.__name||function(t,n){try{Object.defineProperty(t,'name',{value:n,configurable:true})}catch(e){}return t};",
                     }}
                 />
+                {/*
+                  Cloudflare Web Analytics — free, cookieless, GDPR-safe.
+                  Get your beacon token from: Cloudflare dashboard → campwatch.dev →
+                  Analytics & Logs → Web Analytics → Add a site. Then add it as the
+                  NEXT_PUBLIC_CLOUDFLARE_BEACON_TOKEN environment variable in the
+                  Cloudflare Worker settings (Workers & Pages → campwatch → Settings →
+                  Variables and Secrets). If the env var is absent the script is omitted.
+                */}
+                {process.env.NEXT_PUBLIC_CLOUDFLARE_BEACON_TOKEN && (
+                    <script
+                        defer
+                        src="https://static.cloudflareinsights.com/beacon.min.js"
+                        data-cf-beacon={`{"token": "${process.env.NEXT_PUBLIC_CLOUDFLARE_BEACON_TOKEN}"}`}
+                    />
+                )}
             </head>
             <body
                 className={`${inter.variable} ${GeistSans.variable} ${bigShoulders.variable} ${cormorant.variable} ${sourceSerif.variable} ${dmMono.variable} ${caveat.variable} font-sans antialiased`}

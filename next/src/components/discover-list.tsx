@@ -6,7 +6,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import { LoadingGhostRow } from "@/components/field-notes/loading";
 import { getTypeBadge } from "@/components/campground/type-badge";
 import type { ApiConfigResponse, Campground } from "@/types/campground";
 
@@ -66,16 +66,9 @@ export function DiscoverList() {
 
     if (isLoading) {
         return (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="space-y-2">
                 {[0, 1, 2, 3, 4, 5].map((i) => (
-                    <div key={i} className="overflow-hidden rounded-xl border bg-card">
-                        <Skeleton className="aspect-[5/3] w-full rounded-none" />
-                        <div className="space-y-3 p-4">
-                            <Skeleton className="h-5 w-3/4" />
-                            <Skeleton className="h-4 w-1/2" />
-                            <Skeleton className="h-9 w-full" />
-                        </div>
-                    </div>
+                    <LoadingGhostRow key={i} height={54} />
                 ))}
             </div>
         );

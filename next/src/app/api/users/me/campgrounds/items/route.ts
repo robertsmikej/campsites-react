@@ -4,6 +4,7 @@ import { jsonResponse, withCors } from "@/lib/responses";
 import { getUserCampgrounds, putUserCampgrounds } from "@/lib/user-campgrounds";
 import { getSitewideDefaultSettings } from "@/lib/settings";
 import type { Campground, GlobalSettings, SiteConfig } from "@/types/campground";
+import { withErrorLogging } from "@/lib/route-helpers";
 
 interface DefaultConfig {
     campgrounds?: SiteConfig;
@@ -18,7 +19,7 @@ function defaultGlobalSettings(): GlobalSettings {
     };
 }
 
-export async function POST(request: Request): Promise<Response> {
+async function postHandler(request: Request): Promise<Response> {
     const session = await readSession(request);
     if (!session) return withCors(jsonResponse({ error: "Unauthorized" }, 401));
 
@@ -70,3 +71,4 @@ export async function POST(request: Request): Promise<Response> {
     });
     return withCors(jsonResponse(stored));
 }
+export const POST = withErrorLogging(postHandler, "POST /api/users/me/campgrounds/items");

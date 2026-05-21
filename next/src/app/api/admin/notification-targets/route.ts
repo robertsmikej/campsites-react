@@ -3,6 +3,7 @@ import { jsonResponse, withCors } from "@/lib/responses";
 import { getUserCampgrounds } from "@/lib/user-campgrounds";
 import type { UserProfile, UserRole } from "@/types/user";
 import type { GlobalSettings, SiteConfig } from "@/types/campground";
+import { withErrorLogging } from "@/lib/route-helpers";
 
 interface NotificationTarget {
     email: string;
@@ -18,7 +19,7 @@ interface NotificationTarget {
 const PROFILE_PREFIX = "user:";
 const PROFILE_SUFFIX = ":profile";
 
-export async function GET(request: Request): Promise<Response> {
+async function getHandler(request: Request): Promise<Response> {
     const env = getEnv();
     if (!env.API_SECRET) {
         return withCors(jsonResponse({ error: "Server misconfigured: API_SECRET not set" }, 500));
@@ -63,3 +64,4 @@ export async function GET(request: Request): Promise<Response> {
     targets.sort((a, b) => a.email.localeCompare(b.email));
     return withCors(jsonResponse({ targets }));
 }
+export const GET = withErrorLogging(getHandler, "GET /api/admin/notification-targets");

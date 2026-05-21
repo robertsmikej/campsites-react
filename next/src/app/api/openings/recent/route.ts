@@ -1,5 +1,6 @@
 import { getKv } from "@/lib/cloudflare";
 import type { RecentOpening } from "@/app/api/admin/openings/recent/route";
+import { withErrorLogging } from "@/lib/route-helpers";
 
 const KV_KEY = "notifier:recent";
 
@@ -65,7 +66,7 @@ function devSyntheticOpenings(): RecentOpening[] {
     ];
 }
 
-export async function GET(): Promise<Response> {
+async function getHandler(): Promise<Response> {
     const stored = (await getKv().get(KV_KEY, "json")) as RecentOpening[] | null;
 
     let body: RecentOpening[];
@@ -85,3 +86,4 @@ export async function GET(): Promise<Response> {
         },
     });
 }
+export const GET = withErrorLogging(getHandler, "GET /api/openings/recent");

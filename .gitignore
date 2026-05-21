@@ -26,3 +26,4 @@ yarn-error.log*
 notifier/state.json
 notifier/pending-notifications.json
 notifier/email-preview.html
+notifier/node_modules/

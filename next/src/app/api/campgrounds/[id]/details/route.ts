@@ -1,5 +1,6 @@
 import { getKv } from "@/lib/cloudflare";
 import { jsonResponse, withCors } from "@/lib/responses";
+import { withErrorLogging } from "@/lib/route-helpers";
 
 export interface CampgroundDetails {
     facilityId: string;
@@ -57,7 +58,7 @@ async function fetchCampgroundLatLng(
     }
 }
 
-export async function GET(
+async function getHandler(
     _req: Request,
     context: { params: Promise<{ id: string }> },
 ): Promise<Response> {
@@ -93,3 +94,4 @@ export async function GET(
 
     return withCors(jsonResponse(details));
 }
+export const GET = withErrorLogging(getHandler, "GET /api/campgrounds/[id]/details");
