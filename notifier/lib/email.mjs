@@ -163,6 +163,7 @@ export const sendEmail = async (to, subject, html, apiKey, unsubscribeLink = '')
         },
         body: JSON.stringify({
             from: 'CampWatch <alerts@campwatch.dev>',
+            reply_to: 'hello@campwatch.dev',
             to: [to],
             subject,
             html,
