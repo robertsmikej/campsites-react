@@ -1,7 +1,5 @@
 "use client";
 
-import { CW } from "@/components/field-notes/cw-tokens";
-import { FM } from "@/components/field-notes/tokens";
 import { WatchlistRow } from "./watchlist-row";
 import type { ProcessedCampground, GlobalSettings } from "@/types/campground";
 
@@ -39,10 +37,10 @@ export function WatchlistTable({
     onEditSettings,
 }: WatchlistTableProps) {
     return (
-        <div style={{ background: CW.cream, border: `1px solid ${CW.ink}` }}>
+        <div className="bg-cw-cream border border-cw-ink">
             {showHeader && !isMobile && (
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 110px minmax(0,1fr) 70px 140px", gap: 24, padding: "11px 22px", borderBottom: `1px solid ${CW.rule}`, font: `500 10px/1 ${FM}`, letterSpacing: "0.16em", color: CW.inkSubtle, textTransform: "uppercase", alignItems: "center" }}>
-                    <span>Campground</span><span>Status</span><span>Dates</span><span style={{ textAlign: "right" }}>Open</span><span />
+                <div className="grid gap-6 px-[22px] py-[11px] border-b border-cw-rule font-mono-field text-[10px] font-medium leading-none tracking-[0.16em] text-cw-ink-subtle uppercase items-center" style={{ gridTemplateColumns: "1fr 110px minmax(0,1fr) 70px 140px" }}>
+                    <span>Campground</span><span>Status</span><span>Dates</span><span className="text-right">Open</span><span />
                 </div>
             )}
             {rows.map((c) => (

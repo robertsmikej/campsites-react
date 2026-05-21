@@ -1,7 +1,6 @@
 "use client";
 
 import { CW } from "@/components/field-notes/cw-tokens";
-import { FM } from "@/components/field-notes/tokens";
 import { readStorage, formatSnoozeLabel } from "@/components/dashboard/helpers";
 
 interface OpeningSnoozeButtonProps {
@@ -16,13 +15,11 @@ export function OpeningSnoozeButton({ itemId, onSnooze }: OpeningSnoozeButtonPro
     return (
         <button
             onClick={() => onSnooze(itemId)}
+            className="font-mono-field text-[10px] font-bold leading-none tracking-[0.12em] uppercase px-[9px] py-[7px] cursor-pointer rounded-[2px] inline-flex items-center gap-[5px]"
             style={{
-                font: `700 10px/1 ${FM}`, letterSpacing: "0.12em", textTransform: "uppercase",
                 background: isSnoozedNow ? CW.mustard : "transparent",
                 color: isSnoozedNow ? CW.ink : CW.inkSubtle,
                 border: `1px solid ${isSnoozedNow ? "transparent" : CW.rule}`,
-                padding: "7px 9px", cursor: "pointer", borderRadius: 2,
-                display: "inline-flex", alignItems: "center", gap: 5,
             }}
         >
             <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.6">

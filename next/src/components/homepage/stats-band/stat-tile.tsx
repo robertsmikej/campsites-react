@@ -1,39 +1,26 @@
 "use client";
 
-import { FH, FI, FM } from "@/components/field-notes/tokens";
-
 interface StatTileProps {
     label: string;
     value: string;
     color: string;
     sub: string;
-    isMobile: boolean;
 }
 
-export function StatTile({ label, value, color, sub, isMobile }: StatTileProps) {
+export function StatTile({ label, value, color, sub }: StatTileProps) {
     return (
         <div>
-            <div
-                style={{
-                    font: `500 11px/1 ${FM}`,
-                    letterSpacing: "0.16em",
-                    color: "rgba(251,246,234,0.55)",
-                    textTransform: "uppercase",
-                }}
-            >
+            <div className="font-mono-field text-[11px] leading-none tracking-[0.16em] text-[rgba(251,246,234,0.55)] uppercase font-medium">
                 {label}
             </div>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginTop: 8 }}>
+            <div className="flex items-baseline gap-[10px] mt-2">
                 <span
-                    style={{
-                        font: `900 ${isMobile ? 32 : 36}px/1 ${FH}`,
-                        color,
-                        fontVariantNumeric: "tabular-nums",
-                    }}
+                    className="font-poster text-[32px] md:text-[36px] leading-none font-black [font-variant-numeric:tabular-nums]"
+                    style={{ color }}
                 >
                     {value}
                 </span>
-                <span style={{ font: `500 italic 14px/1 ${FI}`, color: "rgba(251,246,234,0.55)" }}>
+                <span className="font-italic-serif text-[14px] leading-none text-[rgba(251,246,234,0.55)] font-medium italic">
                     {sub}
                 </span>
             </div>

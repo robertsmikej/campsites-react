@@ -1,8 +1,5 @@
 "use client";
 
-import { CW } from "@/components/field-notes/cw-tokens";
-import { FM } from "@/components/field-notes/tokens";
-
 interface AddCampgroundButtonProps {
     onClick: () => void;
 }
@@ -10,15 +7,8 @@ interface AddCampgroundButtonProps {
 export function AddCampgroundButton({ onClick }: AddCampgroundButtonProps) {
     return (
         <button
-            className="cw-tb-add"
+            className="cw-tb-add font-mono-field text-[11px] font-bold leading-none tracking-[0.14em] uppercase bg-cw-ink text-cw-cream border-[1.5px] border-cw-ink px-3 py-2 cursor-pointer rounded-[2px] inline-flex items-center gap-[6px] transition-opacity duration-[140ms]"
             onClick={onClick}
-            style={{
-                font: `700 11px/1 ${FM}`, letterSpacing: "0.14em", textTransform: "uppercase",
-                background: CW.ink, color: CW.cream, border: `1.5px solid ${CW.ink}`,
-                padding: "8px 12px", cursor: "pointer", borderRadius: 2,
-                display: "inline-flex", alignItems: "center", gap: 6,
-                transition: "opacity .14s",
-            }}
         >
             + Add campground
         </button>

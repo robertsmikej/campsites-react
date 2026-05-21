@@ -1,31 +1,12 @@
 "use client";
 
-import { C, FH, FI } from "@/components/field-notes/tokens";
-
-interface WordmarkProps {
-    isMobile: boolean;
-}
-
-export function Wordmark({ isMobile }: WordmarkProps) {
+export function Wordmark() {
     return (
         <div>
-            <div
-                style={{
-                    font: `900 ${isMobile ? 48 : 72}px/0.9 ${FH}`,
-                    color: C.cream,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.005em",
-                }}
-            >
+            <div className="font-poster text-[48px] md:text-[72px] leading-[0.9] text-cw-cream uppercase tracking-[0.005em] font-black">
                 CAMPWATCH
             </div>
-            <div
-                style={{
-                    font: `400 italic 17px/1.4 ${FI}`,
-                    color: "rgba(251,246,234,0.65)",
-                    marginTop: 10,
-                }}
-            >
+            <div className="font-italic-serif text-[17px] leading-[1.4] text-[rgba(251,246,234,0.65)] mt-[10px] italic">
                 Built by a camper, for campers. Polling quietly since 2026.
             </div>
         </div>

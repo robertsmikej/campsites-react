@@ -27,7 +27,7 @@ export function DateRangeCalendar({
     return (
         <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
             <PopoverTrigger asChild>
-                <PickDatesButton isMobile={isMobile} />
+                <PickDatesButton />
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
                 <Calendar

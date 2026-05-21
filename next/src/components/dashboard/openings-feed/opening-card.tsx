@@ -1,7 +1,6 @@
 "use client";
 
 import { CW } from "@/components/field-notes/cw-tokens";
-import { FH, FI, FB, FM } from "@/components/field-notes/tokens";
 import { formatTimeAgo } from "@/components/dashboard/helpers";
 import { OpeningSnoozeButton } from "./opening-snooze-button";
 import type { OpeningItem } from "./openings-feed";
@@ -49,40 +48,41 @@ export function OpeningCard({ item, isMobile, onSnooze, nowMs }: OpeningCardProp
     const timeAgo = formatTimeAgo(nowMs, item.detectedAt);
 
     return (
-        <article style={{
-            background: CW.cream,
-            border: `1.5px solid ${CW.ink}`,
-            boxShadow: isMobile ? `4px 4px 0 ${CW.forest}` : `6px 6px 0 ${CW.forest}`,
-            padding: isMobile ? "16px 18px" : "20px 22px 18px",
-            display: "flex", flexDirection: "column", gap: isMobile ? 12 : 14,
-            minWidth: isMobile ? 270 : undefined,
-            scrollSnapAlign: isMobile ? "start" : undefined,
-            flexShrink: isMobile ? 0 : undefined,
-        }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <article
+            className="bg-cw-cream border-[1.5px] border-cw-ink flex flex-col"
+            style={{
+                boxShadow: isMobile ? `4px 4px 0 ${CW.forest}` : `6px 6px 0 ${CW.forest}`,
+                padding: isMobile ? "16px 18px" : "20px 22px 18px",
+                gap: isMobile ? 12 : 14,
+                minWidth: isMobile ? 270 : undefined,
+                scrollSnapAlign: isMobile ? "start" : undefined,
+                flexShrink: isMobile ? 0 : undefined,
+            }}
+        >
+            <div className="flex items-center gap-2">
                 <Pulse color={tagColor} size={6} />
-                <span style={{ font: `700 10px/1 ${FM}`, letterSpacing: "0.18em", color: tagColor, textTransform: "uppercase" }}>
+                <span className="font-mono-field text-[10px] font-bold leading-none tracking-[0.18em] uppercase" style={{ color: tagColor }}>
                     {tag}
                 </span>
-                <span style={{ font: `500 10px/1 ${FM}`, color: CW.inkSubtle, marginLeft: "auto" }}>
+                <span className="font-mono-field text-[10px] font-medium leading-none ml-auto text-cw-ink-subtle">
                     {timeAgo}
                 </span>
             </div>
             <div>
-                <div style={{ font: `900 ${isMobile ? 17 : 20}px/1.1 ${FH}`, textTransform: "uppercase", letterSpacing: "0.005em" }}>
+                <div className="font-poster font-black leading-[1.1] uppercase tracking-[0.005em]" style={{ fontSize: isMobile ? 17 : 20 }}>
                     {item.campgroundName}
                 </div>
                 {item.siteName && (
-                    <div style={{ font: `500 italic ${isMobile ? 13 : 15}px/1.3 ${FI}`, color: CW.inkSoft, marginTop: 4 }}>
+                    <div className="font-italic-serif font-medium italic leading-[1.3] text-cw-ink-soft mt-1" style={{ fontSize: isMobile ? 13 : 15 }}>
                         Site {item.siteName}
                     </div>
                 )}
             </div>
-            <div style={{ borderTop: `1px dashed ${CW.rule}`, paddingTop: isMobile ? 10 : 12 }}>
-                <div style={{ font: `600 ${isMobile ? 14 : 16}px/1.2 ${FB}`, color: CW.ink }}>
+            <div className="border-t border-dashed border-cw-rule" style={{ paddingTop: isMobile ? 10 : 12 }}>
+                <div className="font-body-serif font-semibold leading-[1.2] text-cw-ink" style={{ fontSize: isMobile ? 14 : 16 }}>
                     {formatOpeningDates(item.from, item.to)}
                 </div>
-                <div style={{ font: `500 11px/1 ${FM}`, letterSpacing: "0.12em", color: CW.inkSoft, marginTop: 4, textTransform: "uppercase" }}>
+                <div className="font-mono-field text-[11px] font-medium leading-none tracking-[0.12em] text-cw-ink-soft mt-1 uppercase">
                     {item.nights} night{item.nights !== 1 ? "s" : ""}
                 </div>
             </div>
@@ -90,12 +90,10 @@ export function OpeningCard({ item, isMobile, onSnooze, nowMs }: OpeningCardProp
                 href={recGovUrl}
                 target="_blank"
                 rel="noopener noreferrer"
+                className="font-poster font-black leading-none tracking-[0.14em] uppercase bg-cw-forest text-cw-cream no-underline text-center rounded-[2px] inline-flex items-center justify-center gap-2"
                 style={{
-                    font: `800 ${isMobile ? 11 : 12}px/1 ${FH}`, letterSpacing: "0.14em", textTransform: "uppercase",
-                    background: CW.forest, color: CW.cream,
+                    fontSize: isMobile ? 11 : 12,
                     padding: isMobile ? "12px" : "13px 14px",
-                    textDecoration: "none", textAlign: "center", borderRadius: 2,
-                    display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8,
                 }}
             >
                 Book on rec.gov ↗

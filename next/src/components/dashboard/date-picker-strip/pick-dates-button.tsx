@@ -1,20 +1,8 @@
 "use client";
 
-import { CW } from "@/components/field-notes/cw-tokens";
-import { FM } from "@/components/field-notes/tokens";
-
-interface PickDatesButtonProps {
-    isMobile: boolean;
-}
-
-export function PickDatesButton({ isMobile }: PickDatesButtonProps) {
+export function PickDatesButton() {
     return (
-        <button style={{
-            font: `700 ${isMobile ? 10 : 11}px/1 ${FM}`, letterSpacing: "0.12em", textTransform: "uppercase",
-            background: "transparent", color: CW.ink, border: `1px solid ${CW.rule}`,
-            padding: isMobile ? "8px 10px" : "9px 12px", cursor: "pointer", borderRadius: 2,
-            display: "inline-flex", alignItems: "center", gap: 8,
-        }}>
+        <button className="font-mono-field text-[10px] md:text-[11px] font-bold leading-none tracking-[0.12em] uppercase bg-transparent text-cw-ink border border-cw-rule px-[10px] py-2 md:px-3 md:py-[9px] cursor-pointer rounded-[2px] inline-flex items-center gap-2">
             <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.4">
                 <rect x="1.5" y="3" width="11" height="10" rx="1" />
                 <path d="M1.5 6 H12.5" />

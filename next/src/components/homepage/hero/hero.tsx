@@ -1,6 +1,5 @@
 "use client";
 
-import { PAD_M } from "@/components/field-notes/tokens";
 import { DScene } from "@/components/field-notes/decorations";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useStats } from "@/contexts/stats-context";
@@ -20,37 +19,21 @@ export function Hero({ auth }: HeroProps) {
     const { stats, nowMs } = useStats();
 
     return (
-        <section style={{ position: "relative", minHeight: isMobile ? 760 : 980, overflow: "hidden" }}>
+        <section className="relative overflow-hidden min-h-[760px] md:min-h-[980px]">
             <DScene />
             <div
-                style={{
-                    position: "absolute",
-                    inset: 0,
-                    background:
-                        "linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0) 30%, rgba(20,15,12,0.35) 95%)",
-                    pointerEvents: "none",
-                }}
+                className="absolute inset-0 pointer-events-none"
+                style={{ background: "linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0) 30%, rgba(20,15,12,0.35) 95%)" }}
             />
 
             <Nav auth={auth} isMobile={isMobile} />
 
             {/* Hero content */}
-            <div
-                style={{
-                    position: isMobile ? "relative" : "absolute",
-                    inset: isMobile ? undefined : 0,
-                    padding: isMobile ? `40px ${PAD_M}px 36px` : "0 56px",
-                    zIndex: 2,
-                    display: isMobile ? "block" : "grid",
-                    gridTemplateColumns: isMobile ? undefined : "1fr 360px",
-                    gap: isMobile ? undefined : 56,
-                    alignItems: isMobile ? undefined : "center",
-                }}
-            >
+            <div className="relative md:absolute md:inset-0 z-[2] pt-10 pb-9 px-[22px] md:p-0 md:px-14 block md:grid md:grid-cols-[1fr_360px] md:gap-14 md:items-center">
                 <div>
-                    <Headline isMobile={isMobile} />
-                    <Paragraph isMobile={isMobile} />
-                    <CtaButtons auth={auth} isMobile={isMobile} />
+                    <Headline />
+                    <Paragraph />
+                    <CtaButtons auth={auth} />
                 </div>
 
                 {/* Pinned bulletin card — desktop only */}

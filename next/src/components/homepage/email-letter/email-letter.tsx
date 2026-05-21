@@ -1,7 +1,5 @@
 "use client";
 
-import { PAD_M } from "@/components/field-notes/tokens";
-import { useIsMobile } from "@/hooks/use-is-mobile";
 import { Intro } from "./intro";
 import { LetterCard } from "./letter-card";
 import type { AuthState } from "@/hooks/use-auth";
@@ -11,13 +9,11 @@ interface EmailLetterProps {
 }
 
 export function EmailLetter({ auth }: EmailLetterProps) {
-    const isMobile = useIsMobile();
-
     return (
-        <section style={{ padding: isMobile ? `60px ${PAD_M}px` : "96px 56px 80px", position: "relative" }}>
-            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: isMobile ? 28 : 72, alignItems: "center" }}>
-                <Intro isMobile={isMobile} />
-                <LetterCard auth={auth} isMobile={isMobile} />
+        <section className="relative py-[60px] px-[22px] md:pt-24 md:pb-20 md:px-14">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-7 md:gap-[72px] items-center">
+                <Intro />
+                <LetterCard auth={auth} />
             </div>
         </section>
     );

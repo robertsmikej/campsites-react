@@ -41,7 +41,8 @@ export function DTopo({ opacity = 0.08, stroke = C.forest }: { opacity?: number;
         <svg
             viewBox="0 0 1200 600"
             preserveAspectRatio="xMidYMid slice"
-            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity, pointerEvents: "none" }}
+            className="absolute inset-0 w-full h-full pointer-events-none"
+            style={{ opacity }}
         >
             {lines}
         </svg>
@@ -54,7 +55,7 @@ export function DScene() {
         <svg
             viewBox="0 0 1600 900"
             preserveAspectRatio="xMidYMid slice"
-            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", display: "block" }}
+            className="absolute inset-0 w-full h-full block"
         >
             <defs>
                 <linearGradient id="d-sky" x1="0" y1="0" x2="0" y2="1">
@@ -146,7 +147,7 @@ export function DScene() {
 // ─── Compass rose ─────────────────────────────────────────────────────────────
 export function DCompass({ size = 56, color = C.cream }: { size?: number; color?: string }) {
     return (
-        <svg viewBox="0 0 64 64" width={size} height={size} style={{ display: "block" }}>
+        <svg viewBox="0 0 64 64" width={size} height={size} className="block">
             <circle cx="32" cy="32" r="29" fill="none" stroke={color} strokeWidth="1.2" opacity="0.9" />
             <circle cx="32" cy="32" r="22" fill="none" stroke={color} strokeWidth="0.6" opacity="0.5" />
             <path d="M32 6 L36 32 L32 30 L28 32 Z" fill={color} />
@@ -168,7 +169,7 @@ export function DPostmark({
     date?: string;
 }) {
     return (
-        <svg viewBox="0 0 120 120" width={size} height={size} style={{ display: "block" }}>
+        <svg viewBox="0 0 120 120" width={size} height={size} className="block">
             <circle cx="60" cy="60" r="54" fill="none" stroke={C.clay} strokeWidth="1.2" opacity="0.7" />
             <circle cx="60" cy="60" r="44" fill="none" stroke={C.clay} strokeWidth="0.8" opacity="0.6" />
             <circle cx="60" cy="60" r="34" fill="none" stroke={C.clay} strokeWidth="0.6" opacity="0.5" />
@@ -198,27 +199,18 @@ export function DPostmark({
 export function DStamp() {
     return (
         <div
+            className="w-20 h-[100px] relative flex-shrink-0 p-1 border border-[rgba(29,24,21,0.18)]"
             style={{
-                width: 80,
-                height: 100,
-                background:
-                    `radial-gradient(circle at 4px 4px, ${C.paper} 1.5px, transparent 1.5px) 0 0 / 8px 8px, ${C.cream}`,
-                border: "1px solid rgba(29,24,21,0.18)",
-                padding: 4,
-                position: "relative",
-                flexShrink: 0,
+                background: `radial-gradient(circle at 4px 4px, ${C.paper} 1.5px, transparent 1.5px) 0 0 / 8px 8px, ${C.cream}`,
             }}
         >
             <div
+                className="w-full h-full relative overflow-hidden"
                 style={{
-                    width: "100%",
-                    height: "100%",
                     background: `linear-gradient(180deg, ${C.skyMid} 0%, ${C.skyLow} 50%, ${C.water} 51%, ${C.waterDeep} 100%)`,
-                    position: "relative",
-                    overflow: "hidden",
                 }}
             >
-                <svg viewBox="0 0 80 100" style={{ width: "100%", height: "100%", display: "block" }}>
+                <svg viewBox="0 0 80 100" className="w-full h-full block">
                     <path d="M 0 55 L 20 35 L 40 50 L 60 32 L 80 48 L 80 60 L 0 60 Z" fill={C.mountainShadow} />
                     <circle cx="60" cy="38" r="4" fill="#fff7e0" />
                     <path d="M 30 78 L 36 64 L 42 78 Z" fill={C.forestNear} />
@@ -240,16 +232,8 @@ export function DStamp() {
 export function DBadge({ children, color = C.clay }: { children: React.ReactNode; color?: string }) {
     return (
         <span
-            style={{
-                font: `700 11px/1 ${FM}`,
-                letterSpacing: "0.16em",
-                color,
-                border: `1px solid ${color}`,
-                padding: "5px 8px",
-                textTransform: "uppercase",
-                borderRadius: 2,
-                background: "transparent",
-            }}
+            className="font-mono-field text-[11px] leading-none tracking-[0.16em] uppercase rounded-[2px] bg-transparent py-[5px] px-2 font-bold"
+            style={{ color, border: `1px solid ${color}` }}
         >
             {children}
         </span>
@@ -259,11 +243,11 @@ export function DBadge({ children, color = C.clay }: { children: React.ReactNode
 // ─── Availability bars ────────────────────────────────────────────────────────
 export function DBars({ pattern, accent = C.forest, secondary = C.mustard }: { pattern: string; accent?: string; secondary?: string }) {
     return (
-        <div style={{ display: "flex", gap: 2, alignItems: "flex-end", height: 26 }}>
+        <div className="flex gap-[2px] items-end h-[26px]">
             {pattern.split("").map((ch, i) => {
                 const h = ch === "." ? 5 : ch === "y" ? 16 : 22;
                 const bg = ch === "." ? "rgba(26,22,20,0.15)" : ch === "y" ? secondary : accent;
-                return <div key={i} style={{ width: 6, height: h, background: bg, borderRadius: 1 }} />;
+                return <div key={i} className="w-[6px] rounded-[1px]" style={{ height: h, background: bg }} />;
             })}
         </div>
     );

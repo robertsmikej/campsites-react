@@ -8,17 +8,14 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { CampgroundLookup } from "@/components/campground-lookup";
-import { CW } from "@/components/field-notes/cw-tokens";
-import { FH, FI, FB, FM } from "@/components/field-notes/tokens";
 import { PasteUrlCard } from "./paste-url-card";
 import { BorrowListCard } from "./borrow-list-card";
 
 interface EmptyStateProps {
     onClone: () => Promise<void>;
-    isMobile: boolean;
 }
 
-export function EmptyState({ onClone, isMobile }: EmptyStateProps) {
+export function EmptyState({ onClone }: EmptyStateProps) {
     const [showLookup, setShowLookup] = useState(false);
     const [busy, setBusy] = useState(false);
 
@@ -27,33 +24,31 @@ export function EmptyState({ onClone, isMobile }: EmptyStateProps) {
         try { await onClone(); } finally { setBusy(false); }
     };
 
-    const pad = isMobile ? 22 : 36;
-
     return (
         <>
-            <section style={{ padding: `64px ${pad}px`, maxWidth: 960 }}>
-                <div style={{ font: `500 11px/1 ${FM}`, letterSpacing: "0.18em", color: CW.clay, marginBottom: 14, textTransform: "uppercase" }}>
+            <section className="px-[22px] md:px-9 py-16 max-w-[960px]">
+                <div className="font-mono-field text-[11px] font-medium leading-none tracking-[0.18em] text-cw-clay mb-[14px] uppercase">
                     Welcome aboard.
                 </div>
-                <h1 style={{ margin: "0 0 18px", letterSpacing: "-0.005em" }}>
-                    <span style={{ font: `900 ${isMobile ? 38 : 56}px/0.95 ${FH}`, textTransform: "uppercase", display: "block" }}>
+                <h1 className="m-0 mb-[18px] tracking-[-0.005em]">
+                    <span className="font-poster text-[38px] md:text-[56px] font-black leading-[0.95] uppercase block">
                         YOUR WATCHLIST
                     </span>
-                    <span style={{ font: `500 italic ${isMobile ? 38 : 56}px/0.95 ${FI}`, color: CW.forest, display: "block", marginTop: 4, letterSpacing: "-0.01em" }}>
+                    <span className="font-italic-serif text-[38px] md:text-[56px] font-medium italic leading-[0.95] text-cw-forest block mt-1 tracking-[-0.01em]">
                         is empty — for now.
                     </span>
                 </h1>
-                <p style={{ font: `400 18px/1.55 ${FB}`, color: CW.inkSoft, margin: "0 0 40px", maxWidth: 640 }}>
+                <p className="font-body-serif text-[18px] leading-[1.55] text-cw-ink-soft m-0 mb-10 max-w-[640px]">
                     Add a campground from <em>recreation.gov</em> and we&apos;ll start polling every five minutes. When a site you&apos;d actually take opens up, an email finds you. That&apos;s the whole thing.
                 </p>
 
-                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 18, marginBottom: 32 }}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-[18px] mb-8">
                     <PasteUrlCard onShowLookup={() => setShowLookup(true)} />
                     <BorrowListCard onClone={handleClone} busy={busy} />
                 </div>
 
-                <div style={{ display: "flex", alignItems: "center", gap: 10, font: `500 italic 15px/1.4 ${FI}`, color: CW.inkSubtle }}>
-                    <span style={{ width: 8, height: 8, borderRadius: 4, background: CW.mustard, flexShrink: 0 }} />
+                <div className="flex items-center gap-[10px] font-italic-serif text-[15px] font-medium italic leading-[1.4] text-cw-ink-subtle">
+                    <span className="w-2 h-2 rounded-full bg-cw-mustard shrink-0" />
                     Polling won&apos;t start until you add at least one campground. We&apos;ll never email an empty watchlist.
                 </div>
             </section>

@@ -1,7 +1,6 @@
 "use client";
 
-import { C, PAD_M } from "@/components/field-notes/tokens";
-import { useIsMobile } from "@/hooks/use-is-mobile";
+import { C } from "@/components/field-notes/tokens";
 import { useStats } from "@/contexts/stats-context";
 import { formatTimeAgo } from "@/components/field-notes/format-time-ago";
 import { StatTile } from "./stat-tile";
@@ -13,7 +12,6 @@ function formatCount(n: number | null | undefined): string {
 
 export function StatsBand() {
     const { stats, nowMs } = useStats();
-    const isMobile = useIsMobile();
 
     const tiles = [
         {
@@ -43,10 +41,10 @@ export function StatsBand() {
     ] as const;
 
     return (
-        <section style={{ background: C.forestDeep, color: C.cream, padding: isMobile ? `28px ${PAD_M}px` : "32px 56px", position: "relative" }}>
-            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr 1fr", gap: isMobile ? 24 : 48 }}>
+        <section className="relative py-7 px-[22px] md:py-8 md:px-14" style={{ background: C.waterDeep, color: C.cream }}>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-12">
                 {tiles.map((tile) => (
-                    <StatTile key={tile.label} {...tile} isMobile={isMobile} />
+                    <StatTile key={tile.label} {...tile} />
                 ))}
             </div>
         </section>

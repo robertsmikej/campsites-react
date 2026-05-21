@@ -1,12 +1,9 @@
 "use client";
 
 import type { DateRange } from "react-day-picker";
-import { FI } from "@/components/field-notes/tokens";
-import { CW } from "@/components/field-notes/cw-tokens";
 import { GroupingToggle } from "./grouping-toggle";
 import { DateRangeCalendar } from "./date-range-calendar";
 import { Legend } from "./legend";
-
 function formatShortRange(start: Date, end: Date): string {
     const fmt = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" });
     return `${fmt.format(start)} – ${fmt.format(end)}`;
@@ -34,8 +31,8 @@ export function DatePickerStrip({
     onGroupBy,
 }: DatePickerStripProps) {
     return (
-        <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 24, flexWrap: "wrap" }}>
-            <GroupingToggle groupBy={groupBy} onGroupBy={onGroupBy} isMobile={isMobile} />
+        <div className="flex gap-[10px] items-center mb-6 flex-wrap">
+            <GroupingToggle groupBy={groupBy} onGroupBy={onGroupBy} />
 
             <DateRangeCalendar
                 calRange={calRange}
@@ -45,7 +42,7 @@ export function DatePickerStrip({
                 isMobile={isMobile}
             />
 
-            <span style={{ font: `500 italic 14px/1 ${FI}`, color: CW.inkSoft }}>
+            <span className="font-italic-serif text-[14px] font-medium italic leading-none text-cw-ink-soft">
                 {formatShortRange(dateRange.start, dateRange.end)}
             </span>
 
