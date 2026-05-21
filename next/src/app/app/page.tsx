@@ -208,7 +208,7 @@ export default function AppPage() {
                     />
 
                     <main className="bg-cw-paper text-cw-ink font-body-serif min-h-screen">
-                        <div className="mx-auto w-full max-w-7xl">
+                        <div className="mx-auto w-full max-w-screen-2xl">
 
                         {/* Missing-from-default sync banner */}
                         {userCampgrounds.missingFromDefault.length > 0 && !dismissedSync && (
