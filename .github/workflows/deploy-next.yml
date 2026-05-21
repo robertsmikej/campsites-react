@@ -3,9 +3,6 @@ name: Deploy Next.js Worker
 on:
     push:
         branches: ["**"]
-        paths:
-            - "next/**"
-            - ".github/workflows/deploy-next.yml"
     workflow_dispatch: {}
 
 jobs:
