@@ -51,11 +51,48 @@ const caveat = Caveat({
     weight: ["400", "600"],
 });
 
+const SITE_URL = "https://campwatch.dev";
+const SITE_TITLE = "CampWatch — Never Miss a Campsite Opening";
+const SITE_DESCRIPTION = "Recreation.gov sells out in minutes. CampWatch watches the sites you actually want, every five minutes, and emails you the second one opens. No app, no notifications to babysit.";
+
 export const metadata: Metadata = {
-    title: "CampWatch — Never Miss a Campsite Opening",
-    description: "Get instant alerts when campsites open up at the places you actually want to camp.",
+    metadataBase: new URL(SITE_URL),
+    title: {
+        default: SITE_TITLE,
+        template: "%s · CampWatch",
+    },
+    description: SITE_DESCRIPTION,
+    applicationName: "CampWatch",
+    keywords: ["recreation.gov", "campsite alerts", "campground availability", "outdoors", "camping"],
+    authors: [{ name: "Mike Roberts" }],
+    creator: "Mike Roberts",
     icons: {
         icon: "/icon.svg",
+    },
+    openGraph: {
+        type: "website",
+        url: SITE_URL,
+        siteName: "CampWatch",
+        title: SITE_TITLE,
+        description: SITE_DESCRIPTION,
+        images: [
+            {
+                url: "/og-default.png",
+                width: 1200,
+                height: 630,
+                alt: "CampWatch — campsite availability alerts for recreation.gov",
+            },
+        ],
+    },
+    twitter: {
+        card: "summary_large_image",
+        title: SITE_TITLE,
+        description: SITE_DESCRIPTION,
+        images: ["/og-default.png"],
+    },
+    robots: {
+        index: true,
+        follow: true,
     },
 };
 
