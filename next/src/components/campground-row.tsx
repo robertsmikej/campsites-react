@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronRight, Star, StarOff } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 
 import {
     Sheet,
@@ -9,21 +9,18 @@ import {
     SheetHeader,
     SheetTitle,
 } from "@/components/ui/sheet";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { AvailabilityStrip } from "@/components/availability-strip";
 import { CampgroundDetail } from "@/components/campground-detail";
 import { useCampgroundDetails } from "@/hooks/use-campground-details";
+import { CampgroundThumbnail } from "@/components/campground/campground-thumbnail";
+import { CampgroundNameLine } from "@/components/campground/campground-name-line";
+import { OpenCountBadge } from "@/components/campground/open-count-badge";
+import { FavoriteStar } from "@/components/campground/favorite-star";
+import { getCampgroundOpenCount } from "@/components/campground/get-open-count";
+import { DEFAULT_IMAGE } from "@/components/campground/get-image-url";
 import type { SiteRatingsMap } from "@/components/availability-strip";
 import type { ProcessedCampground, GlobalSettings } from "@/types/campground";
-
-const DEFAULT_IMAGE = "/images/sites/bg_default.jpg";
-
-// Format a local date as YYYY-MM-DD without timezone drift.
-function toLocalIso(d: Date): string {
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
 
 interface CampgroundRowProps {
     campground: ProcessedCampground;
@@ -69,22 +66,7 @@ export function CampgroundRow({
         isLocalDefault && details?.previewImageUrl ? details.previewImageUrl : imageUrl;
 
     const isCompact = density === "compact";
-
-    // Count available stays within the active window (or all if no window).
-    const totalAvailable = Object.values(
-        campground.siteAvailability ?? {},
-    ).reduce((acc, site) => {
-        if (!windowStart || !windowEnd) {
-            return acc + (site.matches?.length ?? 0);
-        }
-        // Count only matches whose range overlaps the window
-        const winStartIso = toLocalIso(windowStart);
-        const winEndIso = toLocalIso(windowEnd);
-        const count = (site.matches ?? []).filter(
-            (m) => m.from <= winEndIso && m.to > winStartIso,
-        ).length;
-        return acc + count;
-    }, 0);
+    const totalAvailable = getCampgroundOpenCount(campground, windowStart, windowEnd);
 
     return (
         <Sheet open={open} onOpenChange={setOpen}>
@@ -107,36 +89,22 @@ export function CampgroundRow({
                 }}
             >
                 {/* Thumbnail */}
-                <div
-                    className={cn(
-                        "shrink-0 overflow-hidden rounded-md bg-muted bg-cover bg-center",
-                        isCompact ? "size-9" : "size-12",
-                    )}
-                    style={{ backgroundImage: `url(${effectiveImageUrl})` }}
-                    aria-hidden
+                <CampgroundThumbnail
+                    imageUrl={effectiveImageUrl}
+                    size={isCompact ? "sm" : "md"}
                 />
 
-                {/* Name + area */}
+                {/* Name + area + open count */}
                 <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                        <h3 className={cn(
-                            "truncate font-display font-semibold leading-tight",
-                            isCompact ? "text-sm" : "text-base",
-                        )}>
-                            {campground.name}
-                        </h3>
-                        {totalAvailable === 0 ? (
-                            <Badge
-                                variant="secondary"
-                                className={cn("shrink-0", isCompact ? "text-[9px]" : "text-[10px]")}
-                            >
-                                Nothing open
-                            </Badge>
-                        ) : (
-                            <Badge className={cn("shrink-0 bg-primary text-primary-foreground", isCompact ? "text-[9px]" : "text-[10px]")}>
-                                {totalAvailable} open
-                            </Badge>
-                        )}
+                        <CampgroundNameLine
+                            name={campground.name}
+                            nameClassName={isCompact ? "text-sm" : "text-base"}
+                        />
+                        <OpenCountBadge
+                            count={totalAvailable}
+                            variant={isCompact ? "compact" : "default"}
+                        />
                     </div>
                     {!isCompact && (
                         <p className="truncate text-xs text-muted-foreground">
@@ -157,26 +125,12 @@ export function CampgroundRow({
                     />
                 </div>
 
-                {/* Favorite toggle — hidden in readOnly mode */}
-                {!readOnly && (
-                    <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onToggleFavorite();
-                        }}
-                        aria-label={
-                            isFavorite ? "Remove favorite" : "Add favorite"
-                        }
-                    >
-                        {isFavorite ? (
-                            <Star className="size-4 fill-primary text-primary" />
-                        ) : (
-                            <StarOff className="size-4 text-muted-foreground" />
-                        )}
-                    </Button>
-                )}
+                {/* Favorite toggle */}
+                <FavoriteStar
+                    isFavorite={isFavorite}
+                    onToggle={onToggleFavorite}
+                    hidden={readOnly}
+                />
 
                 {/* Chevron caret */}
                 <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
