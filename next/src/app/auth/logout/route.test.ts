@@ -68,11 +68,11 @@ describe("POST /auth/logout", () => {
 
         const { POST } = await import("./route");
         const res = await POST(
-            new Request("https://app.campwatch.io/auth/logout", {
+            new Request("https://campwatch.dev/auth/logout", {
                 method: "POST",
             }),
         );
 
-        expect(res.headers.get("Location")).toBe("https://app.campwatch.io/");
+        expect(res.headers.get("Location")).toBe("https://campwatch.dev/");
     });
 });

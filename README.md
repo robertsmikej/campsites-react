@@ -19,7 +19,7 @@ notifier/     Node script run as a GitHub Actions cron every 15 minutes.
 
 workers-site/ Tiny redirect Worker (the legacy `campsites-finder` URL).
               307-redirects every request to the corresponding path on
-              campwatch.*. Kept alive so old unsubscribe links in
+              campwatch.dev. Kept alive so old unsubscribe links in
               already-sent emails continue to work.
 
 legacy/cra/   The previous Create React App build of the same product.

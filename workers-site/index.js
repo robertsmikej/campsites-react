@@ -7,7 +7,7 @@
 // Redirect) responses too aggressively for our taste, so 307 is the safer
 // default during the migration window.
 
-const TARGET_ORIGIN = "https://campwatch.mikeroberts421.workers.dev";
+const TARGET_ORIGIN = "https://campwatch.dev";
 
 const cors = (response) => {
     response.headers.set("Access-Control-Allow-Origin", "*");
