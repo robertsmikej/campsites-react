@@ -116,7 +116,9 @@ export async function verifyIdToken(
 ): Promise<GoogleIdTokenPayload> {
     const parts = idToken.split(".");
     if (parts.length !== 3) throw new Error("Malformed ID token");
-    const [headerB64, payloadB64, signatureB64] = parts;
+    const headerB64 = parts[0] ?? "";
+    const payloadB64 = parts[1] ?? "";
+    const signatureB64 = parts[2] ?? "";
 
     const header = base64UrlDecodeJson<{ alg: string; kid: string }>(headerB64);
     if (header.alg !== "RS256") throw new Error(`Unsupported alg: ${header.alg}`);

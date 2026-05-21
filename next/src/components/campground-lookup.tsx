@@ -39,7 +39,7 @@ function parseInput(s: string): string | null {
     const trimmed = s.trim();
     // URL: recreation.gov/camping/campgrounds/233137 etc.
     const urlMatch = trimmed.match(/recreation\.gov\/[^?#]*?\/(\d{4,7})(?:[/?#]|$)/i);
-    if (urlMatch) return urlMatch[1];
+    if (urlMatch) return urlMatch[1] ?? null;
     // Bare numeric ID
     if (/^\d{4,7}$/.test(trimmed)) return trimmed;
     return null;
@@ -170,7 +170,6 @@ function ResultCard({
 
     const cg = result.cg!;
     const isOnList = result.state === "on-list" || addedSuccess;
-    const _isNew = result.state === "new"; // reserved for future "new campground" badge
     const isWatched = result.state === "watched";
 
     let statusLabel: string;

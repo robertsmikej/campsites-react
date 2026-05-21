@@ -9,7 +9,9 @@ export function createDragEndHandler<T extends { id?: string }>(items: T[], setI
         const to = ids.indexOf(String(over.id));
         if (from < 0 || to < 0) return;
         const next = [...items];
-        const [moved] = next.splice(from, 1);
+        const spliced = next.splice(from, 1);
+        const moved = spliced[0];
+        if (moved === undefined) return;
         next.splice(to, 0, moved);
         setItems(next);
     };

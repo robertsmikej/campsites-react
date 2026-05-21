@@ -3,10 +3,7 @@
 
 import type { StayMatch } from "../../next/src/types/campground";
 
-const DELAY_BETWEEN_REQUESTS_MS = 50;
 const IGNORE_TYPES = ["GROUP SHELTER NONELECTRIC", "WALK TO", "DAY USE"];
-
-const delay = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
 // ── Internal types ────────────────────────────────────────────────────────────
 
@@ -45,7 +42,7 @@ export const getAllDatesInRange = (start: string, end: string): string[] => {
     const current = new Date(start);
     const final = new Date(end);
     while (current <= final) {
-        result.push(current.toISOString().split("T")[0]);
+        result.push(current.toISOString().split("T")[0] ?? "");
         current.setDate(current.getDate() + 1);
     }
     return result;
@@ -56,19 +53,21 @@ export const findConsecutiveAvailableRanges = (dates: string[], length: number):
     const ranges: [string, string][] = [];
     const timestamps = dates.map((d) => new Date(d).getTime());
     for (let i = 0; i <= timestamps.length - length; ) {
+        const iTs = timestamps[i] ?? 0;
         let isConsecutive = true;
         for (let j = 1; j < length; j++) {
-            const expected = timestamps[i] + j * 86400000;
-            if (timestamps[i + j] !== expected) {
+            const expected = iTs + j * 86400000;
+            if ((timestamps[i + j] ?? -1) !== expected) {
                 isConsecutive = false;
                 break;
             }
         }
         if (isConsecutive) {
-            const from = new Date(timestamps[i]).toISOString().split("T")[0];
-            const toDate = new Date(timestamps[i + length - 1]);
+            const from = new Date(iTs).toISOString().split("T")[0] ?? "";
+            const lastTs = timestamps[i + length - 1] ?? iTs;
+            const toDate = new Date(lastTs);
             toDate.setDate(toDate.getDate() + 1);
-            const to = toDate.toISOString().split("T")[0];
+            const to = toDate.toISOString().split("T")[0] ?? "";
             ranges.push([from, to]);
             i += length;
         } else {
@@ -143,16 +142,17 @@ export const processCampgroundResults = (
 
             const validDates = Object.entries(siteData.availabilities)
                 .filter(([, status]) => status === "Available")
-                .map(([date]) => date.split("T")[0])
+                .map(([date]) => date.split("T")[0] ?? "")
                 .filter((date) => allDates.includes(date));
 
-            siteAvailability[siteId].dates.push(...validDates);
+            siteAvailability[siteId]?.dates.push(...validDates);
         }
     }
 
     // For each site, find matching stay ranges
     for (const siteId in siteAvailability) {
         const site = siteAvailability[siteId];
+        if (!site) continue;
         const uniqueDates = [...new Set(site.dates)].sort();
         const stayMatches: StayMatch[] = [];
 
@@ -160,7 +160,10 @@ export const processCampgroundResults = (
             const allRangesForLength = findConsecutiveAvailableRanges(uniqueDates, length);
 
             for (const [from, to] of allRangesForLength) {
-                const [y, m, d] = from.split("-").map(Number);
+                const parts = from.split("-").map(Number);
+                const y = parts[0] ?? 0;
+                const m = parts[1] ?? 1;
+                const d = parts[2] ?? 1;
                 const startDay = new Date(Date.UTC(y, m - 1, d)).toLocaleString("en-US", {
                     weekday: "long",
                     timeZone: "UTC",

@@ -96,7 +96,8 @@ describe("GET /api/admin/notification-targets", () => {
         const body = (await res.json()) as {
             targets: Array<{ notifications: { enabled: boolean; frequencyMinutes: number } }>;
         };
-        expect(body.targets[0].notifications).toEqual({ enabled: true, frequencyMinutes: 15 });
+        // Each test sets up exactly one user in KV, so targets[0] is guaranteed.
+        expect(body.targets[0]!.notifications).toEqual({ enabled: true, frequencyMinutes: 15 });
     });
 
     it("includes notifierState from KV when present", async () => {
@@ -124,8 +125,9 @@ describe("GET /api/admin/notification-targets", () => {
         const body = (await res.json()) as {
             targets: Array<{ notifierState: unknown; lastNotifiedAt?: string }>;
         };
-        expect(body.targets[0].notifierState).toEqual({ signatures: ["a", "b"] });
-        expect(body.targets[0].lastNotifiedAt).toBe("2026-05-15T01:00:00.000Z");
+        // Each test sets up exactly one user in KV, so targets[0] is guaranteed.
+        expect(body.targets[0]!.notifierState).toEqual({ signatures: ["a", "b"] });
+        expect(body.targets[0]!.lastNotifiedAt).toBe("2026-05-15T01:00:00.000Z");
     });
 
     it("includes roles in each target", async () => {
@@ -150,7 +152,8 @@ describe("GET /api/admin/notification-targets", () => {
         const res = await get(`Bearer ${SECRET}`);
         expect(res.status).toBe(200);
         const body = (await res.json()) as { targets: Array<{ roles: string[] }> };
-        expect(body.targets[0].roles).toEqual(["curator"]);
+        // Each test sets up exactly one user in KV, so targets[0] is guaranteed.
+        expect(body.targets[0]!.roles).toEqual(["curator"]);
     });
 
     it("returns notifierState: null when no state has been stored", async () => {
@@ -174,6 +177,7 @@ describe("GET /api/admin/notification-targets", () => {
 
         const res = await get(`Bearer ${SECRET}`);
         const body = (await res.json()) as { targets: Array<{ notifierState: unknown }> };
-        expect(body.targets[0].notifierState).toBeNull();
+        // Each test sets up exactly one user in KV, so targets[0] is guaranteed.
+        expect(body.targets[0]!.notifierState).toBeNull();
     });
 });

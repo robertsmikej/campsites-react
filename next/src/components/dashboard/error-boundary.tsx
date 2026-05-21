@@ -12,17 +12,17 @@ interface State {
 }
 
 export class DashboardErrorBoundary extends Component<Props, State> {
-    state: State = { error: null };
+    override state: State = { error: null };
 
     static getDerivedStateFromError(error: Error): State {
         return { error };
     }
 
-    componentDidCatch(error: Error, info: ErrorInfo) {
+    override componentDidCatch(error: Error, info: ErrorInfo) {
         console.error(`[DashboardErrorBoundary:${this.props.section}]`, error, info);
     }
 
-    render() {
+    override render() {
         if (this.state.error) {
             return (
                 <div className="my-4 rounded-lg border border-cw-rule bg-cw-cream px-4 py-3 text-sm">

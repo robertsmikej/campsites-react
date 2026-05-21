@@ -6,7 +6,10 @@ import { siteGroups } from "@/lib/settings";
 // ---------------------------------------------------------------------------
 
 export const formatToMMDDYYYY = (dateStr: string): string => {
-    const [year, month, day] = dateStr.split("-");
+    const parts = dateStr.split("-");
+    const year = parts[0] ?? "";
+    const month = parts[1] ?? "";
+    const day = parts[2] ?? "";
     return `${month}/${day}/${year}`;
 };
 
@@ -22,11 +25,11 @@ export function getDayOfWeek(
 ): string | number {
     const dayNumber = new Date(dateStr).getUTCDay();
     if (!returnString) return dayNumber;
-    return longForm ? dayNamesLong[dayNumber] : dayNamesShort[dayNumber];
+    return longForm ? (dayNamesLong[dayNumber] ?? "") : (dayNamesShort[dayNumber] ?? "");
 }
 
 export const getShortenedDayOfWeek = (dayStr: string): string => {
-    return dayNamesShort[dayNamesLong.indexOf(dayStr)];
+    return dayNamesShort[dayNamesLong.indexOf(dayStr)] ?? "";
 };
 
 export const getDateForCurrentMonth = (monthNum = 1): string => {
@@ -160,6 +163,7 @@ export const formatGroupsByFavorites = (
 
         for (const siteId in campground.siteAvailability) {
             const site = campground.siteAvailability[siteId];
+            if (!site) continue;
             if ((site.matches?.length ?? 0) > 0 || (site.excludedMatches?.length ?? 0) > 0) {
                 if ((site.matches?.length ?? 0) > 0) {
                     campground.hasAvailability = true;

@@ -5,6 +5,14 @@
         "allowJs": true,
         "skipLibCheck": true,
         "strict": true,
+        "noUncheckedIndexedAccess": true,
+        "noImplicitOverride": true,
+        "noFallthroughCasesInSwitch": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        // exactOptionalPropertyTypes: skipped — produces 30 errors across 22 files including
+        // shadcn-generated ui/ components and Cloudflare KV types. The fixes would require
+        // touching third-party generated code and widespread type-narrowing for little practical gain.
         "noEmit": true,
         "esModuleInterop": true,
         "module": "esnext",

@@ -131,7 +131,7 @@ const getCache = (
         }
 
         for (const system in sites) {
-            const expectedIds = new Set(sites[system].map((c) => c.id));
+            const expectedIds = new Set((sites[system] ?? []).map((c) => c.id));
             const cachedIds = new Set((entry.data?.[system] || []).map((c: ProcessedCampground) => c.id));
             for (const id of expectedIds) {
                 if (!cachedIds.has(id)) {
@@ -147,7 +147,7 @@ const getCache = (
         for (const system in entry.data) {
             if (sites[system]) {
                 (entry.data[system] as ProcessedCampground[]).forEach((cachedCampground) => {
-                    const currentConfig = sites[system].find((c) => c.id === cachedCampground.id);
+                    const currentConfig = (sites[system] ?? []).find((c) => c.id === cachedCampground.id);
                     if (currentConfig?.showOrHide) {
                         cachedCampground.showOrHide = { ...currentConfig.showOrHide };
                     }
@@ -251,12 +251,12 @@ export const makeAllRequests = async (
 ): Promise<Array<RecreationGovMonthResponse | null>> => {
     const allResults: Array<RecreationGovMonthResponse | null> = [];
     const total = siteFetchMap.length;
-    for (let i = 0; i < siteFetchMap.length; i++) {
-        const { campground, month } = siteFetchMap[i];
+    for (const entry of siteFetchMap) {
+        const { campground, month } = entry;
         const result = await fetchData(campground.id, month);
         allResults.push(result);
         if (typeof onProgress === "function") {
-            onProgress(i + 1, total);
+            onProgress(allResults.length, total);
         }
         await delay(DELAY_BETWEEN_REQUESTS_MS);
     }
@@ -269,12 +269,12 @@ const makeMockRequests = async (
 ): Promise<Array<RecreationGovMonthResponse | null>> => {
     const total = siteFetchMap.length;
     const allResults: Array<RecreationGovMonthResponse | null> = [];
-    for (let i = 0; i < siteFetchMap.length; i++) {
-        const { campground, month } = siteFetchMap[i];
+    for (const entry of siteFetchMap) {
+        const { campground, month } = entry;
         const result = getMockApiResponse(campground.id, month);
         allResults.push(result);
         if (typeof onProgress === "function") {
-            onProgress(i + 1, total);
+            onProgress(allResults.length, total);
         }
     }
     return allResults;
@@ -309,13 +309,15 @@ const processApiResults = (
 
     // Then process API results for availability data
     allResults.forEach((data, index) => {
-        const { system, campground, allDates } = siteFetchMap[index];
+        const mapEntry = siteFetchMap[index];
+        if (!mapEntry) return;
+        const { system, campground, allDates } = mapEntry;
         console.log(
             `[API Response] Campground ${campground.id}:`,
             data ? `${Object.keys(data.campsites || {}).length} campsites returned` : "No data",
         );
         if (data && data.campsites) {
-            const campgroundEntry = results[system].find((c) => c.id === campground.id)!;
+            const campgroundEntry = (results[system] ?? []).find((c) => c.id === campground.id)!;
 
             for (const [siteId, siteData] of Object.entries(data.campsites)) {
                 if (settings?.ignoreTypes?.includes(siteData.campsite_type ?? "")) {
@@ -332,7 +334,7 @@ const processApiResults = (
                 }
                 const validDates = Object.entries(siteData.availabilities)
                     .filter(([, status]) => status === "Available")
-                    .map(([date]) => date.split("T")[0])
+                    .map(([date]) => date.split("T")[0] ?? "")
                     .filter((date) => allDates.includes(date));
 
                 if (validDates.length > 0) {
@@ -340,11 +342,12 @@ const processApiResults = (
                         `  [Available] Site ${siteData.site} (${siteId}): ${validDates.length} available dates`,
                     );
                 }
-                campgroundEntry.siteAvailability[siteId].dates.push(...validDates);
+                campgroundEntry.siteAvailability[siteId]?.dates.push(...validDates);
             }
 
             for (const siteId in campgroundEntry.siteAvailability) {
                 const site = campgroundEntry.siteAvailability[siteId];
+                if (!site) continue;
                 const uniqueDates = [...new Set(site.dates)].sort();
                 const stayMatches: StayMatch[] = [];
                 const excludedRanges: ExcludedStay[] = [];
@@ -357,7 +360,10 @@ const processApiResults = (
                     const allRangesForLength = findConsecutiveAvailableRanges(uniqueDates, length);
 
                     for (const [from, to] of allRangesForLength) {
-                        const [y, m, d] = from.split("-").map(Number);
+                        const parts = from.split("-").map(Number);
+                        const y = parts[0] ?? 0;
+                        const m = parts[1] ?? 1;
+                        const d = parts[2] ?? 1;
                         const startDay = new Date(Date.UTC(y, m - 1, d)).toLocaleString("en-US", {
                             weekday: "long",
                             timeZone: "UTC",
@@ -431,7 +437,7 @@ const processApiResults = (
 
     // Summary log
     for (const system in results) {
-        results[system].forEach((campground) => {
+        (results[system] ?? []).forEach((campground) => {
             const totalMatches = Object.values(campground.siteAvailability).reduce(
                 (sum, site) => sum + (site.matches?.length || 0),
                 0,
@@ -456,6 +462,7 @@ const calculateExcludedMatches = (
 
             for (const siteId in campground.siteAvailability) {
                 const site = campground.siteAvailability[siteId];
+                if (!site) continue;
                 const uniqueDates = [...new Set(site.dates || [])].sort();
                 const excludedRanges: ExcludedStay[] = [];
 
@@ -463,7 +470,10 @@ const calculateExcludedMatches = (
                     const allRangesForLength = findConsecutiveAvailableRanges(uniqueDates, length);
 
                     for (const [from, to] of allRangesForLength) {
-                        const [y, m, d] = from.split("-").map(Number);
+                        const parts = from.split("-").map(Number);
+                        const y = parts[0] ?? 0;
+                        const m = parts[1] ?? 1;
+                        const d = parts[2] ?? 1;
                         const startDay = new Date(Date.UTC(y, m - 1, d)).toLocaleString("en-US", {
                             weekday: "long",
                             timeZone: "UTC",
@@ -520,10 +530,11 @@ const reorderResultsByConfig = (
 ): Record<string, ProcessedCampground[]> => {
     const reordered: Record<string, ProcessedCampground[]> = {};
     for (const system in siteConfig) {
-        if (!results[system]) continue;
-        const configOrder = siteConfig[system].filter((c) => c.enabled !== false).map((c) => c.id);
+        const systemResults = results[system];
+        if (!systemResults) continue;
+        const configOrder = (siteConfig[system] ?? []).filter((c) => c.enabled !== false).map((c) => c.id);
         reordered[system] = configOrder
-            .map((id) => results[system].find((c) => c.id === id))
+            .map((id) => systemResults.find((c) => c.id === id))
             .filter((c): c is ProcessedCampground => Boolean(c));
     }
     return reordered;
@@ -587,7 +598,7 @@ export const getAllDatesInRange = (start: string, end: string): string[] => {
     const current = new Date(start);
     const final = new Date(end);
     while (current <= final) {
-        result.push(current.toISOString().split("T")[0]);
+        result.push(current.toISOString().split("T")[0] ?? "");
         current.setDate(current.getDate() + 1);
     }
     return result;
@@ -597,19 +608,21 @@ export const findConsecutiveAvailableRanges = (dates: string[], length: number):
     const ranges: [string, string][] = [];
     const timestamps = dates.map((d) => new Date(d).getTime());
     for (let i = 0; i <= timestamps.length - length; ) {
+        const iTs = timestamps[i] ?? 0;
         let isConsecutive = true;
         for (let j = 1; j < length; j++) {
-            const expected = timestamps[i] + j * 86400000;
-            if (timestamps[i + j] !== expected) {
+            const expected = iTs + j * 86400000;
+            if ((timestamps[i + j] ?? -1) !== expected) {
                 isConsecutive = false;
                 break;
             }
         }
         if (isConsecutive) {
-            const from = new Date(timestamps[i]).toISOString().split("T")[0];
-            const toDate = new Date(timestamps[i + length - 1]);
+            const from = new Date(iTs).toISOString().split("T")[0] ?? "";
+            const lastTs = timestamps[i + length - 1] ?? iTs;
+            const toDate = new Date(lastTs);
             toDate.setDate(toDate.getDate() + 1);
-            const to = toDate.toISOString().split("T")[0];
+            const to = toDate.toISOString().split("T")[0] ?? "";
             ranges.push([from, to]);
             i += length;
         } else {

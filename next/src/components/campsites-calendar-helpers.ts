@@ -27,7 +27,10 @@ export interface DisplayRange {
 
 /** Parse an ISO date string "YYYY-MM-DD" into a UTC midnight Date. */
 function parseUTC(iso: string): Date {
-    const [y, m, d] = iso.split("-").map(Number);
+    const parts = iso.split("-").map(Number);
+    const y = parts[0] ?? 0;
+    const m = parts[1] ?? 1;
+    const d = parts[2] ?? 1;
     return new Date(Date.UTC(y, m - 1, d));
 }
 
@@ -55,17 +58,6 @@ function addOneMonthISO(iso: string): string {
 /** Compare two ISO date strings. Returns negative / 0 / positive. */
 function cmpISO(a: string, b: string): number {
     return a < b ? -1 : a > b ? 1 : 0;
-}
-
-/** Iterate each calendar day from `from` up to AND INCLUDING `to`. */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function* eachDayInclusive(from: string, to: string): Generator<string> {
-    const cursor = parseUTC(from);
-    const end = parseUTC(to);
-    while (cursor <= end) {
-        yield fmtUTC(cursor);
-        cursor.setUTCDate(cursor.getUTCDate() + 1);
-    }
 }
 
 /** Iterate each calendar day from `from` STRICTLY BEFORE `to`. */

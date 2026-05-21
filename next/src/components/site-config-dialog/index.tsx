@@ -124,7 +124,7 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
         setViewMode("cards");
         setExpandedPanels(new Set([idx]));
         // Scroll to the panel after a brief paint delay
-        const id = `campground-panel-${campgrounds[idx].id || `idx-${idx}`}`;
+        const id = `campground-panel-${campgrounds[idx]?.id || `idx-${idx}`}`;
         requestAnimationFrame(() => {
             document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "nearest" });
         });
@@ -216,7 +216,7 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
         const indices = values
             .map((v) => {
                 const match = v.match(/^campground-(\d+)$/);
-                return match ? parseInt(match[1], 10) : -1;
+                return match ? parseInt(match[1] ?? "", 10) : -1;
             })
             .filter((i) => i >= 0);
         setExpandedPanels(new Set(indices));

@@ -157,7 +157,8 @@ describe("POST /api/users/me/campgrounds/items", () => {
             updatedAt: string;
         };
         expect(body.campgrounds["recreation.gov"]).toHaveLength(1);
-        expect(body.campgrounds["recreation.gov"][0].id).toBe("campground-a");
+        // Test sets up exactly one campground, so [0] is guaranteed.
+        expect(body.campgrounds["recreation.gov"][0]!.id).toBe("campground-a");
         expect(typeof body.updatedAt).toBe("string");
 
         // Verify it was persisted in KV

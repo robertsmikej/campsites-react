@@ -31,7 +31,7 @@ export function parseFacilityId(input: string): string | null {
     const match = url.pathname.match(/\/campgrounds\/(\d+)(?:\/|$)/);
     if (!match) return null;
 
-    return match[1];
+    return match[1] ?? null;
 }
 
 interface RecGovCampground {
@@ -44,7 +44,7 @@ interface RecGovCampground {
 function titleCase(s: string): string {
     return s
         .split(" ")
-        .map((w) => (w.length > 0 ? w[0].toUpperCase() + w.slice(1).toLowerCase() : w))
+        .map((w) => (w.length > 0 ? (w[0] ?? "").toUpperCase() + w.slice(1).toLowerCase() : w))
         .join(" ");
 }
 

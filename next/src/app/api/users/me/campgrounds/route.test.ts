@@ -287,7 +287,8 @@ describe("PUT /api/users/me/campgrounds", () => {
             campgrounds: { "recreation.gov": { id: string }[] };
             globalSettings: { stayLengths: number[] };
         };
-        expect(defaultParsed.campgrounds["recreation.gov"][0].id).toBe("232312");
+        // Default config always has at least one campground, so [0] is guaranteed.
+        expect(defaultParsed.campgrounds["recreation.gov"][0]!.id).toBe("232312");
         expect(defaultParsed.globalSettings.stayLengths).toEqual([2, 3, 4]);
     });
 });

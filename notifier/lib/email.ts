@@ -36,7 +36,10 @@ const generateUnsubscribeToken = (email: string, secret: string): string => {
 };
 
 const formatDate = (dateStr: string): string => {
-    const [y, m, d] = dateStr.split("-").map(Number);
+    const parts = dateStr.split("-").map(Number);
+    const y = parts[0] ?? 0;
+    const m = parts[1] ?? 1;
+    const d = parts[2] ?? 1;
     const date = new Date(Date.UTC(y, m - 1, d));
     const day = DAY_NAMES[date.getUTCDay()];
     const month = MONTH_NAMES[date.getUTCMonth()];
@@ -369,13 +372,13 @@ export const formatEmail = (newMatches: MatchResult[], options: FormatEmailOptio
                 matches: [],
             };
         }
-        byCampground[m.campgroundName].matches.push(m);
+        byCampground[m.campgroundName]?.matches.push(m);
     }
 
     // Sort: favorites first within each campground
     const groupOrder: Record<string, number> = { favorites: 0, worthwhile: 1, "all-others": 2 };
     for (const name in byCampground) {
-        byCampground[name].matches.sort((a, b) => groupOrder[a.group] - groupOrder[b.group]);
+        byCampground[name]?.matches.sort((a, b) => (groupOrder[a.group] ?? 0) - (groupOrder[b.group] ?? 0));
     }
 
     // ── Timestamp ────────────────────────────────────────────────────────────

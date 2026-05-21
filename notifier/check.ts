@@ -159,7 +159,9 @@ async function fetchDeduped(plan: FetchPlanItem[]): Promise<Record<string, unkno
 
     const rawByCampground: Record<string, unknown[]> = {};
     for (let i = 0; i < plan.length; i++) {
-        const { campgroundId, month } = plan[i];
+        const planEntry = plan[i];
+        if (!planEntry) continue;
+        const { campgroundId, month } = planEntry;
         const result = await fetchMonth(campgroundId, month);
         if (!rawByCampground[campgroundId]) rawByCampground[campgroundId] = [];
         rawByCampground[campgroundId].push(result);
@@ -573,10 +575,10 @@ async function main(): Promise<void> {
         sortedLatencies.length === 0
             ? Number(priorStats?.medianLatencyMs) || 0
             : sortedLatencies.length % 2 === 1
-              ? sortedLatencies[(sortedLatencies.length - 1) / 2]
+              ? (sortedLatencies[(sortedLatencies.length - 1) / 2] ?? 0)
               : Math.round(
-                    (sortedLatencies[sortedLatencies.length / 2 - 1] +
-                        sortedLatencies[sortedLatencies.length / 2]) /
+                    ((sortedLatencies[sortedLatencies.length / 2 - 1] ?? 0) +
+                        (sortedLatencies[sortedLatencies.length / 2] ?? 0)) /
                         2,
                 );
 

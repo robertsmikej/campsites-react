@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { useUserCampgrounds } from "@/hooks/use-user-campgrounds";
 import { useCampgroundsData } from "@/hooks/use-campgrounds-data";
 import { useAuth } from "@/hooks/use-auth";
-import { clearCampgroundCache } from "@/lib/recreation-gov";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useNowTick } from "@/hooks/use-now-tick";
 import { useRecentOpenings } from "@/hooks/use-recent-openings";
@@ -79,7 +78,7 @@ export default function AppPage() {
         [globalSettings, useMockData],
     );
 
-    const { campgroundsByAreas, isFetching, progressBarData, refresh } = useCampgroundsData({
+    const { campgroundsByAreas, isFetching, progressBarData } = useCampgroundsData({
         siteConfig,
         settings,
         useMockData,
@@ -115,20 +114,6 @@ export default function AppPage() {
 
     const isLoading = isFetching || isHydrating;
     const isEmpty = !userCampgrounds.isHydrating && userCampgrounds.isEmpty;
-
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- kept for future top-bar menu
-    const topBarMenuItems = [
-        { label: "Configure Sites", action: () => setIsConfigDialogOpen(true) },
-        { label: isLoading ? "Refreshing…" : "Refresh data", action: () => refresh(), disabled: isLoading },
-        {
-            label: "Clear cache",
-            action: () => {
-                clearCampgroundCache();
-                refresh();
-            },
-            disabled: isLoading,
-        },
-    ];
 
     // Compute open counts within date range
     const openCounts = useMemo(() => {
