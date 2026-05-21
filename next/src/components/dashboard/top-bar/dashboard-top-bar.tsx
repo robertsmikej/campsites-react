@@ -45,7 +45,7 @@ export function DashboardTopBar({ auth, onAddCampground }: DashboardTopBarProps)
     return (
         <>
             <header className="sticky top-0 z-30 backdrop-blur-md border-b border-cw-rule bg-[rgba(244,234,216,0.95)]">
-                <div className="flex items-center gap-[18px] px-9 py-4">
+                <div className="mx-auto w-full max-w-7xl flex items-center gap-[18px] px-9 py-4">
                     {/* Logo + wordmark */}
                     <Link
                         href={auth.user ? "/app" : "/"}

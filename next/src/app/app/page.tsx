@@ -208,6 +208,7 @@ export default function AppPage() {
                     />
 
                     <main className="bg-cw-paper text-cw-ink font-body-serif min-h-screen">
+                        <div className="mx-auto w-full max-w-7xl">
 
                         {/* Missing-from-default sync banner */}
                         {userCampgrounds.missingFromDefault.length > 0 && !dismissedSync && (
@@ -294,6 +295,7 @@ export default function AppPage() {
                             <span>Built by a camper, for campers</span>
                             <span>{siteData.name}</span>
                         </footer>
+                        </div>
                     </main>
 
                     <SiteConfigDialog
