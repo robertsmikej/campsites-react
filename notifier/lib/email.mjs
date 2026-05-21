@@ -28,24 +28,31 @@ const buildReservationLink = (siteId, fromDate, nights) => {
     return `https://www.recreation.gov/camping/campsites/${siteId}?arrivalDate=${arrival}&departureDate=${departure}`;
 };
 
-// ── Palette (hex literals — email clients don't support CSS variables) ──────
+// ── Palette ──────────────────────────────────────────────────────────────────
 const C = {
     paper:       '#F4EAD8',
     cream:       '#FBF6EA',
     ink:         '#1A1614',
-    inkSoft:     'rgba(26,22,20,0.70)',
-    inkFaint:    'rgba(26,22,20,0.50)',
-    rule:        'rgba(26,22,20,0.18)',
+    inkSoft:     '#5e554e',
+    inkSubtle:   '#8c8278',
+    rule:        '#d9cebb',
+    ruleSoft:    '#e8dfcb',
     forest:      '#1F3D2A',
+    forestDeep:  '#142a1d',
     clay:        '#B65C3F',
     mustard:     '#C9A227',
+    sand:        '#f6c79c',
+    creampale:   'rgba(251,246,234,0.55)',
+    creamwarm:   'rgba(251,246,234,0.78)',
+    creamlink:   'rgba(251,246,234,0.70)',
 };
 
-// ── Type stacks ──────────────────────────────────────────────────────────────
+// ── Font cascades ─────────────────────────────────────────────────────────────
 const F = {
-    poster:  '"Arial Black", "Helvetica Neue", Helvetica, Arial, sans-serif',
-    serif:   'Georgia, "Times New Roman", serif',
-    mono:    '"Courier New", Courier, monospace',
+    poster: `'Big Shoulders Display', Impact, 'Arial Black', sans-serif`,
+    ital:   `Georgia, 'Times New Roman', serif`,
+    body:   `Georgia, 'Times New Roman', serif`,
+    mono:   `'Courier New', Courier, monospace`,
 };
 
 export const formatEmail = (newMatches, options = {}) => {
@@ -53,7 +60,7 @@ export const formatEmail = (newMatches, options = {}) => {
     const unsubscribeOptions = { unsubscribeUrl, email, apiSecret };
     const count = newMatches.length;
 
-    // Subject line — show campground names so it's easy to scan
+    // Subject line
     const uniqueCampgroundNames = [...new Set(newMatches.map((m) => m.campgroundName))];
     let subject;
     if (count === 1) {
@@ -77,16 +84,6 @@ export const formatEmail = (newMatches, options = {}) => {
         byCampground[name].matches.sort((a, b) => groupOrder[a.group] - groupOrder[b.group]);
     }
 
-    // ── Header headline ──────────────────────────────────────────────────────
-    // e.g. "2 OPENINGS — OUTLET, PINE FLATS"
-    const shortNames = uniqueCampgroundNames
-        .map((n) => n.replace(/\s+campground$/i, '').toUpperCase())
-        .join(', ');
-    const headlineCount = `${count} OPENING${count === 1 ? '' : 'S'}`;
-    const italicLine = count === 1
-        ? `Hello &mdash; one new opening this morning.`
-        : `Hello &mdash; ${count} new openings this morning.`;
-
     // ── Timestamp ────────────────────────────────────────────────────────────
     const now = new Date();
     const timestamp = now.toLocaleString('en-US', {
@@ -94,101 +91,225 @@ export const formatEmail = (newMatches, options = {}) => {
         dateStyle: 'medium',
         timeStyle: 'short',
     });
-    // Compact date for the envelope header (MM.DD.YYYY)
-    const dateStamp = now.toLocaleDateString('en-US', {
-        timeZone: 'America/Boise',
-        month: '2-digit',
-        day:   '2-digit',
-        year:  'numeric',
-    }).replace(/\//g, '.');
-    const timeStamp = now.toLocaleTimeString('en-US', {
-        timeZone: 'America/Boise',
-        hour:   'numeric',
-        minute: '2-digit',
-        hour12: true,
-    }).replace(' ', '&nbsp;') + '&nbsp;MDT';
 
     // ── Build unsubscribe link ────────────────────────────────────────────────
-    let unsubscribeHtml = '';
     let unsubscribeLink = '';
     if (unsubscribeOptions.unsubscribeUrl && unsubscribeOptions.email && unsubscribeOptions.apiSecret) {
         const token = generateUnsubscribeToken(unsubscribeOptions.email, unsubscribeOptions.apiSecret);
         unsubscribeLink = `${unsubscribeOptions.unsubscribeUrl}?email=${encodeURIComponent(unsubscribeOptions.email)}&token=${token}`;
-        unsubscribeHtml = `&nbsp;&middot;&nbsp;<a href="${unsubscribeLink}" style="color:${C.forest};text-decoration:underline;font-family:${F.mono};font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;">Unsubscribe</a>`;
     }
 
-    // ── Logo / wordmark ───────────────────────────────────────────────────────
+    // ── Logo URL ─────────────────────────────────────────────────────────────
     const logoUrl = siteUrl ? `${siteUrl}/images/logos/CampWatch_Logo_trimmed_small.png` : '';
 
+    // ── Header headline campground names (up to 2, then "+ N more") ──────────
+    const shortNames = uniqueCampgroundNames
+        .map((n) => n.replace(/\s+campground$/i, '').toUpperCase());
+    let headlineNames;
+    if (shortNames.length <= 2) {
+        headlineNames = shortNames.join(' &middot; ') + '.';
+    } else {
+        headlineNames = shortNames.slice(0, 2).join(' &middot; ') + ` + ${shortNames.length - 2} MORE.`;
+    }
+    const headlineCount = `${count} NEW OPENING${count === 1 ? '' : 'S'}`;
+
+    // Italic subhead
+    const subhead = count === 1
+        ? `One new site came open. It matches your window.`
+        : `${count} new sites came open. ${count === 2 ? 'Both match' : 'All match'} your window.`;
+
+    // ── Pre-header text ───────────────────────────────────────────────────────
+    const preheaderNames = uniqueCampgroundNames.join(' · ');
+    const preheaderText = `${count} new opening${count === 1 ? '' : 's'} on your watchlist · ${preheaderNames}`;
+
     // ── Per-campground sections ───────────────────────────────────────────────
+    // Track a global opening counter across campgrounds
+    let openingCounter = 0;
+
     const campgroundSections = Object.entries(byCampground)
-        .map(([name, { area, matches }], cgIdx) => {
-            // Section header: campground name + area
-            const sectionHeader = `
-                <tr>
-                    <td colspan="2" style="padding:${cgIdx === 0 ? '0' : '16px'} 0 8px 0;">
-                        <div style="font-family:${F.poster};font-size:13px;font-weight:900;letter-spacing:0.5px;text-transform:uppercase;color:${C.ink};margin:0 0 1px 0;">${name}</div>
-                        ${area ? `<div style="font-family:${F.mono};font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:${C.inkFaint};margin:0;">${area}</div>` : ''}
-                    </td>
-                </tr>`;
+        .map(([name, { area, description, matches }]) => {
+            const sectionParts = [];
 
-            const rows = matches
-                .map((m) => {
-                    const link = buildReservationLink(m.siteId, m.match.from, m.match.nights);
-                    const siteName = m.siteName.replace(/^Site\s+/i, '');
-                    const nightWord = m.match.nights === 1 ? 'night' : 'nights';
-                    const dateRange = `${formatDate(m.match.from)} &ndash; ${formatDate(m.match.to)} &middot; ${m.match.nights}&nbsp;${nightWord}`;
+            // Section row
+            sectionParts.push(`
+        <tr>
+            <td bgcolor="${C.paper}" style="background-color:${C.paper};padding:28px 18px 6px 18px;">
+                <table cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;">
+                    <tbody>`);
 
-                    return `
-                <tr>
-                    <td colspan="2" style="border-top:1px dashed ${C.rule};padding:10px 0 10px 0;">
-                        <table cellpadding="0" cellspacing="0" border="0" style="width:100%;">
-                            <tr>
-                                <td style="vertical-align:top;">
-                                    <div style="font-family:${F.serif};font-size:15px;font-weight:700;color:${C.ink};line-height:1.2;margin:0 0 3px 0;">${name} &middot; Site&nbsp;${siteName}</div>
-                                    <div style="font-family:${F.serif};font-style:italic;font-size:13px;font-weight:500;color:${C.inkSoft};line-height:1.4;margin:0 0 6px 0;">${dateRange}</div>
-                                    <a href="${link}" style="font-family:${F.serif};font-size:13px;font-weight:700;color:${C.forest};text-decoration:underline;display:inline-block;">Book on rec.gov &rarr;</a>
-                                </td>
-                                <td style="vertical-align:top;text-align:right;padding-left:8px;white-space:nowrap;">
-                                    <span style="font-family:${F.mono};font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:${C.clay};border:1px solid ${C.clay};padding:3px 5px;display:inline-block;line-height:1;">NEW</span>
-                                </td>
-                            </tr>
-                        </table>
-                    </td>
-                </tr>`;
-                })
-                .join('\n');
+            // § Opening N of M eyebrow
+            openingCounter += matches.length;
+            // We need the start index for this group — compute before we used the counter
+            const groupStart = openingCounter - matches.length;
 
-            return `${sectionHeader}${rows}`;
+            // Build the eyebrow: "§ Opening N–M of total" or "§ Opening N of M" for single
+            let eyebrow;
+            if (matches.length === 1) {
+                eyebrow = `&sect; Opening ${groupStart + 1} of ${count}`;
+            } else {
+                eyebrow = `&sect; Openings ${groupStart + 1}&ndash;${openingCounter} of ${count}`;
+            }
+
+            sectionParts.push(`
+                        <tr>
+                            <td style="padding-bottom:8px;">
+                                <div style="font-family:${F.mono};font-size:11px;color:${C.clay};letter-spacing:0.18em;text-transform:uppercase;">${eyebrow}</div>
+                            </td>
+                        </tr>`);
+
+            // Campground name
+            sectionParts.push(`
+                        <tr>
+                            <td style="padding-bottom:4px;">
+                                <div style="font-family:${F.poster};font-weight:900;font-size:22px;line-height:26px;color:${C.ink};text-transform:uppercase;letter-spacing:0.005em;">${name}</div>
+                            </td>
+                        </tr>`);
+
+            // Area (italic)
+            if (area) {
+                sectionParts.push(`
+                        <tr>
+                            <td style="padding-bottom:14px;">
+                                <div style="font-family:${F.ital};font-style:italic;font-size:16px;line-height:22px;color:${C.inkSoft};">${area}</div>
+                            </td>
+                        </tr>`);
+            } else {
+                sectionParts.push(`
+                        <tr><td style="padding-bottom:14px;"></td></tr>`);
+            }
+
+            // Optional description
+            if (description) {
+                sectionParts.push(`
+                        <tr>
+                            <td style="padding-bottom:18px;">
+                                <div style="font-family:${F.body};font-size:14px;line-height:22px;color:${C.inkSoft};">${description}</div>
+                            </td>
+                        </tr>`);
+            }
+
+            // Per-match cards
+            for (const m of matches) {
+                const link = buildReservationLink(m.siteId, m.match.from, m.match.nights);
+                const siteName = m.siteName.replace(/^Site\s+/i, '');
+                const dateRange = `${formatDate(m.match.from)} &nbsp;&rarr;&nbsp; ${formatDate(m.match.to)}`;
+                const nightsText = `${m.match.nights} ${m.match.nights === 1 ? 'night' : 'nights'}`;
+
+                // Tier badge
+                let badgeBg, badgeColor, badgeLabel;
+                if (m.group === 'favorites') {
+                    badgeBg = C.forest;
+                    badgeColor = C.cream;
+                    badgeLabel = '&#9733; Favorite site';
+                } else if (m.group === 'worthwhile') {
+                    badgeBg = C.mustard;
+                    badgeColor = C.ink;
+                    badgeLabel = 'Acceptable site';
+                } else {
+                    badgeBg = C.rule;
+                    badgeColor = C.ink;
+                    badgeLabel = 'On your watchlist';
+                }
+
+                sectionParts.push(`
+                        <tr>
+                            <td style="padding-bottom:10px;">
+                                <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:${C.cream};border:1.5px solid ${C.ink};border-collapse:separate;">
+                                    <tbody>
+                                        <tr>
+                                            <td style="padding:14px 16px 4px 16px;vertical-align:middle;">
+                                                <!-- Tier badge -->
+                                                <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom:8px;">
+                                                    <tbody>
+                                                        <tr>
+                                                            <td bgcolor="${badgeBg}" style="background-color:${badgeBg};font-family:${F.mono};font-size:10px;color:${badgeColor};letter-spacing:0.18em;text-transform:uppercase;font-weight:700;padding:4px 8px;">${badgeLabel}</td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                                <!-- Site number -->
+                                                <div style="font-family:${F.ital};font-style:italic;font-size:22px;line-height:26px;color:${C.ink};">Site ${siteName}</div>
+                                                <!-- Dates -->
+                                                <div style="font-family:${F.body};font-weight:bold;font-size:16px;line-height:22px;color:${C.ink};margin-top:6px;">${dateRange}</div>
+                                                <!-- Nights -->
+                                                <div style="font-family:${F.mono};font-size:11px;color:${C.inkSubtle};letter-spacing:0.12em;text-transform:uppercase;margin-top:4px;">${nightsText}</div>
+                                            </td>
+                                        </tr>
+                                        <!-- Book button — full-width, stacked below -->
+                                        <tr>
+                                            <td style="padding:0 16px 16px 16px;">
+                                                <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                                                    <tbody>
+                                                        <tr>
+                                                            <td bgcolor="${C.forest}" align="center" style="background-color:${C.forest};">
+                                                                <a href="${link}" style="display:block;padding:13px 12px;font-family:${F.poster};font-weight:800;font-size:11px;color:${C.cream};text-decoration:none;letter-spacing:0.12em;text-transform:uppercase;text-align:center;">Book on recreation.gov &rarr;</a>
+                                                            </td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </td>
+                        </tr>`);
+            }
+
+            sectionParts.push(`
+                    </tbody>
+                </table>
+            </td>
+        </tr>`);
+
+            return sectionParts.join('');
         })
         .join('\n');
 
-    // ── View all button ───────────────────────────────────────────────────────
-    const viewAllHtml = siteUrl
-        ? `
-                <tr>
-                    <td colspan="2" style="padding:20px 0 0 0;text-align:center;">
-                        <a href="${siteUrl}" style="display:inline-block;background:${C.forest};color:${C.cream};font-family:${F.mono};font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;text-decoration:none;padding:10px 24px;">View All Availability &rarr;</a>
-                    </td>
-                </tr>`
-        : '';
+    // ── CTA ───────────────────────────────────────────────────────────────────
+    const ctaHref = siteUrl ? siteUrl : 'https://campwatch.dev';
+    const ctaRow = `
+        <tr>
+            <td bgcolor="${C.paper}" style="background-color:${C.paper};padding:12px 18px 36px 18px;">
+                <table cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;">
+                    <tbody>
+                        <tr>
+                            <td align="center" style="padding-top:18px;border-top:1px solid ${C.rule};">
+                                <a href="${ctaHref}" style="display:inline-block;font-family:${F.poster};font-weight:800;font-size:12px;color:${C.ink};text-decoration:underline;letter-spacing:0.14em;text-transform:uppercase;padding:4px 6px;">Open your dashboard &rarr;</a>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </td>
+        </tr>`;
 
-    // ── Footer sign-off ───────────────────────────────────────────────────────
-    const footerSignoff = `
-                <tr>
-                    <td colspan="2" style="border-top:1px dashed ${C.rule};padding:14px 0 0 0;">
-                        <div style="font-family:${F.serif};font-style:italic;font-size:13px;font-weight:400;color:${C.inkSoft};line-height:1.5;margin:0 0 2px 0;">Yours from the trail,</div>
-                        <div style="font-family:${F.serif};font-style:italic;font-size:20px;font-weight:600;color:${C.clay};line-height:1.2;">&mdash;&nbsp;CampWatch</div>
-                    </td>
-                </tr>`;
+    // ── Footer ────────────────────────────────────────────────────────────────
+    const settingsLink = siteUrl ? `${siteUrl}/app/account` : 'https://campwatch.dev/app/account';
+    const unsubscribeFooterHtml = unsubscribeLink
+        ? `<a href="${unsubscribeLink}" style="color:${C.creamlink};text-decoration:underline;">Unsubscribe</a>`
+        : `<a href="https://campwatch.dev/unsubscribe" style="color:${C.creamlink};text-decoration:underline;">Unsubscribe</a>`;
 
-    // ── Footer meta (timestamp + unsubscribe) ─────────────────────────────────
-    const footerMeta = `
-                <tr>
-                    <td colspan="2" style="border-top:1px solid ${C.rule};padding:16px 0 0 0;text-align:center;">
-                        <span style="font-family:${F.mono};font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:${C.inkFaint};">Checked at ${timestamp} (MST)${unsubscribeHtml}</span>
-                    </td>
-                </tr>`;
+    const footerRow = `
+        <tr>
+            <td bgcolor="${C.forestDeep}" style="background-color:${C.forestDeep};padding:28px 18px 32px 18px;">
+                <table cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;">
+                    <tbody>
+                        <tr>
+                            <td>
+                                <div style="font-family:${F.ital};font-style:italic;font-size:18px;line-height:26px;color:${C.sand};margin-bottom:4px;">Yours from the trail,</div>
+                                <div style="font-family:${F.poster};font-weight:900;font-size:22px;line-height:28px;color:${C.cream};letter-spacing:0.04em;text-transform:uppercase;margin-bottom:16px;">&mdash;&nbsp;CampWatch</div>
+                                <div style="font-family:${F.mono};font-size:11px;color:${C.creampale};letter-spacing:0.12em;text-transform:uppercase;line-height:20px;">
+                                    You're getting this because you signed up for CampWatch alerts.<br/>
+                                    <a href="${settingsLink}" style="color:${C.creamlink};text-decoration:underline;">Notification settings</a>
+                                    &nbsp;&middot;&nbsp;
+                                    ${unsubscribeFooterHtml}
+                                    &nbsp;&middot;&nbsp;
+                                    <a href="mailto:hello@campwatch.dev" style="color:${C.creamlink};text-decoration:underline;">Reply directly</a>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </td>
+        </tr>`;
 
     // ── Full HTML ─────────────────────────────────────────────────────────────
     const html = `<!DOCTYPE html>
@@ -203,67 +324,73 @@ export const formatEmail = (newMatches, options = {}) => {
 <!-- Outer wrapper -->
 <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:${C.paper};">
     <tr>
-        <td align="center" style="padding:32px 16px 32px 16px;">
+        <td align="center" style="padding:24px 0 32px 0;">
 
-            <!-- Content card — 640px max -->
-            <table cellpadding="0" cellspacing="0" border="0" width="640" style="max-width:640px;width:100%;background-color:${C.cream};border:1.5px solid ${C.ink};">
-                <tr>
-                    <td style="padding:32px 36px 32px 36px;">
+            <!-- Email card — max 600px -->
+            <table cellpadding="0" cellspacing="0" border="0" width="600" style="max-width:600px;width:100%;border-collapse:collapse;">
+                <tbody>
 
-                        <!-- Inner layout table -->
-                        <table cellpadding="0" cellspacing="0" border="0" style="width:100%;">
+                    <!-- PRE-HEADER (hidden, inbox preview text) -->
+                    <tr>
+                        <td style="display:none;overflow:hidden;max-height:0;max-width:0;opacity:0;mso-hide:all;">${preheaderText}</td>
+                    </tr>
 
-                            <!-- ── Envelope header ── -->
-                            <tr>
-                                <td colspan="2" style="border-bottom:1px solid ${C.rule};padding-bottom:14px;margin-bottom:16px;">
-                                    <table cellpadding="0" cellspacing="0" border="0" style="width:100%;">
-                                        <tr>
-                                            <!-- FROM/TO block -->
-                                            <td style="vertical-align:top;">
-                                                ${logoUrl
-                                                    ? `<img src="${logoUrl}" alt="CampWatch" height="28" style="height:28px;width:auto;display:block;margin-bottom:8px;" />`
-                                                    : ''}
-                                                <div style="font-family:${F.mono};font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:${C.inkSoft};line-height:1.6;">FROM</div>
-                                                <div style="font-family:${F.mono};font-size:10px;font-weight:700;letter-spacing:1.5px;color:${C.ink};line-height:1.6;margin-bottom:6px;">CampWatch &lt;alerts@campwatch.dev&gt;</div>
-                                                <div style="font-family:${F.mono};font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:${C.inkSoft};line-height:1.6;">TO</div>
-                                                <div style="font-family:${F.mono};font-size:10px;font-weight:700;letter-spacing:1.5px;color:${C.ink};line-height:1.6;">${email ? email : 'you@trail.example'}</div>
-                                            </td>
-                                            <!-- Date stamp -->
-                                            <td style="vertical-align:top;text-align:right;">
-                                                <div style="font-family:${F.mono};font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:${C.inkSoft};line-height:1.6;text-align:right;">${dateStamp}</div>
-                                                <div style="font-family:${F.mono};font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:${C.inkSoft};line-height:1.6;text-align:right;">${timeStamp}</div>
-                                            </td>
-                                        </tr>
-                                    </table>
-                                </td>
-                            </tr>
+                    <!-- HEADER — forest-deep banner -->
+                    <tr>
+                        <td bgcolor="${C.forestDeep}" style="background-color:${C.forestDeep};padding:24px 18px 22px 18px;">
+                            <table cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;">
+                                <tbody>
+                                    <tr>
+                                        <td>
+                                            <!-- Logo row -->
+                                            <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom:18px;">
+                                                <tbody>
+                                                    <tr>
+                                                        <td style="vertical-align:middle;">
+                                                            ${logoUrl
+                                                                ? `<img src="${logoUrl}" alt="CampWatch" width="28" height="28" style="width:28px;height:28px;display:block;background-color:${C.cream};" />`
+                                                                : `<div style="width:28px;height:28px;background-color:${C.cream};display:inline-block;"></div>`}
+                                                        </td>
+                                                        <td style="vertical-align:middle;padding-left:10px;">
+                                                            <span style="font-family:${F.poster};font-weight:900;font-size:16px;color:${C.cream};letter-spacing:0.06em;text-transform:uppercase;">CampWatch</span>
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                            <!-- Field Bulletin label — stacked below wordmark on mobile -->
+                                            <div style="font-family:${F.mono};font-size:10px;color:${C.creampale};letter-spacing:0.18em;text-transform:uppercase;margin-bottom:14px;">Field Bulletin &middot; No. 0142</div>
+                                            <!-- Poster headline -->
+                                            <div style="font-family:${F.poster};font-weight:900;font-size:26px;line-height:28px;color:${C.cream};letter-spacing:-0.005em;text-transform:uppercase;margin-bottom:4px;">
+                                                <span style="color:${C.sand};">${headlineCount}</span><br/>
+                                                ${headlineNames}
+                                            </div>
+                                            <!-- Italic subhead -->
+                                            <div style="font-family:${F.ital};font-style:italic;font-size:16px;line-height:24px;color:${C.creamwarm};margin-top:6px;">${subhead}</div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </td>
+                    </tr>
 
-                            <!-- ── Poster headline ── -->
-                            <tr>
-                                <td colspan="2" style="padding-top:16px;padding-bottom:4px;">
-                                    <div style="font-family:${F.poster};font-size:26px;font-weight:900;letter-spacing:0.5px;text-transform:uppercase;line-height:1.1;color:${C.ink};margin:0 0 8px 0;">
-                                        <span style="color:${C.clay};">${headlineCount}</span>&nbsp;&mdash;&nbsp;${shortNames}
-                                    </div>
-                                    <div style="font-family:${F.serif};font-style:italic;font-size:17px;font-weight:500;color:${C.inkSoft};line-height:1.4;margin:0 0 16px 0;">${italicLine}</div>
-                                </td>
-                            </tr>
+                    <!-- META BAR — stacked (mobile-first) -->
+                    <tr>
+                        <td bgcolor="${C.paper}" style="background-color:${C.paper};padding:14px 18px;border-top:1px solid ${C.forest};border-bottom:1px solid ${C.rule};">
+                            <div style="font-family:${F.mono};font-size:10px;color:${C.inkSubtle};letter-spacing:0.14em;text-transform:uppercase;margin-bottom:4px;">Checked ${timestamp}</div>
+                            <div style="font-family:${F.mono};font-size:10px;color:${C.clay};letter-spacing:0.14em;text-transform:uppercase;">&#9679; LIVE &middot; Polling every 5 min</div>
+                        </td>
+                    </tr>
 
-                            <!-- ── Per-campground opening rows ── -->
-                            ${campgroundSections}
+                    <!-- OPENINGS — one section per campground -->
+                    ${campgroundSections}
 
-                            <!-- ── View all button ── -->
-                            ${viewAllHtml}
+                    <!-- CTA -->
+                    ${ctaRow}
 
-                            <!-- ── Sign-off ── -->
-                            <tr><td colspan="2" style="padding-top:20px;"></td></tr>
-                            ${footerSignoff}
+                    <!-- FOOTER -->
+                    ${footerRow}
 
-                            <!-- ── Footer meta ── -->
-                            ${footerMeta}
-
-                        </table>
-                    </td>
-                </tr>
+                </tbody>
             </table>
 
         </td>
