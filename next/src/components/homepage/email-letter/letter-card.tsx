@@ -46,7 +46,7 @@ export function LetterCard({ auth }: LetterCardProps) {
                         <div className="font-mono-field text-[11px] leading-[1.6] text-cw-ink-soft tracking-[0.06em] font-medium">
                             <div className="text-cw-ink-soft">FROM</div>
                             <div className="text-cw-ink mt-[2px]">
-                                CampWatch &lt;alerts@campwatch.app&gt;
+                                CampWatch &lt;alerts@campwatch.dev&gt;
                             </div>
                             <div className="text-cw-ink-soft mt-2">TO</div>
                             <div className="text-cw-ink mt-[2px]">{auth.user?.email ?? "you@trail.example"}</div>

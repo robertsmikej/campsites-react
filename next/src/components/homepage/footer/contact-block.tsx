@@ -8,10 +8,10 @@ export function ContactBlock() {
             </div>
             <div>
                 <a
-                    href="mailto:hello@campwatch.app"
+                    href="mailto:hello@campwatch.dev"
                     className="text-inherit no-underline"
                 >
-                    hello@campwatch.app
+                    hello@campwatch.dev
                 </a>
             </div>
             <div className="mt-3">

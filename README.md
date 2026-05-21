@@ -3,7 +3,7 @@
 A campsite availability tracker for recreation.gov. Watches the campgrounds and
 sites you care about and emails you the moment something opens up.
 
-Live at **https://campwatch.mikeroberts421.workers.dev/app**.
+Live at **https://campwatch.dev**.
 
 ## Architecture
 
