@@ -15,7 +15,7 @@ import type { AuthState } from "@/hooks/use-auth";
 
 interface DashboardTopBarProps {
     auth: AuthState;
-    onAddCampground: () => void;
+    onAddCampground?: () => void;
 }
 
 interface NavLink {
@@ -87,7 +87,7 @@ export function DashboardTopBar({ auth, onAddCampground }: DashboardTopBarProps)
 
                     {/* Right cluster */}
                     <div className="ml-auto flex gap-[14px] items-center">
-                        {auth.user && (
+                        {auth.user && onAddCampground && (
                             <button
                                 type="button"
                                 onClick={onAddCampground}
