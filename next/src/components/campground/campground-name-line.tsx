@@ -21,10 +21,7 @@ export function CampgroundNameLine({
 }: CampgroundNameLineProps) {
     return (
         <div className="min-w-0">
-            <h3 className={cn(
-                "truncate font-display font-semibold leading-tight text-base",
-                nameClassName,
-            )}>
+            <h3 className={cn("truncate font-display font-semibold leading-tight text-base", nameClassName)}>
                 {name}
             </h3>
             {subtitleClassName !== undefined && (

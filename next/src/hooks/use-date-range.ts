@@ -21,13 +21,17 @@ function loadDateRange(): { start: Date; end: Date } {
         if (!raw) return getDefaultRange();
         const parsed = JSON.parse(raw) as { start: string; end: string };
         return { start: new Date(parsed.start), end: new Date(parsed.end) };
-    } catch { return getDefaultRange(); }
+    } catch {
+        return getDefaultRange();
+    }
 }
 
 function saveDateRange(start: Date, end: Date) {
     try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify({ start: toLocalIso(start), end: toLocalIso(end) }));
-    } catch { /* ignore */ }
+    } catch {
+        /* ignore */
+    }
 }
 
 export interface UseDateRangeReturn {

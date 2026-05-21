@@ -1,11 +1,6 @@
 "use client";
 
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { CampgroundLookup } from "@/components/campground-lookup";
 
 export function AddCampgroundDialog({ open, onClose }: { open: boolean; onClose: () => void }) {

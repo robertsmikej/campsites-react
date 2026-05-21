@@ -73,9 +73,10 @@ export function WatchlistPostcard() {
                         </span>
                     </h2>
                     <p className="font-body-serif text-[17px] leading-[1.6] text-cw-ink-soft max-w-[460px] m-0 mb-7">
-                        Each row is a campground. Each bar is a single night, color-coded by how much you&apos;d want it:
-                        dark green for the sites you&apos;ve starred, gold for &ldquo;I&apos;d take it,&rdquo; dimmed for
-                        booked. The next eighteen weeks, at a glance.
+                        Each row is a campground. Each bar is a single night, color-coded by how much
+                        you&apos;d want it: dark green for the sites you&apos;ve starred, gold for
+                        &ldquo;I&apos;d take it,&rdquo; dimmed for booked. The next eighteen weeks, at a
+                        glance.
                     </p>
                     <div className="flex items-center gap-6">
                         {(
@@ -90,7 +91,9 @@ export function WatchlistPostcard() {
                                     className="w-3 h-3 rounded-[2px] inline-block"
                                     style={{ background: color }}
                                 />
-                                <span className="font-italic-serif text-[17px] leading-none text-cw-ink-soft font-medium italic">{label}</span>
+                                <span className="font-italic-serif text-[17px] leading-none text-cw-ink-soft font-medium italic">
+                                    {label}
+                                </span>
                             </div>
                         ))}
                     </div>

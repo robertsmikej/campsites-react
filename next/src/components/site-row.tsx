@@ -50,12 +50,7 @@ export function SiteRow({
         }, 0) ?? 0;
 
     return (
-        <div
-            className={cn(
-                "rounded-md border bg-card transition-shadow",
-                open && "shadow-sm",
-            )}
-        >
+        <div className={cn("rounded-md border bg-card transition-shadow", open && "shadow-sm")}>
             <button
                 type="button"
                 onClick={() => setOpen(!open)}
@@ -72,9 +67,7 @@ export function SiteRow({
                     )}
                 />
                 <div className="min-w-0 flex-shrink-0 basis-32">
-                    <p className="truncate text-sm font-medium">
-                        {site.siteName}
-                    </p>
+                    <p className="truncate text-sm font-medium">{site.siteName}</p>
                     <p className="truncate text-[11px] text-muted-foreground">
                         {site.campsite_type ?? "Standard"}
                     </p>
@@ -115,19 +108,12 @@ export function SiteRow({
                     </Badge>
                 )}
                 <div className="hidden flex-1 min-w-0 sm:block">
-                    <AvailabilityStrip
-                        site={site}
-                        showExcluded={showExcluded}
-                    />
+                    <AvailabilityStrip site={site} showExcluded={showExcluded} />
                 </div>
             </button>
             {open ? (
                 <div className="border-t bg-muted/20 p-2">
-                    <CampsitesCalendar
-                        site={site}
-                        campground={campground}
-                        showExcluded={showExcluded}
-                    />
+                    <CampsitesCalendar site={site} campground={campground} showExcluded={showExcluded} />
                 </div>
             ) : null}
         </div>

@@ -35,10 +35,9 @@ beforeEach(() => {
 
 async function get(id: string): Promise<Response> {
     const { GET } = await import("./route");
-    return GET(
-        new Request(`https://example.com/api/recgov/facility/${id}`),
-        { params: Promise.resolve({ id }) },
-    );
+    return GET(new Request(`https://example.com/api/recgov/facility/${id}`), {
+        params: Promise.resolve({ id }),
+    });
 }
 
 describe("GET /api/recgov/facility/[id]", () => {
@@ -66,7 +65,7 @@ describe("GET /api/recgov/facility/[id]", () => {
 
         const res = await get("232358");
         expect(res.status).toBe(200);
-        const body = await res.json() as { summary: FacilitySummary; cached: boolean };
+        const body = (await res.json()) as { summary: FacilitySummary; cached: boolean };
         expect(body.cached).toBe(true);
         expect(body.summary.name).toBe("Outlet Campground");
     });
@@ -81,16 +80,14 @@ describe("GET /api/recgov/facility/[id]", () => {
 
         const res = await get("232358");
         expect(res.status).toBe(200);
-        const body = await res.json() as { summary: FacilitySummary; cached: boolean };
+        const body = (await res.json()) as { summary: FacilitySummary; cached: boolean };
         expect(body.cached).toBe(false);
         expect(body.summary.name).toBe("Outlet Campground");
 
         // KV was written with expirationTtl
-        expect(putSpy).toHaveBeenCalledWith(
-            "recgov:facility:232358",
-            JSON.stringify(MOCK_SUMMARY),
-            { expirationTtl: 86400 },
-        );
+        expect(putSpy).toHaveBeenCalledWith("recgov:facility:232358", JSON.stringify(MOCK_SUMMARY), {
+            expirationTtl: 86400,
+        });
     });
 
     it("404 when fetchFacilitySummary returns null", async () => {
@@ -101,7 +98,7 @@ describe("GET /api/recgov/facility/[id]", () => {
 
         const res = await get("232358");
         expect(res.status).toBe(404);
-        const body = await res.json() as { error: string };
+        const body = (await res.json()) as { error: string };
         expect(body.error).toBe("Facility not found");
     });
 
@@ -113,7 +110,7 @@ describe("GET /api/recgov/facility/[id]", () => {
 
         const res = await get("232358");
         expect(res.status).toBe(502);
-        const body = await res.json() as { error: string };
+        const body = (await res.json()) as { error: string };
         expect(body.error).toBe("Facility lookup failed");
     });
 });

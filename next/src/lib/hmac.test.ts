@@ -23,9 +23,7 @@ describe("HMAC unsubscribe tokens", () => {
 
     it("rejects a token signed with a different secret", async () => {
         const token = await generateUnsubscribeToken("user@example.com", SECRET);
-        expect(
-            await verifyUnsubscribeToken("user@example.com", token, "different-secret"),
-        ).toBe(false);
+        expect(await verifyUnsubscribeToken("user@example.com", token, "different-secret")).toBe(false);
     });
 
     it("rejects garbage tokens without throwing", async () => {

@@ -1,18 +1,18 @@
 // Email formatting and sending via Resend API.
 // No dependencies — uses native fetch and Node crypto.
 
-import { createHmac } from 'node:crypto';
+import { createHmac } from "node:crypto";
 
-const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 // Generate HMAC token matching the CF Worker's implementation
 const generateUnsubscribeToken = (email, secret) => {
-    return createHmac('sha256', secret).update(email).digest('hex');
+    return createHmac("sha256", secret).update(email).digest("hex");
 };
 
 const formatDate = (dateStr) => {
-    const [y, m, d] = dateStr.split('-').map(Number);
+    const [y, m, d] = dateStr.split("-").map(Number);
     const date = new Date(Date.UTC(y, m - 1, d));
     const day = DAY_NAMES[date.getUTCDay()];
     const month = MONTH_NAMES[date.getUTCMonth()];
@@ -23,36 +23,36 @@ const buildReservationLink = (siteId, fromDate, nights) => {
     const from = new Date(fromDate);
     const to = new Date(from);
     to.setDate(from.getDate() + nights);
-    const arrival = from.toISOString().split('T')[0];
-    const departure = to.toISOString().split('T')[0];
+    const arrival = from.toISOString().split("T")[0];
+    const departure = to.toISOString().split("T")[0];
     return `https://www.recreation.gov/camping/campsites/${siteId}?arrivalDate=${arrival}&departureDate=${departure}`;
 };
 
 // ── Palette ──────────────────────────────────────────────────────────────────
 const C = {
-    paper:       '#F4EAD8',
-    cream:       '#FBF6EA',
-    ink:         '#1A1614',
-    inkSoft:     '#5e554e',
-    inkSubtle:   '#8c8278',
-    rule:        '#d9cebb',
-    ruleSoft:    '#e8dfcb',
-    forest:      '#1F3D2A',
-    forestDeep:  '#142a1d',
-    clay:        '#B65C3F',
-    mustard:     '#C9A227',
-    sand:        '#f6c79c',
-    creampale:   'rgba(251,246,234,0.55)',
-    creamwarm:   'rgba(251,246,234,0.78)',
-    creamlink:   'rgba(251,246,234,0.70)',
+    paper: "#F4EAD8",
+    cream: "#FBF6EA",
+    ink: "#1A1614",
+    inkSoft: "#5e554e",
+    inkSubtle: "#8c8278",
+    rule: "#d9cebb",
+    ruleSoft: "#e8dfcb",
+    forest: "#1F3D2A",
+    forestDeep: "#142a1d",
+    clay: "#B65C3F",
+    mustard: "#C9A227",
+    sand: "#f6c79c",
+    creampale: "rgba(251,246,234,0.55)",
+    creamwarm: "rgba(251,246,234,0.78)",
+    creamlink: "rgba(251,246,234,0.70)",
 };
 
 // ── Font cascades ─────────────────────────────────────────────────────────────
 const F = {
     poster: `'Big Shoulders Display', Impact, 'Arial Black', sans-serif`,
-    ital:   `Georgia, 'Times New Roman', serif`,
-    body:   `Georgia, 'Times New Roman', serif`,
-    mono:   `'Courier New', Courier, monospace`,
+    ital: `Georgia, 'Times New Roman', serif`,
+    body: `Georgia, 'Times New Roman', serif`,
+    mono: `'Courier New', Courier, monospace`,
 };
 
 export const formatEmail = (newMatches, options = {}) => {
@@ -66,61 +66,65 @@ export const formatEmail = (newMatches, options = {}) => {
     if (count === 1) {
         subject = `1 new opening · ${uniqueCampgroundNames[0]}`;
     } else {
-        subject = `${count} new openings · ${uniqueCampgroundNames.join(', ')}`;
+        subject = `${count} new openings · ${uniqueCampgroundNames.join(", ")}`;
     }
 
     // Group by campground
     const byCampground = {};
     for (const m of newMatches) {
         if (!byCampground[m.campgroundName]) {
-            byCampground[m.campgroundName] = { area: m.campgroundArea, description: m.campgroundDescription, matches: [] };
+            byCampground[m.campgroundName] = {
+                area: m.campgroundArea,
+                description: m.campgroundDescription,
+                matches: [],
+            };
         }
         byCampground[m.campgroundName].matches.push(m);
     }
 
     // Sort: favorites first within each campground
-    const groupOrder = { favorites: 0, worthwhile: 1, 'all-others': 2 };
+    const groupOrder = { favorites: 0, worthwhile: 1, "all-others": 2 };
     for (const name in byCampground) {
         byCampground[name].matches.sort((a, b) => groupOrder[a.group] - groupOrder[b.group]);
     }
 
     // ── Timestamp ────────────────────────────────────────────────────────────
     const now = new Date();
-    const timestamp = now.toLocaleString('en-US', {
-        timeZone: 'America/Boise',
-        dateStyle: 'medium',
-        timeStyle: 'short',
+    const timestamp = now.toLocaleString("en-US", {
+        timeZone: "America/Boise",
+        dateStyle: "medium",
+        timeStyle: "short",
     });
 
     // ── Build unsubscribe link ────────────────────────────────────────────────
-    let unsubscribeLink = '';
+    let unsubscribeLink = "";
     if (unsubscribeOptions.unsubscribeUrl && unsubscribeOptions.email && unsubscribeOptions.apiSecret) {
         const token = generateUnsubscribeToken(unsubscribeOptions.email, unsubscribeOptions.apiSecret);
         unsubscribeLink = `${unsubscribeOptions.unsubscribeUrl}?email=${encodeURIComponent(unsubscribeOptions.email)}&token=${token}`;
     }
 
     // ── Logo URL ─────────────────────────────────────────────────────────────
-    const logoUrl = siteUrl ? `${siteUrl}/images/logos/CampWatch_Logo_trimmed_small.png` : '';
+    const logoUrl = siteUrl ? `${siteUrl}/images/logos/CampWatch_Logo_trimmed_small.png` : "";
 
     // ── Header headline campground names (up to 2, then "+ N more") ──────────
-    const shortNames = uniqueCampgroundNames
-        .map((n) => n.replace(/\s+campground$/i, '').toUpperCase());
+    const shortNames = uniqueCampgroundNames.map((n) => n.replace(/\s+campground$/i, "").toUpperCase());
     let headlineNames;
     if (shortNames.length <= 2) {
-        headlineNames = shortNames.join(' &middot; ') + '.';
+        headlineNames = shortNames.join(" &middot; ") + ".";
     } else {
-        headlineNames = shortNames.slice(0, 2).join(' &middot; ') + ` + ${shortNames.length - 2} MORE.`;
+        headlineNames = shortNames.slice(0, 2).join(" &middot; ") + ` + ${shortNames.length - 2} MORE.`;
     }
-    const headlineCount = `${count} NEW OPENING${count === 1 ? '' : 'S'}`;
+    const headlineCount = `${count} NEW OPENING${count === 1 ? "" : "S"}`;
 
     // Italic subhead
-    const subhead = count === 1
-        ? `One new site came open. It matches your window.`
-        : `${count} new sites came open. ${count === 2 ? 'Both match' : 'All match'} your window.`;
+    const subhead =
+        count === 1
+            ? `One new site came open. It matches your window.`
+            : `${count} new sites came open. ${count === 2 ? "Both match" : "All match"} your window.`;
 
     // ── Pre-header text ───────────────────────────────────────────────────────
-    const preheaderNames = uniqueCampgroundNames.join(' · ');
-    const preheaderText = `${count} new opening${count === 1 ? '' : 's'} on your watchlist · ${preheaderNames}`;
+    const preheaderNames = uniqueCampgroundNames.join(" · ");
+    const preheaderText = `${count} new opening${count === 1 ? "" : "s"} on your watchlist · ${preheaderNames}`;
 
     // ── Per-campground sections ───────────────────────────────────────────────
     // Track a global opening counter across campgrounds
@@ -191,24 +195,24 @@ export const formatEmail = (newMatches, options = {}) => {
             // Per-match cards
             for (const m of matches) {
                 const link = buildReservationLink(m.siteId, m.match.from, m.match.nights);
-                const siteName = m.siteName.replace(/^Site\s+/i, '');
+                const siteName = m.siteName.replace(/^Site\s+/i, "");
                 const dateRange = `${formatDate(m.match.from)} &nbsp;&rarr;&nbsp; ${formatDate(m.match.to)}`;
-                const nightsText = `${m.match.nights} ${m.match.nights === 1 ? 'night' : 'nights'}`;
+                const nightsText = `${m.match.nights} ${m.match.nights === 1 ? "night" : "nights"}`;
 
                 // Tier badge
                 let badgeBg, badgeColor, badgeLabel;
-                if (m.group === 'favorites') {
+                if (m.group === "favorites") {
                     badgeBg = C.forest;
                     badgeColor = C.cream;
-                    badgeLabel = '&#9733; Favorite site';
-                } else if (m.group === 'worthwhile') {
+                    badgeLabel = "&#9733; Favorite site";
+                } else if (m.group === "worthwhile") {
                     badgeBg = C.mustard;
                     badgeColor = C.ink;
-                    badgeLabel = 'Acceptable site';
+                    badgeLabel = "Acceptable site";
                 } else {
                     badgeBg = C.rule;
                     badgeColor = C.ink;
-                    badgeLabel = 'On your watchlist';
+                    badgeLabel = "On your watchlist";
                 }
 
                 sectionParts.push(`
@@ -260,12 +264,12 @@ export const formatEmail = (newMatches, options = {}) => {
             </td>
         </tr>`);
 
-            return sectionParts.join('');
+            return sectionParts.join("");
         })
-        .join('\n');
+        .join("\n");
 
     // ── CTA ───────────────────────────────────────────────────────────────────
-    const ctaHref = siteUrl ? siteUrl : 'https://campwatch.dev';
+    const ctaHref = siteUrl ? siteUrl : "https://campwatch.dev";
     const ctaRow = `
         <tr>
             <td bgcolor="${C.paper}" style="background-color:${C.paper};padding:12px 18px 36px 18px;">
@@ -282,7 +286,7 @@ export const formatEmail = (newMatches, options = {}) => {
         </tr>`;
 
     // ── Footer ────────────────────────────────────────────────────────────────
-    const settingsLink = siteUrl ? `${siteUrl}/app/account` : 'https://campwatch.dev/app/account';
+    const settingsLink = siteUrl ? `${siteUrl}/app/account` : "https://campwatch.dev/app/account";
     const unsubscribeFooterHtml = unsubscribeLink
         ? `<a href="${unsubscribeLink}" style="color:${C.creamlink};text-decoration:underline;">Unsubscribe</a>`
         : `<a href="https://campwatch.dev/unsubscribe" style="color:${C.creamlink};text-decoration:underline;">Unsubscribe</a>`;
@@ -347,9 +351,11 @@ export const formatEmail = (newMatches, options = {}) => {
                                                 <tbody>
                                                     <tr>
                                                         <td style="vertical-align:middle;">
-                                                            ${logoUrl
-                                                                ? `<img src="${logoUrl}" alt="CampWatch" width="28" height="28" style="width:28px;height:28px;display:block;background-color:${C.cream};" />`
-                                                                : `<div style="width:28px;height:28px;background-color:${C.cream};display:inline-block;"></div>`}
+                                                            ${
+                                                                logoUrl
+                                                                    ? `<img src="${logoUrl}" alt="CampWatch" width="28" height="28" style="width:28px;height:28px;display:block;background-color:${C.cream};" />`
+                                                                    : `<div style="width:28px;height:28px;background-color:${C.cream};display:inline-block;"></div>`
+                                                            }
                                                         </td>
                                                         <td style="vertical-align:middle;padding-left:10px;">
                                                             <span style="font-family:${F.poster};font-weight:900;font-size:16px;color:${C.cream};letter-spacing:0.06em;text-transform:uppercase;">CampWatch</span>
@@ -403,20 +409,20 @@ export const formatEmail = (newMatches, options = {}) => {
     return { subject, html, unsubscribeLink };
 };
 
-export const sendEmail = async (to, subject, html, apiKey, unsubscribeLink = '') => {
-    const response = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
+export const sendEmail = async (to, subject, html, apiKey, unsubscribeLink = "") => {
+    const response = await fetch("https://api.resend.com/emails", {
+        method: "POST",
         headers: {
             Authorization: `Bearer ${apiKey}`,
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
         },
         body: JSON.stringify({
-            from: 'CampWatch <alerts@campwatch.dev>',
-            reply_to: 'hello@campwatch.dev',
+            from: "CampWatch <alerts@campwatch.dev>",
+            reply_to: "hello@campwatch.dev",
             to: [to],
             subject,
             html,
-            ...(unsubscribeLink ? { headers: { 'List-Unsubscribe': `<${unsubscribeLink}>` } } : {}),
+            ...(unsubscribeLink ? { headers: { "List-Unsubscribe": `<${unsubscribeLink}>` } } : {}),
         }),
     });
 

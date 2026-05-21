@@ -6,10 +6,7 @@ import { fetchFacilitySummary, parseFacilityId, type FacilitySummary } from "@/l
 const CACHE_PREFIX = "recgov:facility:";
 const CACHE_TTL_SECONDS = 60 * 60 * 24;
 
-export async function GET(
-    request: Request,
-    context: { params: Promise<{ id: string }> },
-): Promise<Response> {
+export async function GET(request: Request, context: { params: Promise<{ id: string }> }): Promise<Response> {
     const session = await readSession(request);
     if (!session) return withCors(jsonResponse({ error: "Unauthorized" }, 401));
 

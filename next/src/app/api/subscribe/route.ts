@@ -21,10 +21,7 @@ export async function POST(request: Request): Promise<Response> {
         return withCors(jsonResponse({ message: "Already subscribed" }));
     }
 
-    await kv.put(
-        `email:${email}`,
-        JSON.stringify({ email, subscribedAt: new Date().toISOString() }),
-    );
+    await kv.put(`email:${email}`, JSON.stringify({ email, subscribedAt: new Date().toISOString() }));
     return withCors(jsonResponse({ message: "Subscribed successfully" }));
 }
 

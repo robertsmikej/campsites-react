@@ -53,7 +53,10 @@ SESSION_SECRET=any-random-string</pre>
 <p>You'll also need to add <code>http://localhost:3000/auth/google/callback</code> to the Google Cloud OAuth client's allowed redirect URIs.</p>
 <p style="margin-top: 32px;"><a href="/">← back to homepage</a></p>
 </body></html>`;
-            return new Response(html, { status: 500, headers: { "Content-Type": "text/html; charset=utf-8" } });
+            return new Response(html, {
+                status: 500,
+                headers: { "Content-Type": "text/html; charset=utf-8" },
+            });
         }
         return jsonResponse({ error: "OAuth not configured on this Worker" }, 500);
     }

@@ -32,7 +32,10 @@ describe("GET /api/admin/users", () => {
 
     it("returns 403 when signed in but not a curator", async () => {
         vi.mocked(sessions.readSession).mockResolvedValue({
-            id: "x", email: "u@x.com", createdAt: "x", expiresAt: "x",
+            id: "x",
+            email: "u@x.com",
+            createdAt: "x",
+            expiresAt: "x",
         });
         const kv = createMockKv({
             "user:u@x.com:profile": JSON.stringify({ email: "u@x.com", roles: [] }),
@@ -43,7 +46,10 @@ describe("GET /api/admin/users", () => {
 
     it("returns 200 with sorted user list for a curator", async () => {
         vi.mocked(sessions.readSession).mockResolvedValue({
-            id: "x", email: "curator@x.com", createdAt: "x", expiresAt: "x",
+            id: "x",
+            email: "curator@x.com",
+            createdAt: "x",
+            expiresAt: "x",
         });
         const kv = createMockKv({
             "user:curator@x.com:profile": JSON.stringify({
@@ -58,8 +64,8 @@ describe("GET /api/admin/users", () => {
                 roles: [],
                 createdAt: "2026-01-01T00:00:00.000Z",
             }),
-            "user:curator@x.com:campgrounds": "{}",  // should be filtered out
-            "session:abc": "{}",                       // should be filtered out
+            "user:curator@x.com:campgrounds": "{}", // should be filtered out
+            "session:abc": "{}", // should be filtered out
         });
         vi.mocked(cloudflare.getKv).mockReturnValue(kv);
 

@@ -26,15 +26,14 @@ function devSyntheticStats(): NotifierStats {
 async function getHandler(): Promise<Response> {
     const raw = (await getKv().get(KEY, "json")) as NotifierStatsInternal | null;
     const fresh =
-        raw &&
-        raw.lastPollAt &&
-        Date.now() - new Date(raw.lastPollAt).getTime() < STALE_THRESHOLD_MS;
+        raw && raw.lastPollAt && Date.now() - new Date(raw.lastPollAt).getTime() < STALE_THRESHOLD_MS;
 
     let body: NotifierStats | null = null;
     if (fresh && raw) {
         // Strip internal rolling-computation fields before returning publicly.
         const { _latencyWindow: _lw, _dailyHistory: _dh, ...publicStats } = raw;
-        void _lw; void _dh;
+        void _lw;
+        void _dh;
         body = publicStats;
     }
 

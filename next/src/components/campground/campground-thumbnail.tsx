@@ -14,11 +14,7 @@ const SIZE_CLASSES = {
     lg: "size-16",
 } as const;
 
-export function CampgroundThumbnail({
-    imageUrl,
-    size = "md",
-    className,
-}: CampgroundThumbnailProps) {
+export function CampgroundThumbnail({ imageUrl, size = "md", className }: CampgroundThumbnailProps) {
     return (
         <div
             className={cn(

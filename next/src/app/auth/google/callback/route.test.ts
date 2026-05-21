@@ -71,9 +71,7 @@ async function callCallback(opts: {
     }
 
     const { GET } = await import("./route");
-    return GET(
-        new Request(`https://example.com/auth/google/callback?${params.toString()}`, { headers }),
-    );
+    return GET(new Request(`https://example.com/auth/google/callback?${params.toString()}`, { headers }));
 }
 
 describe("GET /auth/google/callback — success", () => {
@@ -101,7 +99,7 @@ describe("GET /auth/google/callback — success", () => {
         expect(allCookies).toContain("campwatch_oauth_state=;");
 
         // Profile and session should be stored in KV
-        const profile = await kv.get("user:user@example.com:profile", "json") as { name: string } | null;
+        const profile = (await kv.get("user:user@example.com:profile", "json")) as { name: string } | null;
         expect(profile?.name).toBe("Test User");
 
         // At least one session key should be in KV

@@ -26,22 +26,29 @@ import {
 const VARIANT_CLASS: Record<DayVariant, string> = {
     // Hard match — solid forest pill
     single: "rounded-full bg-primary text-primary-foreground transition-colors duration-150 hover:opacity-90",
-    rangeStart: "rounded-l-full bg-primary text-primary-foreground transition-colors duration-150 hover:opacity-90",
-    rangeMiddle: "rounded-none bg-primary text-primary-foreground transition-colors duration-150 hover:opacity-90",
+    rangeStart:
+        "rounded-l-full bg-primary text-primary-foreground transition-colors duration-150 hover:opacity-90",
+    rangeMiddle:
+        "rounded-none bg-primary text-primary-foreground transition-colors duration-150 hover:opacity-90",
     rangeEnd:
         "rounded-r-full bg-primary text-primary-foreground bg-gradient-to-br from-primary from-65% to-transparent to-65% transition-colors duration-150 hover:opacity-90",
 
     // Soft / single-day availability — muted forest
     softSingle: "rounded-full bg-primary/20 text-primary transition-colors duration-150 hover:bg-primary/30",
-    softRangeStart: "rounded-l-full bg-primary/20 text-primary transition-colors duration-150 hover:bg-primary/30",
-    softRangeMiddle: "rounded-none bg-primary/20 text-primary transition-colors duration-150 hover:bg-primary/30",
+    softRangeStart:
+        "rounded-l-full bg-primary/20 text-primary transition-colors duration-150 hover:bg-primary/30",
+    softRangeMiddle:
+        "rounded-none bg-primary/20 text-primary transition-colors duration-150 hover:bg-primary/30",
     softRangeEnd:
         "rounded-r-full bg-primary/20 text-primary bg-gradient-to-br from-primary/20 from-65% to-transparent to-65% transition-colors duration-150 hover:bg-primary/30",
 
     // Excluded — warm rust
-    excludedSingle: "rounded-full bg-accent text-accent-foreground transition-colors duration-150 hover:opacity-90",
-    excludedRangeStart: "rounded-l-full bg-accent text-accent-foreground transition-colors duration-150 hover:opacity-90",
-    excludedRangeMiddle: "rounded-none bg-accent text-accent-foreground transition-colors duration-150 hover:opacity-90",
+    excludedSingle:
+        "rounded-full bg-accent text-accent-foreground transition-colors duration-150 hover:opacity-90",
+    excludedRangeStart:
+        "rounded-l-full bg-accent text-accent-foreground transition-colors duration-150 hover:opacity-90",
+    excludedRangeMiddle:
+        "rounded-none bg-accent text-accent-foreground transition-colors duration-150 hover:opacity-90",
     excludedRangeEnd:
         "rounded-r-full bg-accent text-accent-foreground bg-gradient-to-br from-accent from-65% to-transparent to-65% transition-colors duration-150 hover:opacity-90",
 };
@@ -82,11 +89,7 @@ export function CampsitesCalendar({ site, campground, showExcluded }: CampsitesC
         const fallback = campground.image
             ? `/images/sites/${campground.image}`
             : "/images/sites/bg_default.jpg";
-        const photos = site.photos?.length
-            ? site.photos
-            : site.photo
-                ? [site.photo]
-                : [fallback];
+        const photos = site.photos?.length ? site.photos : site.photo ? [site.photo] : [fallback];
         const resolved = photos.map((photo) => {
             if (photo.startsWith("http")) return photo;
             return photo.startsWith("/images/") ? photo : `/images/sites/${photo}`;
@@ -155,8 +158,8 @@ export function CampsitesCalendar({ site, campground, showExcluded }: CampsitesC
                                     const label = variant.startsWith("excluded")
                                         ? "Filtered out — site is open but doesn't fit your filters"
                                         : variant.startsWith("soft")
-                                        ? "Single day available"
-                                        : "Available";
+                                          ? "Single day available"
+                                          : "Available";
 
                                     return (
                                         <Tooltip>
@@ -181,9 +184,7 @@ export function CampsitesCalendar({ site, campground, showExcluded }: CampsitesC
             {/* Photo preview dialog */}
             <Dialog
                 open={photoPreview.open}
-                onOpenChange={(open) =>
-                    !open && setPhotoPreview({ open: false, photos: [], siteName: "" })
-                }
+                onOpenChange={(open) => !open && setPhotoPreview({ open: false, photos: [], siteName: "" })}
             >
                 <DialogContent className="max-h-[90vh] w-[95vw] max-w-[95vw] overflow-y-auto sm:max-w-4xl">
                     <DialogHeader>

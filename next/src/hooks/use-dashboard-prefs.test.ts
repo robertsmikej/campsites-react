@@ -5,7 +5,7 @@
  * node env), so we test the observable contract by exercising the underlying
  * load/save/migration logic directly via a stubbed localStorage.
  */
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 
 // ---------------------------------------------------------------------------
 // localStorage stub
@@ -17,11 +17,19 @@ function makeLocalStorage(initial: Store = {}): Storage {
     let store: Store = { ...initial };
     return {
         getItem: vi.fn((key: string) => store[key] ?? null),
-        setItem: vi.fn((key: string, value: string) => { store[key] = value; }),
-        removeItem: vi.fn((key: string) => { delete store[key]; }),
-        clear: vi.fn(() => { store = {}; }),
+        setItem: vi.fn((key: string, value: string) => {
+            store[key] = value;
+        }),
+        removeItem: vi.fn((key: string) => {
+            delete store[key];
+        }),
+        clear: vi.fn(() => {
+            store = {};
+        }),
         key: vi.fn((i: number) => Object.keys(store)[i] ?? null),
-        get length() { return Object.keys(store).length; },
+        get length() {
+            return Object.keys(store).length;
+        },
     } as unknown as Storage;
 }
 
@@ -34,7 +42,10 @@ const OLD_DATE_RANGE_KEY = "campwatch:date-range";
 const OLD_GROUP_BY_KEY = "campwatch:watchlist-grouping";
 
 type GroupBy = "region" | "status" | "all";
-interface DashboardPrefs { dateRange: { from: string; to: string } | null; groupBy: GroupBy; }
+interface DashboardPrefs {
+    dateRange: { from: string; to: string } | null;
+    groupBy: GroupBy;
+}
 const DEFAULT_PREFS: DashboardPrefs = { dateRange: null, groupBy: "region" };
 
 function makeLoadPrefs(ls: Storage) {
@@ -94,7 +105,10 @@ describe("useDashboardPrefs – storage layer", () => {
     });
 
     it("reads back a previously saved blob", () => {
-        const saved: DashboardPrefs = { dateRange: { from: "2026-06-01", to: "2026-06-30" }, groupBy: "status" };
+        const saved: DashboardPrefs = {
+            dateRange: { from: "2026-06-01", to: "2026-06-30" },
+            groupBy: "status",
+        };
         savePrefs(saved);
         expect(loadPrefs()).toEqual(saved);
     });
@@ -113,7 +127,7 @@ describe("useDashboardPrefs – storage layer", () => {
 
         expect(prefs.dateRange).toEqual({ from: "2026-07-04", to: "2026-07-10" });
         expect(ls.getItem(OLD_DATE_RANGE_KEY)).toBeNull(); // old key removed
-        expect(ls.getItem(STORAGE_KEY)).not.toBeNull();    // new key written
+        expect(ls.getItem(STORAGE_KEY)).not.toBeNull(); // new key written
     });
 
     it("migrates old campwatch:watchlist-grouping key (unquoted string)", () => {

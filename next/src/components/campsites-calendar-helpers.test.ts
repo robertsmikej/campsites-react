@@ -1,9 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-    buildVariantMap,
-    buildDateDisplayArray,
-    getMonthsFromSiteData,
-} from "./campsites-calendar-helpers";
+import { buildVariantMap, buildDateDisplayArray, getMonthsFromSiteData } from "./campsites-calendar-helpers";
 import type { SiteAvailability } from "@/types/campground";
 
 // ---------------------------------------------------------------------------

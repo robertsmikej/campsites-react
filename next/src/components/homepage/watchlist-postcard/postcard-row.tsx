@@ -1,6 +1,5 @@
 "use client";
 
-import { C } from "@/components/field-notes/tokens";
 import { DBars } from "@/components/field-notes/decorations";
 
 interface PostcardRowProps {
@@ -26,15 +25,17 @@ export function PostcardRow({ name, loc, pattern, tag, tagColor, isLast, isMobil
     };
 
     return (
-        <div
-            className={`py-3 ${isLast ? "" : "border-b border-dotted border-[rgba(26,22,20,0.16)]"}`}
-        >
+        <div className={`py-3 ${isLast ? "" : "border-b border-dotted border-[rgba(26,22,20,0.16)]"}`}>
             {isMobile ? (
                 <>
                     <div className="flex justify-between items-start gap-2">
                         <div className="flex-1 min-w-0">
-                            <div className="font-italic-serif text-[20px] leading-[1.1] text-cw-ink font-medium italic">{name}</div>
-                            <div className="font-body-serif text-[12px] leading-[1.2] text-cw-ink-soft mt-[3px]">{loc}</div>
+                            <div className="font-italic-serif text-[20px] leading-[1.1] text-cw-ink font-medium italic">
+                                {name}
+                            </div>
+                            <div className="font-body-serif text-[12px] leading-[1.2] text-cw-ink-soft mt-[3px]">
+                                {loc}
+                            </div>
                         </div>
                         <span
                             className="font-mono-field leading-none uppercase rounded-full flex-shrink-0 font-semibold"
@@ -43,13 +44,19 @@ export function PostcardRow({ name, loc, pattern, tag, tagColor, isLast, isMobil
                             {tag}
                         </span>
                     </div>
-                    <div className="mt-[10px]"><DBars pattern={pattern} /></div>
+                    <div className="mt-[10px]">
+                        <DBars pattern={pattern} />
+                    </div>
                 </>
             ) : (
                 <div className="grid grid-cols-[1fr_1fr_90px] gap-3 items-center">
                     <div>
-                        <div className="font-italic-serif text-[22px] leading-[1.1] text-cw-ink font-medium italic">{name}</div>
-                        <div className="font-body-serif text-[12px] leading-[1.2] text-cw-ink-soft mt-[3px]">{loc}</div>
+                        <div className="font-italic-serif text-[22px] leading-[1.1] text-cw-ink font-medium italic">
+                            {name}
+                        </div>
+                        <div className="font-body-serif text-[12px] leading-[1.2] text-cw-ink-soft mt-[3px]">
+                            {loc}
+                        </div>
                     </div>
                     <DBars pattern={pattern} />
                     <span

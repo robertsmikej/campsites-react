@@ -92,5 +92,8 @@ function localDeepMerge<T extends Record<string, unknown>>(target: T, source: Pa
 }
 
 export const getSitewideDefaultSettings = (overrides: Partial<DefaultSettings>): DefaultSettings => {
-    return localDeepMerge({ ...defaultSettings } as Record<string, unknown>, overrides as Record<string, unknown>) as unknown as DefaultSettings;
+    return localDeepMerge(
+        { ...defaultSettings } as Record<string, unknown>,
+        overrides as Record<string, unknown>,
+    ) as unknown as DefaultSettings;
 };

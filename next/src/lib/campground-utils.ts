@@ -1,9 +1,4 @@
-import type {
-    Campground,
-    SiteAvailability,
-    ProcessedCampground,
-    StayMatch,
-} from "@/types/campground";
+import type { SiteAvailability, ProcessedCampground, StayMatch } from "@/types/campground";
 import { siteGroups } from "@/lib/settings";
 
 // ---------------------------------------------------------------------------
@@ -50,15 +45,11 @@ export const getDateForFutureMonth = (months: number): string => {
 // ---------------------------------------------------------------------------
 
 export const sortBySiteName = (arr: SiteAvailability[]): SiteAvailability[] => {
-    return [...arr].sort((a, b) =>
-        a.siteName.localeCompare(b.siteName, undefined, { sensitivity: "base" }),
-    );
+    return [...arr].sort((a, b) => a.siteName.localeCompare(b.siteName, undefined, { sensitivity: "base" }));
 };
 
 export const sortByFromDate = (arr: StayMatch[]): StayMatch[] => {
-    return [...arr].sort((a, b) =>
-        a.from.localeCompare(b.from, undefined, { sensitivity: "base" }),
-    );
+    return [...arr].sort((a, b) => a.from.localeCompare(b.from, undefined, { sensitivity: "base" }));
 };
 
 // ---------------------------------------------------------------------------
@@ -90,9 +81,7 @@ export const checkForGroupAvailability = (
     _showOrHide?: unknown,
 ): boolean => {
     if (!group || Object.values(group).length === 0) return false;
-    const hasGroupAvailability = Object.values(group).map((campground) =>
-        checkForAvailability(campground),
-    );
+    const hasGroupAvailability = Object.values(group).map((campground) => checkForAvailability(campground));
     return hasGroupAvailability.some((element) => element === true);
 };
 
@@ -200,7 +189,9 @@ export const formatGroups = (
     } else {
         normalized = data as ProcessedCampground[];
     }
-    return groupArrayOfObjectsByKey(normalized as unknown as Array<Record<string, unknown>>, groupByKey) as Record<string, ProcessedCampground[]> | undefined;
+    return groupArrayOfObjectsByKey(normalized as unknown as Array<Record<string, unknown>>, groupByKey) as
+        | Record<string, ProcessedCampground[]>
+        | undefined;
 };
 
 export const getSitesWithMatches = (campground: SiteAvailability[]): SiteAvailability[] => {
@@ -242,7 +233,11 @@ export const getEmptyGroupedSites = (): {
             (acc as Record<string, SiteAvailability[]>)[group.label] = [];
             return acc;
         },
-        {} as { Favorites: SiteAvailability[]; Worthwhile: SiteAvailability[]; "All Others": SiteAvailability[] },
+        {} as {
+            Favorites: SiteAvailability[];
+            Worthwhile: SiteAvailability[];
+            "All Others": SiteAvailability[];
+        },
     );
 };
 

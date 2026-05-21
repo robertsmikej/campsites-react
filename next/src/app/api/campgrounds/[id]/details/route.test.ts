@@ -29,10 +29,9 @@ function futureCachedAt(): number {
 
 async function get(id: string): Promise<Response> {
     const { GET } = await import("./route");
-    return GET(
-        new Request(`https://example.com/api/campgrounds/${id}/details`),
-        { params: Promise.resolve({ id }) },
-    );
+    return GET(new Request(`https://example.com/api/campgrounds/${id}/details`), {
+        params: Promise.resolve({ id }),
+    });
 }
 
 beforeEach(() => {
@@ -45,7 +44,7 @@ describe("GET /api/campgrounds/[id]/details", () => {
         vi.mocked(cloudflare.getKv).mockReturnValue(createMockKv());
         const res = await get("abc");
         expect(res.status).toBe(400);
-        const body = await res.json() as { error: string };
+        const body = (await res.json()) as { error: string };
         expect(body.error).toBe("Invalid campground id");
     });
 
@@ -56,7 +55,7 @@ describe("GET /api/campgrounds/[id]/details", () => {
 
         const res = await get("232358");
         expect(res.status).toBe(200);
-        const body = await res.json() as CampgroundDetails;
+        const body = (await res.json()) as CampgroundDetails;
         expect(body.name).toBe("Outlet Campground");
         expect(body.previewImageUrl).toBe("https://cdn.recreation.gov/img/outlet.jpg");
     });
@@ -70,36 +69,44 @@ describe("GET /api/campgrounds/[id]/details", () => {
 
         // Mock fetch: campground endpoint returns lat/lng + name
         // search endpoint returns preview_image_url
-        vi.stubGlobal("fetch", vi.fn().mockImplementation((url: string) => {
-            if ((url as string).includes("/api/camps/campgrounds/")) {
-                return Promise.resolve({
-                    ok: true,
-                    json: () => Promise.resolve({
-                        campground: {
-                            facility_name: "Outlet Campground",
-                            facility_latitude: 44.2,
-                            facility_longitude: -114.9,
-                        },
-                    }),
-                } as Response);
-            }
-            if ((url as string).includes("/api/search")) {
-                return Promise.resolve({
-                    ok: true,
-                    json: () => Promise.resolve({
-                        results: [
-                            { entity_id: "999", preview_image_url: "https://other.jpg" },
-                            { entity_id: "232358", preview_image_url: "https://cdn.recreation.gov/img/outlet.jpg" },
-                        ],
-                    }),
-                } as Response);
-            }
-            return Promise.resolve({ ok: false } as Response);
-        }));
+        vi.stubGlobal(
+            "fetch",
+            vi.fn().mockImplementation((url: string) => {
+                if ((url as string).includes("/api/camps/campgrounds/")) {
+                    return Promise.resolve({
+                        ok: true,
+                        json: () =>
+                            Promise.resolve({
+                                campground: {
+                                    facility_name: "Outlet Campground",
+                                    facility_latitude: 44.2,
+                                    facility_longitude: -114.9,
+                                },
+                            }),
+                    } as Response);
+                }
+                if ((url as string).includes("/api/search")) {
+                    return Promise.resolve({
+                        ok: true,
+                        json: () =>
+                            Promise.resolve({
+                                results: [
+                                    { entity_id: "999", preview_image_url: "https://other.jpg" },
+                                    {
+                                        entity_id: "232358",
+                                        preview_image_url: "https://cdn.recreation.gov/img/outlet.jpg",
+                                    },
+                                ],
+                            }),
+                    } as Response);
+                }
+                return Promise.resolve({ ok: false } as Response);
+            }),
+        );
 
         const res = await get("232358");
         expect(res.status).toBe(200);
-        const body = await res.json() as CampgroundDetails;
+        const body = (await res.json()) as CampgroundDetails;
         expect(body.name).toBe("Outlet Campground");
         expect(body.latitude).toBe(44.2);
         expect(body.longitude).toBe(-114.9);
@@ -119,29 +126,33 @@ describe("GET /api/campgrounds/[id]/details", () => {
         const kv = createMockKv();
         vi.mocked(cloudflare.getKv).mockReturnValue(kv);
 
-        vi.stubGlobal("fetch", vi.fn().mockImplementation((url: string) => {
-            if ((url as string).includes("/api/camps/campgrounds/")) {
+        vi.stubGlobal(
+            "fetch",
+            vi.fn().mockImplementation((url: string) => {
+                if ((url as string).includes("/api/camps/campgrounds/")) {
+                    return Promise.resolve({
+                        ok: true,
+                        json: () =>
+                            Promise.resolve({
+                                campground: {
+                                    facility_name: "Some Campground",
+                                    facility_latitude: 40.0,
+                                    facility_longitude: -120.0,
+                                },
+                            }),
+                    } as Response);
+                }
+                // search returns no matching entity_id
                 return Promise.resolve({
                     ok: true,
-                    json: () => Promise.resolve({
-                        campground: {
-                            facility_name: "Some Campground",
-                            facility_latitude: 40.0,
-                            facility_longitude: -120.0,
-                        },
-                    }),
+                    json: () => Promise.resolve({ results: [] }),
                 } as Response);
-            }
-            // search returns no matching entity_id
-            return Promise.resolve({
-                ok: true,
-                json: () => Promise.resolve({ results: [] }),
-            } as Response);
-        }));
+            }),
+        );
 
         const res = await get("111111");
         expect(res.status).toBe(200);
-        const body = await res.json() as CampgroundDetails;
+        const body = (await res.json()) as CampgroundDetails;
         expect(body.previewImageUrl).toBeNull();
 
         vi.unstubAllGlobals();
@@ -151,29 +162,34 @@ describe("GET /api/campgrounds/[id]/details", () => {
         const kv = createMockKv();
         vi.mocked(cloudflare.getKv).mockReturnValue(kv);
 
-        vi.stubGlobal("fetch", vi.fn().mockImplementation((url: string) => {
-            if ((url as string).includes("/api/camps/campgrounds/")) {
+        vi.stubGlobal(
+            "fetch",
+            vi.fn().mockImplementation((url: string) => {
+                if ((url as string).includes("/api/camps/campgrounds/")) {
+                    return Promise.resolve({
+                        ok: true,
+                        json: () =>
+                            Promise.resolve({
+                                campground: { facility_name: "Test CG" },
+                            }),
+                    } as Response);
+                }
                 return Promise.resolve({
                     ok: true,
-                    json: () => Promise.resolve({
-                        campground: { facility_name: "Test CG" },
-                    }),
+                    json: () =>
+                        Promise.resolve({
+                            results: [
+                                { entity_id: "000001", preview_image_url: "https://wrong.jpg" },
+                                { entity_id: "555555", preview_image_url: "https://correct.jpg" },
+                                { entity_id: "000002", preview_image_url: "https://alsowrong.jpg" },
+                            ],
+                        }),
                 } as Response);
-            }
-            return Promise.resolve({
-                ok: true,
-                json: () => Promise.resolve({
-                    results: [
-                        { entity_id: "000001", preview_image_url: "https://wrong.jpg" },
-                        { entity_id: "555555", preview_image_url: "https://correct.jpg" },
-                        { entity_id: "000002", preview_image_url: "https://alsowrong.jpg" },
-                    ],
-                }),
-            } as Response);
-        }));
+            }),
+        );
 
         const res = await get("555555");
-        const body = await res.json() as CampgroundDetails;
+        const body = (await res.json()) as CampgroundDetails;
         expect(body.previewImageUrl).toBe("https://correct.jpg");
 
         vi.unstubAllGlobals();

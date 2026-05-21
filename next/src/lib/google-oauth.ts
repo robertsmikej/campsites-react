@@ -110,7 +110,10 @@ async function getJwks(): Promise<GoogleJwk[]> {
     return data.keys;
 }
 
-export async function verifyIdToken(idToken: string, expectedAudience: string): Promise<GoogleIdTokenPayload> {
+export async function verifyIdToken(
+    idToken: string,
+    expectedAudience: string,
+): Promise<GoogleIdTokenPayload> {
     const parts = idToken.split(".");
     if (parts.length !== 3) throw new Error("Malformed ID token");
     const [headerB64, payloadB64, signatureB64] = parts;

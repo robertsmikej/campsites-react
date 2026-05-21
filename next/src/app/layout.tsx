@@ -1,13 +1,6 @@
 import type { Metadata } from "next";
 import { GeistSans } from "geist/font/sans";
-import {
-    Inter,
-    Big_Shoulders,
-    Cormorant_Garamond,
-    Source_Serif_4,
-    DM_Mono,
-    Caveat,
-} from "next/font/google";
+import { Inter, Big_Shoulders, Cormorant_Garamond, Source_Serif_4, DM_Mono, Caveat } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
@@ -53,7 +46,8 @@ const caveat = Caveat({
 
 const SITE_URL = "https://campwatch.dev";
 const SITE_TITLE = "CampWatch — Never Miss a Campsite Opening";
-const SITE_DESCRIPTION = "Recreation.gov sells out in minutes. CampWatch watches the sites you actually want, every five minutes, and emails you the second one opens. No app, no notifications to babysit.";
+const SITE_DESCRIPTION =
+    "Recreation.gov sells out in minutes. CampWatch watches the sites you actually want, every five minutes, and emails you the second one opens. No app, no notifications to babysit.";
 
 export const metadata: Metadata = {
     metadataBase: new URL(SITE_URL),
@@ -108,8 +102,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 */}
                 <script
                     dangerouslySetInnerHTML={{
-                        __html:
-                            "window.__name=window.__name||function(t,n){try{Object.defineProperty(t,'name',{value:n,configurable:true})}catch(e){}return t};",
+                        __html: "window.__name=window.__name||function(t,n){try{Object.defineProperty(t,'name',{value:n,configurable:true})}catch(e){}return t};",
                     }}
                 />
                 {/*

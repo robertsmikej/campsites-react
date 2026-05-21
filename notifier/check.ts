@@ -3,12 +3,12 @@
 // deduplicates recreation.gov fetches, and emails each user about their own matches.
 // Designed to run as a GitHub Actions scheduled workflow.
 
-import { fetchMonth, processCampgroundResults, getAllDatesInRange } from './lib/fetch-availability';
-import { findNewMatches, generateSignature } from './lib/diff';
-import { formatEmail, sendEmail } from './lib/email';
-import type { Campground, GlobalSettings } from '../next/src/types/campground';
-import type { MatchResult, SiteConfigForDiff, CampgroundResult } from './lib/diff';
-import type { SiteAvailabilityMap } from './lib/fetch-availability';
+import { fetchMonth, processCampgroundResults, getAllDatesInRange } from "./lib/fetch-availability";
+import { findNewMatches, generateSignature } from "./lib/diff";
+import { formatEmail, sendEmail } from "./lib/email";
+import type { Campground, GlobalSettings } from "../next/src/types/campground";
+import type { MatchResult, SiteConfigForDiff, CampgroundResult } from "./lib/diff";
+import type { SiteAvailabilityMap } from "./lib/fetch-availability";
 
 const DELAY_BETWEEN_FETCHES_MS = 500;
 
@@ -36,7 +36,7 @@ interface NotificationTarget {
     lastNotifiedAt?: string | null;
     notifierState?: NotifierState | null;
     campgrounds: {
-        'recreation.gov'?: Campground[];
+        "recreation.gov"?: Campground[];
     };
     globalSettings?: GlobalSettings;
 }
@@ -111,12 +111,12 @@ function isEligible(target: NotificationTarget, now: Date, forceEmail: boolean):
 // ── Dedup fetch plan ──────────────────────────────────────────────────────────
 
 function monthsBetween(startIso: string, endIso: string): string[] {
-    const start = new Date(startIso + 'T00:00:00Z');
-    const end = new Date(endIso + 'T00:00:00Z');
+    const start = new Date(startIso + "T00:00:00Z");
+    const end = new Date(endIso + "T00:00:00Z");
     const months = new Set<string>();
     const cur = new Date(start);
     while (cur <= end) {
-        const m = `${cur.getUTCFullYear()}-${String(cur.getUTCMonth() + 1).padStart(2, '0')}`;
+        const m = `${cur.getUTCFullYear()}-${String(cur.getUTCMonth() + 1).padStart(2, "0")}`;
         months.add(m);
         cur.setUTCMonth(cur.getUTCMonth() + 1);
     }
@@ -127,7 +127,7 @@ function buildDedupedFetchPlan(targets: NotificationTarget[]): FetchPlanItem[] {
     // campgroundId → Set<"YYYY-MM">
     const ranges = new Map<string, Set<string>>();
     for (const target of targets) {
-        for (const c of target.campgrounds['recreation.gov'] ?? []) {
+        for (const c of target.campgrounds["recreation.gov"] ?? []) {
             if (c.enabled === false) continue;
             const start = c.dates?.startDate;
             const end = c.dates?.endDate;
@@ -173,11 +173,14 @@ async function fetchDeduped(plan: FetchPlanItem[]): Promise<Record<string, unkno
 // ── Compute matches for a single user from pre-fetched raw API data ───────────
 // Returns matches in the same shape as findNewMatches (without diff).
 
-function computeMatchesForUser(target: NotificationTarget, rawByCampground: Record<string, unknown[]>): MatchResult[] {
+function computeMatchesForUser(
+    target: NotificationTarget,
+    rawByCampground: Record<string, unknown[]>,
+): MatchResult[] {
     const globalSettings = target.globalSettings ?? ({} as Partial<GlobalSettings>);
     const defaultSettings = {
         stayLengths: [2, 3, 4, 5],
-        validStartDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+        validStartDays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
     };
     const baseSettings = {
         stayLengths: globalSettings.stayLengths ?? defaultSettings.stayLengths,
@@ -187,7 +190,7 @@ function computeMatchesForUser(target: NotificationTarget, rawByCampground: Reco
     // Build synthetic fetchCampground-style result objects so we can reuse findNewMatches.
     const syntheticResults: CampgroundResult[] = [];
 
-    for (const c of target.campgrounds['recreation.gov'] ?? []) {
+    for (const c of target.campgrounds["recreation.gov"] ?? []) {
         if (c.enabled === false) continue;
         const start = c.dates?.startDate;
         const end = c.dates?.endDate;
@@ -212,14 +215,14 @@ function computeMatchesForUser(target: NotificationTarget, rawByCampground: Reco
         syntheticResults.push({
             campgroundId: c.id,
             campgroundName: c.name,
-            campgroundArea: c.area ?? '',
-            campgroundDescription: c.description ?? '',
+            campgroundArea: c.area ?? "",
+            campgroundDescription: c.description ?? "",
             sites: siteAvailability,
         });
     }
 
     // Build a "siteConfigurations" list in the shape findNewMatches expects.
-    const siteConfigurations: SiteConfigForDiff[] = (target.campgrounds['recreation.gov'] ?? []).map((c) => ({
+    const siteConfigurations: SiteConfigForDiff[] = (target.campgrounds["recreation.gov"] ?? []).map((c) => ({
         id: c.id,
         sites: {
             favorites: c.sites?.favorites ?? [],
@@ -234,7 +237,7 @@ function computeMatchesForUser(target: NotificationTarget, rawByCampground: Reco
     // Apply the notifyAll / favorites filter (mirrors the old logic).
     const notifyAllIds = new Set(siteConfigurations.filter((c) => c.notifyAll).map((c) => c.id));
     const filtered = allMatches.filter(
-        (m) => m.group === 'favorites' || m.group === 'worthwhile' || notifyAllIds.has(m.campgroundId)
+        (m) => m.group === "favorites" || m.group === "worthwhile" || notifyAllIds.has(m.campgroundId),
     );
 
     return filtered;
@@ -285,7 +288,10 @@ async function sendEmailToUser({
 
 // ── First-seen map helpers ────────────────────────────────────────────────────
 
-async function fetchFirstSeenMap(subscriberApiUrl: string, subscriberApiSecret: string): Promise<FirstSeenMap> {
+async function fetchFirstSeenMap(
+    subscriberApiUrl: string,
+    subscriberApiSecret: string,
+): Promise<FirstSeenMap> {
     const res = await fetch(`${subscriberApiUrl}/api/admin/first-seen`, {
         headers: { Authorization: `Bearer ${subscriberApiSecret}` },
     });
@@ -302,9 +308,9 @@ async function putFirstSeenMap(
     map: FirstSeenMap,
 ): Promise<void> {
     const res = await fetch(`${subscriberApiUrl}/api/admin/first-seen`, {
-        method: 'PUT',
+        method: "PUT",
         headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
             Authorization: `Bearer ${subscriberApiSecret}`,
         },
         body: JSON.stringify({ map }),
@@ -320,16 +326,16 @@ async function main(): Promise<void> {
     const subscriberApiUrl = process.env.SUBSCRIBER_API_URL;
     const subscriberApiSecret = process.env.SUBSCRIBER_API_SECRET;
     const resendApiKey = process.env.RESEND_API_KEY;
-    const siteUrl = process.env.SITE_URL ?? '';
-    const forceEmail = process.env.FORCE_EMAIL === 'true';
+    const siteUrl = process.env.SITE_URL ?? "";
+    const forceEmail = process.env.FORCE_EMAIL === "true";
     const now = new Date();
 
     if (!subscriberApiUrl || !subscriberApiSecret) {
-        console.error('[Error] Missing SUBSCRIBER_API_URL or SUBSCRIBER_API_SECRET');
+        console.error("[Error] Missing SUBSCRIBER_API_URL or SUBSCRIBER_API_SECRET");
         process.exit(1);
     }
     if (!resendApiKey) {
-        console.error('[Error] Missing RESEND_API_KEY');
+        console.error("[Error] Missing RESEND_API_KEY");
         process.exit(1);
     }
 
@@ -341,14 +347,14 @@ async function main(): Promise<void> {
         console.error(`[Error] notification-targets returned ${targetsResponse.status}`);
         process.exit(1);
     }
-    const { targets } = await targetsResponse.json() as NotificationTargetsResponse;
+    const { targets } = (await targetsResponse.json()) as NotificationTargetsResponse;
     console.log(`[Targets] ${targets.length} users with non-empty campground lists`);
 
     // 2. Filter by enabled + frequency.
     const eligible = targets.filter((t) => isEligible(t, now, forceEmail));
     console.log(`[Eligible] ${eligible.length} users due for a check this cycle`);
     if (eligible.length === 0) {
-        console.log('[Done] Nothing to do');
+        console.log("[Done] Nothing to do");
         return;
     }
 
@@ -369,7 +375,7 @@ async function main(): Promise<void> {
     //    Also build a global enrichment map (sig → enriched fields) so step 9.5 can
     //    populate the recent-openings log without re-walking per-user data.
     const newFirstSeenMap: FirstSeenMap = {};
-    const globalMatchesBySig: Record<string, Omit<RecentOpening, 'signature' | 'detectedAt'>> = {};
+    const globalMatchesBySig: Record<string, Omit<RecentOpening, "signature" | "detectedAt">> = {};
     for (const target of eligible) {
         const userMatches = computeMatchesForUser(target, rawByCampground);
         for (const m of userMatches) {
@@ -397,7 +403,7 @@ async function main(): Promise<void> {
     const sentLatenciesMs: number[] = [];
     for (const target of eligible) {
         const userMatches = computeMatchesForUser(target, rawByCampground);
-        const isCurator = (target.roles ?? []).includes('curator');
+        const isCurator = (target.roles ?? []).includes("curator");
 
         // Apply curator lead-time: non-curators only see matches whose global first-sighting
         // is at least LEAD_TIME_MS in the past. This filter runs BEFORE the diff so that a
@@ -430,7 +436,13 @@ async function main(): Promise<void> {
         console.log(`[${target.email}] ${newMatches.length} new match(es) — sending email`);
         try {
             const sentAtMs = Date.now();
-            await sendEmailToUser({ user: target, matches: newMatches, resendApiKey, siteUrl, apiSecret: subscriberApiSecret });
+            await sendEmailToUser({
+                user: target,
+                matches: newMatches,
+                resendApiKey,
+                siteUrl,
+                apiSecret: subscriberApiSecret,
+            });
             // Record latency for each match in this email.
             for (const m of newMatches) {
                 const sig = signatureForMatch(m);
@@ -448,9 +460,9 @@ async function main(): Promise<void> {
 
     // 8. Push state back to the API.
     const stateResponse = await fetch(`${subscriberApiUrl}/api/admin/notifier-state`, {
-        method: 'PUT',
+        method: "PUT",
         headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
             Authorization: `Bearer ${subscriberApiSecret}`,
         },
         body: JSON.stringify({ updates }),
@@ -458,7 +470,7 @@ async function main(): Promise<void> {
     if (!stateResponse.ok) {
         console.error(`[Warn] notifier-state PUT returned ${stateResponse.status}`);
     } else {
-        const result = await stateResponse.json() as { updated: number };
+        const result = (await stateResponse.json()) as { updated: number };
         console.log(`[Done] Updated state for ${result.updated} user(s)`);
     }
 
@@ -469,7 +481,8 @@ async function main(): Promise<void> {
     // Fetch the prior log from the public endpoint (no auth needed, falls back to []).
     const RECENT_WINDOW_MS = 24 * 60 * 60 * 1000;
     const recentResp = await fetch(`${subscriberApiUrl}/api/openings/recent`).catch(() => null);
-    const priorRecent: RecentOpening[] = recentResp && recentResp.ok ? await recentResp.json() as RecentOpening[] : [];
+    const priorRecent: RecentOpening[] =
+        recentResp && recentResp.ok ? ((await recentResp.json()) as RecentOpening[]) : [];
 
     // Prune entries older than 24h.
     const recent = priorRecent.filter(
@@ -495,9 +508,9 @@ async function main(): Promise<void> {
 
     try {
         const recentPutResp = await fetch(`${subscriberApiUrl}/api/admin/openings/recent`, {
-            method: 'PUT',
+            method: "PUT",
             headers: {
-                'Content-Type': 'application/json',
+                "Content-Type": "application/json",
                 Authorization: `Bearer ${subscriberApiSecret}`,
             },
             body: JSON.stringify(trimmedRecent),
@@ -505,7 +518,9 @@ async function main(): Promise<void> {
         if (!recentPutResp.ok) {
             console.error(`[Warn] /api/admin/openings/recent PUT returned ${recentPutResp.status}`);
         } else {
-            console.log(`[Recent] ${trimmedRecent.length} entries in log (${recent.length - (priorRecent.filter((r) => r.detectedAt && Date.now() - new Date(r.detectedAt).getTime() < RECENT_WINDOW_MS).length)} new this cycle)`);
+            console.log(
+                `[Recent] ${trimmedRecent.length} entries in log (${recent.length - priorRecent.filter((r) => r.detectedAt && Date.now() - new Date(r.detectedAt).getTime() < RECENT_WINDOW_MS).length} new this cycle)`,
+            );
         }
     } catch (err) {
         console.error(`[Warn] /api/admin/openings/recent PUT failed: ${(err as Error).message}`);
@@ -518,7 +533,7 @@ async function main(): Promise<void> {
     // matching only enabled entries. Gives a stable "currently watched" count each cycle.
     const trackedIds = new Set<string>();
     for (const t of targets) {
-        for (const c of t.campgrounds['recreation.gov'] ?? []) {
+        for (const c of t.campgrounds["recreation.gov"] ?? []) {
             if (c.enabled === false) continue;
             if (c.id) trackedIds.add(c.id);
         }
@@ -529,14 +544,15 @@ async function main(): Promise<void> {
     try {
         const priorStatsResponse = await fetch(`${subscriberApiUrl}/api/stats`);
         if (priorStatsResponse.ok) {
-            priorStats = await priorStatsResponse.json() as PriorStats;
+            priorStats = (await priorStatsResponse.json()) as PriorStats;
         }
     } catch (err) {
         console.error(`[Warn] Could not fetch prior stats: ${(err as Error).message}`);
     }
 
     // Daily counter: reset to 0 if the date has rolled over; otherwise accumulate.
-    const priorOpenings = priorStats?.todayKey === todayKeyUtc ? Number(priorStats.openingsSentToday) || 0 : 0;
+    const priorOpenings =
+        priorStats?.todayKey === todayKeyUtc ? Number(priorStats.openingsSentToday) || 0 : 0;
     const openingsSentToday = priorOpenings + sentLatenciesMs.length;
 
     // Daily history for the rolling 7-day window.
@@ -545,20 +561,24 @@ async function main(): Promise<void> {
     const openingsSentLast7Days = dailyHistory.reduce((acc, entry) => acc + (Number(entry.count) || 0), 0);
 
     // Latency window: carry forward up to 200 prior samples, then append this cycle's.
-    const priorWindow = (priorStats?.todayKey === todayKeyUtc && Array.isArray(priorStats._latencyWindow))
-        ? priorStats._latencyWindow.slice(-200)
-        : [];
+    const priorWindow =
+        priorStats?.todayKey === todayKeyUtc && Array.isArray(priorStats._latencyWindow)
+            ? priorStats._latencyWindow.slice(-200)
+            : [];
     const latencyWindow = [...priorWindow, ...sentLatenciesMs].slice(-200);
 
     // Compute median.
     const sortedLatencies = [...latencyWindow].sort((a, b) => a - b);
-    const medianLatencyMs = sortedLatencies.length === 0
-        ? (Number(priorStats?.medianLatencyMs) || 0)
-        : sortedLatencies.length % 2 === 1
-            ? sortedLatencies[(sortedLatencies.length - 1) / 2]
-            : Math.round(
-                (sortedLatencies[sortedLatencies.length / 2 - 1] + sortedLatencies[sortedLatencies.length / 2]) / 2,
-              );
+    const medianLatencyMs =
+        sortedLatencies.length === 0
+            ? Number(priorStats?.medianLatencyMs) || 0
+            : sortedLatencies.length % 2 === 1
+              ? sortedLatencies[(sortedLatencies.length - 1) / 2]
+              : Math.round(
+                    (sortedLatencies[sortedLatencies.length / 2 - 1] +
+                        sortedLatencies[sortedLatencies.length / 2]) /
+                        2,
+                );
 
     const statsBody: StatsBody = {
         lastPollAt: now.toISOString(),
@@ -574,9 +594,9 @@ async function main(): Promise<void> {
 
     try {
         const statsResponse = await fetch(`${subscriberApiUrl}/api/admin/stats`, {
-            method: 'PUT',
+            method: "PUT",
             headers: {
-                'Content-Type': 'application/json',
+                "Content-Type": "application/json",
                 Authorization: `Bearer ${subscriberApiSecret}`,
             },
             body: JSON.stringify(statsBody),
@@ -584,7 +604,9 @@ async function main(): Promise<void> {
         if (!statsResponse.ok) {
             console.error(`[Warn] /api/admin/stats PUT returned ${statsResponse.status}`);
         } else {
-            console.log(`[Stats] ${trackedIds.size} cgs tracked, ${sentLatenciesMs.length} sent this cycle, ${openingsSentLast7Days} last 7d, ${medianLatencyMs}ms median`);
+            console.log(
+                `[Stats] ${trackedIds.size} cgs tracked, ${sentLatenciesMs.length} sent this cycle, ${openingsSentLast7Days} last 7d, ${medianLatencyMs}ms median`,
+            );
         }
     } catch (err) {
         console.error(`[Warn] /api/admin/stats PUT failed: ${(err as Error).message}`);
@@ -599,12 +621,12 @@ function updateDailyHistory(
     todayCount: number,
 ): DailyHistoryEntry[] {
     const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
-    const todayMs = new Date(todayKey + 'T00:00:00Z').getTime();
+    const todayMs = new Date(todayKey + "T00:00:00Z").getTime();
     const cutoff = todayMs - SEVEN_DAYS_MS;
     const filtered = (prior ?? [])
         .filter((entry) => {
-            if (!entry || typeof entry.date !== 'string') return false;
-            const entryMs = new Date(entry.date + 'T00:00:00Z').getTime();
+            if (!entry || typeof entry.date !== "string") return false;
+            const entryMs = new Date(entry.date + "T00:00:00Z").getTime();
             if (!Number.isFinite(entryMs)) return false;
             return entryMs >= cutoff && entry.date !== todayKey;
         })
@@ -615,6 +637,6 @@ function updateDailyHistory(
 }
 
 main().catch((err) => {
-    console.error('[Fatal]', err);
+    console.error("[Fatal]", err);
     process.exit(1);
 });

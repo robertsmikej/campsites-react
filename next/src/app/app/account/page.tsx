@@ -5,13 +5,7 @@ import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -52,6 +46,7 @@ export default function AccountPage() {
         const n = auth.user?.notifications ?? DEFAULT_NOTIFICATIONS;
         setNotifEnabled(n.enabled);
         setNotifFrequency(n.frequencyMinutes as Frequency);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [auth.user?.notifications?.enabled, auth.user?.notifications?.frequencyMinutes]);
 
     if (auth.isLoading || !auth.user) {
@@ -82,7 +77,7 @@ export default function AccountPage() {
                 credentials: "include",
             });
             if (!response.ok) {
-                const body = await response.json().catch(() => ({})) as { error?: string };
+                const body = (await response.json().catch(() => ({}))) as { error?: string };
                 toast.error(body.error ?? `Save failed (${response.status})`);
                 return;
             }
@@ -94,7 +89,8 @@ export default function AccountPage() {
     }
 
     const currentNotifEnabled = auth.user.notifications?.enabled ?? DEFAULT_NOTIFICATIONS.enabled;
-    const currentNotifFrequency = auth.user.notifications?.frequencyMinutes ?? DEFAULT_NOTIFICATIONS.frequencyMinutes;
+    const currentNotifFrequency =
+        auth.user.notifications?.frequencyMinutes ?? DEFAULT_NOTIFICATIONS.frequencyMinutes;
     const notifDirty = notifEnabled !== currentNotifEnabled || notifFrequency !== currentNotifFrequency;
 
     async function saveNotifications() {
@@ -157,7 +153,6 @@ export default function AccountPage() {
             <main className="bg-cw-paper text-cw-ink font-body-serif min-h-screen">
                 <div className="mx-auto w-full max-w-screen-2xl px-[22px] md:px-9 py-8 sm:py-12">
                     <div className="max-w-2xl space-y-6">
-
                         {/* Page header */}
                         <div className="mb-8">
                             <div className="font-mono-field text-[11px] font-bold uppercase tracking-[0.18em] text-cw-clay mb-2">
@@ -183,6 +178,7 @@ export default function AccountPage() {
                             {/* Avatar + identity */}
                             <div className="flex items-center gap-4 mb-6">
                                 {auth.user.picture ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
                                     <img
                                         src={auth.user.picture}
                                         alt={auth.user.name ?? "Profile photo"}
@@ -364,7 +360,8 @@ export default function AccountPage() {
                                     <AlertDialogHeader>
                                         <AlertDialogTitle>Delete your account?</AlertDialogTitle>
                                         <AlertDialogDescription>
-                                            This removes your profile and any watchlist data. This cannot be undone.
+                                            This removes your profile and any watchlist data. This cannot be
+                                            undone.
                                         </AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
@@ -379,7 +376,6 @@ export default function AccountPage() {
                                 </AlertDialogContent>
                             </AlertDialog>
                         </section>
-
                     </div>
                 </div>
             </main>

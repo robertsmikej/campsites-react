@@ -21,7 +21,9 @@ beforeEach(() => {
 
 async function doPost(): Promise<Response> {
     const { POST } = await import("./route");
-    return POST(new Request("https://example.com/api/users/me/campgrounds/clone-default", { method: "POST" }));
+    return POST(
+        new Request("https://example.com/api/users/me/campgrounds/clone-default", { method: "POST" }),
+    );
 }
 
 describe("POST /api/users/me/campgrounds/clone-default", () => {
@@ -61,7 +63,7 @@ describe("POST /api/users/me/campgrounds/clone-default", () => {
         expect(typeof body.updatedAt).toBe("string");
 
         // User's record should now be stored in KV
-        const stored = await kv.get("user:user@example.com:campgrounds", "json") as typeof body;
+        const stored = (await kv.get("user:user@example.com:campgrounds", "json")) as typeof body;
         expect(stored.campgrounds).toEqual(curatedDefault.campgrounds);
         expect(stored.globalSettings).toEqual(curatedDefault.globalSettings);
     });

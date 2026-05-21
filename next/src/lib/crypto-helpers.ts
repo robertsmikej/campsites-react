@@ -38,10 +38,7 @@ export async function signValue(value: string, secret: string): Promise<string> 
     return `${payload}.${sig}`;
 }
 
-export async function verifySignedValue(
-    signed: string,
-    secret: string,
-): Promise<string | null> {
+export async function verifySignedValue(signed: string, secret: string): Promise<string | null> {
     const dot = signed.lastIndexOf(".");
     if (dot < 1 || dot >= signed.length - 1) return null;
     const payload = signed.slice(0, dot);

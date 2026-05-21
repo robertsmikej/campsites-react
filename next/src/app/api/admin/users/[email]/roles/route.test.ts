@@ -51,7 +51,10 @@ describe("PUT /api/admin/users/[email]/roles", () => {
 
     it("returns 403 when signed in but not a curator", async () => {
         vi.mocked(sessions.readSession).mockResolvedValue({
-            id: "x", email: "user@x.com", createdAt: "x", expiresAt: "x",
+            id: "x",
+            email: "user@x.com",
+            createdAt: "x",
+            expiresAt: "x",
         });
         const kv = createMockKv({
             "user:user@x.com:profile": JSON.stringify({ email: "user@x.com", roles: [] }),
@@ -63,7 +66,10 @@ describe("PUT /api/admin/users/[email]/roles", () => {
 
     it("returns 400 on invalid JSON body", async () => {
         vi.mocked(sessions.readSession).mockResolvedValue({
-            id: "x", email: "curator@x.com", createdAt: "x", expiresAt: "x",
+            id: "x",
+            email: "curator@x.com",
+            createdAt: "x",
+            expiresAt: "x",
         });
         const kv = createMockKv({
             "user:curator@x.com:profile": JSON.stringify({ email: "curator@x.com", roles: ["curator"] }),
@@ -77,7 +83,10 @@ describe("PUT /api/admin/users/[email]/roles", () => {
 
     it("returns 400 when roles is missing", async () => {
         vi.mocked(sessions.readSession).mockResolvedValue({
-            id: "x", email: "curator@x.com", createdAt: "x", expiresAt: "x",
+            id: "x",
+            email: "curator@x.com",
+            createdAt: "x",
+            expiresAt: "x",
         });
         const kv = createMockKv({
             "user:curator@x.com:profile": JSON.stringify({ email: "curator@x.com", roles: ["curator"] }),
@@ -89,7 +98,10 @@ describe("PUT /api/admin/users/[email]/roles", () => {
 
     it("returns 400 when roles contains an invalid string", async () => {
         vi.mocked(sessions.readSession).mockResolvedValue({
-            id: "x", email: "curator@x.com", createdAt: "x", expiresAt: "x",
+            id: "x",
+            email: "curator@x.com",
+            createdAt: "x",
+            expiresAt: "x",
         });
         const kv = createMockKv({
             "user:curator@x.com:profile": JSON.stringify({ email: "curator@x.com", roles: ["curator"] }),
@@ -101,7 +113,10 @@ describe("PUT /api/admin/users/[email]/roles", () => {
 
     it("returns 400 when roles is not an array", async () => {
         vi.mocked(sessions.readSession).mockResolvedValue({
-            id: "x", email: "curator@x.com", createdAt: "x", expiresAt: "x",
+            id: "x",
+            email: "curator@x.com",
+            createdAt: "x",
+            expiresAt: "x",
         });
         const kv = createMockKv({
             "user:curator@x.com:profile": JSON.stringify({ email: "curator@x.com", roles: ["curator"] }),
@@ -113,7 +128,10 @@ describe("PUT /api/admin/users/[email]/roles", () => {
 
     it("returns 404 when target user does not exist", async () => {
         vi.mocked(sessions.readSession).mockResolvedValue({
-            id: "x", email: "curator@x.com", createdAt: "x", expiresAt: "x",
+            id: "x",
+            email: "curator@x.com",
+            createdAt: "x",
+            expiresAt: "x",
         });
         const kv = createMockKv({
             "user:curator@x.com:profile": JSON.stringify({ email: "curator@x.com", roles: ["curator"] }),
@@ -125,7 +143,10 @@ describe("PUT /api/admin/users/[email]/roles", () => {
 
     it("returns 400 when attempting to remove the last curator", async () => {
         vi.mocked(sessions.readSession).mockResolvedValue({
-            id: "x", email: "curator@x.com", createdAt: "x", expiresAt: "x",
+            id: "x",
+            email: "curator@x.com",
+            createdAt: "x",
+            expiresAt: "x",
         });
         const kv = createMockKv({
             "user:curator@x.com:profile": JSON.stringify({ email: "curator@x.com", roles: ["curator"] }),
@@ -139,7 +160,10 @@ describe("PUT /api/admin/users/[email]/roles", () => {
 
     it("returns 200 with updated profile when granting curator", async () => {
         vi.mocked(sessions.readSession).mockResolvedValue({
-            id: "x", email: "curator@x.com", createdAt: "x", expiresAt: "x",
+            id: "x",
+            email: "curator@x.com",
+            createdAt: "x",
+            expiresAt: "x",
         });
         const kv = createMockKv({
             "user:curator@x.com:profile": JSON.stringify({ email: "curator@x.com", roles: ["curator"] }),
@@ -155,7 +179,10 @@ describe("PUT /api/admin/users/[email]/roles", () => {
 
     it("returns 200 when revoking curator from one of multiple curators", async () => {
         vi.mocked(sessions.readSession).mockResolvedValue({
-            id: "x", email: "curator1@x.com", createdAt: "x", expiresAt: "x",
+            id: "x",
+            email: "curator1@x.com",
+            createdAt: "x",
+            expiresAt: "x",
         });
         const kv = createMockKv({
             "user:curator1@x.com:profile": JSON.stringify({ email: "curator1@x.com", roles: ["curator"] }),
@@ -171,7 +198,10 @@ describe("PUT /api/admin/users/[email]/roles", () => {
 
     it("URL-decodes an email with special characters", async () => {
         vi.mocked(sessions.readSession).mockResolvedValue({
-            id: "x", email: "curator@x.com", createdAt: "x", expiresAt: "x",
+            id: "x",
+            email: "curator@x.com",
+            createdAt: "x",
+            expiresAt: "x",
         });
         const kv = createMockKv({
             "user:curator@x.com:profile": JSON.stringify({ email: "curator@x.com", roles: ["curator"] }),

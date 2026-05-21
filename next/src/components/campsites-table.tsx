@@ -5,14 +5,7 @@ import { ExternalLink, Camera } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-    Card,
-    CardContent,
-    CardFooter,
-    CardHeader,
-    CardTitle,
-    CardDescription,
-} from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -24,7 +17,6 @@ import {
     getSitesWithMatches,
     sortByFromDate,
     sortBySiteName,
-    goToPage,
 } from "@/lib/campground-utils";
 import type { ProcessedCampground, SiteAvailability, StayMatch, ExcludedStay } from "@/types/campground";
 
@@ -48,15 +40,9 @@ function openPhotoPreview(
 ) {
     const campgroundId = campground?.id;
     const siteNumber = site.siteName?.replace(/^Site\s+/i, "");
-    const fallback = campground?.image
-        ? `/images/sites/${campground.image}`
-        : "/images/sites/bg_default.jpg";
+    const fallback = campground?.image ? `/images/sites/${campground.image}` : "/images/sites/bg_default.jpg";
 
-    const sitePhotos: string[] = site.photos?.length
-        ? site.photos
-        : site.photo
-            ? [site.photo]
-            : [];
+    const sitePhotos: string[] = site.photos?.length ? site.photos : site.photo ? [site.photo] : [];
     const resolvedPhotos = sitePhotos.map((photo) => {
         if (photo.startsWith("http")) return photo;
         return photo.startsWith("/images/") ? photo : `/images/sites/${photo}`;
@@ -92,13 +78,7 @@ function CampsiteCard({
     const reservationUrl = `https://www.recreation.gov/camping/campsites/${site.siteId}?arrivalDate=${match.from}&departureDate=${match.to}`;
 
     return (
-        <Card
-            className={
-                isExcluded
-                    ? "border-amber-500 border-2 opacity-75"
-                    : "border"
-            }
-        >
+        <Card className={isExcluded ? "border-amber-500 border-2 opacity-75" : "border"}>
             <CardHeader>
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                     <div className="flex flex-col gap-0.5">
@@ -121,13 +101,18 @@ function CampsiteCard({
                         <CardDescription>{site.loop ?? campground?.name}</CardDescription>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
-                        <Badge variant={isExcluded ? "outline" : "default"} className={isExcluded ? "border-amber-500 text-amber-700" : ""}>
+                        <Badge
+                            variant={isExcluded ? "outline" : "default"}
+                            className={isExcluded ? "border-amber-500 text-amber-700" : ""}
+                        >
                             {match.nights} nights
                         </Badge>
                         <Badge variant="secondary">Arrives {shortDayOfWeek}</Badge>
                         {isExcluded && (
                             <Badge variant="outline" className="border-amber-500 text-amber-700">
-                                {excludedReason === "stayLength" ? "Excluded: stay length" : "Excluded: start day"}
+                                {excludedReason === "stayLength"
+                                    ? "Excluded: stay length"
+                                    : "Excluded: start day"}
                             </Badge>
                         )}
                     </div>
@@ -137,19 +122,27 @@ function CampsiteCard({
                 <Separator className="mb-3" />
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                     <div>
-                        <div className="text-[0.7rem] uppercase tracking-wide text-muted-foreground mb-0.5">Arrival</div>
+                        <div className="text-[0.7rem] uppercase tracking-wide text-muted-foreground mb-0.5">
+                            Arrival
+                        </div>
                         <div className="text-sm">{formatToMMDDYYYY(match.from)}</div>
                     </div>
                     <div>
-                        <div className="text-[0.7rem] uppercase tracking-wide text-muted-foreground mb-0.5">Departure</div>
+                        <div className="text-[0.7rem] uppercase tracking-wide text-muted-foreground mb-0.5">
+                            Departure
+                        </div>
                         <div className="text-sm">{formatToMMDDYYYY(match.to)}</div>
                     </div>
                     <div>
-                        <div className="text-[0.7rem] uppercase tracking-wide text-muted-foreground mb-0.5">Loop</div>
+                        <div className="text-[0.7rem] uppercase tracking-wide text-muted-foreground mb-0.5">
+                            Loop
+                        </div>
                         <div className="text-sm">{site.loop ?? "Primary"}</div>
                     </div>
                     <div>
-                        <div className="text-[0.7rem] uppercase tracking-wide text-muted-foreground mb-0.5">Type</div>
+                        <div className="text-[0.7rem] uppercase tracking-wide text-muted-foreground mb-0.5">
+                            Type
+                        </div>
                         <div className="text-sm">{site.campsite_type ?? "Standard"}</div>
                     </div>
                 </div>
@@ -233,23 +226,17 @@ export function CampsitesTable({ data, campground, showExcluded }: CampsitesTabl
                             site={site}
                             match={match}
                             campground={campground}
-                            onPhotoClick={() =>
-                                openPhotoPreview(site, campground, setPhotoPreview)
-                            }
+                            onPhotoClick={() => openPhotoPreview(site, campground, setPhotoPreview)}
                         />
                     ))
                 ) : (
-                    <p className="text-sm text-muted-foreground">
-                        No matching campsites were found.
-                    </p>
+                    <p className="text-sm text-muted-foreground">No matching campsites were found.</p>
                 )}
             </div>
 
             <Dialog
                 open={photoPreview.open}
-                onOpenChange={(open) =>
-                    !open && setPhotoPreview({ open: false, photos: [], siteName: "" })
-                }
+                onOpenChange={(open) => !open && setPhotoPreview({ open: false, photos: [], siteName: "" })}
             >
                 <DialogContent className="max-h-[90vh] w-[95vw] max-w-[95vw] overflow-y-auto sm:max-w-3xl">
                     <DialogHeader>

@@ -19,15 +19,7 @@ interface DefaultRecord {
 
 const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
     stayLengths: [2, 3, 4, 5],
-    validStartDays: [
-        "Monday",
-        "Tuesday",
-        "Wednesday",
-        "Thursday",
-        "Friday",
-        "Saturday",
-        "Sunday",
-    ],
+    validStartDays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
 };
 
 const EMPTY_SITE_CONFIG: SiteConfig = { "recreation.gov": [] };
@@ -99,13 +91,14 @@ export function DiscoverClient() {
 
                 <main className="bg-cw-paper text-cw-ink font-body-serif min-h-screen">
                     <div className="mx-auto w-full max-w-screen-2xl">
-
                         {/* Sign-in nudge banner */}
                         {!auth.isLoading && !auth.user && (
                             <div className="rounded-md border border-cw-clay/40 bg-cw-mustard/10 px-4 py-3 mb-6 mx-[22px] md:mx-9 mt-5 flex flex-wrap items-center justify-between gap-3">
                                 <p className="font-body-serif text-[14px] text-cw-ink">
                                     Browsing the curator&apos;s list.{" "}
-                                    <span className="font-italic-serif italic">Sign in to start your own watchlist.</span>
+                                    <span className="font-italic-serif italic">
+                                        Sign in to start your own watchlist.
+                                    </span>
                                 </p>
                                 <a
                                     href="/auth/google/start?returnTo=/app"

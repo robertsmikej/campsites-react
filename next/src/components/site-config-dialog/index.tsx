@@ -19,13 +19,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 
-import {
-    Dialog,
-    DialogContent,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion } from "@/components/ui/accordion";
@@ -33,11 +27,7 @@ import { Separator } from "@/components/ui/separator";
 import type { Campground, SiteConfig } from "@/types/campground";
 
 import { toEditableCampground, sanitizeCampground, createEmptyCampground } from "./serialize";
-import {
-    DEFAULT_STAY_RANGE,
-    type EditableCampground,
-    type SiteConfigDialogProps,
-} from "./types";
+import { DEFAULT_STAY_RANGE, type EditableCampground, type SiteConfigDialogProps } from "./types";
 import { createDragEndHandler } from "./drag-drop";
 import { GeneralSettings } from "./general-settings";
 import { AddCampground } from "./add-campground";
@@ -72,15 +62,8 @@ function SortableCampgroundEditor(props: {
     };
 
     return (
-        <div
-            ref={setNodeRef}
-            style={style}
-            id={`campground-panel-${sortableId}`}
-        >
-            <CampgroundEditor
-                {...props}
-                dragHandleProps={{ ...attributes, ...listeners }}
-            />
+        <div ref={setNodeRef} style={style} id={`campground-panel-${sortableId}`}>
+            <CampgroundEditor {...props} dragHandleProps={{ ...attributes, ...listeners }} />
         </div>
     );
 }
@@ -99,21 +82,14 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
         focusedCampgroundId,
     } = props;
 
-    const [campgrounds, setCampgrounds] = useState<EditableCampground[]>([
-        createEmptyCampground(),
-    ]);
+    const [campgrounds, setCampgrounds] = useState<EditableCampground[]>([createEmptyCampground()]);
     const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
     const [stayRange, setStayRange] = useState<[number, number]>(() =>
         globalSettings.stayLengths && globalSettings.stayLengths.length > 0
-            ? [
-                  Math.min(...globalSettings.stayLengths),
-                  Math.max(...globalSettings.stayLengths),
-              ]
+            ? [Math.min(...globalSettings.stayLengths), Math.max(...globalSettings.stayLengths)]
             : DEFAULT_STAY_RANGE,
     );
-    const [validStartDays, setValidStartDays] = useState<string[]>(
-        () => globalSettings.validStartDays ?? [],
-    );
+    const [validStartDays, setValidStartDays] = useState<string[]>(() => globalSettings.validStartDays ?? []);
     const [expandedPanels, setExpandedPanels] = useState<Set<number>>(new Set([0]));
 
     const previousViewMode = useRef(viewMode);
@@ -132,10 +108,7 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
         setCampgrounds(initial.length > 0 ? initial : [createEmptyCampground()]);
         setStayRange(
             globalSettings.stayLengths && globalSettings.stayLengths.length > 0
-                ? [
-                      Math.min(...globalSettings.stayLengths),
-                      Math.max(...globalSettings.stayLengths),
-                  ]
+                ? [Math.min(...globalSettings.stayLengths), Math.max(...globalSettings.stayLengths)]
                 : DEFAULT_STAY_RANGE,
         );
         setValidStartDays(globalSettings.validStartDays ?? []);
@@ -172,9 +145,7 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
     }, [viewMode, campgrounds.length]);
 
     const updateCampground = (index: number, updater: (c: EditableCampground) => EditableCampground) => {
-        setCampgrounds((prev) =>
-            prev.map((c, idx) => (idx === index ? updater(c) : c)),
-        );
+        setCampgrounds((prev) => prev.map((c, idx) => (idx === index ? updater(c) : c)));
     };
 
     const handleFieldChange = <K extends keyof EditableCampground>(
@@ -270,9 +241,7 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
         });
     };
 
-    const isSaveDisabled = campgrounds.some(
-        (c) => !c.name.trim() || !c.id.trim(),
-    );
+    const isSaveDisabled = campgrounds.some((c) => !c.name.trim() || !c.id.trim());
 
     const sortableIds = campgrounds.map((c, idx) => c.id || `idx-${idx}`);
 
@@ -304,10 +273,7 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
                                 onAdd={handleAddCampground}
                             />
                         </div>
-                        <Tabs
-                            value={viewMode}
-                            onValueChange={(v) => setViewMode(v as "cards" | "list")}
-                        >
+                        <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "cards" | "list")}>
                             <TabsList>
                                 <TabsTrigger value="cards">Cards</TabsTrigger>
                                 <TabsTrigger value="list">List</TabsTrigger>
@@ -321,17 +287,11 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
                             <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() =>
-                                    setExpandedPanels(new Set(campgrounds.map((_, i) => i)))
-                                }
+                                onClick={() => setExpandedPanels(new Set(campgrounds.map((_, i) => i)))}
                             >
                                 Expand all
                             </Button>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setExpandedPanels(new Set())}
-                            >
+                            <Button variant="ghost" size="sm" onClick={() => setExpandedPanels(new Set())}>
                                 Collapse all
                             </Button>
                         </div>
@@ -345,10 +305,7 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
                             modifiers={[restrictToVerticalAxis]}
                             onDragEnd={handleDragEndWrapper}
                         >
-                            <SortableContext
-                                items={sortableIds}
-                                strategy={verticalListSortingStrategy}
-                            >
+                            <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
                                 <Accordion
                                     type="multiple"
                                     value={accordionValue}
@@ -371,9 +328,7 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
                                             onFieldChange={(field, value) =>
                                                 handleFieldChange(index, field, value)
                                             }
-                                            onDateChange={(key, value) =>
-                                                handleDateChange(index, key, value)
-                                            }
+                                            onDateChange={(key, value) => handleDateChange(index, key, value)}
                                             onShowOrHideChange={(key, checked) =>
                                                 handleShowOrHideChange(index, key, checked)
                                             }
@@ -401,10 +356,7 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
                             modifiers={[restrictToVerticalAxis]}
                             onDragEnd={handleDragEndWrapper}
                         >
-                            <SortableContext
-                                items={sortableIds}
-                                strategy={verticalListSortingStrategy}
-                            >
+                            <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
                                 <CampgroundsTable
                                     campgrounds={campgrounds}
                                     isOnlyCampground={campgrounds.length === 1}

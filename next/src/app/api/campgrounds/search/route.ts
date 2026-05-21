@@ -27,7 +27,10 @@ async function getHandler(request: Request): Promise<Response> {
         return withCors(
             new Response(JSON.stringify([]), {
                 status: 200,
-                headers: { "Content-Type": "application/json", "Cache-Control": "public, max-age=60, s-maxage=60" },
+                headers: {
+                    "Content-Type": "application/json",
+                    "Cache-Control": "public, max-age=60, s-maxage=60",
+                },
             }),
         );
     }
@@ -60,7 +63,10 @@ async function getHandler(request: Request): Promise<Response> {
         return withCors(
             new Response(JSON.stringify(results), {
                 status: 200,
-                headers: { "Content-Type": "application/json", "Cache-Control": "public, max-age=300, s-maxage=300" },
+                headers: {
+                    "Content-Type": "application/json",
+                    "Cache-Control": "public, max-age=300, s-maxage=300",
+                },
             }),
         );
     } catch {

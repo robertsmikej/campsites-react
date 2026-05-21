@@ -74,7 +74,7 @@
     --popover-foreground: oklch(0.96 0.008 80);
 
     /* Primary desaturated in dark, slightly brighter than light forest */
-    --primary: oklch(0.65 0.10 150);
+    --primary: oklch(0.65 0.1 150);
     --primary-foreground: oklch(0.15 0.012 150);
 
     --secondary: oklch(0.27 0.012 60);
@@ -86,56 +86,56 @@
     --accent: oklch(0.7 0.14 40);
     --accent-foreground: oklch(0.15 0.012 60);
 
-    --destructive: oklch(0.68 0.20 25);
+    --destructive: oklch(0.68 0.2 25);
     --destructive-foreground: oklch(0.99 0.005 80);
 
     --border: oklch(0.3 0.01 70);
     --input: oklch(0.3 0.01 70);
-    --ring: oklch(0.65 0.10 150);
+    --ring: oklch(0.65 0.1 150);
 
-    --chart-1: oklch(0.65 0.10 150);
+    --chart-1: oklch(0.65 0.1 150);
     --chart-2: oklch(0.7 0.14 40);
     --chart-3: oklch(0.62 0.08 110);
-    --chart-4: oklch(0.72 0.10 70);
+    --chart-4: oklch(0.72 0.1 70);
     --chart-5: oklch(0.6 0.06 250);
 
     --sidebar: oklch(0.18 0.013 60);
     --sidebar-foreground: oklch(0.96 0.008 80);
-    --sidebar-primary: oklch(0.65 0.10 150);
+    --sidebar-primary: oklch(0.65 0.1 150);
     --sidebar-primary-foreground: oklch(0.15 0.012 150);
     --sidebar-accent: oklch(0.27 0.012 60);
     --sidebar-accent-foreground: oklch(0.92 0.008 80);
     --sidebar-border: oklch(0.3 0.01 70);
-    --sidebar-ring: oklch(0.65 0.10 150);
+    --sidebar-ring: oklch(0.65 0.1 150);
 }
 
 /* ── CampWatch Field Notes tokens ── */
 :root {
-    --cw-paper: #F4EAD8;
-    --cw-cream: #FBF6EA;
-    --cw-ink: #1A1614;
-    --cw-ink-soft: rgba(26,22,20,0.7);
-    --cw-ink-subtle: rgba(26,22,20,0.5);
-    --cw-ink-faint: rgba(26,22,20,0.3);
-    --cw-rule: rgba(26,22,20,0.18);
-    --cw-rule-soft: rgba(26,22,20,0.07);
-    --cw-forest: #1F3D2A;
-    --cw-clay: #B65C3F;
-    --cw-mustard: #C9A227;
+    --cw-paper: #f4ead8;
+    --cw-cream: #fbf6ea;
+    --cw-ink: #1a1614;
+    --cw-ink-soft: rgba(26, 22, 20, 0.7);
+    --cw-ink-subtle: rgba(26, 22, 20, 0.5);
+    --cw-ink-faint: rgba(26, 22, 20, 0.3);
+    --cw-rule: rgba(26, 22, 20, 0.18);
+    --cw-rule-soft: rgba(26, 22, 20, 0.07);
+    --cw-forest: #1f3d2a;
+    --cw-clay: #b65c3f;
+    --cw-mustard: #c9a227;
 }
 
 .dark {
-    --cw-paper: #1A1614;
-    --cw-cream: #241D17;
-    --cw-ink: #F4EAD8;
-    --cw-ink-soft: rgba(244,234,216,0.72);
-    --cw-ink-subtle: rgba(244,234,216,0.5);
-    --cw-ink-faint: rgba(244,234,216,0.3);
-    --cw-rule: rgba(244,234,216,0.16);
-    --cw-rule-soft: rgba(244,234,216,0.07);
-    --cw-forest: #7EB58F;
-    --cw-clay: #D88562;
-    --cw-mustard: #E2BC4E;
+    --cw-paper: #1a1614;
+    --cw-cream: #241d17;
+    --cw-ink: #f4ead8;
+    --cw-ink-soft: rgba(244, 234, 216, 0.72);
+    --cw-ink-subtle: rgba(244, 234, 216, 0.5);
+    --cw-ink-faint: rgba(244, 234, 216, 0.3);
+    --cw-rule: rgba(244, 234, 216, 0.16);
+    --cw-rule-soft: rgba(244, 234, 216, 0.07);
+    --cw-forest: #7eb58f;
+    --cw-clay: #d88562;
+    --cw-mustard: #e2bc4e;
 }
 
 @theme inline {
@@ -206,13 +206,22 @@
 }
 
 @layer base {
-    * { @apply border-border outline-ring/50; }
-    body { @apply bg-background text-foreground antialiased; }
+    * {
+        @apply border-border outline-ring/50;
+    }
+    body {
+        @apply bg-background text-foreground antialiased;
+    }
 
-    html { @apply font-sans; }
+    html {
+        @apply font-sans;
+    }
 
     /* Headings use Geist Sans; consumers can override with `font-sans` */
-    h1, h2, h3, .font-display {
+    h1,
+    h2,
+    h3,
+    .font-display {
         font-family: var(--font-display);
         letter-spacing: -0.025em;
         font-weight: 500;
@@ -224,8 +233,11 @@
 }
 
 /* View Transitions — smooth page-to-page fades */
-@view-transition { navigation: auto; }
-::view-transition-old(root), ::view-transition-new(root) {
+@view-transition {
+    navigation: auto;
+}
+::view-transition-old(root),
+::view-transition-new(root) {
     animation-duration: 220ms;
     animation-timing-function: ease;
 }

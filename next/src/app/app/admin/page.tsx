@@ -81,7 +81,8 @@ export default function AdminPage() {
                                     Curators only
                                 </h1>
                                 <p className="font-italic-serif text-[18px] italic leading-[1.3] text-cw-ink-soft mb-6">
-                                    This page is for curators. If you should be one, ask a curator to grant you the role.
+                                    This page is for curators. If you should be one, ask a curator to grant
+                                    you the role.
                                 </p>
                                 <Link
                                     href="/app"
@@ -111,7 +112,15 @@ export default function AdminPage() {
             setDefaultGlobalSettings(
                 data.globalSettings ?? {
                     stayLengths: [2, 3, 4, 5],
-                    validStartDays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+                    validStartDays: [
+                        "Monday",
+                        "Tuesday",
+                        "Wednesday",
+                        "Thursday",
+                        "Friday",
+                        "Saturday",
+                        "Sunday",
+                    ],
                 },
             );
             setDefaultDialogOpen(true);
@@ -153,9 +162,7 @@ export default function AdminPage() {
             return;
         }
         const updated = (await r.json()) as UserProfile;
-        setUsers((current) =>
-            current?.map((u) => (u.email === updated.email ? updated : u)) ?? null,
-        );
+        setUsers((current) => current?.map((u) => (u.email === updated.email ? updated : u)) ?? null);
         toast.success(`Updated ${target.email}`);
     }
 
@@ -194,7 +201,6 @@ export default function AdminPage() {
 
             <main className="bg-cw-paper text-cw-ink font-body-serif min-h-screen">
                 <div className="mx-auto w-full max-w-screen-2xl px-[22px] md:px-9 py-8 sm:py-12">
-
                     {/* Page header */}
                     <div className="mb-8">
                         <div className="font-mono-field text-[11px] font-bold uppercase tracking-[0.18em] text-cw-clay mb-2">
@@ -209,7 +215,6 @@ export default function AdminPage() {
                     </div>
 
                     <div className="max-w-4xl space-y-6">
-
                         {/* Users section */}
                         <section className="rounded-md border border-cw-ink bg-cw-cream p-6 sm:p-8">
                             <div className="font-mono-field text-[11px] font-bold uppercase tracking-[0.18em] text-cw-clay mb-2">
@@ -272,7 +277,8 @@ export default function AdminPage() {
                                 Migrate catalog
                             </h2>
                             <p className="font-italic-serif text-[16px] sm:text-[18px] italic leading-[1.3] text-cw-ink-soft mb-6">
-                                Idempotent seed: merges any new catalog entries into the default KV config without touching existing ones.
+                                Idempotent seed: merges any new catalog entries into the default KV config
+                                without touching existing ones.
                             </p>
                             <button
                                 type="button"
@@ -305,7 +311,6 @@ export default function AdminPage() {
                                 </div>
                             )}
                         </section>
-
                     </div>
                 </div>
             </main>

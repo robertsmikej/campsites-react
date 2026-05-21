@@ -1,48 +1,48 @@
 // Renders a sample email to email-preview.html for visual inspection.
 // Usage: npx tsx render-preview.ts
 
-import { writeFileSync } from 'node:fs';
-import { formatEmail } from './lib/email';
-import type { MatchResult } from './lib/diff';
+import { writeFileSync } from "node:fs";
+import { formatEmail } from "./lib/email";
+import type { MatchResult } from "./lib/diff";
 
 const SAMPLE_MATCHES: MatchResult[] = [
     // Outlet Campground — two sites
     {
-        campgroundName: 'Outlet Campground',
-        campgroundArea: 'Payette National Forest',
-        campgroundDescription: '',
-        campgroundId: 'cg-outlet',
-        siteName: 'Site 015',
-        siteId: '10001',
-        group: 'favorites',
-        match: { from: '2026-05-23', to: '2026-05-25', nights: 2 },
+        campgroundName: "Outlet Campground",
+        campgroundArea: "Payette National Forest",
+        campgroundDescription: "",
+        campgroundId: "cg-outlet",
+        siteName: "Site 015",
+        siteId: "10001",
+        group: "favorites",
+        match: { from: "2026-05-23", to: "2026-05-25", nights: 2 },
     },
     {
-        campgroundName: 'Outlet Campground',
-        campgroundArea: 'Payette National Forest',
-        campgroundDescription: '',
-        campgroundId: 'cg-outlet',
-        siteName: 'Site 007',
-        siteId: '10002',
-        group: 'worthwhile',
-        match: { from: '2026-05-30', to: '2026-06-01', nights: 2 },
+        campgroundName: "Outlet Campground",
+        campgroundArea: "Payette National Forest",
+        campgroundDescription: "",
+        campgroundId: "cg-outlet",
+        siteName: "Site 007",
+        siteId: "10002",
+        group: "worthwhile",
+        match: { from: "2026-05-30", to: "2026-06-01", nights: 2 },
     },
     // Pine Flats — one site
     {
-        campgroundName: 'Pine Flats Campground',
-        campgroundArea: 'Boise National Forest',
-        campgroundDescription: '',
-        campgroundId: 'cg-pineflats',
-        siteName: 'Site 008',
-        siteId: '10003',
-        group: 'favorites',
-        match: { from: '2026-06-06', to: '2026-06-07', nights: 1 },
+        campgroundName: "Pine Flats Campground",
+        campgroundArea: "Boise National Forest",
+        campgroundDescription: "",
+        campgroundId: "cg-pineflats",
+        siteName: "Site 008",
+        siteId: "10003",
+        group: "favorites",
+        match: { from: "2026-06-06", to: "2026-06-07", nights: 1 },
     },
 ];
 
 const { html } = formatEmail(SAMPLE_MATCHES, {
-    email: 'you@trail.example',
-    siteUrl: 'https://campwatch.dev',
+    email: "you@trail.example",
+    siteUrl: "https://campwatch.dev",
     // No unsubscribeUrl / apiSecret — omit footer unsubscribe link in preview
 });
 
@@ -112,5 +112,5 @@ ${html}
 </body>
 </html>`;
 
-writeFileSync(new URL('./email-preview.html', import.meta.url), preview, 'utf8');
-console.log('email-preview.html written.');
+writeFileSync(new URL("./email-preview.html", import.meta.url), preview, "utf8");
+console.log("email-preview.html written.");

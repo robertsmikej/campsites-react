@@ -9,9 +9,7 @@ export function useColorMode() {
 
     useEffect(() => setMounted(true), []);
 
-    const mode: "light" | "dark" = mounted
-        ? (resolvedTheme as "light" | "dark") ?? "light"
-        : "light";
+    const mode: "light" | "dark" = mounted ? ((resolvedTheme as "light" | "dark") ?? "light") : "light";
 
     return {
         mode,

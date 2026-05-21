@@ -12,11 +12,16 @@ export function BorrowListCard({ onClone, busy }: BorrowListCardProps) {
                 Option 02
             </div>
             <h2 className="m-0 mb-[14px]">
-                <span className="font-poster text-[22px] font-black leading-[1.1] uppercase block">BORROW A LIST</span>
-                <span className="font-italic-serif text-[22px] font-medium italic leading-[1.1] text-cw-forest block mt-[2px]">from the curator.</span>
+                <span className="font-poster text-[22px] font-black leading-[1.1] uppercase block">
+                    BORROW A LIST
+                </span>
+                <span className="font-italic-serif text-[22px] font-medium italic leading-[1.1] text-cw-forest block mt-[2px]">
+                    from the curator.
+                </span>
             </h2>
             <p className="font-body-serif text-[14px] leading-[1.5] text-cw-ink-soft m-0 mb-[14px]">
-                Start with <strong className="text-cw-ink">hand-picked campgrounds</strong> across Sawtooth, Glacier, Yosemite, and Olympic. Edit or remove any of them later.
+                Start with <strong className="text-cw-ink">hand-picked campgrounds</strong> across Sawtooth,
+                Glacier, Yosemite, and Olympic. Edit or remove any of them later.
             </p>
             <button
                 onClick={() => void onClone()}

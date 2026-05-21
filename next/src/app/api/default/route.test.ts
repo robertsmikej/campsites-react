@@ -65,9 +65,7 @@ describe("GET /api/default", () => {
     it("returns 200 with the stored config", async () => {
         const config = {
             campgrounds: {
-                "recreation.gov": [
-                    { id: "123", name: "My Camp", sites: { favorites: [], worthwhile: [] } },
-                ],
+                "recreation.gov": [{ id: "123", name: "My Camp", sites: { favorites: [], worthwhile: [] } }],
             },
             globalSettings: { stayLengths: [2, 3], validStartDays: ["Friday"] },
         };
@@ -165,9 +163,7 @@ describe("PUT /api/default", () => {
 
         const payload = {
             campgrounds: {
-                "recreation.gov": [
-                    { id: "999", name: "Curated", sites: { favorites: [], worthwhile: [] } },
-                ],
+                "recreation.gov": [{ id: "999", name: "Curated", sites: { favorites: [], worthwhile: [] } }],
             },
             globalSettings: { stayLengths: [3, 4], validStartDays: ["Saturday"] },
         };

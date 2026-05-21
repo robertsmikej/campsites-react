@@ -31,8 +31,6 @@ export function getCampgroundOpenCount(
         }
         const winStartIso = toLocalIso(windowStart);
         const winEndIso = toLocalIso(windowEnd);
-        return acc + (site.matches ?? []).filter(
-            (m) => m.from <= winEndIso && m.to > winStartIso,
-        ).length;
+        return acc + (site.matches ?? []).filter((m) => m.from <= winEndIso && m.to > winStartIso).length;
     }, 0);
 }

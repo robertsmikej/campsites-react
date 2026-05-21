@@ -7,9 +7,7 @@ import { SESSION_COOKIE } from "@/lib/sessions";
 const PROTECTED_PREFIXES = ["/app"];
 
 function requiresAuth(pathname: string): boolean {
-    return PROTECTED_PREFIXES.some(
-        (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
-    );
+    return PROTECTED_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 }
 
 export function middleware(request: NextRequest) {

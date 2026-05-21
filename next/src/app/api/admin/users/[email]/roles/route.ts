@@ -44,9 +44,7 @@ export async function PUT(
     if (removingCurator) {
         const curators = await listCurators();
         if (curators.length <= 1 && curators.includes(targetEmail)) {
-            return withCors(
-                jsonResponse({ error: "Cannot remove the last curator" }, 400),
-            );
+            return withCors(jsonResponse({ error: "Cannot remove the last curator" }, 400));
         }
     }
 

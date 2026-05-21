@@ -1,9 +1,6 @@
 import type { DragEndEvent } from "@dnd-kit/core";
 
-export function createDragEndHandler<T extends { id?: string }>(
-    items: T[],
-    setItems: (next: T[]) => void,
-) {
+export function createDragEndHandler<T extends { id?: string }>(items: T[], setItems: (next: T[]) => void) {
     return (event: DragEndEvent) => {
         const { active, over } = event;
         if (!over || active.id === over.id) return;

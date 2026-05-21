@@ -14,10 +14,7 @@ export interface CampgroundDetails {
 const CACHE_PREFIX = "cg-details:";
 const CACHE_TTL_SECONDS = 60 * 60 * 24 * 30; // 30 days
 
-async function fetchSearchPreview(
-    facilityId: string,
-    facilityName: string | null,
-): Promise<string | null> {
+async function fetchSearchPreview(facilityId: string, facilityName: string | null): Promise<string | null> {
     if (!facilityName) return null;
     const url = `https://www.recreation.gov/api/search?q=${encodeURIComponent(facilityName)}&entity_type=campground&size=10`;
     try {
@@ -58,10 +55,7 @@ async function fetchCampgroundLatLng(
     }
 }
 
-async function getHandler(
-    _req: Request,
-    context: { params: Promise<{ id: string }> },
-): Promise<Response> {
+async function getHandler(_req: Request, context: { params: Promise<{ id: string }> }): Promise<Response> {
     const { id } = await context.params;
 
     if (!id || !/^\d+$/.test(id)) {

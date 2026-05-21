@@ -40,15 +40,7 @@ function emptyShape(): ApiRecord {
         campgrounds: { "recreation.gov": [] },
         globalSettings: {
             stayLengths: [2, 3, 4, 5],
-            validStartDays: [
-                "Monday",
-                "Tuesday",
-                "Wednesday",
-                "Thursday",
-                "Friday",
-                "Saturday",
-                "Sunday",
-            ],
+            validStartDays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
         },
         updatedAt: null,
     };
@@ -97,28 +89,31 @@ export function useUserCampgrounds(): UseUserCampgroundsState {
         void fetchDefault();
     }, [fetchDefault]);
 
-    const save = useCallback(async (siteConfig: SiteConfig, globalSettings: GlobalSettings) => {
-        try {
-            const r = await fetch(ENDPOINT, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ campgrounds: siteConfig, globalSettings }),
-                credentials: "include",
-            });
-            if (!r.ok) {
+    const save = useCallback(
+        async (siteConfig: SiteConfig, globalSettings: GlobalSettings) => {
+            try {
+                const r = await fetch(ENDPOINT, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ campgrounds: siteConfig, globalSettings }),
+                    credentials: "include",
+                });
+                if (!r.ok) {
+                    setSyncStatus("error");
+                    return;
+                }
+                const stored = (await r.json()) as ApiRecord;
+                setRecord(stored);
+                setSyncStatus("success");
+                // Re-fetch the default so missingFromDefault reflects any write-through
+                // the server performed (curator saves update the default KV key).
+                void fetchDefault();
+            } catch {
                 setSyncStatus("error");
-                return;
             }
-            const stored = (await r.json()) as ApiRecord;
-            setRecord(stored);
-            setSyncStatus("success");
-            // Re-fetch the default so missingFromDefault reflects any write-through
-            // the server performed (curator saves update the default KV key).
-            void fetchDefault();
-        } catch {
-            setSyncStatus("error");
-        }
-    }, [fetchDefault]);
+        },
+        [fetchDefault],
+    );
 
     const cloneDefault = useCallback(async () => {
         try {
@@ -190,9 +185,7 @@ export function useUserCampgrounds(): UseUserCampgroundsState {
         updatedAt: record.updatedAt,
         isHydrating,
         syncStatus,
-        isEmpty:
-            record.updatedAt === null &&
-            (record.campgrounds["recreation.gov"]?.length ?? 0) === 0,
+        isEmpty: record.updatedAt === null && (record.campgrounds["recreation.gov"]?.length ?? 0) === 0,
         missingFromDefault,
         clearSyncStatus: () => setSyncStatus(null),
         save,

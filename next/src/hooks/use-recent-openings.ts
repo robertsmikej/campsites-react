@@ -21,7 +21,7 @@ export function useRecentOpenings(): RecentOpening[] {
         try {
             const resp = await fetch("/api/openings/recent");
             if (resp.ok) {
-                const data = await resp.json() as RecentOpening[];
+                const data = (await resp.json()) as RecentOpening[];
                 setOpenings(Array.isArray(data) ? data : []);
             }
         } catch {

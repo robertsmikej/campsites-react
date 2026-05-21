@@ -2,12 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createMockKv } from "./__mocks__/cloudflare-test-helpers";
 import * as cloudflare from "./cloudflare";
 import type { CampWatchEnv } from "./cloudflare";
-import {
-    SESSION_COOKIE,
-    createSession,
-    readSession,
-    destroySession,
-} from "./sessions";
+import { SESSION_COOKIE, createSession, readSession, destroySession } from "./sessions";
 
 beforeEach(() => {
     vi.resetModules();
@@ -122,7 +117,7 @@ describe("dev bypass", () => {
     it("creates the user profile in KV on first dev request", async () => {
         const { kv } = mockEnv({ DEV_USER: "new@example.com" });
         await readSession(reqWithCookie(null));
-        const stored = await kv.get("user:new@example.com:profile", "json") as { email: string } | null;
+        const stored = (await kv.get("user:new@example.com:profile", "json")) as { email: string } | null;
         expect(stored?.email).toBe("new@example.com");
     });
 
@@ -139,7 +134,9 @@ describe("dev bypass", () => {
             BOOTSTRAP_ADMIN_EMAIL: "admin@example.com",
         });
         await readSession(reqWithCookie(null));
-        const profile = await kv.get("user:admin@example.com:profile", "json") as { roles: string[] } | null;
+        const profile = (await kv.get("user:admin@example.com:profile", "json")) as {
+            roles: string[];
+        } | null;
         expect(profile?.roles).toContain("curator");
     });
 

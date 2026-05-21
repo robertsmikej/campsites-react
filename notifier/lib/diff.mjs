@@ -19,9 +19,9 @@ export const findNewMatches = (currentResults, previousSignatures, siteConfigura
             for (const match of site.matches || []) {
                 const signature = generateSignature(result.campgroundId, siteId, match);
                 if (!previousSignatures.has(signature)) {
-                    let group = 'all-others';
-                    if (favorites.has(site.siteName)) group = 'favorites';
-                    else if (worthwhile.has(site.siteName)) group = 'worthwhile';
+                    let group = "all-others";
+                    if (favorites.has(site.siteName)) group = "favorites";
+                    else if (worthwhile.has(site.siteName)) group = "worthwhile";
 
                     newMatches.push({
                         campgroundId: result.campgroundId,

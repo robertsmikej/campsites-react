@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { parseFacilityId, fetchFacilitySummary } from "./recgov-facility";
 
 // ---------------------------------------------------------------------------
@@ -23,7 +23,9 @@ describe("parseFacilityId", () => {
     });
 
     it("URL with trailing path segment", () => {
-        expect(parseFacilityId("https://www.recreation.gov/camping/campgrounds/232358/availability")).toBe("232358");
+        expect(parseFacilityId("https://www.recreation.gov/camping/campgrounds/232358/availability")).toBe(
+            "232358",
+        );
     });
 
     it("non-numeric string returns null", () => {
@@ -61,9 +63,12 @@ describe("fetchFacilitySummary", () => {
     });
 
     it("maps facility_name with trailing parenthetical → name and campground type", async () => {
-        vi.stubGlobal("fetch", makeFetchMock(200, {
-            campground: { facility_name: "OUTLET CAMPGROUND (ID)" },
-        }));
+        vi.stubGlobal(
+            "fetch",
+            makeFetchMock(200, {
+                campground: { facility_name: "OUTLET CAMPGROUND (ID)" },
+            }),
+        );
         const result = await fetchFacilitySummary("232358");
         expect(result).not.toBeNull();
         expect(result!.name).toBe("Outlet Campground");
@@ -72,58 +77,76 @@ describe("fetchFacilitySummary", () => {
     });
 
     it("LOOKOUT takes precedence over CABIN in type inference", async () => {
-        vi.stubGlobal("fetch", makeFetchMock(200, {
-            campground: { facility_name: "DEADWOOD LOOKOUT REC CABIN" },
-        }));
+        vi.stubGlobal(
+            "fetch",
+            makeFetchMock(200, {
+                campground: { facility_name: "DEADWOOD LOOKOUT REC CABIN" },
+            }),
+        );
         const result = await fetchFacilitySummary("999");
         expect(result!.type).toBe("lookout");
     });
 
     it("CABIN type when no LOOKOUT", async () => {
-        vi.stubGlobal("fetch", makeFetchMock(200, {
-            campground: { facility_name: "REDFISH CABIN" },
-        }));
+        vi.stubGlobal(
+            "fetch",
+            makeFetchMock(200, {
+                campground: { facility_name: "REDFISH CABIN" },
+            }),
+        );
         const result = await fetchFacilitySummary("888");
         expect(result!.type).toBe("cabin");
     });
 
     it("maps addresses[0].city to area", async () => {
-        vi.stubGlobal("fetch", makeFetchMock(200, {
-            campground: {
-                facility_name: "SOME CAMPGROUND",
-                addresses: [{ city: "STANLEY", state_code: "ID" }],
-            },
-        }));
+        vi.stubGlobal(
+            "fetch",
+            makeFetchMock(200, {
+                campground: {
+                    facility_name: "SOME CAMPGROUND",
+                    addresses: [{ city: "STANLEY", state_code: "ID" }],
+                },
+            }),
+        );
         const result = await fetchFacilitySummary("111");
         expect(result!.area).toBe("Stanley");
     });
 
     it("strips HTML tags from description", async () => {
-        vi.stubGlobal("fetch", makeFetchMock(200, {
-            campground: {
-                facility_name: "SOME CAMPGROUND",
-                facility_description_map: { Overview: "Some <b>HTML</b> text." },
-            },
-        }));
+        vi.stubGlobal(
+            "fetch",
+            makeFetchMock(200, {
+                campground: {
+                    facility_name: "SOME CAMPGROUND",
+                    facility_description_map: { Overview: "Some <b>HTML</b> text." },
+                },
+            }),
+        );
         const result = await fetchFacilitySummary("111");
         expect(result!.description).toBe("Some HTML text.");
     });
 
     it("maps first Image media entry to imageUrl", async () => {
-        vi.stubGlobal("fetch", makeFetchMock(200, {
-            campground: {
-                facility_name: "SOME CAMPGROUND",
-                media: [{ media_type: "Image", url: "https://x.com/img.jpg" }],
-            },
-        }));
+        vi.stubGlobal(
+            "fetch",
+            makeFetchMock(200, {
+                campground: {
+                    facility_name: "SOME CAMPGROUND",
+                    media: [{ media_type: "Image", url: "https://x.com/img.jpg" }],
+                },
+            }),
+        );
         const result = await fetchFacilitySummary("111");
         expect(result!.imageUrl).toBe("https://x.com/img.jpg");
     });
 
     it("returns null when facility_name is missing", async () => {
-        vi.stubGlobal("fetch", makeFetchMock(200, {
-            campground: {},
-        }));
+        vi.stubGlobal(
+            "fetch",
+            makeFetchMock(200, {
+                campground: {},
+            }),
+        );
         const result = await fetchFacilitySummary("111");
         expect(result).toBeNull();
     });

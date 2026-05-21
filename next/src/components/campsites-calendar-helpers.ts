@@ -58,6 +58,7 @@ function cmpISO(a: string, b: string): number {
 }
 
 /** Iterate each calendar day from `from` up to AND INCLUDING `to`. */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function* eachDayInclusive(from: string, to: string): Generator<string> {
     const cursor = parseUTC(from);
     const end = parseUTC(to);
@@ -159,10 +160,7 @@ export function buildVariantMap(values: DisplayRange[]): Map<string, DayVariant>
  *   - Single available dates not covered by any range also become soft entries
  *     with to = from + 1 day (to mirror CRA's `dayjs(d).add(1, 'day')`)
  */
-export function buildDateDisplayArray(
-    site: SiteAvailability,
-    includeExcluded: boolean,
-): DisplayRange[] {
+export function buildDateDisplayArray(site: SiteAvailability, includeExcluded: boolean): DisplayRange[] {
     const { dates = [], matches = [], excludedMatches = [] } = site;
 
     // Regular match ranges
@@ -176,8 +174,8 @@ export function buildDateDisplayArray(
     // stayLength-excluded → orange (only when toggled)
     const excludedRanges: DisplayRange[] = includeExcluded
         ? excludedMatches
-            .filter((m) => m.reason !== "startDay")
-            .map((m) => ({ from: m.from, to: m.to, excluded: true }))
+              .filter((m) => m.reason !== "startDay")
+              .map((m) => ({ from: m.from, to: m.to, excluded: true }))
         : [];
 
     // Collect all days covered by any match or soft range
@@ -216,15 +214,10 @@ export function buildDateDisplayArray(
  * to show (dates, matches, or excluded matches depending on includeExcluded).
  * Sorted chronologically.
  */
-export function getMonthsFromSiteData(
-    site: SiteAvailability,
-    includeExcluded: boolean,
-): string[] {
+export function getMonthsFromSiteData(site: SiteAvailability, includeExcluded: boolean): string[] {
     const { dates = [], matches = [], excludedMatches = [] } = site;
     const startDayExcluded = excludedMatches.filter((m) => m.reason === "startDay");
-    const stayLengthExcluded = includeExcluded
-        ? excludedMatches.filter((m) => m.reason !== "startDay")
-        : [];
+    const stayLengthExcluded = includeExcluded ? excludedMatches.filter((m) => m.reason !== "startDay") : [];
     const allMatches = [...matches, ...startDayExcluded, ...stayLengthExcluded];
 
     const monthsSet = new Set<string>();

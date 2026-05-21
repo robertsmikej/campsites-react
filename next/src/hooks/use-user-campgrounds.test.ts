@@ -54,16 +54,14 @@ describe("useUserCampgrounds fetch contract", () => {
     it("isEmpty is true when updatedAt is null and campgrounds is empty", () => {
         const record = makeFakeRecord();
         const isEmpty =
-            record.updatedAt === null &&
-            (record.campgrounds["recreation.gov"]?.length ?? 0) === 0;
+            record.updatedAt === null && (record.campgrounds["recreation.gov"]?.length ?? 0) === 0;
         expect(isEmpty).toBe(true);
     });
 
     it("isEmpty is false when updatedAt is set", () => {
         const record = makeFakeRecord({ updatedAt: "2024-01-01T00:00:00.000Z" });
         const isEmpty =
-            record.updatedAt === null &&
-            (record.campgrounds["recreation.gov"]?.length ?? 0) === 0;
+            record.updatedAt === null && (record.campgrounds["recreation.gov"]?.length ?? 0) === 0;
         expect(isEmpty).toBe(false);
     });
 
@@ -75,8 +73,7 @@ describe("useUserCampgrounds fetch contract", () => {
             },
         });
         const isEmpty =
-            record.updatedAt === null &&
-            (record.campgrounds["recreation.gov"]?.length ?? 0) === 0;
+            record.updatedAt === null && (record.campgrounds["recreation.gov"]?.length ?? 0) === 0;
         expect(isEmpty).toBe(false);
     });
 
@@ -134,10 +131,13 @@ describe("useUserCampgrounds fetch contract", () => {
             credentials: "include",
         });
 
-        expect(fetchMock).toHaveBeenCalledWith(ENDPOINT, expect.objectContaining({
-            method: "PUT",
-            body: expect.stringContaining('"recreation.gov":[]'),
-        }));
+        expect(fetchMock).toHaveBeenCalledWith(
+            ENDPOINT,
+            expect.objectContaining({
+                method: "PUT",
+                body: expect.stringContaining('"recreation.gov":[]'),
+            }),
+        );
     });
 
     it("exports the hook function", async () => {
@@ -164,7 +164,9 @@ function makeDefaultRecord(campgrounds: unknown[] = []) {
 
 describe("missingFromDefault logic", () => {
     it("returns campgrounds in default but not in user config", () => {
-        const userCampgrounds = [{ id: "111", name: "Existing Camp", sites: { favorites: [], worthwhile: [] } }];
+        const userCampgrounds = [
+            { id: "111", name: "Existing Camp", sites: { favorites: [], worthwhile: [] } },
+        ];
         const defaultCampgrounds = [
             { id: "111", name: "Existing Camp", sites: { favorites: [], worthwhile: [] } },
             { id: "233881", name: "Deadwood Lookout", sites: { favorites: [], worthwhile: [] } },
@@ -219,7 +221,9 @@ describe("syncMissing fetch contract", () => {
     });
 
     it("GET /api/default fetches the curator default config", async () => {
-        const defaultRecord = makeDefaultRecord([{ id: "233881", name: "Deadwood Lookout", sites: { favorites: [], worthwhile: [] } }]);
+        const defaultRecord = makeDefaultRecord([
+            { id: "233881", name: "Deadwood Lookout", sites: { favorites: [], worthwhile: [] } },
+        ]);
         const fetchMock = mockFetch(defaultRecord);
         globalThis.fetch = fetchMock;
 
@@ -232,10 +236,15 @@ describe("syncMissing fetch contract", () => {
 
     it("syncMissing PUTs merged list via the existing campgrounds endpoint", async () => {
         const existing = [{ id: "111", name: "Existing", sites: { favorites: [], worthwhile: [] } }];
-        const missing = [{ id: "233881", name: "Deadwood Lookout", sites: { favorites: [], worthwhile: [] } }];
+        const missing = [
+            { id: "233881", name: "Deadwood Lookout", sites: { favorites: [], worthwhile: [] } },
+        ];
         const merged = [...existing, ...missing];
         const globalSettings = { stayLengths: [2, 3, 4, 5], validStartDays: ["Monday"] };
-        const stored = makeFakeRecord({ updatedAt: "2024-01-03T00:00:00.000Z", campgrounds: { "recreation.gov": merged } });
+        const stored = makeFakeRecord({
+            updatedAt: "2024-01-03T00:00:00.000Z",
+            campgrounds: { "recreation.gov": merged },
+        });
         const fetchMock = mockFetch(stored);
         globalThis.fetch = fetchMock;
 
@@ -247,9 +256,12 @@ describe("syncMissing fetch contract", () => {
             credentials: "include",
         });
 
-        expect(fetchMock).toHaveBeenCalledWith(ENDPOINT, expect.objectContaining({
-            method: "PUT",
-            body: expect.stringContaining("233881"),
-        }));
+        expect(fetchMock).toHaveBeenCalledWith(
+            ENDPOINT,
+            expect.objectContaining({
+                method: "PUT",
+                body: expect.stringContaining("233881"),
+            }),
+        );
     });
 });

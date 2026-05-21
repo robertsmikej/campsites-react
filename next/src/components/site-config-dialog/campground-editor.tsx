@@ -4,11 +4,7 @@ import { useState } from "react";
 import { GripVertical, Trash2, CalendarIcon, X } from "lucide-react";
 import { format } from "date-fns";
 
-import {
-    AccordionContent,
-    AccordionItem,
-    AccordionTrigger,
-} from "@/components/ui/accordion";
+import { AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,13 +25,7 @@ import {
     CommandList,
 } from "@/components/ui/command";
 
-import {
-    ALL_DAYS,
-    STAY_MAX,
-    STAY_MIN,
-    DEFAULT_SHOW_HIDE,
-    type EditableCampground,
-} from "./types";
+import { ALL_DAYS, STAY_MAX, STAY_MIN, DEFAULT_SHOW_HIDE, type EditableCampground } from "./types";
 
 interface CampgroundEditorProps {
     campground: EditableCampground;
@@ -116,7 +106,9 @@ function DatePickerField({
                     />
                 </PopoverContent>
             </Popover>
-            <p className="mt-1 text-xs text-muted-foreground">Optional. Leave blank to use global settings.</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+                Optional. Leave blank to use global settings.
+            </p>
         </div>
     );
 }
@@ -219,10 +211,7 @@ function MultiSelectSites({
                                         value={option}
                                         onSelect={() => handleSelect(option)}
                                     >
-                                        <Checkbox
-                                            checked={value.includes(option)}
-                                            className="mr-2"
-                                        />
+                                        <Checkbox checked={value.includes(option)} className="mr-2" />
                                         {option}
                                     </CommandItem>
                                 ))}
@@ -231,9 +220,7 @@ function MultiSelectSites({
                     </Command>
                 </PopoverContent>
             </Popover>
-            {helperText && (
-                <p className="mt-1 text-xs text-muted-foreground">{helperText}</p>
-            )}
+            {helperText && <p className="mt-1 text-xs text-muted-foreground">{helperText}</p>}
         </div>
     );
 }
@@ -257,9 +244,7 @@ export function CampgroundEditor({
     const hasCampgroundDays = !!campground.validStartDays;
     const hasCampgroundStay = !!campground.stayLengths;
 
-    const effectiveDays = hasCampgroundDays
-        ? campground.validStartDays!
-        : globalValidStartDays;
+    const effectiveDays = hasCampgroundDays ? campground.validStartDays! : globalValidStartDays;
 
     const effectiveStayRange: [number, number] = hasCampgroundStay
         ? [Math.min(...campground.stayLengths!), Math.max(...campground.stayLengths!)]
@@ -271,7 +256,10 @@ export function CampgroundEditor({
             onFieldChange("validStartDays", [...current, day]);
         } else {
             if (current.length === 1) return;
-            onFieldChange("validStartDays", current.filter((d) => d !== day));
+            onFieldChange(
+                "validStartDays",
+                current.filter((d) => d !== day),
+            );
         }
     };
 
@@ -310,10 +298,7 @@ export function CampgroundEditor({
                             </span>
                         )}
                     </span>
-                    <span
-                        className="flex items-center gap-1"
-                        onClick={(e) => e.stopPropagation()}
-                    >
+                    <span className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                         <TooltipProvider>
                             <Tooltip>
                                 <TooltipTrigger asChild>
@@ -324,7 +309,9 @@ export function CampgroundEditor({
                                     />
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                    {isEnabled ? "Watching — turn off to skip API calls" : "Disabled — no API calls"}
+                                    {isEnabled
+                                        ? "Watching — turn off to skip API calls"
+                                        : "Disabled — no API calls"}
                                 </TooltipContent>
                             </Tooltip>
                         </TooltipProvider>
@@ -415,6 +402,7 @@ export function CampgroundEditor({
                     {campground.image && (
                         <div className="w-32 shrink-0">
                             <div className="overflow-hidden rounded-lg border">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
                                 <img
                                     src={`/images/sites/${campground.image}`}
                                     alt={campground.name || "Campground map"}
@@ -584,7 +572,9 @@ export function CampgroundEditor({
                                 variant="ghost"
                                 size="sm"
                                 className="h-6 text-xs"
-                                onClick={() => onFieldChange("stayLengths", buildStayLengths(globalStayRange))}
+                                onClick={() =>
+                                    onFieldChange("stayLengths", buildStayLengths(globalStayRange))
+                                }
                             >
                                 Customize
                             </Button>

@@ -115,7 +115,9 @@ describe("PUT /api/admin/notifier-state", () => {
         expect(aliceState).toEqual({ signatures: ["sig1"] });
 
         // Alice's profile patched with lastNotifiedAt
-        const aliceProfile = (await kv.get("user:alice@x.com:profile", "json")) as { lastNotifiedAt?: string };
+        const aliceProfile = (await kv.get("user:alice@x.com:profile", "json")) as {
+            lastNotifiedAt?: string;
+        };
         expect(aliceProfile.lastNotifiedAt).toBe("2026-05-15T01:00:00.000Z");
 
         // Bob's notifier state written

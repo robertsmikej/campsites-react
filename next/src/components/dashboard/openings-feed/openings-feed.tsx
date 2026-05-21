@@ -33,8 +33,16 @@ export function OpeningsFeed({ openingItems, isMobile, nowMs, PAD }: OpeningsFee
                             § I — STILL BOOKABLE
                         </div>
                         <h2 className="m-0 tracking-[-0.005em]">
-                            <span className="font-poster font-black leading-none uppercase inline" style={{ fontSize: isMobile ? 22 : 32 }}>OPEN RIGHT NOW</span>
-                            <span className="font-italic-serif font-medium italic leading-none text-cw-forest tracking-[-0.01em]" style={{ fontSize: isMobile ? 22 : 32, marginLeft: 12 }}>
+                            <span
+                                className="font-poster font-black leading-none uppercase inline"
+                                style={{ fontSize: isMobile ? 22 : 32 }}
+                            >
+                                OPEN RIGHT NOW
+                            </span>
+                            <span
+                                className="font-italic-serif font-medium italic leading-none text-cw-forest tracking-[-0.01em]"
+                                style={{ fontSize: isMobile ? 22 : 32, marginLeft: 12 }}
+                            >
                                 across your watchlist.
                             </span>
                         </h2>
@@ -45,13 +53,27 @@ export function OpeningsFeed({ openingItems, isMobile, nowMs, PAD }: OpeningsFee
             {openingItems.length === 0 ? (
                 <FeedEmpty />
             ) : isMobile ? (
-                <div style={{ display: "flex", gap: 12, overflowX: "auto", padding: `4px ${PAD}px 16px`, scrollSnapType: "x mandatory" }}>
+                <div
+                    style={{
+                        display: "flex",
+                        gap: 12,
+                        overflowX: "auto",
+                        padding: `4px ${PAD}px 16px`,
+                        scrollSnapType: "x mandatory",
+                    }}
+                >
                     {openingItems.map((item) => (
                         <OpeningCard key={item.id} item={item} isMobile nowMs={nowMs} />
                     ))}
                 </div>
             ) : (
-                <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.min(openingItems.length, 4)}, 1fr)`, gap: 18 }}>
+                <div
+                    style={{
+                        display: "grid",
+                        gridTemplateColumns: `repeat(${Math.min(openingItems.length, 4)}, 1fr)`,
+                        gap: 18,
+                    }}
+                >
                     {openingItems.map((item) => (
                         <OpeningCard key={item.id} item={item} isMobile={false} nowMs={nowMs} />
                     ))}

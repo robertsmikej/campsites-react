@@ -14,10 +14,15 @@ function StatusPill({ openCount }: { openCount: number }) {
     const isOpen = openCount > 0;
     return (
         <span className="inline-flex items-center gap-[6px]">
-            {isOpen
-                ? <span className="w-[7px] h-[7px] rounded-full bg-cw-forest" />
-                : <span className="w-[7px] h-[7px] rounded-full border-[1.5px] border-cw-clay" />}
-            <span className="font-mono-field text-[11px] font-bold leading-none tracking-[0.12em] uppercase" style={{ color: isOpen ? CW.forest : CW.clay }}>
+            {isOpen ? (
+                <span className="w-[7px] h-[7px] rounded-full bg-cw-forest" />
+            ) : (
+                <span className="w-[7px] h-[7px] rounded-full border-[1.5px] border-cw-clay" />
+            )}
+            <span
+                className="font-mono-field text-[11px] font-bold leading-none tracking-[0.12em] uppercase"
+                style={{ color: isOpen ? CW.forest : CW.clay }}
+            >
                 {isOpen ? "Open" : "Quiet"}
             </span>
         </span>
@@ -25,7 +30,13 @@ function StatusPill({ openCount }: { openCount: number }) {
 }
 
 // ─── Availability bars ────────────────────────────────────────────────────────
-function AvailBars({ campground, windowStart, windowEnd, height = 22, bar = 5 }: {
+function AvailBars({
+    campground,
+    windowStart,
+    windowEnd,
+    height = 22,
+    bar = 5,
+}: {
     campground: ProcessedCampground;
     windowStart: Date;
     windowEnd: Date;
@@ -42,7 +53,10 @@ function AvailBars({ campground, windowStart, windowEnd, height = 22, bar = 5 }:
         let hasMatch = false;
         for (const site of Object.values(campground.siteAvailability ?? {})) {
             for (const m of site.matches ?? []) {
-                if (m.from <= iso && m.to > iso) { hasMatch = true; break; }
+                if (m.from <= iso && m.to > iso) {
+                    hasMatch = true;
+                    break;
+                }
             }
             if (hasMatch) break;
         }
@@ -50,7 +64,8 @@ function AvailBars({ campground, windowStart, windowEnd, height = 22, bar = 5 }:
         cursor.setDate(cursor.getDate() + 1);
     }
 
-    const sample = days.length > 42 ? days.filter((_, i) => i % Math.ceil(days.length / 42) === 0).slice(0, 42) : days;
+    const sample =
+        days.length > 42 ? days.filter((_, i) => i % Math.ceil(days.length / 42) === 0).slice(0, 42) : days;
 
     return (
         <div className="flex gap-[2px] items-end shrink-0" style={{ height: height + 2 }}>
@@ -75,7 +90,11 @@ interface WatchlistRowProps {
     globalSettings?: GlobalSettings;
     isMobile: boolean;
     readOnly?: boolean;
-    onRatingChange?: (campgroundId: string, siteName: string, rating: "favorite" | "worthwhile" | "unrated") => void;
+    onRatingChange?: (
+        campgroundId: string,
+        siteName: string,
+        rating: "favorite" | "worthwhile" | "unrated",
+    ) => void;
     onEditSettings?: (campgroundId: string) => void;
 }
 
@@ -138,7 +157,11 @@ interface DesktopRowProps {
     settings: { views?: { type?: "calendar" | "table" } };
     globalSettings?: GlobalSettings;
     readOnly?: boolean;
-    onRatingChange?: (campgroundId: string, siteName: string, rating: "favorite" | "worthwhile" | "unrated") => void;
+    onRatingChange?: (
+        campgroundId: string,
+        siteName: string,
+        rating: "favorite" | "worthwhile" | "unrated",
+    ) => void;
     onEditSettings?: (campgroundId: string) => void;
 }
 
@@ -189,10 +212,20 @@ function DesktopRow({
                         <button
                             className="bg-transparent border-none cursor-pointer p-0 shrink-0"
                             style={{ color: isFavorite ? CW.mustard : CW.inkFaint }}
-                            onClick={(e) => { e.stopPropagation(); onToggleFavorite(); }}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onToggleFavorite();
+                            }}
                             aria-label={isFavorite ? "Remove favorite" : "Add favorite"}
                         >
-                            <svg width="18" height="18" viewBox="0 0 20 20" fill={isFavorite ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.5">
+                            <svg
+                                width="18"
+                                height="18"
+                                viewBox="0 0 20 20"
+                                fill={isFavorite ? "currentColor" : "none"}
+                                stroke="currentColor"
+                                strokeWidth="1.5"
+                            >
                                 <path d="M10 2 L12.5 7.5 L18.5 8.2 L14 12.4 L15.3 18.3 L10 15.5 L4.7 18.3 L6 12.4 L1.5 8.2 L7.5 7.5 Z" />
                             </svg>
                         </button>
@@ -211,10 +244,22 @@ function DesktopRow({
                 <StatusPill openCount={openCount} />
 
                 {/* Availability bars */}
-                <AvailBars campground={campground} windowStart={windowStart} windowEnd={windowEnd} height={22} bar={5} />
+                <AvailBars
+                    campground={campground}
+                    windowStart={windowStart}
+                    windowEnd={windowEnd}
+                    height={22}
+                    bar={5}
+                />
 
                 {/* Open count */}
-                <div className="text-right font-poster text-[22px] font-black leading-none" style={{ color: openCount === 0 ? CW.inkFaint : CW.forest, fontVariantNumeric: "tabular-nums" }}>
+                <div
+                    className="text-right font-poster text-[22px] font-black leading-none"
+                    style={{
+                        color: openCount === 0 ? CW.inkFaint : CW.forest,
+                        fontVariantNumeric: "tabular-nums",
+                    }}
+                >
                     {openCount}
                 </div>
             </div>
@@ -233,12 +278,14 @@ function DesktopRow({
                     globalSettings={globalSettings}
                     imageUrl={getCampgroundImageUrl(campground)}
                     siteRatings={hasSiteRatings ? siteRatings : undefined}
-                    onRatingChange={onRatingChange && campground.id
-                        ? (siteName, newRating) => onRatingChange(campground.id!, siteName, newRating)
-                        : undefined}
-                    onEditSettings={onEditSettings && campground.id
-                        ? () => onEditSettings(campground.id!)
-                        : undefined}
+                    onRatingChange={
+                        onRatingChange && campground.id
+                            ? (siteName, newRating) => onRatingChange(campground.id!, siteName, newRating)
+                            : undefined
+                    }
+                    onEditSettings={
+                        onEditSettings && campground.id ? () => onEditSettings(campground.id!) : undefined
+                    }
                 />
             </SheetContent>
         </Sheet>
@@ -255,7 +302,11 @@ interface MobileRowProps {
     settings: { views?: { type?: "calendar" | "table" } };
     globalSettings?: GlobalSettings;
     readOnly?: boolean;
-    onRatingChange?: (campgroundId: string, siteName: string, rating: "favorite" | "worthwhile" | "unrated") => void;
+    onRatingChange?: (
+        campgroundId: string,
+        siteName: string,
+        rating: "favorite" | "worthwhile" | "unrated",
+    ) => void;
     onEditSettings?: (campgroundId: string) => void;
 }
 
@@ -302,10 +353,20 @@ function MobileRow({
                         <button
                             className="bg-transparent border-none cursor-pointer p-0 shrink-0"
                             style={{ color: isFavorite ? CW.mustard : CW.inkFaint }}
-                            onClick={(e) => { e.stopPropagation(); onToggleFavorite(); }}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onToggleFavorite();
+                            }}
                             aria-label={isFavorite ? "Remove favorite" : "Add favorite"}
                         >
-                            <svg width="18" height="18" viewBox="0 0 20 20" fill={isFavorite ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.5">
+                            <svg
+                                width="18"
+                                height="18"
+                                viewBox="0 0 20 20"
+                                fill={isFavorite ? "currentColor" : "none"}
+                                stroke="currentColor"
+                                strokeWidth="1.5"
+                            >
                                 <path d="M10 2 L12.5 7.5 L18.5 8.2 L14 12.4 L15.3 18.3 L10 15.5 L4.7 18.3 L6 12.4 L1.5 8.2 L7.5 7.5 Z" />
                             </svg>
                         </button>
@@ -318,7 +379,13 @@ function MobileRow({
                             {campground.area ?? ""}
                         </div>
                     </div>
-                    <div className="font-poster text-[20px] font-black leading-none shrink-0" style={{ color: openCount === 0 ? CW.inkFaint : CW.forest, fontVariantNumeric: "tabular-nums" }}>
+                    <div
+                        className="font-poster text-[20px] font-black leading-none shrink-0"
+                        style={{
+                            color: openCount === 0 ? CW.inkFaint : CW.forest,
+                            fontVariantNumeric: "tabular-nums",
+                        }}
+                    >
                         {openCount}
                     </div>
                 </div>
@@ -326,7 +393,13 @@ function MobileRow({
                 {/* Bottom row: status pill + bars */}
                 <div className="flex items-center justify-between gap-3 mt-[10px]">
                     <StatusPill openCount={openCount} />
-                    <AvailBars campground={campground} windowStart={windowStart} windowEnd={windowEnd} height={18} bar={4} />
+                    <AvailBars
+                        campground={campground}
+                        windowStart={windowStart}
+                        windowEnd={windowEnd}
+                        height={18}
+                        bar={4}
+                    />
                 </div>
             </div>
 
@@ -344,12 +417,14 @@ function MobileRow({
                     globalSettings={globalSettings}
                     imageUrl={getCampgroundImageUrl(campground)}
                     siteRatings={hasSiteRatings ? siteRatings : undefined}
-                    onRatingChange={onRatingChange && campground.id
-                        ? (siteName, newRating) => onRatingChange(campground.id!, siteName, newRating)
-                        : undefined}
-                    onEditSettings={onEditSettings && campground.id
-                        ? () => onEditSettings(campground.id!)
-                        : undefined}
+                    onRatingChange={
+                        onRatingChange && campground.id
+                            ? (siteName, newRating) => onRatingChange(campground.id!, siteName, newRating)
+                            : undefined
+                    }
+                    onEditSettings={
+                        onEditSettings && campground.id ? () => onEditSettings(campground.id!) : undefined
+                    }
                 />
             </SheetContent>
         </Sheet>

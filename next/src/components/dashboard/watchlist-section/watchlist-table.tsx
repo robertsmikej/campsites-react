@@ -15,7 +15,11 @@ interface WatchlistTableProps {
     globalSettings?: GlobalSettings;
     isMobile: boolean;
     readOnly?: boolean;
-    onRatingChange?: (campgroundId: string, siteName: string, rating: "favorite" | "worthwhile" | "unrated") => void;
+    onRatingChange?: (
+        campgroundId: string,
+        siteName: string,
+        rating: "favorite" | "worthwhile" | "unrated",
+    ) => void;
     onEditSettings?: (campgroundId: string) => void;
 }
 
@@ -37,8 +41,14 @@ export function WatchlistTable({
     return (
         <div className="bg-cw-cream border border-cw-ink">
             {showHeader && !isMobile && (
-                <div className="grid gap-6 px-[22px] py-[11px] border-b border-cw-rule font-mono-field text-[10px] font-medium leading-none tracking-[0.16em] text-cw-ink-subtle uppercase items-center" style={{ gridTemplateColumns: "1fr 110px minmax(0,1fr) 70px" }}>
-                    <span>Campground</span><span>Status</span><span>Dates</span><span className="text-right">Open</span>
+                <div
+                    className="grid gap-6 px-[22px] py-[11px] border-b border-cw-rule font-mono-field text-[10px] font-medium leading-none tracking-[0.16em] text-cw-ink-subtle uppercase items-center"
+                    style={{ gridTemplateColumns: "1fr 110px minmax(0,1fr) 70px" }}
+                >
+                    <span>Campground</span>
+                    <span>Status</span>
+                    <span>Dates</span>
+                    <span className="text-right">Open</span>
                 </div>
             )}
             {rows.map((c) => (

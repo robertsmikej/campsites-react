@@ -6,10 +6,13 @@ import { deepMerge } from "@/lib/campground-utils";
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
 function indexById(entries: Campground[] = []): Record<string, Campground> {
-    return entries.reduce((acc, entry) => {
-        if (entry?.id) acc[entry.id] = entry;
-        return acc;
-    }, {} as Record<string, Campground>);
+    return entries.reduce(
+        (acc, entry) => {
+            if (entry?.id) acc[entry.id] = entry;
+            return acc;
+        },
+        {} as Record<string, Campground>,
+    );
 }
 
 export function mergeCatalogWithConfigurations(
@@ -23,7 +26,10 @@ export function mergeCatalogWithConfigurations(
         const base = clone(campground);
         const overrides = systemConfigs[campground.id];
         if (!overrides) return base;
-        return deepMerge(base as unknown as Record<string, unknown>, clone(overrides) as unknown as Record<string, unknown>) as unknown as Campground;
+        return deepMerge(
+            base as unknown as Record<string, unknown>,
+            clone(overrides) as unknown as Record<string, unknown>,
+        ) as unknown as Campground;
     });
 
     return merged;

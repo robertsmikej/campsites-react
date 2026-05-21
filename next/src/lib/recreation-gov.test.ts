@@ -1,9 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-    findConsecutiveAvailableRanges,
-    getAllDatesInRange,
-    getSiteFetchMap,
-} from "./recreation-gov";
+import { findConsecutiveAvailableRanges, getAllDatesInRange, getSiteFetchMap } from "./recreation-gov";
 
 describe("getAllDatesInRange", () => {
     it("includes both endpoints", () => {
@@ -30,10 +26,7 @@ describe("findConsecutiveAvailableRanges", () => {
         // starting at index 0 and index 2.
         // Actually: starting at index 0 it consumes [0,1]; then i jumps to 2 — but there's only [2] left,
         // not enough for length=2. So result is just [["2026-05-27", "2026-05-29"]].
-        const ranges = findConsecutiveAvailableRanges(
-            ["2026-05-27", "2026-05-28", "2026-05-29"],
-            2,
-        );
+        const ranges = findConsecutiveAvailableRanges(["2026-05-27", "2026-05-28", "2026-05-29"], 2);
         expect(ranges).toEqual([["2026-05-27", "2026-05-29"]]);
     });
 

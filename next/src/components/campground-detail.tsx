@@ -37,10 +37,7 @@ function buildFilterSummary(
     if (stayLengths && stayLengths.length > 0) {
         const min = Math.min(...stayLengths);
         const max = Math.max(...stayLengths);
-        const value =
-            min === max
-                ? `${min} night${min === 1 ? "" : "s"}`
-                : `${min}–${max} nights`;
+        const value = min === max ? `${min} night${min === 1 ? "" : "s"}` : `${min}–${max} nights`;
         items.push({
             label: "Stay length",
             value,
@@ -154,9 +151,9 @@ export function CampgroundDetail({
     const [mapOpen, setMapOpen] = useState(false);
     const mapImg = campground.mapImage;
     const mapImageSrc = mapImg
-        ? (mapImg.startsWith("http") || mapImg.startsWith("/images/")
+        ? mapImg.startsWith("http") || mapImg.startsWith("/images/")
             ? mapImg
-            : `/images/sites/${mapImg}`)
+            : `/images/sites/${mapImg}`
         : null;
 
     // Per-drawer "show without filters" toggle — additive on top of the global toggle
@@ -165,14 +162,10 @@ export function CampgroundDetail({
 
     const filterSummary = buildFilterSummary(campground, globalSettings);
 
-    const allSites: SiteAvailability[] = Object.values(
-        campground.siteAvailability ?? {},
-    );
+    const allSites: SiteAvailability[] = Object.values(campground.siteAvailability ?? {});
     const grouped = groupSitesByRating(allSites, siteRatings);
     const totalNights = countTotalNights(allSites);
-    const sitesWithAvailability = allSites.filter(
-        (s) => (s.matches?.length ?? 0) > 0,
-    ).length;
+    const sitesWithAvailability = allSites.filter((s) => (s.matches?.length ?? 0) > 0).length;
 
     const renderSiteRow = (site: SiteAvailability) => (
         <SiteRow
@@ -182,9 +175,7 @@ export function CampgroundDetail({
             showExcluded={effectiveShowExcluded}
             rating={siteRatings ? (siteRatings[site.siteName] ?? "unrated") : undefined}
             onRatingChange={
-                onRatingChange
-                    ? (newRating) => onRatingChange(site.siteName, newRating)
-                    : undefined
+                onRatingChange ? (newRating) => onRatingChange(site.siteName, newRating) : undefined
             }
             readOnly={readOnly}
         />
@@ -208,11 +199,7 @@ export function CampgroundDetail({
                 {/* type badge top-right */}
                 <div className="absolute right-3 top-3">
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-background/80 px-2.5 py-1 text-xs font-medium backdrop-blur-md">
-                        <TypeIcon
-                            className="size-3.5 shrink-0"
-                            style={{ color: badge.color }}
-                            aria-hidden
-                        />
+                        <TypeIcon className="size-3.5 shrink-0" style={{ color: badge.color }} aria-hidden />
                         {badge.label}
                     </span>
                 </div>
@@ -224,9 +211,7 @@ export function CampgroundDetail({
                             {campground.name}
                         </h2>
                         {campground.area ? (
-                            <p className="truncate text-xs text-white/85">
-                                {campground.area}
-                            </p>
+                            <p className="truncate text-xs text-white/85">{campground.area}</p>
                         ) : null}
                     </div>
                     <div className="flex items-center gap-1.5">
@@ -262,7 +247,9 @@ export function CampgroundDetail({
                                 )}
                             </TooltipTrigger>
                             <TooltipContent>
-                                {mapImageSrc ? "View campground layout map" : "Campground layout on recreation.gov"}
+                                {mapImageSrc
+                                    ? "View campground layout map"
+                                    : "Campground layout on recreation.gov"}
                             </TooltipContent>
                         </Tooltip>
                         {details?.latitude != null && details?.longitude != null && (
@@ -293,7 +280,11 @@ export function CampgroundDetail({
                     </DialogHeader>
                     {mapImageSrc && (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={mapImageSrc} alt="Campground layout map" className="w-full rounded-lg border" />
+                        <img
+                            src={mapImageSrc}
+                            alt="Campground layout map"
+                            className="w-full rounded-lg border"
+                        />
                     )}
                     <div className="flex justify-end pt-2">
                         <a
@@ -324,18 +315,13 @@ export function CampgroundDetail({
                         ) : null}
                     </span>
                     {campground.notifyAll && (
-                        <Badge
-                            variant="outline"
-                            className="shrink-0 border-blue-400 text-blue-600"
-                        >
+                        <Badge variant="outline" className="shrink-0 border-blue-400 text-blue-600">
                             Notify all
                         </Badge>
                     )}
                 </div>
                 {campground.description && (
-                    <p className="text-sm text-muted-foreground">
-                        {campground.description}
-                    </p>
+                    <p className="text-sm text-muted-foreground">{campground.description}</p>
                 )}
                 {!readOnly && onEditSettings && (
                     <button
@@ -375,15 +361,10 @@ export function CampgroundDetail({
                     </div>
                     <ul className="space-y-1">
                         {filterSummary.items.map((item) => (
-                            <li
-                                key={item.label}
-                                className="flex items-center justify-between gap-2 text-xs"
-                            >
+                            <li key={item.label} className="flex items-center justify-between gap-2 text-xs">
                                 <span className="text-muted-foreground">{item.label}</span>
                                 <span className="flex items-center gap-1.5">
-                                    <span className="font-medium text-foreground">
-                                        {item.value}
-                                    </span>
+                                    <span className="font-medium text-foreground">{item.value}</span>
                                     <Badge
                                         variant="outline"
                                         className="h-4 text-[9px] uppercase tracking-wide"
@@ -401,8 +382,7 @@ export function CampgroundDetail({
                         )}
                     </ul>
                     <p className="mt-2 text-[11px] text-muted-foreground">
-                        Filtered dates are hidden until you toggle &ldquo;Show without
-                        filters&rdquo; on.
+                        Filtered dates are hidden until you toggle &ldquo;Show without filters&rdquo; on.
                     </p>
                 </div>
             )}

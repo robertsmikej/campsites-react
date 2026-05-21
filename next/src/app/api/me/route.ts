@@ -27,7 +27,13 @@ function isValidPatch(body: unknown): body is PatchBody {
         const n = obj.notifications as Record<string, unknown>;
         if (typeof n !== "object" || n === null) return false;
         if (typeof n.enabled !== "boolean") return false;
-        if (n.frequencyMinutes !== 5 && n.frequencyMinutes !== 15 && n.frequencyMinutes !== 60 && n.frequencyMinutes !== 240) return false;
+        if (
+            n.frequencyMinutes !== 5 &&
+            n.frequencyMinutes !== 15 &&
+            n.frequencyMinutes !== 60 &&
+            n.frequencyMinutes !== 240
+        )
+            return false;
     }
     return true;
 }

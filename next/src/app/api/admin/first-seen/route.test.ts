@@ -135,7 +135,7 @@ describe("PUT /api/admin/first-seen", () => {
         };
         const res = await put({ map }, `Bearer ${SECRET}`);
         expect(res.status).toBe(200);
-        const body = await res.json() as { ok: boolean };
+        const body = (await res.json()) as { ok: boolean };
         expect(body.ok).toBe(true);
 
         const stored = await kv.get("notifier:first-seen", "json");

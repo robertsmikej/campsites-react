@@ -3,11 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { fetchCampgrounds } from "@/lib/recreation-gov";
 import { formatGroupsByFavorites } from "@/lib/campground-utils";
-import type {
-    CampgroundsBySystem,
-    ProcessedCampground,
-    SiteConfig,
-} from "@/types/campground";
+import type { CampgroundsBySystem, ProcessedCampground, SiteConfig } from "@/types/campground";
 
 interface ProgressBarData {
     totalCalls: number;
@@ -22,12 +18,7 @@ interface UseCampgroundsDataArgs {
     enabled: boolean;
 }
 
-export function useCampgroundsData({
-    siteConfig,
-    settings,
-    useMockData,
-    enabled,
-}: UseCampgroundsDataArgs) {
+export function useCampgroundsData({ siteConfig, settings, useMockData, enabled }: UseCampgroundsDataArgs) {
     const [campgroundsData, setCampgroundsData] = useState<CampgroundsBySystem>({});
     const [campgroundsByAreas, setCampgroundsByAreas] = useState<ProcessedCampground[]>([]);
     const [isFetching, setIsFetching] = useState(false);
@@ -77,7 +68,9 @@ export function useCampgroundsData({
             setCampgroundsByAreas([]);
             return;
         }
-        setCampgroundsByAreas(formatGroupsByFavorites(campgroundsData as Record<string, ProcessedCampground[]>) ?? []);
+        setCampgroundsByAreas(
+            formatGroupsByFavorites(campgroundsData as Record<string, ProcessedCampground[]>) ?? [],
+        );
     }, [campgroundsData]);
 
     return { campgroundsData, campgroundsByAreas, isFetching, progressBarData, refresh };

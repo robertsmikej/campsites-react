@@ -8,14 +8,7 @@ import { createUserProfile, getUserProfile, bootstrapCuratorIfFirst } from "@/li
 const OAUTH_STATE_COOKIE = "campwatch_oauth_state";
 
 function clearStateCookie(): string {
-    return [
-        `${OAUTH_STATE_COOKIE}=`,
-        "HttpOnly",
-        "Secure",
-        "SameSite=Lax",
-        "Path=/",
-        "Max-Age=0",
-    ].join("; ");
+    return [`${OAUTH_STATE_COOKIE}=`, "HttpOnly", "Secure", "SameSite=Lax", "Path=/", "Max-Age=0"].join("; ");
 }
 
 function readCookie(request: Request, name: string): string | null {

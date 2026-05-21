@@ -1,17 +1,20 @@
 import { getEmptyGroupedSites, getLocalCurrentTime } from "@/lib/campground-utils";
 import { getMockApiResponse } from "@/data/mock-recreation-api";
-import type { Campground, ProcessedCampground, SiteAvailability, ExcludedStay, StayMatch } from "@/types/campground";
+import type { Campground, ProcessedCampground, ExcludedStay, StayMatch } from "@/types/campground";
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
 interface RecreationGovMonthResponse {
-    campsites: Record<string, {
-        site: string;
-        campsite_type?: string;
-        availabilities: Record<string, string>;
-    }>;
+    campsites: Record<
+        string,
+        {
+            site: string;
+            campsite_type?: string;
+            availabilities: Record<string, string>;
+        }
+    >;
 }
 
 interface SiteFetchMapEntry {
@@ -47,9 +50,17 @@ const DELAY_BETWEEN_REQUESTS_MS = 5;
 // ---------------------------------------------------------------------------
 
 const countMatches = (dataObj: Record<string, ProcessedCampground[]> | null | undefined): number => {
-    return Object.values(dataObj || {}).flat().reduce((total, campground) => {
-        return total + Object.values(campground?.siteAvailability || {}).reduce((sum, site) => sum + (site.matches?.length || 0), 0);
-    }, 0);
+    return Object.values(dataObj || {})
+        .flat()
+        .reduce((total, campground) => {
+            return (
+                total +
+                Object.values(campground?.siteAvailability || {}).reduce(
+                    (sum, site) => sum + (site.matches?.length || 0),
+                    0,
+                )
+            );
+        }, 0);
 };
 
 const setCache = (key: string, data: Record<string, ProcessedCampground[]>): void => {
@@ -63,7 +74,9 @@ const setCache = (key: string, data: Record<string, ProcessedCampground[]>): voi
             const existing = JSON.parse(existingStr);
             const existingMatchCount = countMatches(existing.data);
             if (existingMatchCount > 0 && newMatchCount === 0) {
-                console.log(`[Cache] BLOCKED: Not overwriting cache with ${existingMatchCount} matches with empty data`);
+                console.log(
+                    `[Cache] BLOCKED: Not overwriting cache with ${existingMatchCount} matches with empty data`,
+                );
                 return;
             }
         } catch {
@@ -110,7 +123,9 @@ const getCache = (
         const entry = JSON.parse(entryStr);
         const age = Date.now() - entry.timestamp;
         if (age > CACHE_DURATION_MS) {
-            console.log(`[Cache] Cache expired (age: ${Math.round(age / 1000)}s, max: ${CACHE_DURATION_MS / 1000}s)`);
+            console.log(
+                `[Cache] Cache expired (age: ${Math.round(age / 1000)}s, max: ${CACHE_DURATION_MS / 1000}s)`,
+            );
             localStorage.removeItem(key);
             return null;
         }
@@ -170,7 +185,7 @@ async function fetchData(facilityId: string, month: string): Promise<RecreationG
             console.error(`recreation.gov ${facilityId} returned ${r.status}`);
             return null;
         }
-        return await r.json() as RecreationGovMonthResponse;
+        return (await r.json()) as RecreationGovMonthResponse;
     } catch (e) {
         console.error("recreation.gov fetch error:", e);
         return null;
@@ -321,7 +336,9 @@ const processApiResults = (
                     .filter((date) => allDates.includes(date));
 
                 if (validDates.length > 0) {
-                    console.log(`  [Available] Site ${siteData.site} (${siteId}): ${validDates.length} available dates`);
+                    console.log(
+                        `  [Available] Site ${siteData.site} (${siteId}): ${validDates.length} available dates`,
+                    );
                 }
                 campgroundEntry.siteAvailability[siteId].dates.push(...validDates);
             }
@@ -346,7 +363,8 @@ const processApiResults = (
                             timeZone: "UTC",
                         });
                         const effectiveStartDays = campground.validStartDays ?? settings.dates.validStartDays;
-                        const isValidStartDay = !effectiveStartDays?.length || effectiveStartDays.includes(startDay);
+                        const isValidStartDay =
+                            !effectiveStartDays?.length || effectiveStartDays.includes(startDay);
                         const isValidStayLength = length >= minStay && length <= maxStay;
 
                         if (isValidStayLength && isValidStartDay) {
@@ -354,7 +372,11 @@ const processApiResults = (
                         } else {
                             const sName = site.siteName;
                             if (!campgroundEntry.excludedMatches!.sites[sName]) {
-                                campgroundEntry.excludedMatches!.sites[sName] = { siteId, byStayLength: 0, byStartDay: 0 };
+                                campgroundEntry.excludedMatches!.sites[sName] = {
+                                    siteId,
+                                    byStayLength: 0,
+                                    byStartDay: 0,
+                                };
                             }
                             const reason = !isValidStayLength ? "stayLength" : "startDay";
                             excludedRanges.push({ from, to, nights: length, excluded: true, reason });
@@ -398,7 +420,10 @@ const processApiResults = (
                 site.matches = filtered;
                 site.excludedMatches = filteredExcluded;
                 if (filtered.length > 0) {
-                    console.log(`  [Matches] Site ${site.siteName}: ${filtered.length} matching stays`, filtered);
+                    console.log(
+                        `  [Matches] Site ${site.siteName}: ${filtered.length} matching stays`,
+                        filtered,
+                    );
                 }
             }
         }
@@ -444,13 +469,18 @@ const calculateExcludedMatches = (
                             timeZone: "UTC",
                         });
                         const effectiveStartDays = campground.validStartDays ?? settings.dates.validStartDays;
-                        const isValidStartDay = !effectiveStartDays?.length || effectiveStartDays.includes(startDay);
+                        const isValidStartDay =
+                            !effectiveStartDays?.length || effectiveStartDays.includes(startDay);
                         const isValidStayLength = length >= minStay && length <= maxStay;
 
                         const sName = site.siteName;
                         if (!isValidStayLength || !isValidStartDay) {
                             if (!campground.excludedMatches!.sites[sName]) {
-                                campground.excludedMatches!.sites[sName] = { siteId, byStayLength: 0, byStartDay: 0 };
+                                campground.excludedMatches!.sites[sName] = {
+                                    siteId,
+                                    byStayLength: 0,
+                                    byStartDay: 0,
+                                };
                             }
                             const reason = !isValidStayLength ? "stayLength" : "startDay";
                             excludedRanges.push({ from, to, nights: length, excluded: true, reason });
@@ -566,7 +596,7 @@ export const getAllDatesInRange = (start: string, end: string): string[] => {
 export const findConsecutiveAvailableRanges = (dates: string[], length: number): [string, string][] => {
     const ranges: [string, string][] = [];
     const timestamps = dates.map((d) => new Date(d).getTime());
-    for (let i = 0; i <= timestamps.length - length;) {
+    for (let i = 0; i <= timestamps.length - length; ) {
         let isConsecutive = true;
         for (let j = 1; j < length; j++) {
             const expected = timestamps[i] + j * 86400000;

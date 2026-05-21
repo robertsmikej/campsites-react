@@ -3,11 +3,13 @@ import { buildAuthorizationUrl, verifyIdToken } from "./google-oauth";
 
 describe("buildAuthorizationUrl", () => {
     it("includes the required query params", () => {
-        const url = new URL(buildAuthorizationUrl({
-            clientId: "client.apps.googleusercontent.com",
-            redirectUri: "https://example.com/auth/google/callback",
-            state: "signed-state-value",
-        }));
+        const url = new URL(
+            buildAuthorizationUrl({
+                clientId: "client.apps.googleusercontent.com",
+                redirectUri: "https://example.com/auth/google/callback",
+                state: "signed-state-value",
+            }),
+        );
         expect(url.origin + url.pathname).toBe("https://accounts.google.com/o/oauth2/v2/auth");
         expect(url.searchParams.get("response_type")).toBe("code");
         expect(url.searchParams.get("client_id")).toBe("client.apps.googleusercontent.com");
@@ -19,21 +21,25 @@ describe("buildAuthorizationUrl", () => {
     });
 
     it("uses custom scopes when provided", () => {
-        const url = new URL(buildAuthorizationUrl({
-            clientId: "client.apps.googleusercontent.com",
-            redirectUri: "https://example.com/auth/google/callback",
-            state: "state",
-            scopes: ["openid", "email"],
-        }));
+        const url = new URL(
+            buildAuthorizationUrl({
+                clientId: "client.apps.googleusercontent.com",
+                redirectUri: "https://example.com/auth/google/callback",
+                state: "state",
+                scopes: ["openid", "email"],
+            }),
+        );
         expect(url.searchParams.get("scope")).toBe("openid email");
     });
 
     it("sets access_type=online and prompt=select_account", () => {
-        const url = new URL(buildAuthorizationUrl({
-            clientId: "c",
-            redirectUri: "https://example.com/callback",
-            state: "s",
-        }));
+        const url = new URL(
+            buildAuthorizationUrl({
+                clientId: "c",
+                redirectUri: "https://example.com/callback",
+                state: "s",
+            }),
+        );
         expect(url.searchParams.get("access_type")).toBe("online");
         expect(url.searchParams.get("prompt")).toBe("select_account");
     });

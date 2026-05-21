@@ -69,9 +69,7 @@ export function toEditableCampground(
 
 export function sanitizeCampground(campground: EditableCampground): Campground {
     const favorites =
-        campground.favoritesArray != null
-            ? campground.favoritesArray
-            : parseList(campground.favoritesText);
+        campground.favoritesArray != null ? campground.favoritesArray : parseList(campground.favoritesText);
     const worthwhile =
         campground.worthwhileArray != null
             ? campground.worthwhileArray

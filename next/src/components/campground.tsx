@@ -3,11 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { ChevronDown } from "lucide-react";
 
-import {
-    Card,
-    CardContent,
-    CardHeader,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -84,10 +80,7 @@ function getInitialSectionViews(
 ): Record<SectionKey, ViewMode> {
     if (!campground) return {};
     const campgroundId = getCampgroundStorageId(campground);
-    const storedViewsMap = readMapFromStorage(SECTION_VIEWS_KEY) as Record<
-        string,
-        Record<string, ViewMode>
-    >;
+    const storedViewsMap = readMapFromStorage(SECTION_VIEWS_KEY) as Record<string, Record<string, ViewMode>>;
     return (storedViewsMap[campgroundId] as Record<SectionKey, ViewMode>) ?? {};
 }
 
@@ -103,23 +96,16 @@ interface CampgroundProps {
 
 function getMatchCount(sites: ReturnType<typeof Object.values>[number]): number {
     if (!Array.isArray(sites)) return 0;
-    return sites.reduce(
-        (acc: number, site: { matches?: unknown[] }) => acc + (site.matches?.length ?? 0),
-        0,
-    );
+    return sites.reduce((acc: number, site: { matches?: unknown[] }) => acc + (site.matches?.length ?? 0), 0);
 }
 
-export function Campground({
-    campground: campgroundProp,
-    viewMode,
-    showExcluded = false,
-}: CampgroundProps) {
+export function Campground({ campground: campgroundProp, viewMode, showExcluded = false }: CampgroundProps) {
     // Initialise synchronously to avoid a flash of wrong state
-    const [expandedSections, setExpandedSections] = useState<Record<SectionKey, boolean>>(
-        () => getInitialExpandedState(campgroundProp),
+    const [expandedSections, setExpandedSections] = useState<Record<SectionKey, boolean>>(() =>
+        getInitialExpandedState(campgroundProp),
     );
-    const [sectionViews, setSectionViews] = useState<Record<SectionKey, ViewMode>>(
-        () => getInitialSectionViews(campgroundProp),
+    const [sectionViews, setSectionViews] = useState<Record<SectionKey, ViewMode>>(() =>
+        getInitialSectionViews(campgroundProp),
     );
 
     // Re-sync when the campground changes
@@ -129,10 +115,7 @@ export function Campground({
     }, [campgroundProp]);
 
     // The global effective view: prop overrides settings default
-    const effectiveView = useMemo<ViewMode>(
-        () => viewMode ?? "calendar",
-        [viewMode],
-    );
+    const effectiveView = useMemo<ViewMode>(() => viewMode ?? "calendar", [viewMode]);
 
     // Per-section view overrides only apply in calendar mode
     const overridesEnabled = effectiveView === "calendar";
@@ -141,10 +124,7 @@ export function Campground({
     useEffect(() => {
         const storageId = getCampgroundStorageId(campgroundProp);
         if (!storageId || Object.keys(expandedSections).length === 0) return;
-        const stored = readMapFromStorage(SECTION_EXPANDED_KEY) as Record<
-            string,
-            Record<string, boolean>
-        >;
+        const stored = readMapFromStorage(SECTION_EXPANDED_KEY) as Record<string, Record<string, boolean>>;
         stored[storageId] = expandedSections;
         writeMapToStorage(SECTION_EXPANDED_KEY, stored);
     }, [expandedSections, campgroundProp]);
@@ -153,10 +133,7 @@ export function Campground({
     useEffect(() => {
         const storageId = getCampgroundStorageId(campgroundProp);
         if (!storageId) return;
-        const stored = readMapFromStorage(SECTION_VIEWS_KEY) as Record<
-            string,
-            Record<string, ViewMode>
-        >;
+        const stored = readMapFromStorage(SECTION_VIEWS_KEY) as Record<string, Record<string, ViewMode>>;
         if (Object.keys(sectionViews).length === 0) {
             delete stored[storageId];
         } else {
@@ -196,8 +173,8 @@ export function Campground({
                 const expanded = hasExcludedAvailability
                     ? true
                     : isHiddenBySetting
-                        ? (expandedSections[type] ?? false)
-                        : (expandedSections[type] ?? hasPreferenceAvailability);
+                      ? (expandedSections[type] ?? false)
+                      : (expandedSections[type] ?? hasPreferenceAvailability);
 
                 const sectionView: ViewMode = overridesEnabled
                     ? (sectionViews[type] ?? effectiveView)
@@ -215,10 +192,7 @@ export function Campground({
                                         {matchCount} stays available
                                     </Badge>
                                     {isHiddenBySetting && (
-                                        <Badge
-                                            variant="outline"
-                                            className="opacity-70 text-xs"
-                                        >
+                                        <Badge variant="outline" className="opacity-70 text-xs">
                                             Hidden by settings
                                         </Badge>
                                     )}
@@ -229,9 +203,7 @@ export function Campground({
                                     {overridesEnabled ? (
                                         <Tabs
                                             value={sectionView}
-                                            onValueChange={(v) =>
-                                                handleSectionViewChange(type, v)
-                                            }
+                                            onValueChange={(v) => handleSectionViewChange(type, v)}
                                         >
                                             <TabsList className="h-7">
                                                 <TabsTrigger value="calendar" className="text-xs px-2 py-0.5">
@@ -264,9 +236,7 @@ export function Campground({
                                                 />
                                             </Button>
                                         </TooltipTrigger>
-                                        <TooltipContent>
-                                            {expanded ? "Collapse" : "Expand"}
-                                        </TooltipContent>
+                                        <TooltipContent>{expanded ? "Collapse" : "Expand"}</TooltipContent>
                                     </Tooltip>
                                 </div>
                             </div>

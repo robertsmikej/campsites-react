@@ -18,12 +18,20 @@ export function FaqItem({ q, a, index, isMobile }: FaqItemProps) {
             >
                 <summary className="flex justify-between items-start gap-[14px] cursor-pointer">
                     <div className="flex items-start gap-[10px]">
-                        <span className="font-mono-field text-[10px] leading-[1.6] text-cw-mustard tracking-[0.12em] flex-shrink-0 font-medium">Q.0{index + 1}</span>
-                        <h3 className="font-italic-serif text-[19px] leading-[1.3] text-cw-cream m-0 tracking-[-0.005em] font-medium italic">{q}</h3>
+                        <span className="font-mono-field text-[10px] leading-[1.6] text-cw-mustard tracking-[0.12em] flex-shrink-0 font-medium">
+                            Q.0{index + 1}
+                        </span>
+                        <h3 className="font-italic-serif text-[19px] leading-[1.3] text-cw-cream m-0 tracking-[-0.005em] font-medium italic">
+                            {q}
+                        </h3>
                     </div>
-                    <span className="font-mono-field text-[20px] leading-none text-cw-mustard flex-shrink-0 font-medium">+</span>
+                    <span className="font-mono-field text-[20px] leading-none text-cw-mustard flex-shrink-0 font-medium">
+                        +
+                    </span>
                 </summary>
-                <p className="font-body-serif text-[14px] leading-[1.55] text-[rgba(239,230,210,0.82)] m-0 mt-3 ml-[26px]">{a}</p>
+                <p className="font-body-serif text-[14px] leading-[1.55] text-[rgba(239,230,210,0.82)] m-0 mt-3 ml-[26px]">
+                    {a}
+                </p>
             </details>
         );
     }

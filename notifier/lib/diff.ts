@@ -1,8 +1,8 @@
 // Change detection: compare current matches against previous state
 // to identify NEW availability that should trigger a notification.
 
-import type { StayMatch } from '../../next/src/types/campground';
-import type { SiteAvailabilityMap } from './fetch-availability';
+import type { StayMatch } from "../../next/src/types/campground";
+import type { SiteAvailabilityMap } from "./fetch-availability";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -23,7 +23,7 @@ export interface SiteConfigForDiff {
     notifyAll: boolean;
 }
 
-export type MatchGroup = 'favorites' | 'worthwhile' | 'all-others';
+export type MatchGroup = "favorites" | "worthwhile" | "all-others";
 
 export interface MatchResult {
     campgroundId: string;
@@ -60,9 +60,9 @@ export const findNewMatches = (
             for (const match of site.matches ?? []) {
                 const signature = generateSignature(result.campgroundId, siteId, match);
                 if (!previousSignatures.has(signature)) {
-                    let group: MatchGroup = 'all-others';
-                    if (favorites.has(site.siteName)) group = 'favorites';
-                    else if (worthwhile.has(site.siteName)) group = 'worthwhile';
+                    let group: MatchGroup = "all-others";
+                    if (favorites.has(site.siteName)) group = "favorites";
+                    else if (worthwhile.has(site.siteName)) group = "worthwhile";
 
                     newMatches.push({
                         campgroundId: result.campgroundId,

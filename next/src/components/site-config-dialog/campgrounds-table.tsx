@@ -2,14 +2,7 @@
 
 import { GripVertical, Trash2, Pencil } from "lucide-react";
 
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -63,9 +56,7 @@ export function CampgroundsTable({
                                     </span>
                                 </TableCell>
                                 <TableCell>
-                                    <span className={!isEnabled ? "opacity-50" : ""}>
-                                        {nameLabel}
-                                    </span>
+                                    <span className={!isEnabled ? "opacity-50" : ""}>{nameLabel}</span>
                                     {!isEnabled && (
                                         <span className="ml-2 text-xs italic text-muted-foreground">
                                             disabled

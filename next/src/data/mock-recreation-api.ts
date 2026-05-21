@@ -56,7 +56,13 @@ const createResponse = (campsites: Record<string, Campsite>): ApiResponse => {
 
 export const mockRecreationApiResponses: Record<string, ApiResponse> = {
     "232358-2025-09": createResponse({
-        "232358-013": createCampsite("013", ["2025-09-06", "2025-09-07", "2025-09-08", "2025-09-11", "2025-09-12"]),
+        "232358-013": createCampsite("013", [
+            "2025-09-06",
+            "2025-09-07",
+            "2025-09-08",
+            "2025-09-11",
+            "2025-09-12",
+        ]),
         "232358-015": createCampsite("015", ["2025-09-14", "2025-09-15", "2025-09-16"]),
         "232358-021": createCampsite("021", ["2025-09-03", "2025-09-04"]),
     }),

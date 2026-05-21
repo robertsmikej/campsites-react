@@ -53,15 +53,34 @@ describe("getCampgroundOpenCount — no window", () => {
             name: "Test",
             sites: { favorites: [], worthwhile: [] },
             siteAvailability: {
-                s1: { siteId: "s1", siteName: "A", dates: [], matches: [{ from: "2026-07-01", to: "2026-07-04", nights: 3 }, { from: "2026-08-01", to: "2026-08-03", nights: 2 }], excludedMatches: [] },
-                s2: { siteId: "s2", siteName: "B", dates: [], matches: [{ from: "2026-07-10", to: "2026-07-12", nights: 2 }], excludedMatches: [] },
+                s1: {
+                    siteId: "s1",
+                    siteName: "A",
+                    dates: [],
+                    matches: [
+                        { from: "2026-07-01", to: "2026-07-04", nights: 3 },
+                        { from: "2026-08-01", to: "2026-08-03", nights: 2 },
+                    ],
+                    excludedMatches: [],
+                },
+                s2: {
+                    siteId: "s2",
+                    siteName: "B",
+                    dates: [],
+                    matches: [{ from: "2026-07-10", to: "2026-07-12", nights: 2 }],
+                    excludedMatches: [],
+                },
             },
         };
         expect(getCampgroundOpenCount(c)).toBe(3);
     });
 
     it("handles undefined siteAvailability gracefully", () => {
-        const c = { id: "1", name: "X", sites: { favorites: [], worthwhile: [] } } as unknown as ProcessedCampground;
+        const c = {
+            id: "1",
+            name: "X",
+            sites: { favorites: [], worthwhile: [] },
+        } as unknown as ProcessedCampground;
         expect(getCampgroundOpenCount(c)).toBe(0);
     });
 });
@@ -71,30 +90,30 @@ describe("getCampgroundOpenCount — no window", () => {
 describe("getCampgroundOpenCount — with window", () => {
     it("counts a match fully inside the window", () => {
         const c = makeCampground([{ from: "2026-07-10", to: "2026-07-12" }]);
-        const winStart = new Date(2026, 6, 1);  // Jul 1
-        const winEnd   = new Date(2026, 6, 31); // Jul 31
+        const winStart = new Date(2026, 6, 1); // Jul 1
+        const winEnd = new Date(2026, 6, 31); // Jul 31
         expect(getCampgroundOpenCount(c, winStart, winEnd)).toBe(1);
     });
 
     it("excludes a match entirely before the window", () => {
         const c = makeCampground([{ from: "2026-06-01", to: "2026-06-05" }]);
         const winStart = new Date(2026, 6, 1);
-        const winEnd   = new Date(2026, 6, 31);
+        const winEnd = new Date(2026, 6, 31);
         expect(getCampgroundOpenCount(c, winStart, winEnd)).toBe(0);
     });
 
     it("excludes a match entirely after the window", () => {
         const c = makeCampground([{ from: "2026-08-01", to: "2026-08-05" }]);
         const winStart = new Date(2026, 6, 1);
-        const winEnd   = new Date(2026, 6, 31);
+        const winEnd = new Date(2026, 6, 31);
         expect(getCampgroundOpenCount(c, winStart, winEnd)).toBe(0);
     });
 
     it("counts a match that starts before and ends inside the window (overlap start)", () => {
         // from < winStart but to > winStart => overlaps
         const c = makeCampground([{ from: "2026-06-28", to: "2026-07-03" }]);
-        const winStart = new Date(2026, 6, 1);  // Jul 1
-        const winEnd   = new Date(2026, 6, 31);
+        const winStart = new Date(2026, 6, 1); // Jul 1
+        const winEnd = new Date(2026, 6, 31);
         expect(getCampgroundOpenCount(c, winStart, winEnd)).toBe(1);
     });
 
@@ -102,14 +121,14 @@ describe("getCampgroundOpenCount — with window", () => {
         // from <= winEnd and to > winStart => overlaps
         const c = makeCampground([{ from: "2026-07-29", to: "2026-08-03" }]);
         const winStart = new Date(2026, 6, 1);
-        const winEnd   = new Date(2026, 6, 31);
+        const winEnd = new Date(2026, 6, 31);
         expect(getCampgroundOpenCount(c, winStart, winEnd)).toBe(1);
     });
 
     it("off-by-one: match.to === winStart is excluded (to > winStart required)", () => {
         // to === winStart means checkout is the same day as window opens — does not overlap
         const winStart = new Date(2026, 6, 10); // Jul 10
-        const winEnd   = new Date(2026, 6, 20);
+        const winEnd = new Date(2026, 6, 20);
         const c = makeCampground([{ from: "2026-07-08", to: "2026-07-10" }]); // to == winStart
         // m.to "2026-07-10" > "2026-07-10" is false => excluded
         expect(getCampgroundOpenCount(c, winStart, winEnd)).toBe(0);
@@ -117,7 +136,7 @@ describe("getCampgroundOpenCount — with window", () => {
 
     it("off-by-one: match.from === winEnd is included (from <= winEnd required)", () => {
         const winStart = new Date(2026, 6, 1);
-        const winEnd   = new Date(2026, 6, 20); // Jul 20
+        const winEnd = new Date(2026, 6, 20); // Jul 20
         const c = makeCampground([{ from: "2026-07-20", to: "2026-07-22" }]); // from == winEnd
         // m.from "2026-07-20" <= "2026-07-20" is true, m.to "2026-07-22" > "2026-07-01" is true => included
         expect(getCampgroundOpenCount(c, winStart, winEnd)).toBe(1);
@@ -134,12 +153,27 @@ describe("getCampgroundOpenCount — with window", () => {
             name: "Multi",
             sites: { favorites: [], worthwhile: [] },
             siteAvailability: {
-                s1: { siteId: "s1", siteName: "A", dates: [], matches: [{ from: "2026-07-05", to: "2026-07-07", nights: 2 }], excludedMatches: [] },
-                s2: { siteId: "s2", siteName: "B", dates: [], matches: [{ from: "2026-07-12", to: "2026-07-14", nights: 2 }, { from: "2026-08-01", to: "2026-08-03", nights: 2 }], excludedMatches: [] },
+                s1: {
+                    siteId: "s1",
+                    siteName: "A",
+                    dates: [],
+                    matches: [{ from: "2026-07-05", to: "2026-07-07", nights: 2 }],
+                    excludedMatches: [],
+                },
+                s2: {
+                    siteId: "s2",
+                    siteName: "B",
+                    dates: [],
+                    matches: [
+                        { from: "2026-07-12", to: "2026-07-14", nights: 2 },
+                        { from: "2026-08-01", to: "2026-08-03", nights: 2 },
+                    ],
+                    excludedMatches: [],
+                },
             },
         };
         const winStart = new Date(2026, 6, 1);
-        const winEnd   = new Date(2026, 6, 31);
+        const winEnd = new Date(2026, 6, 31);
         // s1: 1 match in window; s2: 1 in window + 1 outside = total 2
         expect(getCampgroundOpenCount(c, winStart, winEnd)).toBe(2);
     });

@@ -27,20 +27,13 @@ import { EmptyState } from "@/components/dashboard/empty-state";
 import { siteData } from "@/data/site-data";
 import type { SiteSettingsValue } from "@/context/site-settings";
 import type { OpeningItem } from "@/components/dashboard/openings-feed";
-import type { GroupBy } from "@/hooks/use-dashboard-prefs";
+// import type { GroupBy } from "@/hooks/use-dashboard-prefs"; // kept for future grouping UI
 
 export default function AppPage() {
     const auth = useAuth();
     const userCampgrounds = useUserCampgrounds();
-    const {
-        siteConfig,
-        globalSettings,
-        isHydrating,
-        syncStatus,
-        clearSyncStatus,
-        save,
-        cloneDefault,
-    } = userCampgrounds;
+    const { siteConfig, globalSettings, isHydrating, syncStatus, clearSyncStatus, save, cloneDefault } =
+        userCampgrounds;
 
     const isMobile = useIsMobile();
     const [useMockData] = useState(false);
@@ -50,15 +43,8 @@ export default function AppPage() {
     const [addModalOpen, setAddModalOpen] = useState(false);
 
     // Dashboard preferences (date range + grouping) — single persisted blob.
-    const {
-        dateRange,
-        calRange,
-        datePickerOpen,
-        setDatePickerOpen,
-        handleCalSelect,
-        groupBy,
-        setGroupBy,
-    } = useDashboardPrefs();
+    const { dateRange, calRange, datePickerOpen, setDatePickerOpen, handleCalSelect, groupBy, setGroupBy } =
+        useDashboardPrefs();
     const handleGroupBy = setGroupBy;
 
     // Favorites
@@ -67,12 +53,15 @@ export default function AppPage() {
         try {
             const raw = localStorage.getItem("campwatch:favorites");
             return new Set(raw ? (JSON.parse(raw) as string[]) : []);
-        } catch { return new Set(); }
+        } catch {
+            return new Set();
+        }
     });
     const toggleFavorite = (id: string) => {
         setFavorites((prev) => {
             const next = new Set(prev);
-            if (next.has(id)) next.delete(id); else next.add(id);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
             writeStorage("campwatch:favorites", Array.from(next));
             return next;
         });
@@ -98,37 +87,47 @@ export default function AppPage() {
     });
 
     // Rating change handler
-    const handleRatingChange = useCallback((
-        campgroundId: string,
-        siteName: string,
-        newRating: "favorite" | "worthwhile" | "unrated",
-    ) => {
-        const campgrounds = siteConfig["recreation.gov"] ?? [];
-        const updated = campgrounds.map((cg) => {
-            if (cg.id !== campgroundId) return cg;
-            const favs = (cg.sites?.favorites ?? []).filter((s) => s !== siteName);
-            const worthwhile = (cg.sites?.worthwhile ?? []).filter((s) => s !== siteName);
-            if (newRating === "favorite") favs.push(siteName);
-            else if (newRating === "worthwhile") worthwhile.push(siteName);
-            return { ...cg, sites: { favorites: favs, worthwhile } };
-        });
-        void save({ ...siteConfig, "recreation.gov": updated }, globalSettings);
-    }, [siteConfig, globalSettings, save]);
+    const handleRatingChange = useCallback(
+        (campgroundId: string, siteName: string, newRating: "favorite" | "worthwhile" | "unrated") => {
+            const campgrounds = siteConfig["recreation.gov"] ?? [];
+            const updated = campgrounds.map((cg) => {
+                if (cg.id !== campgroundId) return cg;
+                const favs = (cg.sites?.favorites ?? []).filter((s) => s !== siteName);
+                const worthwhile = (cg.sites?.worthwhile ?? []).filter((s) => s !== siteName);
+                if (newRating === "favorite") favs.push(siteName);
+                else if (newRating === "worthwhile") worthwhile.push(siteName);
+                return { ...cg, sites: { favorites: favs, worthwhile } };
+            });
+            void save({ ...siteConfig, "recreation.gov": updated }, globalSettings);
+        },
+        [siteConfig, globalSettings, save],
+    );
 
     useEffect(() => {
         if (syncStatus === null) return;
-        if (syncStatus === "success") { toast.success("Settings synced to notifications"); }
-        else { toast.warning("Settings saved locally but failed to sync"); }
+        if (syncStatus === "success") {
+            toast.success("Settings synced to notifications");
+        } else {
+            toast.warning("Settings saved locally but failed to sync");
+        }
         clearSyncStatus();
     }, [syncStatus, clearSyncStatus]);
 
     const isLoading = isFetching || isHydrating;
     const isEmpty = !userCampgrounds.isHydrating && userCampgrounds.isEmpty;
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- kept for future top-bar menu
     const topBarMenuItems = [
         { label: "Configure Sites", action: () => setIsConfigDialogOpen(true) },
         { label: isLoading ? "Refreshing…" : "Refresh data", action: () => refresh(), disabled: isLoading },
-        { label: "Clear cache", action: () => { clearCampgroundCache(); refresh(); }, disabled: isLoading },
+        {
+            label: "Clear cache",
+            action: () => {
+                clearCampgroundCache();
+                refresh();
+            },
+            disabled: isLoading,
+        },
     ];
 
     // Compute open counts within date range
@@ -140,8 +139,8 @@ export default function AppPage() {
         return m;
     }, [campgroundsByAreas, dateRange]);
 
-    const campgroundsWithOpenings = useMemo(() =>
-        campgroundsByAreas.filter((c) => (openCounts.get(c.id ?? c.name) ?? 0) > 0).length,
+    const campgroundsWithOpenings = useMemo(
+        () => campgroundsByAreas.filter((c) => (openCounts.get(c.id ?? c.name) ?? 0) > 0).length,
         [campgroundsByAreas, openCounts],
     );
 
@@ -202,106 +201,125 @@ export default function AppPage() {
 
             <SiteSettingsContext.Provider value={settings}>
                 <ProgressBarContext.Provider value={progressBarData}>
-                    <DashboardTopBar
-                        auth={auth}
-                        onAddCampground={() => setAddModalOpen(true)}
-                    />
+                    <DashboardTopBar auth={auth} onAddCampground={() => setAddModalOpen(true)} />
 
                     <main className="bg-cw-paper text-cw-ink font-body-serif min-h-screen">
                         <div className="mx-auto w-full max-w-screen-2xl">
-
-                        {/* Missing-from-default sync banner */}
-                        {userCampgrounds.missingFromDefault.length > 0 && !dismissedSync && (
-                            <div className="px-[22px] py-3 md:px-9">
-                                <div className="flex flex-wrap items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm">
-                                    <Sparkles className="size-4 shrink-0 text-primary" aria-hidden />
-                                    <div className="min-w-0 flex-1">
-                                        <p className="font-medium">
-                                            {userCampgrounds.missingFromDefault.length} new campground{userCampgrounds.missingFromDefault.length === 1 ? "" : "s"} in the default config
-                                        </p>
-                                        <p className="truncate text-xs text-muted-foreground">
-                                            {userCampgrounds.missingFromDefault.map((c) => c.name).join(", ")}
-                                        </p>
-                                    </div>
-                                    <div className="flex shrink-0 items-center gap-2">
-                                        <Button size="sm" onClick={async () => {
-                                            const result = await userCampgrounds.syncMissing();
-                                            setDismissedSync(true);
-                                            toast.success(`Added ${result.added} campground${result.added === 1 ? "" : "s"}`);
-                                        }}>
-                                            Add to my list
-                                        </Button>
-                                        <Button size="icon" variant="ghost" onClick={() => setDismissedSync(true)} aria-label="Dismiss">
-                                            <X className="size-4" />
-                                        </Button>
+                            {/* Missing-from-default sync banner */}
+                            {userCampgrounds.missingFromDefault.length > 0 && !dismissedSync && (
+                                <div className="px-[22px] py-3 md:px-9">
+                                    <div className="flex flex-wrap items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm">
+                                        <Sparkles className="size-4 shrink-0 text-primary" aria-hidden />
+                                        <div className="min-w-0 flex-1">
+                                            <p className="font-medium">
+                                                {userCampgrounds.missingFromDefault.length} new campground
+                                                {userCampgrounds.missingFromDefault.length === 1
+                                                    ? ""
+                                                    : "s"}{" "}
+                                                in the default config
+                                            </p>
+                                            <p className="truncate text-xs text-muted-foreground">
+                                                {userCampgrounds.missingFromDefault
+                                                    .map((c) => c.name)
+                                                    .join(", ")}
+                                            </p>
+                                        </div>
+                                        <div className="flex shrink-0 items-center gap-2">
+                                            <Button
+                                                size="sm"
+                                                onClick={async () => {
+                                                    const result = await userCampgrounds.syncMissing();
+                                                    setDismissedSync(true);
+                                                    toast.success(
+                                                        `Added ${result.added} campground${result.added === 1 ? "" : "s"}`,
+                                                    );
+                                                }}
+                                            >
+                                                Add to my list
+                                            </Button>
+                                            <Button
+                                                size="icon"
+                                                variant="ghost"
+                                                onClick={() => setDismissedSync(true)}
+                                                aria-label="Dismiss"
+                                            >
+                                                <X className="size-4" />
+                                            </Button>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        )}
+                            )}
 
-                        {isEmpty ? (
-                            <DashboardErrorBoundary section="Empty state">
-                                <EmptyState onClone={cloneDefault} />
-                            </DashboardErrorBoundary>
-                        ) : (
-                            <>
-                                <DashboardErrorBoundary section="Greeting">
-                                    <Greeting
-                                        auth={auth}
-                                        isLoading={isLoading}
-                                        campgroundsWithOpenings={campgroundsWithOpenings}
-                                    />
+                            {isEmpty ? (
+                                <DashboardErrorBoundary section="Empty state">
+                                    <EmptyState onClone={cloneDefault} />
                                 </DashboardErrorBoundary>
+                            ) : (
+                                <>
+                                    <DashboardErrorBoundary section="Greeting">
+                                        <Greeting
+                                            auth={auth}
+                                            isLoading={isLoading}
+                                            campgroundsWithOpenings={campgroundsWithOpenings}
+                                        />
+                                    </DashboardErrorBoundary>
 
-                                <DashboardErrorBoundary section="Openings feed">
-                                    <OpeningsFeed
-                                        openingItems={openingItems}
-                                        isMobile={isMobile}
-                                        nowMs={nowMs}
-                                        PAD={PAD}
-                                    />
-                                </DashboardErrorBoundary>
+                                    <DashboardErrorBoundary section="Openings feed">
+                                        <OpeningsFeed
+                                            openingItems={openingItems}
+                                            isMobile={isMobile}
+                                            nowMs={nowMs}
+                                            PAD={PAD}
+                                        />
+                                    </DashboardErrorBoundary>
 
-                                <DashboardErrorBoundary section="Watchlist">
-                                    <WatchlistSection
-                                        campgroundsByAreas={campgroundsByAreas}
-                                        openCounts={openCounts}
-                                        isLoading={isLoading}
-                                        groupBy={groupBy}
-                                        onGroupBy={handleGroupBy}
-                                        dateRange={dateRange}
-                                        calRange={calRange}
-                                        datePickerOpen={datePickerOpen}
-                                        setDatePickerOpen={setDatePickerOpen}
-                                        handleCalSelect={handleCalSelect}
-                                        favorites={favorites}
-                                        onToggleFavorite={toggleFavorite}
-                                        settings={settings as { views?: { type?: "calendar" | "table" } }}
-                                        globalSettings={globalSettings}
-                                        isMobile={isMobile}
-                                        onRatingChange={handleRatingChange}
-                                        onEditSettings={(id) => {
-                                            setFocusedCampgroundId(id);
-                                            setIsConfigDialogOpen(true);
-                                        }}
-                                        PAD={PAD}
-                                    />
-                                </DashboardErrorBoundary>
-                            </>
-                        )}
+                                    <DashboardErrorBoundary section="Watchlist">
+                                        <WatchlistSection
+                                            campgroundsByAreas={campgroundsByAreas}
+                                            openCounts={openCounts}
+                                            isLoading={isLoading}
+                                            groupBy={groupBy}
+                                            onGroupBy={handleGroupBy}
+                                            dateRange={dateRange}
+                                            calRange={calRange}
+                                            datePickerOpen={datePickerOpen}
+                                            setDatePickerOpen={setDatePickerOpen}
+                                            handleCalSelect={handleCalSelect}
+                                            favorites={favorites}
+                                            onToggleFavorite={toggleFavorite}
+                                            settings={settings as { views?: { type?: "calendar" | "table" } }}
+                                            globalSettings={globalSettings}
+                                            isMobile={isMobile}
+                                            onRatingChange={handleRatingChange}
+                                            onEditSettings={(id) => {
+                                                setFocusedCampgroundId(id);
+                                                setIsConfigDialogOpen(true);
+                                            }}
+                                            PAD={PAD}
+                                        />
+                                    </DashboardErrorBoundary>
+                                </>
+                            )}
 
-                        {/* Footer */}
-                        <footer className="px-[22px] md:px-9 pt-5 pb-9 flex justify-between font-mono-field text-[11px] font-medium leading-none tracking-[0.12em] text-cw-ink-faint uppercase flex-wrap gap-2">
-                            <span>Built by a camper, for campers</span>
-                            <span>{siteData.name}</span>
-                        </footer>
+                            {/* Footer */}
+                            <footer className="px-[22px] md:px-9 pt-5 pb-9 flex justify-between font-mono-field text-[11px] font-medium leading-none tracking-[0.12em] text-cw-ink-faint uppercase flex-wrap gap-2">
+                                <span>Built by a camper, for campers</span>
+                                <span>{siteData.name}</span>
+                            </footer>
                         </div>
                     </main>
 
                     <SiteConfigDialog
                         open={isConfigDialogOpen}
-                        onClose={() => { setIsConfigDialogOpen(false); setFocusedCampgroundId(null); }}
-                        onSave={(config, nextGlobal) => { void save(config, nextGlobal); setIsConfigDialogOpen(false); setFocusedCampgroundId(null); }}
+                        onClose={() => {
+                            setIsConfigDialogOpen(false);
+                            setFocusedCampgroundId(null);
+                        }}
+                        onSave={(config, nextGlobal) => {
+                            void save(config, nextGlobal);
+                            setIsConfigDialogOpen(false);
+                            setFocusedCampgroundId(null);
+                        }}
                         onResetToDefaults={() => void cloneDefault()}
                         initialData={siteConfig}
                         globalSettings={globalSettings}

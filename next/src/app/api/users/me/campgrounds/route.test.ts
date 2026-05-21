@@ -87,9 +87,7 @@ describe("GET /api/users/me/campgrounds", () => {
         });
         const stored = {
             campgrounds: {
-                "recreation.gov": [
-                    { id: "1", name: "X", sites: { favorites: [], worthwhile: [] } },
-                ],
+                "recreation.gov": [{ id: "1", name: "X", sites: { favorites: [], worthwhile: [] } }],
             },
             globalSettings: { stayLengths: [2, 3], validStartDays: ["Friday"] },
             updatedAt: "2026-05-15T00:00:00.000Z",
@@ -180,13 +178,19 @@ describe("PUT /api/users/me/campgrounds", () => {
         vi.mocked(cloudflare.getKv).mockReturnValue(kv);
 
         const payload = {
-            campgrounds: { "recreation.gov": [{ id: "1", name: "Test", sites: { favorites: [], worthwhile: [] } }] },
+            campgrounds: {
+                "recreation.gov": [{ id: "1", name: "Test", sites: { favorites: [], worthwhile: [] } }],
+            },
             globalSettings: { stayLengths: [2, 3], validStartDays: ["Friday", "Saturday"] },
         };
 
         const res = await doPut(payload);
         expect(res.status).toBe(200);
-        const body = (await res.json()) as { campgrounds: typeof payload.campgrounds; globalSettings: typeof payload.globalSettings; updatedAt: string };
+        const body = (await res.json()) as {
+            campgrounds: typeof payload.campgrounds;
+            globalSettings: typeof payload.globalSettings;
+            updatedAt: string;
+        };
         expect(body.campgrounds).toEqual(payload.campgrounds);
         expect(body.globalSettings).toEqual(payload.globalSettings);
         expect(typeof body.updatedAt).toBe("string");
@@ -215,14 +219,20 @@ describe("PUT /api/users/me/campgrounds", () => {
         });
         const kv = createMockKv({
             "config:campgrounds": JSON.stringify({
-                campgrounds: { "recreation.gov": [{ id: "old", name: "Old Camp", sites: { favorites: [], worthwhile: [] } }] },
+                campgrounds: {
+                    "recreation.gov": [
+                        { id: "old", name: "Old Camp", sites: { favorites: [], worthwhile: [] } },
+                    ],
+                },
                 globalSettings: { stayLengths: [2], validStartDays: ["Friday"] },
             }),
         });
         vi.mocked(cloudflare.getKv).mockReturnValue(kv);
 
         const payload = {
-            campgrounds: { "recreation.gov": [{ id: "new", name: "New Camp", sites: { favorites: [], worthwhile: [] } }] },
+            campgrounds: {
+                "recreation.gov": [{ id: "new", name: "New Camp", sites: { favorites: [], worthwhile: [] } }],
+            },
             globalSettings: { stayLengths: [3], validStartDays: ["Saturday"] },
         };
 
@@ -255,7 +265,11 @@ describe("PUT /api/users/me/campgrounds", () => {
         vi.mocked(cloudflare.getKv).mockReturnValue(kv);
 
         const payload = {
-            campgrounds: { "recreation.gov": [{ id: "232312", name: "Pine Flats", sites: { favorites: [], worthwhile: [] } }] },
+            campgrounds: {
+                "recreation.gov": [
+                    { id: "232312", name: "Pine Flats", sites: { favorites: [], worthwhile: [] } },
+                ],
+            },
             globalSettings: { stayLengths: [2, 3, 4], validStartDays: ["Friday", "Saturday", "Sunday"] },
         };
 

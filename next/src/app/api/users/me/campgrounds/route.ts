@@ -20,9 +20,7 @@ function emptyRecord() {
     };
 }
 
-function isValidBody(
-    body: unknown,
-): body is {
+function isValidBody(body: unknown): body is {
     campgrounds: { "recreation.gov": unknown[] };
     globalSettings: { stayLengths: number[]; validStartDays: string[] };
 } {

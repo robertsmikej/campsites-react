@@ -42,10 +42,10 @@ describe("GET /auth/google/start", () => {
     });
 
     it("honors returnTo if it's a safe relative path", async () => {
-        const res = await getStart(
-            "https://example.com/auth/google/start?returnTo=%2Fapp%2Faccount",
-            { GOOGLE_CLIENT_ID: "c", SESSION_SECRET: "s" },
-        );
+        const res = await getStart("https://example.com/auth/google/start?returnTo=%2Fapp%2Faccount", {
+            GOOGLE_CLIENT_ID: "c",
+            SESSION_SECRET: "s",
+        });
         // The cookie contains the signed JSON; it's enough to assert the cookie exists
         // and is HMAC-signed (has the dot separator structure from signValue).
         // End-to-end verification happens in the callback test where we round-trip

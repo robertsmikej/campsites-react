@@ -51,7 +51,10 @@ describe("POST /api/admin/migrate", () => {
         });
         vi.mocked(cloudflare.getKv).mockReturnValue(kv);
         vi.mocked(sessions.readSession).mockResolvedValue({
-            id: "x", email: "user@x.com", createdAt: "x", expiresAt: "x",
+            id: "x",
+            email: "user@x.com",
+            createdAt: "x",
+            expiresAt: "x",
         });
         expect((await post()).status).toBe(401);
     });
@@ -66,7 +69,10 @@ describe("POST /api/admin/migrate", () => {
         });
         vi.mocked(cloudflare.getKv).mockReturnValue(kv);
         vi.mocked(sessions.readSession).mockResolvedValue({
-            id: "x", email: "curator@x.com", createdAt: "x", expiresAt: "x",
+            id: "x",
+            email: "curator@x.com",
+            createdAt: "x",
+            expiresAt: "x",
         });
         const res = await post();
         expect(res.status).toBe(200);
@@ -79,11 +85,16 @@ describe("POST /api/admin/migrate", () => {
 
         const res = await post(`Bearer ${SECRET}`);
         expect(res.status).toBe(200);
-        const body = (await res.json()) as { defaultUpdated: boolean; addedCampgrounds: Array<{ id: string }> };
+        const body = (await res.json()) as {
+            defaultUpdated: boolean;
+            addedCampgrounds: Array<{ id: string }>;
+        };
         expect(body.defaultUpdated).toBe(true);
         expect(body.addedCampgrounds.map((c) => c.id).sort()).toEqual([...ALL_CATALOG_IDS].sort());
 
-        const stored = (await kv.get("config:campgrounds", "json")) as { campgrounds: { "recreation.gov": Array<{ id: string }> } };
+        const stored = (await kv.get("config:campgrounds", "json")) as {
+            campgrounds: { "recreation.gov": Array<{ id: string }> };
+        };
         const storedIds = stored.campgrounds["recreation.gov"].map((c) => c.id);
         for (const id of ALL_CATALOG_IDS) {
             expect(storedIds).toContain(id);
@@ -168,8 +179,18 @@ describe("POST /api/admin/migrate", () => {
             "config:campgrounds": JSON.stringify({
                 campgrounds: {
                     "recreation.gov": [
-                        { id: "232358", name: "Outlet", image: "outlet_campground_map.jpg", sites: { favorites: [], worthwhile: [] } },
-                        { id: "232085", name: "Point", image: "point_campground.jpeg", sites: { favorites: [], worthwhile: [] } },
+                        {
+                            id: "232358",
+                            name: "Outlet",
+                            image: "outlet_campground_map.jpg",
+                            sites: { favorites: [], worthwhile: [] },
+                        },
+                        {
+                            id: "232085",
+                            name: "Point",
+                            image: "point_campground.jpeg",
+                            sites: { favorites: [], worthwhile: [] },
+                        },
                     ],
                 },
                 globalSettings: { stayLengths: [2], validStartDays: ["Monday"] },

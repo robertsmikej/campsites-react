@@ -3,12 +3,7 @@
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-    Accordion,
-    AccordionContent,
-    AccordionItem,
-    AccordionTrigger,
-} from "@/components/ui/accordion";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { ALL_DAYS, STAY_MAX, STAY_MIN } from "./types";
 
 interface GeneralSettingsProps {
@@ -31,25 +26,26 @@ export function GeneralSettings(props: GeneralSettingsProps) {
     } = props;
 
     const synthEvent = (checked: boolean) =>
-        ({ target: { checked }, currentTarget: { checked } }) as unknown as React.ChangeEvent<HTMLInputElement>;
+        ({
+            target: { checked },
+            currentTarget: { checked },
+        }) as unknown as React.ChangeEvent<HTMLInputElement>;
 
     return (
         <Accordion type="single" collapsible>
             <AccordionItem value="general">
-                <AccordionTrigger className="text-sm font-medium">
-                    General Settings
-                </AccordionTrigger>
+                <AccordionTrigger className="text-sm font-medium">General Settings</AccordionTrigger>
                 <AccordionContent className="space-y-6 pt-2">
                     <div>
-                        <p className="text-sm">Stay Length (nights): {stayRange[0]} – {stayRange[1]}</p>
+                        <p className="text-sm">
+                            Stay Length (nights): {stayRange[0]} – {stayRange[1]}
+                        </p>
                         <Slider
                             value={stayRange}
                             min={STAY_MIN}
                             max={STAY_MAX}
                             step={1}
-                            onValueChange={(v) =>
-                                onStayRangeChange([v[0] ?? STAY_MIN, v[1] ?? STAY_MAX])
-                            }
+                            onValueChange={(v) => onStayRangeChange([v[0] ?? STAY_MIN, v[1] ?? STAY_MAX])}
                             className="mt-2"
                         />
                         <p className="mt-1 text-xs text-muted-foreground">
@@ -87,9 +83,7 @@ export function GeneralSettings(props: GeneralSettingsProps) {
                         <label className="flex items-start gap-3">
                             <Switch
                                 checked={useMockData}
-                                onCheckedChange={(checked) =>
-                                    onToggleMockData(synthEvent(checked))
-                                }
+                                onCheckedChange={(checked) => onToggleMockData(synthEvent(checked))}
                             />
                             <span className="flex flex-col">
                                 <span className="text-sm">Use mock data</span>

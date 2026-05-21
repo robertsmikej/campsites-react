@@ -75,7 +75,7 @@ export async function fetchFacilitySummary(id: string): Promise<FacilitySummary 
         return null;
     }
 
-    const data = await response.json() as { campground?: RecGovCampground };
+    const data = (await response.json()) as { campground?: RecGovCampground };
     const cg = data.campground ?? {};
 
     const rawName = cg.facility_name;

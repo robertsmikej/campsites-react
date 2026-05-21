@@ -7,10 +7,7 @@ export function ContactBlock() {
                 Get in touch
             </div>
             <div>
-                <a
-                    href="mailto:hello@campwatch.dev"
-                    className="text-inherit no-underline"
-                >
+                <a href="mailto:hello@campwatch.dev" className="text-inherit no-underline">
                     hello@campwatch.dev
                 </a>
             </div>

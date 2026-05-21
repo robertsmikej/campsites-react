@@ -39,9 +39,7 @@ async function postHandler(request: Request): Promise<Response> {
         return withCors(jsonResponse({ error: "No default config to copy from" }, 404));
     }
 
-    const fromDefault: Campground | undefined = def.campgrounds["recreation.gov"]?.find(
-        (c) => c.id === id,
-    );
+    const fromDefault: Campground | undefined = def.campgrounds["recreation.gov"]?.find((c) => c.id === id);
     if (!fromDefault) {
         return withCors(jsonResponse({ error: "Campground not in default list" }, 404));
     }

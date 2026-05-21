@@ -27,7 +27,11 @@ interface WatchlistSectionProps {
     isMobile: boolean;
     readOnly?: boolean;
     showControls?: boolean;
-    onRatingChange?: (campgroundId: string, siteName: string, rating: "favorite" | "worthwhile" | "unrated") => void;
+    onRatingChange?: (
+        campgroundId: string,
+        siteName: string,
+        rating: "favorite" | "worthwhile" | "unrated",
+    ) => void;
     onEditSettings?: (campgroundId: string) => void;
     PAD: number;
 }
@@ -79,26 +83,44 @@ export function WatchlistSection({
     })();
 
     return (
-        <section className="relative border-t-[1.5px] border-cw-ink" style={{ padding: `24px ${PAD}px 60px` }}>
+        <section
+            className="relative border-t-[1.5px] border-cw-ink"
+            style={{ padding: `24px ${PAD}px 60px` }}
+        >
             <div className="pt-7 mb-[18px]">
                 <div className="font-mono-field text-[11px] font-medium leading-none tracking-[0.18em] text-cw-clay mb-[10px] uppercase">
                     {readOnly
                         ? `The list · ${campgroundsByAreas.length} campground${campgroundsByAreas.length !== 1 ? "s" : ""}`
-                        : `§ II — THE WATCHLIST · ${campgroundsByAreas.length} CAMPGROUND${campgroundsByAreas.length !== 1 ? "S" : ""}`
-                    }
+                        : `§ II — THE WATCHLIST · ${campgroundsByAreas.length} CAMPGROUND${campgroundsByAreas.length !== 1 ? "S" : ""}`}
                 </div>
                 <h2 className="m-0 tracking-[-0.005em]">
                     {readOnly ? (
                         <>
-                            <span className="font-poster font-black leading-none uppercase inline" style={{ fontSize: isMobile ? 24 : 32 }}>ALL</span>
-                            <span className="font-italic-serif font-medium italic leading-none text-cw-forest tracking-[-0.01em]" style={{ fontSize: isMobile ? 24 : 32, marginLeft: 10 }}>
+                            <span
+                                className="font-poster font-black leading-none uppercase inline"
+                                style={{ fontSize: isMobile ? 24 : 32 }}
+                            >
+                                ALL
+                            </span>
+                            <span
+                                className="font-italic-serif font-medium italic leading-none text-cw-forest tracking-[-0.01em]"
+                                style={{ fontSize: isMobile ? 24 : 32, marginLeft: 10 }}
+                            >
                                 the picks.
                             </span>
                         </>
                     ) : (
                         <>
-                            <span className="font-poster font-black leading-none uppercase inline" style={{ fontSize: isMobile ? 24 : 32 }}>EVERY PLACE</span>
-                            <span className="font-italic-serif font-medium italic leading-none text-cw-forest tracking-[-0.01em]" style={{ fontSize: isMobile ? 24 : 32, marginLeft: 10 }}>
+                            <span
+                                className="font-poster font-black leading-none uppercase inline"
+                                style={{ fontSize: isMobile ? 24 : 32 }}
+                            >
+                                EVERY PLACE
+                            </span>
+                            <span
+                                className="font-italic-serif font-medium italic leading-none text-cw-forest tracking-[-0.01em]"
+                                style={{ fontSize: isMobile ? 24 : 32, marginLeft: 10 }}
+                            >
                                 you&apos;re watching.
                             </span>
                         </>
@@ -128,11 +150,19 @@ export function WatchlistSection({
             ) : (
                 <div className="grid gap-7">
                     {watchlistGroups.map((group, gi) => {
-                        const openInGroup = group.rows.reduce((sum, c) => sum + (openCounts.get(c.id ?? c.name) ?? 0), 0);
+                        const openInGroup = group.rows.reduce(
+                            (sum, c) => sum + (openCounts.get(c.id ?? c.name) ?? 0),
+                            0,
+                        );
                         return (
                             <div key={group.label}>
                                 {groupBy !== "all" && (
-                                    <GroupHeader index={gi} label={group.label} count={group.rows.length} openInGroup={openInGroup} />
+                                    <GroupHeader
+                                        index={gi}
+                                        label={group.label}
+                                        count={group.rows.length}
+                                        openInGroup={openInGroup}
+                                    />
                                 )}
                                 <WatchlistTable
                                     rows={group.rows}

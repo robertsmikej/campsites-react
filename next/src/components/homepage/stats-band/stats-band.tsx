@@ -41,7 +41,10 @@ export function StatsBand() {
     ] as const;
 
     return (
-        <section className="relative py-7 px-[22px] md:py-8 md:px-14" style={{ background: C.waterDeep, color: C.cream }}>
+        <section
+            className="relative py-7 px-[22px] md:py-8 md:px-14"
+            style={{ background: C.waterDeep, color: C.cream }}
+        >
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-12">
                 {tiles.map((tile) => (
                     <StatTile key={tile.label} {...tile} />

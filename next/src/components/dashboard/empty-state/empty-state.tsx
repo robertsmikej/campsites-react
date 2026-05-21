@@ -1,12 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { CampgroundLookup } from "@/components/campground-lookup";
 import { PasteUrlCard } from "./paste-url-card";
 import { BorrowListCard } from "./borrow-list-card";
@@ -21,7 +16,11 @@ export function EmptyState({ onClone }: EmptyStateProps) {
 
     const handleClone = async () => {
         setBusy(true);
-        try { await onClone(); } finally { setBusy(false); }
+        try {
+            await onClone();
+        } finally {
+            setBusy(false);
+        }
     };
 
     return (
@@ -39,7 +38,9 @@ export function EmptyState({ onClone }: EmptyStateProps) {
                     </span>
                 </h1>
                 <p className="font-body-serif text-[18px] leading-[1.55] text-cw-ink-soft m-0 mb-10 max-w-[640px]">
-                    Add a campground from <em>recreation.gov</em> and we&apos;ll start polling every five minutes. When a site you&apos;d actually take opens up, an email finds you. That&apos;s the whole thing.
+                    Add a campground from <em>recreation.gov</em> and we&apos;ll start polling every five
+                    minutes. When a site you&apos;d actually take opens up, an email finds you. That&apos;s
+                    the whole thing.
                 </p>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-[18px] mb-8">
@@ -49,7 +50,8 @@ export function EmptyState({ onClone }: EmptyStateProps) {
 
                 <div className="flex items-center gap-[10px] font-italic-serif text-[15px] font-medium italic leading-[1.4] text-cw-ink-subtle">
                     <span className="w-2 h-2 rounded-full bg-cw-mustard shrink-0" />
-                    Polling won&apos;t start until you add at least one campground. We&apos;ll never email an empty watchlist.
+                    Polling won&apos;t start until you add at least one campground. We&apos;ll never email an
+                    empty watchlist.
                 </div>
             </section>
 

@@ -23,7 +23,10 @@ export function Hero({ auth }: HeroProps) {
             <DScene />
             <div
                 className="absolute inset-0 pointer-events-none"
-                style={{ background: "linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0) 30%, rgba(20,15,12,0.35) 95%)" }}
+                style={{
+                    background:
+                        "linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0) 30%, rgba(20,15,12,0.35) 95%)",
+                }}
             />
 
             <Nav auth={auth} isMobile={isMobile} />
@@ -37,9 +40,7 @@ export function Hero({ auth }: HeroProps) {
                 </div>
 
                 {/* Pinned bulletin card — desktop only */}
-                {!isMobile && (
-                    <BulletinCard lastPollAt={stats?.lastPollAt} nowMs={nowMs} />
-                )}
+                {!isMobile && <BulletinCard lastPollAt={stats?.lastPollAt} nowMs={nowMs} />}
             </div>
         </section>
     );

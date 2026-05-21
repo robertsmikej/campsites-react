@@ -13,10 +13,14 @@ beforeEach(() => {
     vi.resetModules();
 });
 
-function makeRequest(method: string, url: string, opts: {
-    cookieHeader?: string;
-    body?: unknown;
-} = {}): Request {
+function makeRequest(
+    method: string,
+    url: string,
+    opts: {
+        cookieHeader?: string;
+        body?: unknown;
+    } = {},
+): Request {
     const headers: Record<string, string> = {};
     if (opts.cookieHeader) headers.Cookie = opts.cookieHeader;
     if (opts.body !== undefined) headers["Content-Type"] = "application/json";
@@ -35,10 +39,7 @@ async function setupKvWithSession(kv: ReturnType<typeof createMockKv>) {
     await createUserProfile("user@example.com", { name: "Test User" });
 
     // Create a session
-    const { session } = await createSession(
-        "user@example.com",
-        new Request("https://example.com"),
-    );
+    const { session } = await createSession("user@example.com", new Request("https://example.com"));
 
     return session;
 }
@@ -56,7 +57,7 @@ describe("GET /api/me", () => {
         );
 
         expect(res.status).toBe(200);
-        const body = await res.json() as { email: string; name: string };
+        const body = (await res.json()) as { email: string; name: string };
         expect(body.email).toBe("user@example.com");
         expect(body.name).toBe("Test User");
     });
@@ -103,7 +104,7 @@ describe("PATCH /api/me", () => {
         );
 
         expect(res.status).toBe(200);
-        const body = await res.json() as { name: string };
+        const body = (await res.json()) as { name: string };
         expect(body.name).toBe("Updated Name");
     });
 
@@ -120,7 +121,7 @@ describe("PATCH /api/me", () => {
         );
 
         expect(res.status).toBe(200);
-        const body = await res.json() as { notifications: { enabled: boolean; frequencyMinutes: number } };
+        const body = (await res.json()) as { notifications: { enabled: boolean; frequencyMinutes: number } };
         expect(body.notifications).toEqual({ enabled: true, frequencyMinutes: 60 });
     });
 
@@ -130,9 +131,7 @@ describe("PATCH /api/me", () => {
         vi.mocked(cloudflare.getKv).mockReturnValue(kv);
 
         const { PATCH } = await import("./route");
-        const res = await PATCH(
-            makeRequest("PATCH", "https://example.com/api/me", { body: { name: "x" } }),
-        );
+        const res = await PATCH(makeRequest("PATCH", "https://example.com/api/me", { body: { name: "x" } }));
         expect(res.status).toBe(401);
     });
 
@@ -181,7 +180,7 @@ describe("PATCH /api/me", () => {
         );
 
         expect(res.status).toBe(200);
-        const body = await res.json() as { notifications: { enabled: boolean; frequencyMinutes: number } };
+        const body = (await res.json()) as { notifications: { enabled: boolean; frequencyMinutes: number } };
         expect(body.notifications).toEqual({ enabled: true, frequencyMinutes: 5 });
     });
 

@@ -7,13 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { parseFacilityId, type FacilitySummary } from "@/lib/recgov-facility";
 import type { Campground, CampgroundType } from "@/types/campground";
@@ -51,10 +45,9 @@ export function AddCampground({ existingIds, onAdd }: AddCampgroundProps) {
         }
         setFetching(true);
         try {
-            const r = await fetch(
-                `/api/recgov/facility/${encodeURIComponent(parsed)}`,
-                { credentials: "include" },
-            );
+            const r = await fetch(`/api/recgov/facility/${encodeURIComponent(parsed)}`, {
+                credentials: "include",
+            });
             if (!r.ok) {
                 const body = (await r.json().catch(() => ({}))) as { error?: string };
                 toast.error(body.error ?? `Lookup failed (${r.status})`);

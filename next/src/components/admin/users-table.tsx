@@ -12,9 +12,7 @@ interface UsersTableProps {
 
 export function UsersTable({ users, currentEmail, onToggleRole }: UsersTableProps) {
     if (users.length === 0) {
-        return (
-            <p className="font-italic-serif text-[16px] italic text-cw-ink-soft">No users yet.</p>
-        );
+        return <p className="font-italic-serif text-[16px] italic text-cw-ink-soft">No users yet.</p>;
     }
 
     return (
@@ -43,9 +41,7 @@ export function UsersTable({ users, currentEmail, onToggleRole }: UsersTableProp
                     {users.map((u) => {
                         const isCurator = u.roles?.includes("curator");
                         const isSelf = u.email.toLowerCase() === currentEmail.toLowerCase();
-                        const memberSince = u.createdAt
-                            ? new Date(u.createdAt).toLocaleDateString()
-                            : "—";
+                        const memberSince = u.createdAt ? new Date(u.createdAt).toLocaleDateString() : "—";
                         return (
                             <tr key={u.email} className="border-b border-cw-rule-soft last:border-0">
                                 <td className="py-3 pr-4 font-mono-field text-[12px] text-cw-ink">
@@ -60,7 +56,9 @@ export function UsersTable({ users, currentEmail, onToggleRole }: UsersTableProp
                                             curator
                                         </span>
                                     ) : (
-                                        <span className="font-mono-field text-[12px] text-cw-ink-soft">—</span>
+                                        <span className="font-mono-field text-[12px] text-cw-ink-soft">
+                                            —
+                                        </span>
                                     )}
                                 </td>
                                 <td className="py-3 pr-4 font-mono-field text-[12px] text-cw-ink-soft">
@@ -74,7 +72,9 @@ export function UsersTable({ users, currentEmail, onToggleRole }: UsersTableProp
                                                     <Switch checked={isCurator} disabled />
                                                 </div>
                                             </TooltipTrigger>
-                                            <TooltipContent>You can&apos;t change your own role</TooltipContent>
+                                            <TooltipContent>
+                                                You can&apos;t change your own role
+                                            </TooltipContent>
                                         </Tooltip>
                                     ) : (
                                         <Switch

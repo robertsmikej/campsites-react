@@ -14,19 +14,13 @@ export async function generateUnsubscribeToken(email: string, secret: string): P
         ["sign"],
     );
     const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(email));
-    return [...new Uint8Array(signature)]
-        .map((b) => b.toString(16).padStart(2, "0"))
-        .join("");
+    return [...new Uint8Array(signature)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 /**
  * Constant-time verify. Empty / malformed tokens return false without throwing.
  */
-export async function verifyUnsubscribeToken(
-    email: string,
-    token: string,
-    secret: string,
-): Promise<boolean> {
+export async function verifyUnsubscribeToken(email: string, token: string, secret: string): Promise<boolean> {
     if (!token || !/^[a-f0-9]+$/i.test(token)) return false;
     const expected = await generateUnsubscribeToken(email, secret);
     if (expected.length !== token.length) return false;

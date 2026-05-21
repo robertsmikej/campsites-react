@@ -62,7 +62,9 @@ async function postHandler(request: Request): Promise<Response> {
         return c;
     });
 
-    const mapImagesBackfilled = mergedList.filter((c) => !("image" in c) && "mapImage" in c && additions.every((a) => a.id !== c.id)).length;
+    const mapImagesBackfilled = mergedList.filter(
+        (c) => !("image" in c) && "mapImage" in c && additions.every((a) => a.id !== c.id),
+    ).length;
 
     let didWrite = false;
     if (additions.length > 0 || mapImagesBackfilled > 0) {

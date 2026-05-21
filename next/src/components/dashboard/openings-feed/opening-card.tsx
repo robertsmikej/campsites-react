@@ -9,9 +9,26 @@ const CANCEL_THRESHOLD_DAYS = 14;
 // ─── Pulse dot ───────────────────────────────────────────────────────────────
 function Pulse({ color, size = 7 }: { color: string; size?: number }) {
     return (
-        <span style={{ position: "relative", display: "inline-block", width: size, height: size, flexShrink: 0 }}>
+        <span
+            style={{
+                position: "relative",
+                display: "inline-block",
+                width: size,
+                height: size,
+                flexShrink: 0,
+            }}
+        >
             <span style={{ position: "absolute", inset: 0, borderRadius: "50%", background: color }} />
-            <span style={{ position: "absolute", inset: -3, borderRadius: "50%", border: `1px solid ${color}`, opacity: 0.4, animation: "cw-pulse 1.8s ease-out infinite" }} />
+            <span
+                style={{
+                    position: "absolute",
+                    inset: -3,
+                    borderRadius: "50%",
+                    border: `1px solid ${color}`,
+                    opacity: 0.4,
+                    animation: "cw-pulse 1.8s ease-out infinite",
+                }}
+            />
         </span>
     );
 }
@@ -59,7 +76,10 @@ export function OpeningCard({ item, isMobile, nowMs }: OpeningCardProps) {
         >
             <div className="flex items-center gap-2">
                 <Pulse color={tagColor} size={6} />
-                <span className="font-mono-field text-[10px] font-bold leading-none tracking-[0.18em] uppercase" style={{ color: tagColor }}>
+                <span
+                    className="font-mono-field text-[10px] font-bold leading-none tracking-[0.18em] uppercase"
+                    style={{ color: tagColor }}
+                >
                     {tag}
                 </span>
                 <span className="font-mono-field text-[10px] font-medium leading-none ml-auto text-cw-ink-subtle">
@@ -67,17 +87,26 @@ export function OpeningCard({ item, isMobile, nowMs }: OpeningCardProps) {
                 </span>
             </div>
             <div>
-                <div className="font-poster font-black leading-[1.1] uppercase tracking-[0.005em]" style={{ fontSize: isMobile ? 17 : 20 }}>
+                <div
+                    className="font-poster font-black leading-[1.1] uppercase tracking-[0.005em]"
+                    style={{ fontSize: isMobile ? 17 : 20 }}
+                >
                     {item.campgroundName}
                 </div>
                 {item.siteName && (
-                    <div className="font-italic-serif font-medium italic leading-[1.3] text-cw-ink-soft mt-1" style={{ fontSize: isMobile ? 13 : 15 }}>
+                    <div
+                        className="font-italic-serif font-medium italic leading-[1.3] text-cw-ink-soft mt-1"
+                        style={{ fontSize: isMobile ? 13 : 15 }}
+                    >
                         Site {item.siteName}
                     </div>
                 )}
             </div>
             <div className="border-t border-dashed border-cw-rule" style={{ paddingTop: isMobile ? 10 : 12 }}>
-                <div className="font-body-serif font-semibold leading-[1.2] text-cw-ink" style={{ fontSize: isMobile ? 14 : 16 }}>
+                <div
+                    className="font-body-serif font-semibold leading-[1.2] text-cw-ink"
+                    style={{ fontSize: isMobile ? 14 : 16 }}
+                >
                     {formatOpeningDates(item.from, item.to)}
                 </div>
                 <div className="font-mono-field text-[11px] font-medium leading-none tracking-[0.12em] text-cw-ink-soft mt-1 uppercase">

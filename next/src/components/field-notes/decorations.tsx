@@ -24,7 +24,9 @@ export function DTopo({ opacity = 0.08, stroke = C.forest }: { opacity?: number;
                 pts.push([p.cx + Math.cos(a) * r * wob, p.cy + Math.sin(a) * r * 0.78 * wob]);
             }
             const d =
-                pts.map((pt, idx) => (idx ? "L" : "M") + pt[0].toFixed(1) + "," + pt[1].toFixed(1)).join(" ") + "Z";
+                pts
+                    .map((pt, idx) => (idx ? "L" : "M") + pt[0].toFixed(1) + "," + pt[1].toFixed(1))
+                    .join(" ") + "Z";
             lines.push(
                 <path
                     key={pi + "-" + i}
@@ -106,7 +108,17 @@ export function DScene() {
                 const y = 590 + i * 14;
                 const w = 200 + i * 30;
                 const x = (i * 137) % 1400;
-                return <line key={i} x1={x} y1={y} x2={x + w} y2={y} stroke="rgba(255,255,255,0.06)" strokeWidth="0.8" />;
+                return (
+                    <line
+                        key={i}
+                        x1={x}
+                        y1={y}
+                        x2={x + w}
+                        y2={y}
+                        stroke="rgba(255,255,255,0.06)"
+                        strokeWidth="0.8"
+                    />
+                );
             })}
             <g transform="translate(1100, 480)">
                 {[0, 60, 100, 160, 220, 280, 340, 400, 460].map((x, i) => (
@@ -211,7 +223,10 @@ export function DStamp() {
                 }}
             >
                 <svg viewBox="0 0 80 100" className="w-full h-full block">
-                    <path d="M 0 55 L 20 35 L 40 50 L 60 32 L 80 48 L 80 60 L 0 60 Z" fill={C.mountainShadow} />
+                    <path
+                        d="M 0 55 L 20 35 L 40 50 L 60 32 L 80 48 L 80 60 L 0 60 Z"
+                        fill={C.mountainShadow}
+                    />
                     <circle cx="60" cy="38" r="4" fill="#fff7e0" />
                     <path d="M 30 78 L 36 64 L 42 78 Z" fill={C.forestNear} />
                     <text
@@ -241,13 +256,23 @@ export function DBadge({ children, color = C.clay }: { children: React.ReactNode
 }
 
 // ─── Availability bars ────────────────────────────────────────────────────────
-export function DBars({ pattern, accent = C.forest, secondary = C.mustard }: { pattern: string; accent?: string; secondary?: string }) {
+export function DBars({
+    pattern,
+    accent = C.forest,
+    secondary = C.mustard,
+}: {
+    pattern: string;
+    accent?: string;
+    secondary?: string;
+}) {
     return (
         <div className="flex gap-[2px] items-end h-[26px]">
             {pattern.split("").map((ch, i) => {
                 const h = ch === "." ? 5 : ch === "y" ? 16 : 22;
                 const bg = ch === "." ? "rgba(26,22,20,0.15)" : ch === "y" ? secondary : accent;
-                return <div key={i} className="w-[6px] rounded-[1px]" style={{ height: h, background: bg }} />;
+                return (
+                    <div key={i} className="w-[6px] rounded-[1px]" style={{ height: h, background: bg }} />
+                );
             })}
         </div>
     );

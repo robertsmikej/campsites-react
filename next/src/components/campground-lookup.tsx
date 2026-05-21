@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { Campground, SiteConfig, GlobalSettings } from "@/types/campground";
 import { useAuth } from "@/hooks/use-auth";
 import { useUserCampgrounds } from "@/hooks/use-user-campgrounds";
@@ -70,7 +70,13 @@ function LCheck({ color = C.forest, size = 22 }: { color?: string; size?: number
     return (
         <svg width={size} height={size} viewBox="0 0 22 22" fill="none">
             <circle cx="11" cy="11" r="10" fill={color} />
-            <path d="M6.5 11.5 L9.5 14.5 L15.5 7.5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <path
+                d="M6.5 11.5 L9.5 14.5 L15.5 7.5"
+                stroke="#fff"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
         </svg>
     );
 }
@@ -88,7 +94,12 @@ function LX({ color = "#A8412A", size = 22 }: { color?: string; size?: number })
     return (
         <svg width={size} height={size} viewBox="0 0 22 22" fill="none">
             <circle cx="11" cy="11" r="10" fill={color} />
-            <path d="M7.5 7.5 L14.5 14.5 M14.5 7.5 L7.5 14.5" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
+            <path
+                d="M7.5 7.5 L14.5 14.5 M14.5 7.5 L7.5 14.5"
+                stroke="#fff"
+                strokeWidth="2"
+                strokeLinecap="round"
+            />
         </svg>
     );
 }
@@ -103,20 +114,33 @@ interface ResultCardProps {
     addedSuccess?: boolean;
 }
 
-function ResultCard({ result, compact = false, signedIn = false, onAdd, adding = false, addedSuccess = false }: ResultCardProps) {
+function ResultCard({
+    result,
+    compact = false,
+    signedIn = false,
+    onAdd,
+    adding = false,
+    addedSuccess = false,
+}: ResultCardProps) {
     const padding = compact ? "py-4 px-[18px]" : "py-[22px] px-[26px]";
     if (!result) return null;
 
     // "invalid" — not a rec.gov URL at all
     if (result.state === "invalid") {
         return (
-            <div className={`bg-cw-cream border-[1.5px] border-cw-rule ${padding} flex gap-[14px] items-start`}>
+            <div
+                className={`bg-cw-cream border-[1.5px] border-cw-rule ${padding} flex gap-[14px] items-start`}
+            >
                 <LX />
                 <div className="flex-1">
-                    <div className="font-poster text-[18px] leading-[1.1] uppercase text-[#A8412A] font-black">NOT A RECREATION.GOV URL</div>
+                    <div className="font-poster text-[18px] leading-[1.1] uppercase text-[#A8412A] font-black">
+                        NOT A RECREATION.GOV URL
+                    </div>
                     <div className="font-italic-serif text-[15px] leading-[1.4] text-cw-ink-soft mt-[6px] italic">
                         Paste a campground URL (e.g.{" "}
-                        <span className="font-mono-field not-italic text-[12px]">recreation.gov/camping/campgrounds/232358</span>
+                        <span className="font-mono-field not-italic text-[12px]">
+                            recreation.gov/camping/campgrounds/232358
+                        </span>
                         ) or just the numeric ID.
                     </div>
                 </div>
@@ -127,13 +151,16 @@ function ResultCard({ result, compact = false, signedIn = false, onAdd, adding =
     // "not-found" — valid-looking ID but rec.gov returned nothing
     if (result.state === "not-found") {
         return (
-            <div className={`bg-cw-cream border-[1.5px] border-cw-rule ${padding} flex gap-[14px] items-start`}>
+            <div
+                className={`bg-cw-cream border-[1.5px] border-cw-rule ${padding} flex gap-[14px] items-start`}
+            >
                 <LX />
                 <div className="flex-1">
-                    <div className="font-poster text-[18px] leading-[1.1] uppercase text-[#A8412A] font-black">CAMPGROUND NOT FOUND</div>
+                    <div className="font-poster text-[18px] leading-[1.1] uppercase text-[#A8412A] font-black">
+                        CAMPGROUND NOT FOUND
+                    </div>
                     <div className="font-italic-serif text-[15px] leading-[1.4] text-cw-ink-soft mt-[6px] italic">
-                        ID{" "}
-                        <span className="font-mono-field not-italic text-[12px]">#{result.parsedId}</span>{" "}
+                        ID <span className="font-mono-field not-italic text-[12px]">#{result.parsedId}</span>{" "}
                         doesn&apos;t match a campground on recreation.gov. Double-check the URL.
                     </div>
                 </div>
@@ -143,7 +170,7 @@ function ResultCard({ result, compact = false, signedIn = false, onAdd, adding =
 
     const cg = result.cg!;
     const isOnList = result.state === "on-list" || addedSuccess;
-    const isNew = result.state === "new";
+    const _isNew = result.state === "new"; // reserved for future "new campground" badge
     const isWatched = result.state === "watched";
 
     let statusLabel: string;
@@ -153,7 +180,8 @@ function ResultCard({ result, compact = false, signedIn = false, onAdd, adding =
 
     let bodyText: string;
     if (isOnList) bodyText = "You're already watching this — we'll email you next time a site opens.";
-    else if (isWatched) bodyText = "In the curator's default list. You can add it to your own watchlist in one click.";
+    else if (isWatched)
+        bodyText = "In the curator's default list. You can add it to your own watchlist in one click.";
     else bodyText = "New to our index. Polling will begin within five minutes of adding.";
 
     return (
@@ -164,15 +192,19 @@ function ResultCard({ result, compact = false, signedIn = false, onAdd, adding =
             <div className="flex justify-between items-start gap-4">
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-2">
-                        {isOnList ? <LCheck /> : (isWatched ? <LCheck color={C.mustard} /> : <LWarn />)}
+                        {isOnList ? <LCheck /> : isWatched ? <LCheck color={C.mustard} /> : <LWarn />}
                         <span className="font-mono-field text-[10px] leading-none tracking-[0.18em] text-cw-forest uppercase font-bold">
                             {statusLabel}
                         </span>
                     </div>
-                    <div className={`font-poster ${compact ? "text-[22px]" : "text-[28px]"} leading-none uppercase tracking-[0.005em] font-black`}>
+                    <div
+                        className={`font-poster ${compact ? "text-[22px]" : "text-[28px]"} leading-none uppercase tracking-[0.005em] font-black`}
+                    >
                         {cg.name}
                     </div>
-                    <div className={`font-italic-serif ${compact ? "text-[15px]" : "text-[18px]"} leading-[1.3] text-cw-ink-soft mt-1 font-medium italic`}>
+                    <div
+                        className={`font-italic-serif ${compact ? "text-[15px]" : "text-[18px]"} leading-[1.3] text-cw-ink-soft mt-1 font-medium italic`}
+                    >
                         ID {cg.id}
                     </div>
                 </div>
@@ -195,12 +227,20 @@ function ResultCard({ result, compact = false, signedIn = false, onAdd, adding =
                             onClick={onAdd}
                             disabled={adding}
                             className="font-poster text-[12px] leading-none tracking-[0.14em] uppercase text-cw-cream py-[14px] px-[18px] border-none rounded-[2px] cursor-pointer inline-flex items-center gap-2 whitespace-nowrap font-extrabold"
-                            style={{ background: adding ? C.inkSoft : C.forest, cursor: adding ? "not-allowed" : "pointer" }}
+                            style={{
+                                background: adding ? C.inkSoft : C.forest,
+                                cursor: adding ? "not-allowed" : "pointer",
+                            }}
                         >
                             {adding ? "Adding…" : "Add to my watchlist"}
                             {!adding && (
                                 <svg width="12" height="12" viewBox="0 0 12 12">
-                                    <path d="M1 6 L11 6 M7 2 L11 6 L7 10" stroke={C.cream} strokeWidth="1.6" fill="none" />
+                                    <path
+                                        d="M1 6 L11 6 M7 2 L11 6 L7 10"
+                                        stroke={C.cream}
+                                        strokeWidth="1.6"
+                                        fill="none"
+                                    />
                                 </svg>
                             )}
                         </button>
@@ -211,7 +251,12 @@ function ResultCard({ result, compact = false, signedIn = false, onAdd, adding =
                         >
                             Sign in to add
                             <svg width="12" height="12" viewBox="0 0 12 12">
-                                <path d="M1 6 L11 6 M7 2 L11 6 L7 10" stroke={C.cream} strokeWidth="1.6" fill="none" />
+                                <path
+                                    d="M1 6 L11 6 M7 2 L11 6 L7 10"
+                                    stroke={C.cream}
+                                    strokeWidth="1.6"
+                                    fill="none"
+                                />
                             </svg>
                         </a>
                     )}
@@ -281,68 +326,72 @@ export function CampgroundLookup({ variant: _variant = "homepage" }: CampgroundL
 
     // The displayed result: prefer fetchedResult for network states, else memory
     const displayResult = fetchedResult ?? memoryResult;
-    const isLoading = isFetching || (touched && value.trim() && memoryResult === null && !fetchedResult && auth.isLoading);
+    const isLoading =
+        isFetching || (touched && value.trim() && memoryResult === null && !fetchedResult && auth.isLoading);
 
-    const doLookup = useCallback(async (raw?: string) => {
-        const input = (raw ?? value).trim();
-        if (!input) return;
-        const id = parseInput(input);
-        if (!id) {
-            if (looksLikeUrlAttempt(input)) {
-                setFetchedResult({ state: "invalid" });
+    const doLookup = useCallback(
+        async (raw?: string) => {
+            const input = (raw ?? value).trim();
+            if (!input) return;
+            const id = parseInput(input);
+            if (!id) {
+                if (looksLikeUrlAttempt(input)) {
+                    setFetchedResult({ state: "invalid" });
+                    setSearchResults(null);
+                    return;
+                }
+                setFetchedResult(null);
                 setSearchResults(null);
+                setAddedSuccess(false);
+                setIsSearching(true);
+                try {
+                    const resp = await fetch(`/api/campgrounds/search?q=${encodeURIComponent(input)}`);
+                    if (resp.ok) {
+                        const data = (await resp.json()) as SearchResult[];
+                        setSearchResults(Array.isArray(data) ? data : []);
+                    } else {
+                        setSearchResults([]);
+                    }
+                } catch {
+                    setSearchResults([]);
+                } finally {
+                    setIsSearching(false);
+                }
                 return;
             }
-            setFetchedResult(null);
             setSearchResults(null);
+            const mem = resolve(id);
+            if (mem) {
+                setFetchedResult(null);
+                return;
+            }
+            setIsFetching(true);
+            setFetchedResult(null);
             setAddedSuccess(false);
-            setIsSearching(true);
             try {
-                const resp = await fetch(`/api/campgrounds/search?q=${encodeURIComponent(input)}`);
-                if (resp.ok) {
-                    const data = (await resp.json()) as SearchResult[];
-                    setSearchResults(Array.isArray(data) ? data : []);
+                const resp = await fetch(`/api/campgrounds/${id}/details`);
+                if (!resp.ok) {
+                    setFetchedResult({ state: "not-found", parsedId: id });
+                    return;
+                }
+                const data = (await resp.json()) as { name: string | null; previewImageUrl?: string | null };
+                if (!data.name) {
+                    setFetchedResult({ state: "not-found", parsedId: id });
                 } else {
-                    setSearchResults([]);
+                    setFetchedResult({
+                        state: "new",
+                        parsedId: id,
+                        cg: { id, name: data.name, previewImageUrl: data.previewImageUrl ?? null },
+                    });
                 }
             } catch {
-                setSearchResults([]);
+                setFetchedResult({ state: "not-found", parsedId: id });
             } finally {
-                setIsSearching(false);
+                setIsFetching(false);
             }
-            return;
-        }
-        setSearchResults(null);
-        const mem = resolve(id);
-        if (mem) {
-            setFetchedResult(null);
-            return;
-        }
-        setIsFetching(true);
-        setFetchedResult(null);
-        setAddedSuccess(false);
-        try {
-            const resp = await fetch(`/api/campgrounds/${id}/details`);
-            if (!resp.ok) {
-                setFetchedResult({ state: "not-found", parsedId: id });
-                return;
-            }
-            const data = (await resp.json()) as { name: string | null; previewImageUrl?: string | null };
-            if (!data.name) {
-                setFetchedResult({ state: "not-found", parsedId: id });
-            } else {
-                setFetchedResult({
-                    state: "new",
-                    parsedId: id,
-                    cg: { id, name: data.name, previewImageUrl: data.previewImageUrl ?? null },
-                });
-            }
-        } catch {
-            setFetchedResult({ state: "not-found", parsedId: id });
-        } finally {
-            setIsFetching(false);
-        }
-    }, [value, resolve]);
+        },
+        [value, resolve],
+    );
 
     const fill = (v: string) => {
         setValue(v);
@@ -383,7 +432,7 @@ export function CampgroundLookup({ variant: _variant = "homepage" }: CampgroundL
     }, [displayResult, userCampgrounds]);
 
     const chips = [
-        { label: "\"Redfish Lake\" (name)", val: "Redfish Lake" },
+        { label: '"Redfish Lake" (name)', val: "Redfish Lake" },
         { label: "Outlet (catalog)", val: "232358" },
         { label: "Pine Flats (catalog)", val: "232312" },
         { label: "Bad URL", val: "https://example.com/yosemite" },
@@ -415,7 +464,9 @@ export function CampgroundLookup({ variant: _variant = "homepage" }: CampgroundL
                         </span>
                     </h2>
                     <p className="font-body-serif text-[17px] leading-[1.6] text-cw-ink-soft max-w-[460px] m-0 mb-[22px]">
-                        Paste any campground URL or ID from <em>recreation.gov</em>. We&apos;ll tell you whether it&apos;s already on our watch — and let you add it to your own list in one click.
+                        Paste any campground URL or ID from <em>recreation.gov</em>. We&apos;ll tell you
+                        whether it&apos;s already on our watch — and let you add it to your own list in one
+                        click.
                     </p>
                     <div className="font-hand text-[22px] leading-[1.2] text-cw-clay -rotate-[2deg] inline-block font-semibold italic">
                         ↘ works from any URL on recreation.gov
@@ -441,10 +492,22 @@ export function CampgroundLookup({ variant: _variant = "homepage" }: CampgroundL
                                 }}
                                 type="text"
                                 value={value}
-                                placeholder={isMobile ? "recreation.gov/…/232358" : "Outlet Campground · 232358 · recreation.gov/camping/campgrounds/232358"}
-                                onChange={(e) => { setValue(e.target.value); setTouched(true); setFetchedResult(null); setSearchResults(null); setAddedSuccess(false); }}
+                                placeholder={
+                                    isMobile
+                                        ? "recreation.gov/…/232358"
+                                        : "Outlet Campground · 232358 · recreation.gov/camping/campgrounds/232358"
+                                }
+                                onChange={(e) => {
+                                    setValue(e.target.value);
+                                    setTouched(true);
+                                    setFetchedResult(null);
+                                    setSearchResults(null);
+                                    setAddedSuccess(false);
+                                }}
                                 onFocus={() => setTouched(true)}
-                                onKeyDown={(e) => { if (e.key === "Enter") void doLookup(); }}
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter") void doLookup();
+                                }}
                             />
                         </div>
                         <button
@@ -458,7 +521,12 @@ export function CampgroundLookup({ variant: _variant = "homepage" }: CampgroundL
                         >
                             Check
                             <svg width="14" height="14" viewBox="0 0 14 14">
-                                <path d="M1 7 L13 7 M8 2 L13 7 L8 12" stroke={C.cream} strokeWidth="1.8" fill="none" />
+                                <path
+                                    d="M1 7 L13 7 M8 2 L13 7 L8 12"
+                                    stroke={C.cream}
+                                    strokeWidth="1.8"
+                                    fill="none"
+                                />
                             </svg>
                         </button>
                     </div>
@@ -498,7 +566,9 @@ export function CampgroundLookup({ variant: _variant = "homepage" }: CampgroundL
                     {(isSearching || (searchResults && searchResults.length > 0)) && (
                         <div className="mt-[22px] bg-cw-cream border-[1.5px] border-cw-ink">
                             <div className="font-mono-field text-[10px] leading-none tracking-[0.18em] uppercase text-cw-clay py-3 px-[18px] border-b border-cw-rule font-bold">
-                                {isSearching ? "Searching recreation.gov…" : `${searchResults?.length ?? 0} matches`}
+                                {isSearching
+                                    ? "Searching recreation.gov…"
+                                    : `${searchResults?.length ?? 0} matches`}
                             </div>
                             {isSearching ? (
                                 <div className="p-[18px]">
@@ -517,7 +587,8 @@ export function CampgroundLookup({ variant: _variant = "homepage" }: CampgroundL
                                                     {r.name}
                                                 </div>
                                                 <div className="font-italic-serif text-[14px] leading-[1.3] text-cw-ink-soft mt-[2px] font-medium italic">
-                                                    {[r.area, r.state].filter(Boolean).join(" · ") || "Recreation.gov"}
+                                                    {[r.area, r.state].filter(Boolean).join(" · ") ||
+                                                        "Recreation.gov"}
                                                 </div>
                                                 <div className="font-mono-field text-[10px] leading-none text-cw-ink-soft tracking-[0.14em] mt-[6px] uppercase font-medium">
                                                     ID {r.id}
@@ -533,7 +604,8 @@ export function CampgroundLookup({ variant: _variant = "homepage" }: CampgroundL
                     {/* No-match hint when search returned empty */}
                     {!isSearching && searchResults && searchResults.length === 0 && !displayResult && (
                         <div className="mt-[22px] bg-transparent border-[1.5px] border-dashed border-cw-rule py-5 px-[22px] font-italic-serif text-[16px] leading-[1.4] text-cw-ink-soft italic">
-                            No recreation.gov campgrounds match &ldquo;{value.trim()}&rdquo;. Try a shorter or different name.
+                            No recreation.gov campgrounds match &ldquo;{value.trim()}&rdquo;. Try a shorter or
+                            different name.
                         </div>
                     )}
 
@@ -557,8 +629,10 @@ export function CampgroundLookup({ variant: _variant = "homepage" }: CampgroundL
                                     Waiting on a URL, ID, or name…
                                 </div>
                                 <div className="font-body-serif text-[14px] leading-[1.5] text-cw-ink-soft max-w-[480px]">
-                                    Search by campground name (e.g. <span className="font-mono-field text-[12px]">Stanley Lake</span>),
-                                    paste a recreation.gov URL, or a bare numeric ID like <span className="font-mono-field text-[12px]">232358</span>.
+                                    Search by campground name (e.g.{" "}
+                                    <span className="font-mono-field text-[12px]">Stanley Lake</span>), paste
+                                    a recreation.gov URL, or a bare numeric ID like{" "}
+                                    <span className="font-mono-field text-[12px]">232358</span>.
                                 </div>
                             </div>
                         ) : null}
@@ -582,15 +656,27 @@ export function CampgroundLookup({ variant: _variant = "homepage" }: CampgroundL
                             [
                                 {
                                     label: "01 · On your list already",
-                                    result: { state: "on-list" as LookupState, parsedId: "232358", cg: { id: "232358", name: "Outlet Campground" } },
+                                    result: {
+                                        state: "on-list" as LookupState,
+                                        parsedId: "232358",
+                                        cg: { id: "232358", name: "Outlet Campground" },
+                                    },
                                 },
                                 {
                                     label: "02 · On our watch",
-                                    result: { state: "watched" as LookupState, parsedId: "232312", cg: { id: "232312", name: "Pine Flats Campground" } },
+                                    result: {
+                                        state: "watched" as LookupState,
+                                        parsedId: "232312",
+                                        cg: { id: "232312", name: "Pine Flats Campground" },
+                                    },
                                 },
                                 {
                                     label: "03 · New — we'll start",
-                                    result: { state: "new" as LookupState, parsedId: "233858", cg: { id: "233858", name: "Stanley Lake Campground" } },
+                                    result: {
+                                        state: "new" as LookupState,
+                                        parsedId: "233858",
+                                        cg: { id: "233858", name: "Stanley Lake Campground" },
+                                    },
                                 },
                                 {
                                     label: "04 · Campground not found",

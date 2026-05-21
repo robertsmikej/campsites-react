@@ -187,9 +187,9 @@ function buildStripForSite(
 
 // Colors used for tier-based campground strip bars
 const TIER_COLOR: Record<DayTier, string> = {
-    favorite: "oklch(0.55 0.15 145)",   // forest green
-    worthwhile: "oklch(0.78 0.16 80)",  // warm yellow
-    unrated: "var(--primary)",          // default forest
+    favorite: "oklch(0.55 0.15 145)", // forest green
+    worthwhile: "oklch(0.78 0.16 80)", // warm yellow
+    unrated: "var(--primary)", // default forest
 };
 
 export function AvailabilityStrip({
@@ -213,38 +213,23 @@ export function AvailabilityStrip({
 
     return (
         <div
-            className={cn(
-                "flex h-8 items-end gap-px overflow-hidden rounded-md bg-muted/40 p-1",
-                className,
-            )}
+            className={cn("flex h-8 items-end gap-px overflow-hidden rounded-md bg-muted/40 p-1", className)}
             aria-label={`Availability over ${windowStart && windowEnd ? `selected date range` : `next ${days} days`}`}
         >
             {cells.map((cell) => {
-                const isWeekStart =
-                    new Date(cell.iso + "T00:00:00").getDay() === 0;
-                const intensity =
-                    cell.availableCount > 0
-                        ? Math.min(1, cell.availableCount / maxAvail)
-                        : 0;
+                const isWeekStart = new Date(cell.iso + "T00:00:00").getDay() === 0;
+                const intensity = cell.availableCount > 0 ? Math.min(1, cell.availableCount / maxAvail) : 0;
                 // Show excluded accent only if toggle is on and there's excluded data but no hard availability
-                const showExc =
-                    showExcluded &&
-                    cell.excludedCount > 0 &&
-                    cell.availableCount === 0;
+                const showExc = showExcluded && cell.excludedCount > 0 && cell.availableCount === 0;
 
                 // In campground mode with ratings, use tier color; otherwise fall back to primary
-                const barColor =
-                    siteRatings && cell.bestTier
-                        ? TIER_COLOR[cell.bestTier]
-                        : "var(--primary)";
+                const barColor = siteRatings && cell.bestTier ? TIER_COLOR[cell.bestTier] : "var(--primary)";
 
                 return (
                     <div
                         key={cell.iso}
                         title={`${cell.label} — ${cell.availableCount} available${
-                            cell.excludedCount > 0
-                                ? ` (${cell.excludedCount} filtered)`
-                                : ""
+                            cell.excludedCount > 0 ? ` (${cell.excludedCount} filtered)` : ""
                         }`}
                         className={cn(
                             "flex-1 rounded-sm transition-all",
@@ -265,8 +250,7 @@ export function AvailabilityStrip({
                                     }
                                   : {
                                         height: "10%",
-                                        backgroundColor:
-                                            "var(--muted-foreground)",
+                                        backgroundColor: "var(--muted-foreground)",
                                         opacity: 0.15,
                                     }
                         }

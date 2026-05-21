@@ -1,12 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import {
-    Accordion,
-    AccordionContent,
-    AccordionItem,
-    AccordionTrigger,
-} from "@/components/ui/accordion";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import type { ProcessedCampground, SiteAvailability } from "@/types/campground";
 import { CampsitesCalendar } from "./campsites-calendar";
@@ -18,11 +13,7 @@ interface CampsitesCalendarParentProps {
     showExcluded: boolean;
 }
 
-export function CampsitesCalendarParent({
-    data,
-    campground,
-    showExcluded,
-}: CampsitesCalendarParentProps) {
+export function CampsitesCalendarParent({ data, campground, showExcluded }: CampsitesCalendarParentProps) {
     // Mirror CRA: only show sites with matches, startDay-excluded, or
     // (when toggled) any excluded matches.
     const visibleSites = useMemo(() => {
@@ -36,9 +27,7 @@ export function CampsitesCalendarParent({
 
     // Default-expand sites that have real matches; collapse-only-startDay sites
     const defaultExpanded = useMemo(() => {
-        return visibleSites
-            .filter((site) => site.matches?.length > 0)
-            .map((site) => site.siteId);
+        return visibleSites.filter((site) => site.matches?.length > 0).map((site) => site.siteId);
     }, [visibleSites]);
 
     return (
@@ -105,9 +94,7 @@ export function CampsitesCalendarParent({
                                             className="text-xs border-amber-500 text-amber-700"
                                         >
                                             {m.from} &rarr; {m.nights}n (
-                                            {m.reason === "stayLength"
-                                                ? "stay too short"
-                                                : "wrong start day"}
+                                            {m.reason === "stayLength" ? "stay too short" : "wrong start day"}
                                             )
                                         </Badge>
                                     ))}

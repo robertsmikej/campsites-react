@@ -1,44 +1,44 @@
 // Renders a sample email to email-preview.html for visual inspection.
 // Usage: node render-preview.mjs
 
-import { writeFileSync } from 'node:fs';
-import { formatEmail } from './lib/email.mjs';
+import { writeFileSync } from "node:fs";
+import { formatEmail } from "./lib/email.mjs";
 
 const SAMPLE_MATCHES = [
     // Outlet Campground — two sites
     {
-        campgroundName: 'Outlet Campground',
-        campgroundArea: 'Payette National Forest',
+        campgroundName: "Outlet Campground",
+        campgroundArea: "Payette National Forest",
         campgroundDescription: null,
-        siteName: 'Site 015',
-        siteId: '10001',
-        group: 'favorites',
-        match: { from: '2026-05-23', to: '2026-05-25', nights: 2 },
+        siteName: "Site 015",
+        siteId: "10001",
+        group: "favorites",
+        match: { from: "2026-05-23", to: "2026-05-25", nights: 2 },
     },
     {
-        campgroundName: 'Outlet Campground',
-        campgroundArea: 'Payette National Forest',
+        campgroundName: "Outlet Campground",
+        campgroundArea: "Payette National Forest",
         campgroundDescription: null,
-        siteName: 'Site 007',
-        siteId: '10002',
-        group: 'worthwhile',
-        match: { from: '2026-05-30', to: '2026-06-01', nights: 2 },
+        siteName: "Site 007",
+        siteId: "10002",
+        group: "worthwhile",
+        match: { from: "2026-05-30", to: "2026-06-01", nights: 2 },
     },
     // Pine Flats — one site
     {
-        campgroundName: 'Pine Flats Campground',
-        campgroundArea: 'Boise National Forest',
+        campgroundName: "Pine Flats Campground",
+        campgroundArea: "Boise National Forest",
         campgroundDescription: null,
-        siteName: 'Site 008',
-        siteId: '10003',
-        group: 'favorites',
-        match: { from: '2026-06-06', to: '2026-06-07', nights: 1 },
+        siteName: "Site 008",
+        siteId: "10003",
+        group: "favorites",
+        match: { from: "2026-06-06", to: "2026-06-07", nights: 1 },
     },
 ];
 
 const { html } = formatEmail(SAMPLE_MATCHES, {
-    email: 'you@trail.example',
-    siteUrl: 'https://campwatch.dev',
+    email: "you@trail.example",
+    siteUrl: "https://campwatch.dev",
     // No unsubscribeUrl / apiSecret — omit footer unsubscribe link in preview
 });
 
@@ -108,5 +108,5 @@ ${html}
 </body>
 </html>`;
 
-writeFileSync(new URL('./email-preview.html', import.meta.url), preview, 'utf8');
-console.log('email-preview.html written.');
+writeFileSync(new URL("./email-preview.html", import.meta.url), preview, "utf8");
+console.log("email-preview.html written.");

@@ -2,7 +2,7 @@
 // Uses native fetch (Node 18+) instead of axios. No dependencies required.
 
 const DELAY_BETWEEN_REQUESTS_MS = 50;
-const IGNORE_TYPES = ['GROUP SHELTER NONELECTRIC', 'WALK TO', 'DAY USE'];
+const IGNORE_TYPES = ["GROUP SHELTER NONELECTRIC", "WALK TO", "DAY USE"];
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -12,7 +12,7 @@ export const getAllDatesInRange = (start, end) => {
     const current = new Date(start);
     const final = new Date(end);
     while (current <= final) {
-        result.push(current.toISOString().split('T')[0]);
+        result.push(current.toISOString().split("T")[0]);
         current.setDate(current.getDate() + 1);
     }
     return result;
@@ -32,10 +32,10 @@ export const findConsecutiveAvailableRanges = (dates, length) => {
             }
         }
         if (isConsecutive) {
-            const from = new Date(timestamps[i]).toISOString().split('T')[0];
+            const from = new Date(timestamps[i]).toISOString().split("T")[0];
             const toDate = new Date(timestamps[i + length - 1]);
             toDate.setDate(toDate.getDate() + 1);
-            const to = toDate.toISOString().split('T')[0];
+            const to = toDate.toISOString().split("T")[0];
             ranges.push([from, to]);
             i += length;
         } else {
@@ -68,7 +68,7 @@ export const fetchMonth = async (facilityId, month) => {
     const url = `https://www.recreation.gov/api/camps/availability/campground/${facilityId}/month?start_date=${formattedMonth}`;
     try {
         const response = await fetch(url, {
-            headers: { Accept: 'application/json' },
+            headers: { Accept: "application/json" },
         });
         if (!response.ok) {
             console.error(`[Fetch] HTTP ${response.status} for ${facilityId} month ${month}`);
@@ -105,8 +105,8 @@ export const processCampgroundResults = (apiResults, allDates, settings) => {
             }
 
             const validDates = Object.entries(siteData.availabilities)
-                .filter(([, status]) => status === 'Available')
-                .map(([date]) => date.split('T')[0])
+                .filter(([, status]) => status === "Available")
+                .map(([date]) => date.split("T")[0])
                 .filter((date) => allDates.includes(date));
 
             siteAvailability[siteId].dates.push(...validDates);
@@ -123,10 +123,10 @@ export const processCampgroundResults = (apiResults, allDates, settings) => {
             const allRangesForLength = findConsecutiveAvailableRanges(uniqueDates, length);
 
             for (const [from, to] of allRangesForLength) {
-                const [y, m, d] = from.split('-').map(Number);
-                const startDay = new Date(Date.UTC(y, m - 1, d)).toLocaleString('en-US', {
-                    weekday: 'long',
-                    timeZone: 'UTC',
+                const [y, m, d] = from.split("-").map(Number);
+                const startDay = new Date(Date.UTC(y, m - 1, d)).toLocaleString("en-US", {
+                    weekday: "long",
+                    timeZone: "UTC",
                 });
                 const isValidStartDay =
                     !settings.validStartDays?.length || settings.validStartDays.includes(startDay);
@@ -145,5 +145,3 @@ export const processCampgroundResults = (apiResults, allDates, settings) => {
 
     return siteAvailability;
 };
-
-

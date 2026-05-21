@@ -1,11 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createMockKv } from "./__mocks__/cloudflare-test-helpers";
 import * as cloudflare from "./cloudflare";
-import {
-    getUserCampgrounds,
-    putUserCampgrounds,
-    deleteUserCampgrounds,
-} from "./user-campgrounds";
+import { getUserCampgrounds, putUserCampgrounds, deleteUserCampgrounds } from "./user-campgrounds";
 
 beforeEach(() => {
     vi.resetModules();

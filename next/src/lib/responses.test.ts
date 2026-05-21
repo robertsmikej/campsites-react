@@ -18,11 +18,7 @@ describe("withCors", () => {
     it("sets permissive CORS headers", () => {
         const r = withCors(new Response("hello"));
         expect(r.headers.get("access-control-allow-origin")).toBe("*");
-        expect(r.headers.get("access-control-allow-methods")).toBe(
-            "GET, POST, PUT, OPTIONS",
-        );
-        expect(r.headers.get("access-control-allow-headers")).toBe(
-            "Content-Type, Authorization",
-        );
+        expect(r.headers.get("access-control-allow-methods")).toBe("GET, POST, PUT, OPTIONS");
+        expect(r.headers.get("access-control-allow-headers")).toBe("Content-Type, Authorization");
     });
 });

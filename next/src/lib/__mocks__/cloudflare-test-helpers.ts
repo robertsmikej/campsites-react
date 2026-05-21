@@ -25,7 +25,9 @@ export function createMockKv(initial: Record<string, string> = {}): MockKvNamesp
             store.delete(key);
         },
 
-        async list({ prefix, cursor }: { prefix?: string; cursor?: string } = {}): Promise<KVNamespaceListResult<unknown, string>> {
+        async list({ prefix, cursor: _cursor }: { prefix?: string; cursor?: string } = {}): Promise<
+            KVNamespaceListResult<unknown, string>
+        > {
             const keys = Array.from(store.keys())
                 .filter((k) => (prefix ? k.startsWith(prefix) : true))
                 .sort()

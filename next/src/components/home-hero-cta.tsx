@@ -31,8 +31,7 @@ export function HomeHeroCta() {
                     <Link href="/discover">Browse picks</Link>
                 </Button>
                 <p className="text-sm text-muted-foreground sm:ml-2">
-                    Signed in as{" "}
-                    <span className="font-medium text-foreground">{auth.user.email}</span>
+                    Signed in as <span className="font-medium text-foreground">{auth.user.email}</span>
                 </p>
             </div>
         );

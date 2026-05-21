@@ -58,7 +58,8 @@ export function Faq() {
             q: "Is it really free?",
             a: (
                 <>
-                    Yes. Side project, not a business. Runs on Cloudflare and GitHub Actions free tiers, no paid features planned. If you're curious how it works, the{" "}
+                    Yes. Side project, not a business. Runs on Cloudflare and GitHub Actions free tiers, no
+                    paid features planned. If you&apos;re curious how it works, the{" "}
                     <a
                         href="https://github.com/robertsmikej/campsites-react"
                         target="_blank"
@@ -89,7 +90,9 @@ export function Faq() {
                             ? formatLatency(stats.medianLatencyMs)
                             : "well under a minute"}
                     </span>
-                    . Recreation.gov doesn&apos;t notify you when your specific sites open — you&apos;d have to keep refreshing the page. CampWatch does the refreshing for you and only emails when one of your starred sites actually comes available.
+                    . Recreation.gov doesn&apos;t notify you when your specific sites open — you&apos;d have
+                    to keep refreshing the page. CampWatch does the refreshing for you and only emails when
+                    one of your starred sites actually comes available.
                 </>
             ),
         },

@@ -51,7 +51,9 @@ describe("GET /api/admin/notification-targets", () => {
                 createdAt: "2026-01-01T00:00:00.000Z",
             }),
             "user:bob@x.com:campgrounds": JSON.stringify({
-                campgrounds: { "recreation.gov": [{ id: "1", name: "X", sites: { favorites: [], worthwhile: [] } }] },
+                campgrounds: {
+                    "recreation.gov": [{ id: "1", name: "X", sites: { favorites: [], worthwhile: [] } }],
+                },
                 globalSettings: { stayLengths: [2], validStartDays: ["Monday"] },
                 updatedAt: "2026-01-02T00:00:00.000Z",
             }),
@@ -81,7 +83,9 @@ describe("GET /api/admin/notification-targets", () => {
                 createdAt: "2026-01-01T00:00:00.000Z",
             }),
             "user:user@x.com:campgrounds": JSON.stringify({
-                campgrounds: { "recreation.gov": [{ id: "1", name: "X", sites: { favorites: [], worthwhile: [] } }] },
+                campgrounds: {
+                    "recreation.gov": [{ id: "1", name: "X", sites: { favorites: [], worthwhile: [] } }],
+                },
                 globalSettings: { stayLengths: [2], validStartDays: ["Monday"] },
                 updatedAt: "2026-01-02T00:00:00.000Z",
             }),
@@ -89,7 +93,9 @@ describe("GET /api/admin/notification-targets", () => {
         vi.mocked(cloudflare.getKv).mockReturnValue(kv);
 
         const res = await get(`Bearer ${SECRET}`);
-        const body = (await res.json()) as { targets: Array<{ notifications: { enabled: boolean; frequencyMinutes: number } }> };
+        const body = (await res.json()) as {
+            targets: Array<{ notifications: { enabled: boolean; frequencyMinutes: number } }>;
+        };
         expect(body.targets[0].notifications).toEqual({ enabled: true, frequencyMinutes: 15 });
     });
 
@@ -104,7 +110,9 @@ describe("GET /api/admin/notification-targets", () => {
                 lastNotifiedAt: "2026-05-15T01:00:00.000Z",
             }),
             "user:user@x.com:campgrounds": JSON.stringify({
-                campgrounds: { "recreation.gov": [{ id: "1", name: "X", sites: { favorites: [], worthwhile: [] } }] },
+                campgrounds: {
+                    "recreation.gov": [{ id: "1", name: "X", sites: { favorites: [], worthwhile: [] } }],
+                },
                 globalSettings: { stayLengths: [2], validStartDays: ["Monday"] },
                 updatedAt: "2026-01-02T00:00:00.000Z",
             }),
@@ -130,7 +138,9 @@ describe("GET /api/admin/notification-targets", () => {
                 createdAt: "2026-01-01T00:00:00.000Z",
             }),
             "user:curator@x.com:campgrounds": JSON.stringify({
-                campgrounds: { "recreation.gov": [{ id: "1", name: "X", sites: { favorites: [], worthwhile: [] } }] },
+                campgrounds: {
+                    "recreation.gov": [{ id: "1", name: "X", sites: { favorites: [], worthwhile: [] } }],
+                },
                 globalSettings: { stayLengths: [2], validStartDays: ["Monday"] },
                 updatedAt: "2026-01-02T00:00:00.000Z",
             }),
@@ -153,7 +163,9 @@ describe("GET /api/admin/notification-targets", () => {
                 createdAt: "2026-01-01T00:00:00.000Z",
             }),
             "user:user@x.com:campgrounds": JSON.stringify({
-                campgrounds: { "recreation.gov": [{ id: "1", name: "X", sites: { favorites: [], worthwhile: [] } }] },
+                campgrounds: {
+                    "recreation.gov": [{ id: "1", name: "X", sites: { favorites: [], worthwhile: [] } }],
+                },
                 globalSettings: { stayLengths: [2], validStartDays: ["Monday"] },
                 updatedAt: "2026-01-02T00:00:00.000Z",
             }),

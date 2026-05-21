@@ -28,7 +28,7 @@ export function useCampgroundDetails(facilityId: string | undefined): Campground
         }
         let cancelled = false;
         fetch(`/api/campgrounds/${facilityId}/details`)
-            .then((r) => (r.ok ? r.json() as Promise<CampgroundDetails> : null))
+            .then((r) => (r.ok ? (r.json() as Promise<CampgroundDetails>) : null))
             .then((data) => {
                 if (cancelled) return;
                 cache.set(facilityId, data ?? null);
