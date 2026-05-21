@@ -204,8 +204,6 @@ export default function AppPage() {
                 <ProgressBarContext.Provider value={progressBarData}>
                     <DashboardTopBar
                         auth={auth}
-                        isLoading={isLoading}
-                        menuItems={topBarMenuItems}
                         onAddCampground={() => setAddModalOpen(true)}
                     />
 
