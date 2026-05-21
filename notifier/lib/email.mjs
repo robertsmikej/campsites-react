@@ -162,7 +162,7 @@ export const sendEmail = async (to, subject, html, apiKey, unsubscribeLink = '')
             'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-            from: 'CampWatch <campwatch@robertsmj.com>',
+            from: 'CampWatch <alerts@campwatch.dev>',
             to: [to],
             subject,
             html,
