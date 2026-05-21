@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createMockKv } from "@/lib/__mocks__/cloudflare-test-helpers";
 import * as cloudflare from "@/lib/cloudflare";
