@@ -17,6 +17,7 @@ import { useRecentOpenings } from "@/hooks/use-recent-openings";
 import { useDateRange } from "@/hooks/use-date-range";
 import { useSnoozed } from "@/hooks/use-snoozed";
 import { toLocalIso, readStorage, writeStorage } from "@/components/dashboard/helpers";
+import { getCampgroundOpenCount } from "@/components/campground/get-open-count";
 import { DashboardTopBar } from "@/components/dashboard/dashboard-top-bar";
 import { AddCampgroundDialog } from "@/components/dashboard/add-campground-dialog";
 import { Greeting } from "@/components/dashboard/greeting";
@@ -136,14 +137,8 @@ export default function AppPage() {
     // Compute open counts within date range
     const openCounts = useMemo(() => {
         const m = new Map<string, number>();
-        const winStartIso = toLocalIso(dateRange.start);
-        const winEndIso = toLocalIso(dateRange.end);
         for (const c of campgroundsByAreas) {
-            const key = c.id ?? c.name;
-            const count = Object.values(c.siteAvailability ?? {}).reduce((acc, site) => {
-                return acc + (site.matches ?? []).filter((match) => match.from <= winEndIso && match.to > winStartIso).length;
-            }, 0);
-            m.set(key, count);
+            m.set(c.id ?? c.name, getCampgroundOpenCount(c, dateRange.start, dateRange.end));
         }
         return m;
     }, [campgroundsByAreas, dateRange]);

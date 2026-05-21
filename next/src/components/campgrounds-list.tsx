@@ -16,20 +16,13 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { CampgroundRow } from "@/components/campground-row";
+import { getCampgroundImageUrl } from "@/components/campground/get-image-url";
+import { getCampgroundOpenCount } from "@/components/campground/get-open-count";
 import type { ProcessedCampground, GlobalSettings, SiteAvailability, StayMatch } from "@/types/campground";
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function getImageUrl(c: ProcessedCampground): string {
-    const img = c.image;
-    if (img && !/_map.*\.jpg$/i.test(img)) {
-        if (img.startsWith("http")) return img;
-        return img.startsWith("/images/") ? img : `/images/sites/${img}`;
-    }
-    return "/images/sites/bg_default.jpg";
-}
 
 // Format a local date as YYYY-MM-DD without timezone drift.
 function toLocalIso(d: Date): string {
@@ -366,15 +359,8 @@ export function CampgroundsList({
         }
 
         // 3. sort
-        const winStart = toLocalIso(effectiveWindowStart);
-        const winEnd = toLocalIso(effectiveWindowEnd);
-
         const openCount = (c: ProcessedCampground) =>
-            Object.values(c.siteAvailability ?? {}).reduce((acc, site) => {
-                return acc + (site.matches ?? []).filter(
-                    (m) => m.from <= winEnd && m.to > winStart,
-                ).length;
-            }, 0);
+            getCampgroundOpenCount(c, effectiveWindowStart, effectiveWindowEnd);
 
         if (sortOrder === "alpha") {
             list = [...list].sort((a, b) => a.name.localeCompare(b.name));
@@ -610,7 +596,7 @@ export function CampgroundsList({
                             onToggleFavorite={() => c.id && toggleFavorite(c.id)}
                             settings={settings}
                             globalSettings={globalSettings}
-                            imageUrl={getImageUrl(c)}
+                            imageUrl={getCampgroundImageUrl(c)}
                             siteRatings={hasSiteRatings ? siteRatings : undefined}
                             onRatingChange={
                                 onRatingChange && c.id
