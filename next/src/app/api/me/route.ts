@@ -6,10 +6,10 @@ import { withErrorLogging } from "@/lib/route-helpers";
 
 async function getHandler(request: Request): Promise<Response> {
     const session = await readSession(request);
-    if (!session) return withCors(jsonResponse({ error: "Unauthorized" }, 401));
+    if (!session) return withCors(jsonResponse({ user: null }));
     const profile = await getUserProfile(session.email);
-    if (!profile) return withCors(jsonResponse({ error: "Unauthorized" }, 401));
-    return withCors(jsonResponse(profile));
+    if (!profile) return withCors(jsonResponse({ user: null }));
+    return withCors(jsonResponse({ user: profile }));
 }
 export const GET = withErrorLogging(getHandler, "GET /api/me");
 

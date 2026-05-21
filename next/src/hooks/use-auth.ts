@@ -17,13 +17,12 @@ export function useAuth(): AuthState {
     const fetchMe = useCallback(async () => {
         try {
             const response = await fetch("/api/me", { credentials: "include" });
-            if (response.status === 401) {
-                setUser(null);
-            } else if (!response.ok) {
+            if (!response.ok) {
                 console.warn(`[useAuth] /api/me returned ${response.status}`);
                 setUser(null);
             } else {
-                setUser((await response.json()) as UserProfile);
+                const body = (await response.json()) as { user: UserProfile | null };
+                setUser(body.user);
             }
         } catch (e) {
             console.warn("[useAuth] fetch failed:", e);

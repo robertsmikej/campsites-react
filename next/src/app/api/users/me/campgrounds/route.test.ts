@@ -52,10 +52,12 @@ async function doPutRaw(rawBody: string): Promise<Response> {
 }
 
 describe("GET /api/users/me/campgrounds", () => {
-    it("returns 401 when not signed in", async () => {
+    it("returns 200 with an empty record when not signed in", async () => {
         vi.mocked(sessions.readSession).mockResolvedValue(null);
         const res = await doGet();
-        expect(res.status).toBe(401);
+        expect(res.status).toBe(200);
+        const body = (await res.json()) as { campgrounds: { "recreation.gov": unknown[] } };
+        expect(body.campgrounds["recreation.gov"]).toEqual([]);
     });
 
     it("returns an empty record shape for a fresh user", async () => {

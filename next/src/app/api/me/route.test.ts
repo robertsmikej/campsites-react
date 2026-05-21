@@ -58,22 +58,24 @@ describe("GET /api/me", () => {
         );
 
         expect(res.status).toBe(200);
-        const body = (await res.json()) as { email: string; name: string };
-        expect(body.email).toBe("user@example.com");
-        expect(body.name).toBe("Test User");
+        const body = (await res.json()) as { user: { email: string; name: string } | null };
+        expect(body.user?.email).toBe("user@example.com");
+        expect(body.user?.name).toBe("Test User");
     });
 
-    it("returns 401 when no session cookie", async () => {
+    it("returns 200 with user: null when no session cookie", async () => {
         const kv = createMockKv();
         vi.mocked(cloudflare.getEnv).mockReturnValue({ SUBSCRIBERS: kv } as cloudflare.CampWatchEnv);
         vi.mocked(cloudflare.getKv).mockReturnValue(kv);
 
         const { GET } = await import("./route");
         const res = await GET(makeRequest("GET", "https://example.com/api/me"));
-        expect(res.status).toBe(401);
+        expect(res.status).toBe(200);
+        const body = (await res.json()) as { user: unknown };
+        expect(body.user).toBeNull();
     });
 
-    it("returns 401 when session points to a deleted user", async () => {
+    it("returns 200 with user: null when session points to a deleted user", async () => {
         const kv = createMockKv();
         vi.mocked(cloudflare.getEnv).mockReturnValue({ SUBSCRIBERS: kv } as cloudflare.CampWatchEnv);
         vi.mocked(cloudflare.getKv).mockReturnValue(kv);
@@ -87,7 +89,9 @@ describe("GET /api/me", () => {
                 cookieHeader: `${SESSION_COOKIE}=${session.id}`,
             }),
         );
-        expect(res.status).toBe(401);
+        expect(res.status).toBe(200);
+        const body = (await res.json()) as { user: unknown };
+        expect(body.user).toBeNull();
     });
 });
 

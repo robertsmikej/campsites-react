@@ -38,7 +38,7 @@ function isValidBody(body: unknown): body is {
 
 async function getHandler(request: Request): Promise<Response> {
     const session = await readSession(request);
-    if (!session) return withCors(jsonResponse({ error: "Unauthorized" }, 401));
+    if (!session) return withCors(jsonResponse(emptyRecord()));
 
     const record = await getUserCampgrounds(session.email);
     return withCors(jsonResponse(record ?? emptyRecord()));
