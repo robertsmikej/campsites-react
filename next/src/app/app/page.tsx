@@ -23,8 +23,6 @@ import { Greeting } from "@/components/dashboard/greeting";
 import { OpeningsFeed } from "@/components/dashboard/openings-feed";
 import { WatchlistSection } from "@/components/dashboard/watchlist-section";
 import { EmptyState } from "@/components/dashboard/empty-state";
-import { CW } from "@/components/field-notes/cw-tokens";
-import { FB, FM } from "@/components/field-notes/tokens";
 import { siteData } from "@/data/site-data";
 import type { SiteSettingsValue } from "@/context/site-settings";
 import type { OpeningItem } from "@/components/dashboard/openings-feed";
@@ -200,6 +198,7 @@ export default function AppPage() {
         return items.slice(0, 8);
     }, [recentOpenings, userCampgroundIds, dateRange, snoozedOpenings]);
 
+    // PAD kept for components that still use it for dynamic scroll containers / section padding
     const PAD = isMobile ? 22 : 36;
 
     return (
@@ -221,11 +220,11 @@ export default function AppPage() {
                         onAddCampground={() => setAddModalOpen(true)}
                     />
 
-                    <main style={{ background: CW.paper, color: CW.ink, fontFamily: FB, minHeight: "100vh" }}>
+                    <main className="bg-cw-paper text-cw-ink font-body-serif min-h-screen">
 
                         {/* Missing-from-default sync banner */}
                         {userCampgrounds.missingFromDefault.length > 0 && !dismissedSync && (
-                            <div style={{ padding: `12px ${PAD}px` }}>
+                            <div className="px-[22px] py-3 md:px-9">
                                 <div className="flex flex-wrap items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm">
                                     <Sparkles className="size-4 shrink-0 text-primary" aria-hidden />
                                     <div className="min-w-0 flex-1">
@@ -253,15 +252,13 @@ export default function AppPage() {
                         )}
 
                         {isEmpty ? (
-                            <EmptyState onClone={cloneDefault} isMobile={isMobile} />
+                            <EmptyState onClone={cloneDefault} />
                         ) : (
                             <>
                                 <Greeting
                                     auth={auth}
-                                    isMobile={isMobile}
                                     isLoading={isLoading}
                                     campgroundsWithOpenings={campgroundsWithOpenings}
-                                    PAD={PAD}
                                 />
 
                                 <OpeningsFeed
@@ -301,7 +298,7 @@ export default function AppPage() {
                         )}
 
                         {/* Footer */}
-                        <footer style={{ padding: `20px ${PAD}px 36px`, display: "flex", justifyContent: "space-between", font: `500 11px/1 ${FM}`, letterSpacing: "0.12em", color: CW.inkFaint, textTransform: "uppercase", flexWrap: "wrap", gap: 8 }}>
+                        <footer className="px-[22px] md:px-9 pt-5 pb-9 flex justify-between font-mono-field text-[11px] font-medium leading-none tracking-[0.12em] text-cw-ink-faint uppercase flex-wrap gap-2">
                             <span>Built by a camper, for campers</span>
                             <span>{siteData.name}</span>
                         </footer>

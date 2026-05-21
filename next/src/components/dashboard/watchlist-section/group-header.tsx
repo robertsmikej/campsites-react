@@ -1,8 +1,5 @@
 "use client";
 
-import { CW } from "@/components/field-notes/cw-tokens";
-import { FI, FM } from "@/components/field-notes/tokens";
-
 interface GroupHeaderProps {
     index: number;
     label: string;
@@ -12,22 +9,22 @@ interface GroupHeaderProps {
 
 export function GroupHeader({ index, label, count, openInGroup }: GroupHeaderProps) {
     return (
-        <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 10 }}>
-            <span style={{ font: `700 11px/1 ${FM}`, letterSpacing: "0.18em", color: CW.clay, textTransform: "uppercase" }}>
+        <div className="flex items-baseline gap-3 mb-[10px]">
+            <span className="font-mono-field text-[11px] font-bold leading-none tracking-[0.18em] text-cw-clay uppercase">
                 {String(index + 1).padStart(2, "0")}
             </span>
-            <span style={{ font: `500 italic 22px/1 ${FI}`, color: CW.ink, letterSpacing: "-0.005em" }}>
+            <span className="font-italic-serif text-[22px] font-medium italic leading-none text-cw-ink tracking-[-0.005em]">
                 {label}
             </span>
-            <span style={{ font: `500 11px/1 ${FM}`, color: CW.inkSubtle, letterSpacing: "0.08em" }}>
+            <span className="font-mono-field text-[11px] font-medium leading-none text-cw-ink-subtle tracking-[0.08em]">
                 · {count} campground{count !== 1 ? "s" : ""}
             </span>
             {openInGroup > 0 && (
-                <span style={{ font: `700 11px/1 ${FM}`, color: CW.forest, letterSpacing: "0.12em", textTransform: "uppercase" }}>
+                <span className="font-mono-field text-[11px] font-bold leading-none text-cw-forest tracking-[0.12em] uppercase">
                     · {openInGroup} open
                 </span>
             )}
-            <div style={{ flex: 1, height: 1, background: CW.rule }} />
+            <div className="flex-1 h-px bg-cw-rule" />
         </div>
     );
 }

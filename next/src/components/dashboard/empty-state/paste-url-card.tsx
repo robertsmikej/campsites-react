@@ -1,7 +1,6 @@
 "use client";
 
 import { CW } from "@/components/field-notes/cw-tokens";
-import { FH, FI, FM } from "@/components/field-notes/tokens";
 
 interface PasteUrlCardProps {
     onShowLookup: () => void;
@@ -9,17 +8,17 @@ interface PasteUrlCardProps {
 
 export function PasteUrlCard({ onShowLookup }: PasteUrlCardProps) {
     return (
-        <article style={{ background: CW.cream, border: `1.5px solid ${CW.ink}`, boxShadow: `6px 6px 0 ${CW.forest}`, padding: "24px 26px" }}>
-            <div style={{ font: `700 10px/1 ${FM}`, letterSpacing: "0.18em", color: CW.clay, marginBottom: 10, textTransform: "uppercase" }}>
+        <article className="bg-cw-cream border-[1.5px] border-cw-ink p-[24px_26px]" style={{ boxShadow: `6px 6px 0 ${CW.forest}` }}>
+            <div className="font-mono-field text-[10px] font-bold leading-none tracking-[0.18em] text-cw-clay mb-[10px] uppercase">
                 Option 01
             </div>
-            <h2 style={{ margin: "0 0 14px" }}>
-                <span style={{ font: `900 22px/1.1 ${FH}`, textTransform: "uppercase", display: "block" }}>PASTE A URL</span>
-                <span style={{ font: `500 italic 22px/1.1 ${FI}`, color: CW.forest, display: "block", marginTop: 2 }}>from recreation.gov.</span>
+            <h2 className="m-0 mb-[14px]">
+                <span className="font-poster text-[22px] font-black leading-[1.1] uppercase block">PASTE A URL</span>
+                <span className="font-italic-serif text-[22px] font-medium italic leading-[1.1] text-cw-forest block mt-[2px]">from recreation.gov.</span>
             </h2>
             <button
                 onClick={onShowLookup}
-                style={{ font: `800 12px/1 ${FH}`, letterSpacing: "0.14em", textTransform: "uppercase", background: CW.forest, color: CW.cream, border: "none", padding: "13px 16px", cursor: "pointer", borderRadius: 2 }}
+                className="font-poster text-[12px] font-black leading-none tracking-[0.14em] uppercase bg-cw-forest text-cw-cream border-none px-4 py-[13px] cursor-pointer rounded-[2px]"
             >
                 Look up a campground →
             </button>

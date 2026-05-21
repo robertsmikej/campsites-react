@@ -1,7 +1,5 @@
 "use client";
 
-import { CW } from "@/components/field-notes/cw-tokens";
-import { FH, FI, FM } from "@/components/field-notes/tokens";
 import { StatusSentence } from "./status-sentence";
 import type { AuthState } from "@/hooks/use-auth";
 
@@ -32,29 +30,27 @@ function formatDateEyebrow(): string {
 
 interface GreetingProps {
     auth: AuthState;
-    isMobile: boolean;
     isLoading: boolean;
     campgroundsWithOpenings: number;
-    PAD: number;
 }
 
-export function Greeting({ auth, isMobile, isLoading, campgroundsWithOpenings, PAD }: GreetingProps) {
+export function Greeting({ auth, isLoading, campgroundsWithOpenings }: GreetingProps) {
     const userName = auth.user?.name?.split(" ")[0] ?? "there";
 
     return (
-        <section style={{ padding: `40px ${PAD}px 8px`, position: "relative" }}>
-            <div style={{ font: `500 11px/1 ${FM}`, letterSpacing: "0.18em", color: CW.clay, marginBottom: 14, textTransform: "uppercase" }}>
+        <section className="px-[22px] md:px-9 pt-10 pb-2 relative">
+            <div className="font-mono-field text-[11px] font-medium leading-none tracking-[0.18em] text-cw-clay mb-[14px] uppercase">
                 {formatDateEyebrow()}
             </div>
-            <h1 style={{ margin: "0 0 14px", letterSpacing: "-0.005em" }}>
-                <span style={{ font: `900 ${isMobile ? 38 : 56}px/0.95 ${FH}`, textTransform: "uppercase", display: "inline" }}>
+            <h1 className="m-0 mb-[14px] tracking-[-0.005em]">
+                <span className="font-poster text-[38px] md:text-[56px] font-black leading-[0.95] uppercase inline">
                     GOOD {getTimeOfDay().toUpperCase()},
                 </span>
-                <span style={{ font: `500 italic ${isMobile ? 38 : 56}px/0.95 ${FI}`, color: CW.forest, marginLeft: 14, letterSpacing: "-0.01em" }}>
+                <span className="font-italic-serif text-[38px] md:text-[56px] font-medium italic leading-[0.95] text-cw-forest ml-[14px] tracking-[-0.01em]">
                     {userName}.
                 </span>
             </h1>
-            <StatusSentence isLoading={isLoading} campgroundsWithOpenings={campgroundsWithOpenings} isMobile={isMobile} />
+            <StatusSentence isLoading={isLoading} campgroundsWithOpenings={campgroundsWithOpenings} />
         </section>
     );
 }

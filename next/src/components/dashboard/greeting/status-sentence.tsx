@@ -1,7 +1,6 @@
 "use client";
 
 import { CW } from "@/components/field-notes/cw-tokens";
-import { FB } from "@/components/field-notes/tokens";
 
 // ─── Pulse dot ───────────────────────────────────────────────────────────────
 function Pulse({ color, size = 7 }: { color: string; size?: number }) {
@@ -16,17 +15,16 @@ function Pulse({ color, size = 7 }: { color: string; size?: number }) {
 interface StatusSentenceProps {
     isLoading: boolean;
     campgroundsWithOpenings: number;
-    isMobile: boolean;
 }
 
-export function StatusSentence({ isLoading, campgroundsWithOpenings, isMobile }: StatusSentenceProps) {
+export function StatusSentence({ isLoading, campgroundsWithOpenings }: StatusSentenceProps) {
     return (
-        <p style={{ font: `400 ${isMobile ? 14 : 18}px/1.5 ${FB}`, color: CW.inkSoft, margin: "0 0 6px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+        <p className="font-body-serif text-[14px] md:text-[18px] leading-[1.5] text-cw-ink-soft m-0 mb-[6px] flex items-center gap-3 flex-wrap">
             <Pulse color={CW.forest} size={7} />
             {isLoading
                 ? "Checking your campgrounds…"
                 : campgroundsWithOpenings > 0
-                    ? <><strong style={{ color: CW.ink }}>{campgroundsWithOpenings} campground{campgroundsWithOpenings !== 1 ? "s" : ""}</strong>&nbsp;have bookable sites for your dates.</>
+                    ? <><strong className="text-cw-ink">{campgroundsWithOpenings} campground{campgroundsWithOpenings !== 1 ? "s" : ""}</strong>&nbsp;have bookable sites for your dates.</>
                     : "No bookable sites found in your date window — we're still watching."}
         </p>
     );
