@@ -17,7 +17,7 @@ export interface NotifierStatsValue {
     nowMs: number;
 }
 
-const StatsContext = createContext<NotifierStatsValue | null>(null);
+export const StatsContext = createContext<NotifierStatsValue | null>(null);
 
 function useStatsInternal(): NotifierStats | null {
     const [stats, setStats] = useState<NotifierStats | null>(null);
