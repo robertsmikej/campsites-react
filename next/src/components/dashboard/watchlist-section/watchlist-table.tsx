@@ -14,6 +14,7 @@ interface WatchlistTableProps {
     settings: { views?: { type?: "calendar" | "table" } };
     globalSettings?: GlobalSettings;
     isMobile: boolean;
+    readOnly?: boolean;
     onRatingChange?: (campgroundId: string, siteName: string, rating: "favorite" | "worthwhile" | "unrated") => void;
     onEditSettings?: (campgroundId: string) => void;
 }
@@ -29,6 +30,7 @@ export function WatchlistTable({
     settings,
     globalSettings,
     isMobile,
+    readOnly,
     onRatingChange,
     onEditSettings,
 }: WatchlistTableProps) {
@@ -51,8 +53,9 @@ export function WatchlistTable({
                     settings={settings}
                     globalSettings={globalSettings}
                     isMobile={isMobile}
-                    onRatingChange={onRatingChange}
-                    onEditSettings={onEditSettings}
+                    readOnly={readOnly}
+                    onRatingChange={readOnly ? undefined : onRatingChange}
+                    onEditSettings={readOnly ? undefined : onEditSettings}
                 />
             ))}
         </div>

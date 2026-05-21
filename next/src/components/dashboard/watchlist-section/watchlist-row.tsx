@@ -74,6 +74,7 @@ interface WatchlistRowProps {
     settings: { views?: { type?: "calendar" | "table" } };
     globalSettings?: GlobalSettings;
     isMobile: boolean;
+    readOnly?: boolean;
     onRatingChange?: (campgroundId: string, siteName: string, rating: "favorite" | "worthwhile" | "unrated") => void;
     onEditSettings?: (campgroundId: string) => void;
 }
@@ -88,6 +89,7 @@ export function WatchlistRow({
     settings,
     globalSettings,
     isMobile,
+    readOnly,
     onRatingChange,
     onEditSettings,
 }: WatchlistRowProps) {
@@ -102,6 +104,7 @@ export function WatchlistRow({
                 windowEnd={windowEnd}
                 settings={settings}
                 globalSettings={globalSettings}
+                readOnly={readOnly}
                 onRatingChange={onRatingChange}
                 onEditSettings={onEditSettings}
             />
@@ -118,6 +121,7 @@ export function WatchlistRow({
             windowEnd={windowEnd}
             settings={settings}
             globalSettings={globalSettings}
+            readOnly={readOnly}
             onRatingChange={onRatingChange}
             onEditSettings={onEditSettings}
         />
@@ -133,6 +137,7 @@ interface DesktopRowProps {
     windowEnd: Date;
     settings: { views?: { type?: "calendar" | "table" } };
     globalSettings?: GlobalSettings;
+    readOnly?: boolean;
     onRatingChange?: (campgroundId: string, siteName: string, rating: "favorite" | "worthwhile" | "unrated") => void;
     onEditSettings?: (campgroundId: string) => void;
 }
@@ -146,6 +151,7 @@ function DesktopRow({
     windowEnd,
     settings,
     globalSettings,
+    readOnly,
     onRatingChange,
     onEditSettings,
 }: DesktopRowProps) {
@@ -179,16 +185,18 @@ function DesktopRow({
             >
                 {/* Name + area */}
                 <div className="flex items-center gap-[10px] min-w-0">
-                    <button
-                        className="bg-transparent border-none cursor-pointer p-0 shrink-0"
-                        style={{ color: isFavorite ? CW.mustard : CW.inkFaint }}
-                        onClick={(e) => { e.stopPropagation(); onToggleFavorite(); }}
-                        aria-label={isFavorite ? "Remove favorite" : "Add favorite"}
-                    >
-                        <svg width="18" height="18" viewBox="0 0 20 20" fill={isFavorite ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.5">
-                            <path d="M10 2 L12.5 7.5 L18.5 8.2 L14 12.4 L15.3 18.3 L10 15.5 L4.7 18.3 L6 12.4 L1.5 8.2 L7.5 7.5 Z" />
-                        </svg>
-                    </button>
+                    {!readOnly && (
+                        <button
+                            className="bg-transparent border-none cursor-pointer p-0 shrink-0"
+                            style={{ color: isFavorite ? CW.mustard : CW.inkFaint }}
+                            onClick={(e) => { e.stopPropagation(); onToggleFavorite(); }}
+                            aria-label={isFavorite ? "Remove favorite" : "Add favorite"}
+                        >
+                            <svg width="18" height="18" viewBox="0 0 20 20" fill={isFavorite ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.5">
+                                <path d="M10 2 L12.5 7.5 L18.5 8.2 L14 12.4 L15.3 18.3 L10 15.5 L4.7 18.3 L6 12.4 L1.5 8.2 L7.5 7.5 Z" />
+                            </svg>
+                        </button>
+                    )}
                     <div className="min-w-0">
                         <div className="font-poster text-[16px] font-black leading-[1.1] uppercase tracking-[0.005em] overflow-hidden text-ellipsis whitespace-nowrap">
                             {campground.name}
@@ -246,6 +254,7 @@ interface MobileRowProps {
     windowEnd: Date;
     settings: { views?: { type?: "calendar" | "table" } };
     globalSettings?: GlobalSettings;
+    readOnly?: boolean;
     onRatingChange?: (campgroundId: string, siteName: string, rating: "favorite" | "worthwhile" | "unrated") => void;
     onEditSettings?: (campgroundId: string) => void;
 }
@@ -259,6 +268,7 @@ function MobileRow({
     windowEnd,
     settings,
     globalSettings,
+    readOnly,
     onRatingChange,
     onEditSettings,
 }: MobileRowProps) {
@@ -288,16 +298,18 @@ function MobileRow({
             >
                 {/* Top row: star + name + count */}
                 <div className="flex items-center gap-[10px] min-w-0">
-                    <button
-                        className="bg-transparent border-none cursor-pointer p-0 shrink-0"
-                        style={{ color: isFavorite ? CW.mustard : CW.inkFaint }}
-                        onClick={(e) => { e.stopPropagation(); onToggleFavorite(); }}
-                        aria-label={isFavorite ? "Remove favorite" : "Add favorite"}
-                    >
-                        <svg width="18" height="18" viewBox="0 0 20 20" fill={isFavorite ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.5">
-                            <path d="M10 2 L12.5 7.5 L18.5 8.2 L14 12.4 L15.3 18.3 L10 15.5 L4.7 18.3 L6 12.4 L1.5 8.2 L7.5 7.5 Z" />
-                        </svg>
-                    </button>
+                    {!readOnly && (
+                        <button
+                            className="bg-transparent border-none cursor-pointer p-0 shrink-0"
+                            style={{ color: isFavorite ? CW.mustard : CW.inkFaint }}
+                            onClick={(e) => { e.stopPropagation(); onToggleFavorite(); }}
+                            aria-label={isFavorite ? "Remove favorite" : "Add favorite"}
+                        >
+                            <svg width="18" height="18" viewBox="0 0 20 20" fill={isFavorite ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.5">
+                                <path d="M10 2 L12.5 7.5 L18.5 8.2 L14 12.4 L15.3 18.3 L10 15.5 L4.7 18.3 L6 12.4 L1.5 8.2 L7.5 7.5 Z" />
+                            </svg>
+                        </button>
+                    )}
                     <div className="min-w-0 flex-1">
                         <div className="font-poster text-[15px] font-black leading-[1.1] uppercase tracking-[0.005em] overflow-hidden text-ellipsis whitespace-nowrap">
                             {campground.name}

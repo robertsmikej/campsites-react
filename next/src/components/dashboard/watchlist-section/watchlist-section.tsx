@@ -25,6 +25,8 @@ interface WatchlistSectionProps {
     settings: { views?: { type?: "calendar" | "table" } };
     globalSettings?: GlobalSettings;
     isMobile: boolean;
+    readOnly?: boolean;
+    showControls?: boolean;
     onRatingChange?: (campgroundId: string, siteName: string, rating: "favorite" | "worthwhile" | "unrated") => void;
     onEditSettings?: (campgroundId: string) => void;
     PAD: number;
@@ -46,6 +48,8 @@ export function WatchlistSection({
     settings,
     globalSettings,
     isMobile,
+    readOnly,
+    showControls = true,
     onRatingChange,
     onEditSettings,
     PAD,
@@ -78,26 +82,42 @@ export function WatchlistSection({
         <section className="relative border-t-[1.5px] border-cw-ink" style={{ padding: `24px ${PAD}px 60px` }}>
             <div className="pt-7 mb-[18px]">
                 <div className="font-mono-field text-[11px] font-medium leading-none tracking-[0.18em] text-cw-clay mb-[10px] uppercase">
-                    § II — THE WATCHLIST · {campgroundsByAreas.length} CAMPGROUND{campgroundsByAreas.length !== 1 ? "S" : ""}
+                    {readOnly
+                        ? `The list · ${campgroundsByAreas.length} campground${campgroundsByAreas.length !== 1 ? "s" : ""}`
+                        : `§ II — THE WATCHLIST · ${campgroundsByAreas.length} CAMPGROUND${campgroundsByAreas.length !== 1 ? "S" : ""}`
+                    }
                 </div>
                 <h2 className="m-0 tracking-[-0.005em]">
-                    <span className="font-poster font-black leading-none uppercase inline" style={{ fontSize: isMobile ? 24 : 32 }}>EVERY PLACE</span>
-                    <span className="font-italic-serif font-medium italic leading-none text-cw-forest tracking-[-0.01em]" style={{ fontSize: isMobile ? 24 : 32, marginLeft: 10 }}>
-                        you&apos;re watching.
-                    </span>
+                    {readOnly ? (
+                        <>
+                            <span className="font-poster font-black leading-none uppercase inline" style={{ fontSize: isMobile ? 24 : 32 }}>ALL</span>
+                            <span className="font-italic-serif font-medium italic leading-none text-cw-forest tracking-[-0.01em]" style={{ fontSize: isMobile ? 24 : 32, marginLeft: 10 }}>
+                                the picks.
+                            </span>
+                        </>
+                    ) : (
+                        <>
+                            <span className="font-poster font-black leading-none uppercase inline" style={{ fontSize: isMobile ? 24 : 32 }}>EVERY PLACE</span>
+                            <span className="font-italic-serif font-medium italic leading-none text-cw-forest tracking-[-0.01em]" style={{ fontSize: isMobile ? 24 : 32, marginLeft: 10 }}>
+                                you&apos;re watching.
+                            </span>
+                        </>
+                    )}
                 </h2>
             </div>
 
-            <DatePickerStrip
-                dateRange={dateRange}
-                calRange={calRange}
-                datePickerOpen={datePickerOpen}
-                setDatePickerOpen={setDatePickerOpen}
-                handleCalSelect={handleCalSelect}
-                isMobile={isMobile}
-                groupBy={groupBy}
-                onGroupBy={onGroupBy}
-            />
+            {showControls && (
+                <DatePickerStrip
+                    dateRange={dateRange}
+                    calRange={calRange}
+                    datePickerOpen={datePickerOpen}
+                    setDatePickerOpen={setDatePickerOpen}
+                    handleCalSelect={handleCalSelect}
+                    isMobile={isMobile}
+                    groupBy={groupBy}
+                    onGroupBy={onGroupBy}
+                />
+            )}
 
             {isLoading && campgroundsByAreas.length === 0 ? (
                 <div className="flex flex-col gap-2">
@@ -125,6 +145,7 @@ export function WatchlistSection({
                                     settings={settings}
                                     globalSettings={globalSettings}
                                     isMobile={isMobile}
+                                    readOnly={readOnly}
                                     onRatingChange={onRatingChange}
                                     onEditSettings={onEditSettings}
                                 />
