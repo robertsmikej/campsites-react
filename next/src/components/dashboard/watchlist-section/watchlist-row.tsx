@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { CampgroundRow } from "@/components/campground-row";
 import { CampgroundDetail } from "@/components/campground-detail";
 import { CW } from "@/components/field-notes/cw-tokens";
 import { toLocalIso } from "@/components/dashboard/helpers";
@@ -94,22 +93,17 @@ export function WatchlistRow({
 }: WatchlistRowProps) {
     if (isMobile) {
         return (
-            <CampgroundRow
+            <MobileRow
                 campground={campground}
-                showExcluded={false}
                 isFavorite={isFavorite}
                 onToggleFavorite={onToggleFavorite}
-                settings={settings}
-                globalSettings={globalSettings}
-                imageUrl="/images/sites/bg_default.jpg"
-                onRatingChange={onRatingChange && campground.id
-                    ? (siteName, newRating) => onRatingChange(campground.id!, siteName, newRating)
-                    : undefined}
-                onEditSettings={onEditSettings && campground.id
-                    ? () => onEditSettings(campground.id!)
-                    : undefined}
+                openCount={openCount}
                 windowStart={windowStart}
                 windowEnd={windowEnd}
+                settings={settings}
+                globalSettings={globalSettings}
+                onRatingChange={onRatingChange}
+                onEditSettings={onEditSettings}
             />
         );
     }
@@ -214,6 +208,113 @@ function DesktopRow({
                 {/* Open count */}
                 <div className="text-right font-poster text-[22px] font-black leading-none" style={{ color: openCount === 0 ? CW.inkFaint : CW.forest, fontVariantNumeric: "tabular-nums" }}>
                     {openCount}
+                </div>
+            </div>
+
+            <SheetContent
+                side="right"
+                className="w-full overflow-y-auto px-6 data-[side=right]:sm:max-w-4xl sm:px-8"
+            >
+                <SheetHeader className="px-0">
+                    <SheetTitle className="font-display text-xl">{campground.name}</SheetTitle>
+                </SheetHeader>
+                <CampgroundDetail
+                    campground={campground}
+                    showExcluded={false}
+                    settings={settings}
+                    globalSettings={globalSettings}
+                    imageUrl={getCampgroundImageUrl(campground)}
+                    siteRatings={hasSiteRatings ? siteRatings : undefined}
+                    onRatingChange={onRatingChange && campground.id
+                        ? (siteName, newRating) => onRatingChange(campground.id!, siteName, newRating)
+                        : undefined}
+                    onEditSettings={onEditSettings && campground.id
+                        ? () => onEditSettings(campground.id!)
+                        : undefined}
+                />
+            </SheetContent>
+        </Sheet>
+    );
+}
+
+interface MobileRowProps {
+    campground: ProcessedCampground;
+    isFavorite: boolean;
+    onToggleFavorite: () => void;
+    openCount: number;
+    windowStart: Date;
+    windowEnd: Date;
+    settings: { views?: { type?: "calendar" | "table" } };
+    globalSettings?: GlobalSettings;
+    onRatingChange?: (campgroundId: string, siteName: string, rating: "favorite" | "worthwhile" | "unrated") => void;
+    onEditSettings?: (campgroundId: string) => void;
+}
+
+function MobileRow({
+    campground,
+    isFavorite,
+    onToggleFavorite,
+    openCount,
+    windowStart,
+    windowEnd,
+    settings,
+    globalSettings,
+    onRatingChange,
+    onEditSettings,
+}: MobileRowProps) {
+    const [open, setOpen] = useState(false);
+
+    const siteRatings: SiteRatingsMap = {};
+    for (const name of campground.sites?.favorites ?? []) siteRatings[name] = "favorite";
+    for (const name of campground.sites?.worthwhile ?? []) {
+        if (!(name in siteRatings)) siteRatings[name] = "worthwhile";
+    }
+    const hasSiteRatings = Object.keys(siteRatings).length > 0;
+
+    return (
+        <Sheet open={open} onOpenChange={setOpen}>
+            <div
+                role="button"
+                tabIndex={0}
+                onClick={() => setOpen(true)}
+                onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setOpen(true);
+                    }
+                }}
+                className="px-[22px] py-3 border-b border-cw-rule-soft cursor-pointer active:bg-cw-cream/40 transition-colors"
+                style={{ background: openCount > 0 ? "rgba(31,61,42,0.04)" : "transparent" }}
+            >
+                {/* Top row: star + name + count */}
+                <div className="flex items-center gap-[10px] min-w-0">
+                    <button
+                        className="bg-transparent border-none cursor-pointer p-0 shrink-0"
+                        style={{ color: isFavorite ? CW.mustard : CW.inkFaint }}
+                        onClick={(e) => { e.stopPropagation(); onToggleFavorite(); }}
+                        aria-label={isFavorite ? "Remove favorite" : "Add favorite"}
+                    >
+                        <svg width="18" height="18" viewBox="0 0 20 20" fill={isFavorite ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.5">
+                            <path d="M10 2 L12.5 7.5 L18.5 8.2 L14 12.4 L15.3 18.3 L10 15.5 L4.7 18.3 L6 12.4 L1.5 8.2 L7.5 7.5 Z" />
+                        </svg>
+                    </button>
+                    <div className="min-w-0 flex-1">
+                        <div className="font-poster text-[15px] font-black leading-[1.1] uppercase tracking-[0.005em] overflow-hidden text-ellipsis whitespace-nowrap">
+                            {campground.name}
+                        </div>
+                        <div className="font-italic-serif text-[12px] font-medium italic leading-[1.3] text-cw-ink-soft mt-[2px] overflow-hidden text-ellipsis whitespace-nowrap">
+                            {campground.area ?? ""}
+                        </div>
+                    </div>
+                    <div className="font-poster text-[20px] font-black leading-none shrink-0" style={{ color: openCount === 0 ? CW.inkFaint : CW.forest, fontVariantNumeric: "tabular-nums" }}>
+                        {openCount}
+                    </div>
+                </div>
+
+                {/* Bottom row: status pill + bars */}
+                <div className="flex items-center justify-between gap-3 mt-[10px]">
+                    <StatusPill openCount={openCount} />
+                    <AvailBars campground={campground} windowStart={windowStart} windowEnd={windowEnd} height={18} bar={4} />
                 </div>
             </div>
 
