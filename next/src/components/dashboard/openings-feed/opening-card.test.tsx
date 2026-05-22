@@ -72,16 +72,18 @@ describe("OpeningCard — content", () => {
         expect(screen.getByText(/· 1n/i)).toBeInTheDocument();
     });
 
-    it("renders a rec.gov booking link", () => {
+    it("wraps the whole card in a rec.gov booking link", () => {
         render(<OpeningCard item={baseItem} isMobile={false} nowMs={NOW_MS} />);
-        const link = screen.getByRole("link", { name: /book on rec\.gov/i });
+        const link = screen.getByRole("link", { name: /book .* on recreation\.gov/i });
         expect(link).toHaveAttribute("href", "https://www.recreation.gov/camping/campgrounds/233881");
+        // Card content lives inside the link
+        expect(link).toHaveTextContent(/Granite Peak Campground/i);
     });
 
     it("falls back to rec.gov homepage when recGovId is absent", () => {
         const noId: OpeningItem = { ...baseItem, recGovId: undefined };
         render(<OpeningCard item={noId} isMobile={false} nowMs={NOW_MS} />);
-        const link = screen.getByRole("link", { name: /book on rec\.gov/i });
+        const link = screen.getByRole("link", { name: /book .* on recreation\.gov/i });
         expect(link).toHaveAttribute("href", "https://www.recreation.gov");
     });
 });

@@ -63,8 +63,12 @@ export function OpeningCard({ item, isMobile, nowMs }: OpeningCardProps) {
     const timeAgo = formatTimeAgo(nowMs, item.detectedAt);
 
     return (
-        <article
-            className="bg-cw-cream border-[1.5px] border-cw-ink flex flex-col"
+        <a
+            href={recGovUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={`Book ${item.campgroundName}${item.siteName ? " site " + item.siteName : ""} on recreation.gov`}
+            className="bg-cw-cream border-[1.5px] border-cw-ink flex flex-col no-underline text-inherit transition-shadow transition-transform hover:-translate-x-[1px] hover:-translate-y-[1px] hover:shadow-[4px_4px_0_var(--cw-forest)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cw-forest"
             style={{
                 boxShadow: `3px 3px 0 ${CW.forest}`,
                 padding: isMobile ? "10px 12px" : "10px 12px 9px",
@@ -108,14 +112,6 @@ export function OpeningCard({ item, isMobile, nowMs }: OpeningCardProps) {
                     · {item.nights}n
                 </span>
             </div>
-            <a
-                href={recGovUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-mono-field text-[12px] font-bold leading-none tracking-[0.14em] uppercase text-cw-forest no-underline hover:underline self-start"
-            >
-                Book on rec.gov →
-            </a>
-        </article>
+        </a>
     );
 }
