@@ -128,6 +128,21 @@ export function WatchlistSection({
                 </h2>
             </div>
 
+            <div className="flex items-center flex-wrap gap-x-4 gap-y-2 mb-4 font-mono-field text-[12px] leading-none tracking-[0.1em] text-cw-ink-subtle uppercase">
+                <span>Each tick = one night</span>
+                <span className="inline-flex items-center gap-[6px]">
+                    <span className="inline-block w-[5px] h-[14px] bg-cw-forest rounded-[1px]" />
+                    opening
+                </span>
+                <span className="inline-flex items-center gap-[6px]">
+                    <span className="inline-block w-[5px] h-[4px] bg-cw-ink-faint rounded-[1px]" />
+                    no opening
+                </span>
+                <span className="font-italic-serif normal-case tracking-normal italic text-[13px] text-cw-ink-soft">
+                    expand a row to see which sites and hover a tick for the dates
+                </span>
+            </div>
+
             {showControls && (
                 <DatePickerStrip
                     dateRange={dateRange}
