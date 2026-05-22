@@ -1,8 +1,19 @@
 import { readSession } from "@/lib/sessions";
 import { getKv } from "@/lib/cloudflare";
-import { getUserProfile } from "@/lib/users";
+import { createUserProfile, getUserProfile } from "@/lib/users";
+import { putUserCampgrounds } from "@/lib/user-campgrounds";
 import { jsonResponse, withCors } from "@/lib/responses";
+import { isValidEmail, normalizeEmail } from "@/lib/email";
+import { withErrorLogging } from "@/lib/route-helpers";
 import type { UserProfile } from "@/types/user";
+import type { SiteConfig, GlobalSettings } from "@/types/campground";
+
+const DEFAULT_CONFIG_KEY = "config:campgrounds";
+
+const FALLBACK_GLOBAL_SETTINGS: GlobalSettings = {
+    stayLengths: [2, 3, 4, 5],
+    validStartDays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+};
 
 async function listAllUsers(): Promise<UserProfile[]> {
     const kv = getKv();
@@ -21,15 +32,75 @@ async function listAllUsers(): Promise<UserProfile[]> {
     return profiles;
 }
 
-export async function GET(request: Request): Promise<Response> {
+async function assertCurator(request: Request): Promise<Response | null> {
     const session = await readSession(request);
     if (!session) return withCors(jsonResponse({ error: "Unauthorized" }, 401));
-
     const me = await getUserProfile(session.email);
     if (!me?.roles?.includes("curator")) {
         return withCors(jsonResponse({ error: "Forbidden" }, 403));
     }
+    return null;
+}
+
+async function getHandler(request: Request): Promise<Response> {
+    const denied = await assertCurator(request);
+    if (denied) return denied;
 
     const users = await listAllUsers();
     return withCors(jsonResponse({ users }));
 }
+export const GET = withErrorLogging(getHandler, "GET /api/admin/users");
+
+interface PostBody {
+    email: string;
+    name?: string;
+}
+
+function isValidBody(body: unknown): body is PostBody {
+    if (!body || typeof body !== "object") return false;
+    const b = body as Record<string, unknown>;
+    if (typeof b.email !== "string") return false;
+    if (b.name !== undefined && typeof b.name !== "string") return false;
+    return true;
+}
+
+async function postHandler(request: Request): Promise<Response> {
+    const denied = await assertCurator(request);
+    if (denied) return denied;
+
+    let body: unknown;
+    try {
+        body = await request.json();
+    } catch {
+        return withCors(jsonResponse({ error: "Invalid JSON" }, 400));
+    }
+    if (!isValidBody(body)) {
+        return withCors(jsonResponse({ error: "Body must include email (and optional name)" }, 400));
+    }
+
+    const email = normalizeEmail(body.email);
+    if (!isValidEmail(email)) {
+        return withCors(jsonResponse({ error: "Invalid email" }, 400));
+    }
+
+    const existing = await getUserProfile(email);
+    if (existing) {
+        return withCors(jsonResponse({ error: "User already exists", profile: existing }, 409));
+    }
+
+    const profile = await createUserProfile(email, { name: body.name?.trim() || email });
+
+    // Clone the curator's default watchlist so the new user gets alerts right away.
+    const defaultConfig = (await getKv().get(DEFAULT_CONFIG_KEY, "json")) as {
+        campgrounds?: SiteConfig;
+        globalSettings?: GlobalSettings;
+    } | null;
+
+    await putUserCampgrounds(email, {
+        campgrounds: defaultConfig?.campgrounds ?? { "recreation.gov": [] },
+        globalSettings: defaultConfig?.globalSettings ?? FALLBACK_GLOBAL_SETTINGS,
+    });
+
+    return withCors(jsonResponse(profile, 201));
+}
+export const POST = withErrorLogging(postHandler, "POST /api/admin/users");

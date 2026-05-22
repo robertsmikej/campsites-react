@@ -30,6 +30,10 @@ export default function AdminPage() {
     const [migrateResult, setMigrateResult] = useState<MigrateResult | null>(null);
     const [migrateError, setMigrateError] = useState<string | null>(null);
 
+    const [addEmail, setAddEmail] = useState("");
+    const [addName, setAddName] = useState("");
+    const [addRunning, setAddRunning] = useState(false);
+
     useEffect(() => {
         if (!auth.user || !auth.isCurator) return;
         let cancelled = false;
@@ -166,6 +170,33 @@ export default function AdminPage() {
         toast.success(`Updated ${target.email}`);
     }
 
+    async function addUser(e: React.FormEvent) {
+        e.preventDefault();
+        const email = addEmail.trim();
+        if (!email) return;
+        setAddRunning(true);
+        try {
+            const r = await fetch("/api/admin/users", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, name: addName.trim() || undefined }),
+                credentials: "include",
+            });
+            if (!r.ok) {
+                const body = (await r.json().catch(() => ({}))) as { error?: string };
+                toast.error(body.error ?? `Add failed (${r.status})`);
+                return;
+            }
+            const created = (await r.json()) as UserProfile;
+            setUsers((current) => (current ? [...current, created] : [created]));
+            setAddEmail("");
+            setAddName("");
+            toast.success(`Added ${created.email}`);
+        } finally {
+            setAddRunning(false);
+        }
+    }
+
     async function removeUser(target: UserProfile) {
         if (!window.confirm(`Remove ${target.email}? This deletes their profile, watchlist, and sessions.`)) {
             return;
@@ -264,6 +295,56 @@ export default function AdminPage() {
                                     onRemove={removeUser}
                                 />
                             )}
+
+                            <form
+                                onSubmit={addUser}
+                                className="mt-6 pt-6 border-t border-cw-rule flex flex-col sm:flex-row sm:items-end gap-3"
+                            >
+                                <div className="flex-1">
+                                    <label
+                                        htmlFor="add-email"
+                                        className="block font-mono-field text-[12px] font-bold uppercase tracking-[0.16em] text-cw-clay mb-1"
+                                    >
+                                        Add user — email
+                                    </label>
+                                    <input
+                                        id="add-email"
+                                        type="email"
+                                        required
+                                        value={addEmail}
+                                        onChange={(e) => setAddEmail(e.target.value)}
+                                        placeholder="friend@example.com"
+                                        className="w-full font-mono-field text-[14px] px-3 py-2 border border-cw-rule rounded-[2px] bg-cw-paper text-cw-ink focus:outline-none focus:border-cw-ink"
+                                    />
+                                </div>
+                                <div className="flex-1">
+                                    <label
+                                        htmlFor="add-name"
+                                        className="block font-mono-field text-[12px] font-bold uppercase tracking-[0.16em] text-cw-clay mb-1"
+                                    >
+                                        Name (optional)
+                                    </label>
+                                    <input
+                                        id="add-name"
+                                        type="text"
+                                        value={addName}
+                                        onChange={(e) => setAddName(e.target.value)}
+                                        placeholder="Their name"
+                                        className="w-full font-body-serif text-[14px] px-3 py-2 border border-cw-rule rounded-[2px] bg-cw-paper text-cw-ink focus:outline-none focus:border-cw-ink"
+                                    />
+                                </div>
+                                <button
+                                    type="submit"
+                                    disabled={addRunning || !addEmail.trim()}
+                                    className="font-mono-field text-[12px] font-bold uppercase tracking-[0.14em] bg-cw-ink text-cw-cream px-5 py-2 rounded-[2px] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {addRunning ? "Adding…" : "Add user"}
+                                </button>
+                            </form>
+                            <p className="mt-2 font-italic-serif text-[14px] italic text-cw-ink-soft">
+                                Creates their profile and clones the default watchlist. They&apos;ll
+                                sign in later with this exact email and inherit it.
+                            </p>
                         </section>
 
                         {/* Default config section */}
