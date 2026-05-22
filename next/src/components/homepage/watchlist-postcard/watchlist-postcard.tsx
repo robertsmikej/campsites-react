@@ -184,24 +184,6 @@ export function WatchlistPostcard() {
                         &ldquo;I&apos;d take it,&rdquo; dimmed for booked. The next eighteen weeks, at a
                         glance.
                     </p>
-                    <div className="flex items-center flex-wrap gap-x-5 gap-y-2 font-mono-field text-[12px] leading-none tracking-[0.1em] text-cw-ink-subtle uppercase">
-                        <span>Each tick = one night</span>
-                        {(
-                            [
-                                [C.forest, 22, "favorite"],
-                                [C.mustard, 16, "would take"],
-                                ["rgba(26,22,20,0.2)", 5, "booked"],
-                            ] as const
-                        ).map(([color, height, label]) => (
-                            <span key={label} className="inline-flex items-center gap-[6px]">
-                                <span
-                                    className="inline-block w-[5px] rounded-[1px]"
-                                    style={{ height, background: color }}
-                                />
-                                {label}
-                            </span>
-                        ))}
-                    </div>
                 </div>
 
                 {/* Right: the postcard */}
@@ -221,6 +203,25 @@ export function WatchlistPostcard() {
                         }}
                     >
                         <PostcardHeader />
+
+                        <div className="flex items-center flex-wrap gap-x-4 gap-y-1 mb-3 font-mono-field text-[11px] leading-none tracking-[0.1em] text-cw-ink-subtle uppercase">
+                            <span>Each tick = one night</span>
+                            {(
+                                [
+                                    [C.forest, 18, "favorite"],
+                                    [C.mustard, 13, "would take"],
+                                    ["rgba(26,22,20,0.2)", 4, "booked"],
+                                ] as const
+                            ).map(([color, height, label]) => (
+                                <span key={label} className="inline-flex items-center gap-[6px]">
+                                    <span
+                                        className="inline-block w-[4px] rounded-[1px]"
+                                        style={{ height, background: color }}
+                                    />
+                                    {label}
+                                </span>
+                            ))}
+                        </div>
 
                         {rows.map((row, i) => (
                             <PostcardRow
