@@ -18,7 +18,7 @@ export function FaqItem({ q, a, index, isMobile }: FaqItemProps) {
             >
                 <summary className="flex justify-between items-start gap-[14px] cursor-pointer">
                     <div className="flex items-start gap-[10px]">
-                        <span className="font-mono-field text-[10px] leading-[1.6] text-cw-mustard tracking-[0.12em] flex-shrink-0 font-medium">
+                        <span className="font-mono-field text-[12px] leading-[1.6] text-cw-mustard tracking-[0.12em] flex-shrink-0 font-medium">
                             Q.0{index + 1}
                         </span>
                         <h3 className="font-italic-serif text-[19px] leading-[1.3] text-cw-cream m-0 tracking-[-0.005em] font-medium italic">
@@ -42,7 +42,7 @@ export function FaqItem({ q, a, index, isMobile }: FaqItemProps) {
             style={{ borderTop: index === 0 ? "1px solid rgba(239,230,210,0.2)" : "none" }}
         >
             <div className="grid grid-cols-[48px_1fr] gap-4">
-                <span className="font-mono-field text-[11px] leading-none text-cw-mustard tracking-[0.12em] pt-[6px] font-medium">
+                <span className="font-mono-field text-[13px] leading-none text-cw-mustard tracking-[0.12em] pt-[6px] font-medium">
                     Q.0{index + 1}
                 </span>
                 <div>

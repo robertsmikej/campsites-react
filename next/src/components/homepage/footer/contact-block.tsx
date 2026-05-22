@@ -2,8 +2,8 @@
 
 export function ContactBlock() {
     return (
-        <div className="text-left md:text-right font-mono-field text-[11px] leading-[1.8] text-[rgba(251,246,234,0.7)] tracking-[0.12em] uppercase mt-6 md:mt-0 font-medium">
-            <div className="font-mono-field text-[10px] leading-none text-[rgba(251,246,234,0.75)] tracking-[0.18em] mb-1">
+        <div className="text-left md:text-right font-mono-field text-[13px] leading-[1.8] text-[rgba(251,246,234,0.7)] tracking-[0.12em] uppercase mt-6 md:mt-0 font-medium">
+            <div className="font-mono-field text-[12px] leading-none text-[rgba(251,246,234,0.75)] tracking-[0.18em] mb-1">
                 Get in touch
             </div>
             <div>

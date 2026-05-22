@@ -341,7 +341,7 @@ export function CampgroundDetail({
                     <div className="mb-2 flex items-center justify-between gap-2">
                         <div className="flex items-center gap-1.5">
                             <Filter className="size-3.5 text-muted-foreground" aria-hidden />
-                            <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                            <span className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground">
                                 Filters applied
                             </span>
                         </div>
@@ -381,7 +381,7 @@ export function CampgroundDetail({
                             </li>
                         )}
                     </ul>
-                    <p className="mt-2 text-[11px] text-muted-foreground">
+                    <p className="mt-2 text-[13px] text-muted-foreground">
                         Filtered dates are hidden until you toggle &ldquo;Show without filters&rdquo; on.
                     </p>
                 </div>
@@ -400,7 +400,7 @@ export function CampgroundDetail({
                         )}
                         {grouped.favorites.length > 0 && (
                             <section className="flex flex-col gap-1.5">
-                                <h3 className="text-[11px] font-semibold uppercase tracking-wide text-green-700 dark:text-green-400">
+                                <h3 className="text-[13px] font-semibold uppercase tracking-wide text-green-700 dark:text-green-400">
                                     Favorites · {grouped.favorites.length}
                                 </h3>
                                 {grouped.favorites.map(renderSiteRow)}
@@ -408,7 +408,7 @@ export function CampgroundDetail({
                         )}
                         {grouped.worthwhile.length > 0 && (
                             <section className="flex flex-col gap-1.5">
-                                <h3 className="text-[11px] font-semibold uppercase tracking-wide text-yellow-700 dark:text-yellow-400">
+                                <h3 className="text-[13px] font-semibold uppercase tracking-wide text-yellow-700 dark:text-yellow-400">
                                     Worthwhile · {grouped.worthwhile.length}
                                 </h3>
                                 {grouped.worthwhile.map(renderSiteRow)}
@@ -416,7 +416,7 @@ export function CampgroundDetail({
                         )}
                         {grouped.others.length > 0 && (
                             <section className="flex flex-col gap-1.5">
-                                <h3 className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground">
                                     Other sites · {grouped.others.length}
                                 </h3>
                                 {grouped.others.map(renderSiteRow)}

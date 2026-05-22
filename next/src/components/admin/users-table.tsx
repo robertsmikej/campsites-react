@@ -20,19 +20,19 @@ export function UsersTable({ users, currentEmail, onToggleRole }: UsersTableProp
             <table className="w-full border-collapse">
                 <thead>
                     <tr className="border-b border-cw-rule">
-                        <th className="py-2 pr-4 text-left font-mono-field text-[10px] font-bold uppercase tracking-[0.16em] text-cw-clay">
+                        <th className="py-2 pr-4 text-left font-mono-field text-[12px] font-bold uppercase tracking-[0.16em] text-cw-clay">
                             Email
                         </th>
-                        <th className="py-2 pr-4 text-left font-mono-field text-[10px] font-bold uppercase tracking-[0.16em] text-cw-clay">
+                        <th className="py-2 pr-4 text-left font-mono-field text-[12px] font-bold uppercase tracking-[0.16em] text-cw-clay">
                             Name
                         </th>
-                        <th className="py-2 pr-4 text-left font-mono-field text-[10px] font-bold uppercase tracking-[0.16em] text-cw-clay">
+                        <th className="py-2 pr-4 text-left font-mono-field text-[12px] font-bold uppercase tracking-[0.16em] text-cw-clay">
                             Roles
                         </th>
-                        <th className="py-2 pr-4 text-left font-mono-field text-[10px] font-bold uppercase tracking-[0.16em] text-cw-clay">
+                        <th className="py-2 pr-4 text-left font-mono-field text-[12px] font-bold uppercase tracking-[0.16em] text-cw-clay">
                             Member since
                         </th>
-                        <th className="py-2 text-right font-mono-field text-[10px] font-bold uppercase tracking-[0.16em] text-cw-clay">
+                        <th className="py-2 text-right font-mono-field text-[12px] font-bold uppercase tracking-[0.16em] text-cw-clay">
                             Curator
                         </th>
                     </tr>
@@ -52,7 +52,7 @@ export function UsersTable({ users, currentEmail, onToggleRole }: UsersTableProp
                                 </td>
                                 <td className="py-3 pr-4">
                                     {isCurator ? (
-                                        <span className="font-mono-field text-[10px] font-bold uppercase tracking-[0.14em] px-[7px] py-[3px] rounded-[2px] bg-cw-clay text-cw-cream">
+                                        <span className="font-mono-field text-[12px] font-bold uppercase tracking-[0.14em] px-[7px] py-[3px] rounded-[2px] bg-cw-clay text-cw-cream">
                                             curator
                                         </span>
                                     ) : (

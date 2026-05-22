@@ -247,7 +247,7 @@ export function DStamp() {
 export function DBadge({ children, color = C.clay }: { children: React.ReactNode; color?: string }) {
     return (
         <span
-            className="font-mono-field text-[11px] leading-none tracking-[0.16em] uppercase rounded-[2px] bg-transparent py-[5px] px-2 font-bold"
+            className="font-mono-field text-[13px] leading-none tracking-[0.16em] uppercase rounded-[2px] bg-transparent py-[5px] px-2 font-bold"
             style={{ color, border: `1px solid ${color}` }}
         >
             {children}

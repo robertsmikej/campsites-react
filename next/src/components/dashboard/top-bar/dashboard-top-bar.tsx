@@ -91,7 +91,7 @@ export function DashboardTopBar({ auth, onAddCampground }: DashboardTopBarProps)
                             <button
                                 type="button"
                                 onClick={onAddCampground}
-                                className="inline-flex items-center gap-[6px] font-mono-field text-[11px] font-bold leading-none uppercase tracking-[0.14em] cursor-pointer rounded-[2px] px-[13px] py-[9px] border-[1.5px] outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                className="inline-flex items-center gap-[6px] font-mono-field text-[13px] font-bold leading-none uppercase tracking-[0.14em] cursor-pointer rounded-[2px] px-[13px] py-[9px] border-[1.5px] outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                 style={{
                                     background: CW.ink,
                                     color: CW.cream,
@@ -108,7 +108,7 @@ export function DashboardTopBar({ auth, onAddCampground }: DashboardTopBarProps)
                                     <button
                                         type="button"
                                         aria-label="Account menu"
-                                        className="size-[30px] rounded-full flex items-center justify-center shrink-0 font-mono-field text-[11px] font-bold leading-none cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                        className="size-[30px] rounded-full flex items-center justify-center shrink-0 font-mono-field text-[13px] font-bold leading-none cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                         style={{ background: CW.clay, color: CW.cream }}
                                     >
                                         {auth.user.name?.[0]?.toUpperCase() ?? "?"}
@@ -135,7 +135,7 @@ export function DashboardTopBar({ auth, onAddCampground }: DashboardTopBarProps)
                         ) : (
                             <Link
                                 href="/auth/google/start?returnTo=/app"
-                                className="font-mono-field text-[11px] font-bold leading-none uppercase tracking-[0.14em] no-underline px-[13px] py-[9px] border border-cw-ink rounded-[2px] text-cw-ink"
+                                className="font-mono-field text-[13px] font-bold leading-none uppercase tracking-[0.14em] no-underline px-[13px] py-[9px] border border-cw-ink rounded-[2px] text-cw-ink"
                             >
                                 Sign in
                             </Link>

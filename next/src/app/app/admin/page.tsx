@@ -74,7 +74,7 @@ export default function AdminPage() {
                     <div className="mx-auto w-full max-w-screen-2xl px-[22px] md:px-9 py-8 sm:py-12">
                         <div className="max-w-2xl">
                             <section className="rounded-md border border-cw-ink bg-cw-cream p-6 sm:p-8">
-                                <div className="font-mono-field text-[11px] font-bold uppercase tracking-[0.18em] text-cw-clay mb-2">
+                                <div className="font-mono-field text-[13px] font-bold uppercase tracking-[0.18em] text-cw-clay mb-2">
                                     Access denied
                                 </div>
                                 <h1 className="font-poster text-[28px] font-black uppercase tracking-[0.005em] mb-1">
@@ -86,7 +86,7 @@ export default function AdminPage() {
                                 </p>
                                 <Link
                                     href="/app"
-                                    className="font-mono-field text-[11px] font-bold uppercase tracking-[0.14em] text-cw-ink underline underline-offset-2"
+                                    className="font-mono-field text-[13px] font-bold uppercase tracking-[0.14em] text-cw-ink underline underline-offset-2"
                                 >
                                     Back to dashboard
                                 </Link>
@@ -203,7 +203,7 @@ export default function AdminPage() {
                 <div className="mx-auto w-full max-w-screen-2xl px-[22px] md:px-9 py-8 sm:py-12">
                     {/* Page header */}
                     <div className="mb-8">
-                        <div className="font-mono-field text-[11px] font-bold uppercase tracking-[0.18em] text-cw-clay mb-2">
+                        <div className="font-mono-field text-[13px] font-bold uppercase tracking-[0.18em] text-cw-clay mb-2">
                             Curator · Admin
                         </div>
                         <h1 className="font-poster text-[36px] sm:text-[44px] font-black uppercase leading-[0.95] tracking-[-0.005em]">
@@ -217,7 +217,7 @@ export default function AdminPage() {
                     <div className="max-w-4xl space-y-6">
                         {/* Users section */}
                         <section className="rounded-md border border-cw-ink bg-cw-cream p-6 sm:p-8">
-                            <div className="font-mono-field text-[11px] font-bold uppercase tracking-[0.18em] text-cw-clay mb-2">
+                            <div className="font-mono-field text-[13px] font-bold uppercase tracking-[0.18em] text-cw-clay mb-2">
                                 Users
                             </div>
                             <h2 className="font-poster text-[24px] sm:text-[28px] font-black uppercase tracking-[0.005em] mb-1">
@@ -232,7 +232,7 @@ export default function AdminPage() {
                                 )}
                             </p>
                             {usersError ? (
-                                <p className="font-mono-field text-[11px] text-red-700">{usersError}</p>
+                                <p className="font-mono-field text-[13px] text-red-700">{usersError}</p>
                             ) : users === null ? (
                                 <div className="space-y-2">
                                     <LoadingGhostRow height={36} />
@@ -250,7 +250,7 @@ export default function AdminPage() {
 
                         {/* Default config section */}
                         <section className="rounded-md border border-cw-ink bg-cw-cream p-6 sm:p-8">
-                            <div className="font-mono-field text-[11px] font-bold uppercase tracking-[0.18em] text-cw-forest mb-2">
+                            <div className="font-mono-field text-[13px] font-bold uppercase tracking-[0.18em] text-cw-forest mb-2">
                                 Default config
                             </div>
                             <h2 className="font-poster text-[24px] sm:text-[28px] font-black uppercase tracking-[0.005em] mb-1">
@@ -262,7 +262,7 @@ export default function AdminPage() {
                             <button
                                 type="button"
                                 onClick={openDefaultDialog}
-                                className="font-mono-field text-[11px] font-bold uppercase tracking-[0.14em] cursor-pointer rounded-[2px] px-[13px] py-[9px] border-[1.5px] bg-cw-ink text-cw-cream border-cw-ink"
+                                className="font-mono-field text-[13px] font-bold uppercase tracking-[0.14em] cursor-pointer rounded-[2px] px-[13px] py-[9px] border-[1.5px] bg-cw-ink text-cw-cream border-cw-ink"
                             >
                                 Edit default list
                             </button>
@@ -270,7 +270,7 @@ export default function AdminPage() {
 
                         {/* Migrate section */}
                         <section className="rounded-md border border-cw-ink bg-cw-cream p-6 sm:p-8">
-                            <div className="font-mono-field text-[11px] font-bold uppercase tracking-[0.18em] text-cw-mustard mb-2">
+                            <div className="font-mono-field text-[13px] font-bold uppercase tracking-[0.18em] text-cw-mustard mb-2">
                                 Maintenance
                             </div>
                             <h2 className="font-poster text-[24px] sm:text-[28px] font-black uppercase tracking-[0.005em] mb-1">
@@ -284,14 +284,14 @@ export default function AdminPage() {
                                 type="button"
                                 onClick={runMigrate}
                                 disabled={migrateRunning}
-                                className="font-mono-field text-[11px] font-bold uppercase tracking-[0.14em] cursor-pointer rounded-[2px] px-[13px] py-[9px] border-[1.5px] bg-cw-ink text-cw-cream border-cw-ink disabled:opacity-40 disabled:cursor-not-allowed"
+                                className="font-mono-field text-[13px] font-bold uppercase tracking-[0.14em] cursor-pointer rounded-[2px] px-[13px] py-[9px] border-[1.5px] bg-cw-ink text-cw-cream border-cw-ink disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                                 {migrateRunning ? "Running…" : "Run migrate"}
                             </button>
 
                             {migrateError && (
                                 <div className="mt-4 bg-cw-paper/50 border border-cw-rule-soft p-3 rounded-[4px]">
-                                    <p className="font-mono-field text-[11px] text-red-700">{migrateError}</p>
+                                    <p className="font-mono-field text-[13px] text-red-700">{migrateError}</p>
                                 </div>
                             )}
 
@@ -299,13 +299,13 @@ export default function AdminPage() {
                                 <div className="mt-4 bg-cw-paper/50 border border-cw-rule-soft p-3 rounded-[4px]">
                                     <div className="flex items-center gap-2 mb-2">
                                         <span
-                                            className="font-mono-field text-[11px] font-bold uppercase tracking-[0.14em]"
+                                            className="font-mono-field text-[13px] font-bold uppercase tracking-[0.14em]"
                                             style={{ color: "var(--cw-forest)" }}
                                         >
                                             ✓ Done
                                         </span>
                                     </div>
-                                    <pre className="font-mono-field text-[11px] text-cw-ink-soft whitespace-pre-wrap break-all">
+                                    <pre className="font-mono-field text-[13px] text-cw-ink-soft whitespace-pre-wrap break-all">
                                         {JSON.stringify(migrateResult, null, 2)}
                                     </pre>
                                 </div>

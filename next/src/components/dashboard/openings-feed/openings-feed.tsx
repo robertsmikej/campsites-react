@@ -29,7 +29,7 @@ export function OpeningsFeed({ openingItems, isMobile, nowMs, PAD }: OpeningsFee
             <div style={{ padding: isMobile ? `0 ${PAD}px` : 0 }} className="mb-5">
                 <div className="flex items-baseline justify-between">
                     <div>
-                        <div className="font-mono-field text-[11px] font-medium leading-none tracking-[0.18em] text-cw-clay mb-2 uppercase">
+                        <div className="font-mono-field text-[13px] font-medium leading-none tracking-[0.18em] text-cw-clay mb-2 uppercase">
                             § I — STILL BOOKABLE
                         </div>
                         <h2 className="m-0 tracking-[-0.005em]">

@@ -12,7 +12,7 @@ export function PasteUrlCard({ onShowLookup }: PasteUrlCardProps) {
             className="bg-cw-cream border-[1.5px] border-cw-ink p-[24px_26px]"
             style={{ boxShadow: `6px 6px 0 ${CW.forest}` }}
         >
-            <div className="font-mono-field text-[10px] font-bold leading-none tracking-[0.18em] text-cw-clay mb-[10px] uppercase">
+            <div className="font-mono-field text-[12px] font-bold leading-none tracking-[0.18em] text-cw-clay mb-[10px] uppercase">
                 Option 01
             </div>
             <h2 className="m-0 mb-[14px]">

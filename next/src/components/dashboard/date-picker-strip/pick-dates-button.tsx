@@ -2,7 +2,7 @@
 
 export function PickDatesButton() {
     return (
-        <button className="font-mono-field text-[10px] md:text-[11px] font-bold leading-none tracking-[0.12em] uppercase bg-transparent text-cw-ink border border-cw-rule px-[10px] py-2 md:px-3 md:py-[9px] cursor-pointer rounded-[2px] inline-flex items-center gap-2">
+        <button className="font-mono-field text-[12px] md:text-[13px] font-bold leading-none tracking-[0.12em] uppercase bg-transparent text-cw-ink border border-cw-rule px-[10px] py-2 md:px-3 md:py-[9px] cursor-pointer rounded-[2px] inline-flex items-center gap-2">
             <svg
                 width="13"
                 height="13"

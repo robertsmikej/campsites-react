@@ -192,7 +192,7 @@ function ResultCard({
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-2">
                         {isOnList ? <LCheck /> : isWatched ? <LCheck color={C.mustard} /> : <LWarn />}
-                        <span className="font-mono-field text-[10px] leading-none tracking-[0.18em] text-cw-forest uppercase font-bold">
+                        <span className="font-mono-field text-[12px] leading-none tracking-[0.18em] text-cw-forest uppercase font-bold">
                             {statusLabel}
                         </span>
                     </div>
@@ -451,7 +451,7 @@ export function CampgroundLookup({ variant: _variant = "homepage" }: CampgroundL
             <div className="grid grid-cols-1 md:grid-cols-[1.1fr_1fr] gap-6 md:gap-14 items-start">
                 {/* LEFT — copy */}
                 <div>
-                    <div className="font-mono-field text-[11px] leading-none tracking-[0.18em] text-cw-clay mb-[14px] font-medium uppercase">
+                    <div className="font-mono-field text-[13px] leading-none tracking-[0.18em] text-cw-clay mb-[14px] font-medium uppercase">
                         LOOKUP
                     </div>
                     <h2 className="m-0 mb-[18px] tracking-[-0.005em]">
@@ -477,7 +477,7 @@ export function CampgroundLookup({ variant: _variant = "homepage" }: CampgroundL
                     {/* Input row */}
                     <div className="bg-cw-cream border-[1.5px] border-cw-ink block md:grid md:grid-cols-[128px_1fr_auto] items-stretch">
                         {!isMobile && (
-                            <div className="bg-cw-ink text-cw-cream flex items-center justify-center font-mono-field text-[10px] leading-[1.2] tracking-[0.18em] uppercase text-center px-[10px] font-bold">
+                            <div className="bg-cw-ink text-cw-cream flex items-center justify-center font-mono-field text-[12px] leading-[1.2] tracking-[0.18em] uppercase text-center px-[10px] font-bold">
                                 URL, ID, or name
                             </div>
                         )}
@@ -543,13 +543,13 @@ export function CampgroundLookup({ variant: _variant = "homepage" }: CampgroundL
                             paddingRight: isMobile ? PAD_M : undefined,
                         }}
                     >
-                        <span className="font-mono-field text-[10px] leading-none tracking-[0.16em] text-cw-ink-soft uppercase flex-shrink-0 font-medium">
+                        <span className="font-mono-field text-[12px] leading-none tracking-[0.16em] text-cw-ink-soft uppercase flex-shrink-0 font-medium">
                             Try →
                         </span>
                         {chips.map((ex) => (
                             <button
                                 key={ex.val}
-                                className="cw-chip font-mono-field text-[11px] leading-none tracking-[0.06em] bg-transparent text-cw-ink py-[7px] px-[10px] border border-dashed border-cw-rule cursor-pointer transition-[background,color,border-color] duration-[140ms] font-medium"
+                                className="cw-chip font-mono-field text-[13px] leading-none tracking-[0.06em] bg-transparent text-cw-ink py-[7px] px-[10px] border border-dashed border-cw-rule cursor-pointer transition-[background,color,border-color] duration-[140ms] font-medium"
                                 style={{
                                     flexShrink: isMobile ? 0 : undefined,
                                     whiteSpace: isMobile ? "nowrap" : undefined,
@@ -564,7 +564,7 @@ export function CampgroundLookup({ variant: _variant = "homepage" }: CampgroundL
                     {/* Search results (name search) */}
                     {(isSearching || (searchResults && searchResults.length > 0)) && (
                         <div className="mt-[22px] bg-cw-cream border-[1.5px] border-cw-ink">
-                            <div className="font-mono-field text-[10px] leading-none tracking-[0.18em] uppercase text-cw-clay py-3 px-[18px] border-b border-cw-rule font-bold">
+                            <div className="font-mono-field text-[12px] leading-none tracking-[0.18em] uppercase text-cw-clay py-3 px-[18px] border-b border-cw-rule font-bold">
                                 {isSearching
                                     ? "Searching recreation.gov…"
                                     : `${searchResults?.length ?? 0} matches`}
@@ -589,7 +589,7 @@ export function CampgroundLookup({ variant: _variant = "homepage" }: CampgroundL
                                                     {[r.area, r.state].filter(Boolean).join(" · ") ||
                                                         "Recreation.gov"}
                                                 </div>
-                                                <div className="font-mono-field text-[10px] leading-none text-cw-ink-soft tracking-[0.14em] mt-[6px] uppercase font-medium">
+                                                <div className="font-mono-field text-[12px] leading-none text-cw-ink-soft tracking-[0.14em] mt-[6px] uppercase font-medium">
                                                     ID {r.id}
                                                 </div>
                                             </button>
@@ -688,7 +688,7 @@ export function CampgroundLookup({ variant: _variant = "homepage" }: CampgroundL
                             ] as { label: string; result: LookupResult }[]
                         ).map((s) => (
                             <div key={s.label}>
-                                <div className="font-mono-field text-[10px] leading-none tracking-[0.18em] text-cw-clay mb-2 uppercase font-medium">
+                                <div className="font-mono-field text-[12px] leading-none tracking-[0.18em] text-cw-clay mb-2 uppercase font-medium">
                                     {s.label}
                                 </div>
                                 <ResultCard result={s.result} compact />

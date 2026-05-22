@@ -20,7 +20,7 @@ function StatusPill({ openCount }: { openCount: number }) {
                 <span className="w-[7px] h-[7px] rounded-full border-[1.5px] border-cw-clay" />
             )}
             <span
-                className="font-mono-field text-[11px] font-bold leading-none tracking-[0.12em] uppercase"
+                className="font-mono-field text-[13px] font-bold leading-none tracking-[0.12em] uppercase"
                 style={{ color: isOpen ? CW.forest : CW.clay }}
             >
                 {isOpen ? "Open" : "Quiet"}

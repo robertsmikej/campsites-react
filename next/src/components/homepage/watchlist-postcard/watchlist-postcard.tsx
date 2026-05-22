@@ -58,7 +58,7 @@ export function WatchlistPostcard() {
             <div className="relative flex flex-col md:grid md:grid-cols-2 gap-6 md:gap-16 md:items-center">
                 {/* Left: header + copy + legend */}
                 <div>
-                    <div className="font-mono-field text-[11px] leading-none tracking-[0.18em] text-cw-clay mb-[14px] font-medium uppercase">
+                    <div className="font-mono-field text-[13px] leading-none tracking-[0.18em] text-cw-clay mb-[14px] font-medium uppercase">
                         THE WATCHLIST
                     </div>
                     <h2 className="m-0 mb-6 tracking-[-0.005em]">

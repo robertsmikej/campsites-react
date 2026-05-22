@@ -77,12 +77,12 @@ export function OpeningCard({ item, isMobile, nowMs }: OpeningCardProps) {
             <div className="flex items-center gap-2">
                 <Pulse color={tagColor} size={6} />
                 <span
-                    className="font-mono-field text-[10px] font-bold leading-none tracking-[0.18em] uppercase"
+                    className="font-mono-field text-[12px] font-bold leading-none tracking-[0.18em] uppercase"
                     style={{ color: tagColor }}
                 >
                     {tag}
                 </span>
-                <span className="font-mono-field text-[10px] font-medium leading-none ml-auto text-cw-ink-subtle">
+                <span className="font-mono-field text-[12px] font-medium leading-none ml-auto text-cw-ink-subtle">
                     {timeAgo}
                 </span>
             </div>
@@ -109,7 +109,7 @@ export function OpeningCard({ item, isMobile, nowMs }: OpeningCardProps) {
                 >
                     {formatOpeningDates(item.from, item.to)}
                 </div>
-                <div className="font-mono-field text-[11px] font-medium leading-none tracking-[0.12em] text-cw-ink-soft mt-1 uppercase">
+                <div className="font-mono-field text-[13px] font-medium leading-none tracking-[0.12em] text-cw-ink-soft mt-1 uppercase">
                     {item.nights} night{item.nights !== 1 ? "s" : ""}
                 </div>
             </div>

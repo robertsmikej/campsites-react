@@ -26,7 +26,7 @@ export function Nav({ auth, isMobile }: NavProps) {
                 )}
                 {auth.isLoading ? null : auth.user ? (
                     <a href="/app/account" aria-label="Account" className="no-underline">
-                        <div className="w-7 h-7 rounded-[14px] bg-cw-clay text-cw-cream flex items-center justify-center font-mono-field text-[11px] font-bold">
+                        <div className="w-7 h-7 rounded-[14px] bg-cw-clay text-cw-cream flex items-center justify-center font-mono-field text-[13px] font-bold">
                             {auth.user.name?.[0]?.toUpperCase() ?? "?"}
                         </div>
                     </a>

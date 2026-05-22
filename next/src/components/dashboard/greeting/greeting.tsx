@@ -55,7 +55,7 @@ export function Greeting({ auth, isLoading, campgroundsWithOpenings }: GreetingP
 
     return (
         <section className="px-[22px] md:px-9 pt-10 pb-2 relative">
-            <div className="font-mono-field text-[11px] font-medium leading-none tracking-[0.18em] text-cw-clay mb-[14px] uppercase">
+            <div className="font-mono-field text-[13px] font-medium leading-none tracking-[0.18em] text-cw-clay mb-[14px] uppercase">
                 {formatDateEyebrow()}
             </div>
             <h1 className="m-0 mb-[14px] tracking-[-0.005em]">

@@ -88,7 +88,7 @@ export function WatchlistSection({
             style={{ padding: `24px ${PAD}px 60px` }}
         >
             <div className="pt-7 mb-[18px]">
-                <div className="font-mono-field text-[11px] font-medium leading-none tracking-[0.18em] text-cw-clay mb-[10px] uppercase">
+                <div className="font-mono-field text-[13px] font-medium leading-none tracking-[0.18em] text-cw-clay mb-[10px] uppercase">
                     {readOnly
                         ? `The list · ${campgroundsByAreas.length} campground${campgroundsByAreas.length !== 1 ? "s" : ""}`
                         : `§ II — THE WATCHLIST · ${campgroundsByAreas.length} CAMPGROUND${campgroundsByAreas.length !== 1 ? "S" : ""}`}

@@ -13,7 +13,7 @@ interface OpenCountBadgeProps {
  * Used inline next to the campground name in list rows.
  */
 export function OpenCountBadge({ count, variant = "default", className }: OpenCountBadgeProps) {
-    const textSize = variant === "compact" ? "text-[9px]" : "text-[10px]";
+    const textSize = variant === "compact" ? "text-[9px]" : "text-[12px]";
 
     if (count === 0) {
         return (

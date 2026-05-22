@@ -8,7 +8,7 @@ interface BorrowListCardProps {
 export function BorrowListCard({ onClone, busy }: BorrowListCardProps) {
     return (
         <article className="bg-cw-cream border border-cw-rule p-[24px_26px]">
-            <div className="font-mono-field text-[10px] font-bold leading-none tracking-[0.18em] text-cw-clay mb-[10px] uppercase">
+            <div className="font-mono-field text-[12px] font-bold leading-none tracking-[0.18em] text-cw-clay mb-[10px] uppercase">
                 Option 02
             </div>
             <h2 className="m-0 mb-[14px]">

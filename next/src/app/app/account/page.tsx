@@ -55,7 +55,7 @@ export default function AccountPage() {
                 <DashboardTopBar auth={auth} />
                 <main className="bg-cw-paper text-cw-ink font-body-serif min-h-screen">
                     <div className="mx-auto w-full max-w-screen-2xl px-[22px] md:px-9 py-8 sm:py-12">
-                        <p className="font-mono-field text-[11px] uppercase tracking-[0.14em] text-cw-ink-subtle">
+                        <p className="font-mono-field text-[13px] uppercase tracking-[0.14em] text-cw-ink-subtle">
                             Loading…
                         </p>
                     </div>
@@ -155,7 +155,7 @@ export default function AccountPage() {
                     <div className="max-w-2xl space-y-6">
                         {/* Page header */}
                         <div className="mb-8">
-                            <div className="font-mono-field text-[11px] font-bold uppercase tracking-[0.18em] text-cw-clay mb-2">
+                            <div className="font-mono-field text-[13px] font-bold uppercase tracking-[0.18em] text-cw-clay mb-2">
                                 Settings · You
                             </div>
                             <h1 className="font-poster text-[36px] sm:text-[44px] font-black uppercase leading-[0.95] tracking-[-0.005em]">
@@ -165,7 +165,7 @@ export default function AccountPage() {
 
                         {/* Profile section */}
                         <section className="rounded-md border border-cw-ink bg-cw-cream p-6 sm:p-8">
-                            <div className="font-mono-field text-[11px] font-bold uppercase tracking-[0.18em] text-cw-clay mb-2">
+                            <div className="font-mono-field text-[13px] font-bold uppercase tracking-[0.18em] text-cw-clay mb-2">
                                 Profile
                             </div>
                             <h2 className="font-poster text-[28px] font-black uppercase tracking-[0.005em] mb-1">
@@ -195,7 +195,7 @@ export default function AccountPage() {
                                 <div className="min-w-0">
                                     <div className="flex flex-wrap gap-x-3 gap-y-1">
                                         <div className="flex items-baseline gap-2">
-                                            <span className="font-mono-field text-[10px] font-bold uppercase tracking-[0.16em] text-cw-clay shrink-0">
+                                            <span className="font-mono-field text-[12px] font-bold uppercase tracking-[0.16em] text-cw-clay shrink-0">
                                                 Email
                                             </span>
                                             <span className="font-body-serif text-[14px] text-cw-ink truncate">
@@ -204,7 +204,7 @@ export default function AccountPage() {
                                         </div>
                                     </div>
                                     <div className="flex items-baseline gap-2 mt-1">
-                                        <span className="font-mono-field text-[10px] font-bold uppercase tracking-[0.16em] text-cw-clay shrink-0">
+                                        <span className="font-mono-field text-[12px] font-bold uppercase tracking-[0.16em] text-cw-clay shrink-0">
                                             Member since
                                         </span>
                                         <span className="font-body-serif text-[14px] text-cw-ink-soft">
@@ -218,7 +218,7 @@ export default function AccountPage() {
                             <div className="space-y-2 mb-6">
                                 <Label
                                     htmlFor="account-name"
-                                    className="font-mono-field text-[10px] font-bold uppercase tracking-[0.16em] text-cw-clay"
+                                    className="font-mono-field text-[12px] font-bold uppercase tracking-[0.16em] text-cw-clay"
                                 >
                                     Display name
                                 </Label>
@@ -237,7 +237,7 @@ export default function AccountPage() {
                                     type="button"
                                     onClick={saveName}
                                     disabled={!dirty || saving}
-                                    className="inline-flex items-center font-mono-field text-[11px] font-bold leading-none uppercase tracking-[0.14em] cursor-pointer rounded-[2px] px-[13px] py-[9px] border-[1.5px] disabled:opacity-40 disabled:cursor-not-allowed"
+                                    className="inline-flex items-center font-mono-field text-[13px] font-bold leading-none uppercase tracking-[0.14em] cursor-pointer rounded-[2px] px-[13px] py-[9px] border-[1.5px] disabled:opacity-40 disabled:cursor-not-allowed"
                                     style={{
                                         background: "var(--cw-ink)",
                                         color: "var(--cw-cream)",
@@ -249,7 +249,7 @@ export default function AccountPage() {
                                 <button
                                     type="button"
                                     onClick={signOut}
-                                    className="inline-flex items-center font-mono-field text-[11px] font-bold leading-none uppercase tracking-[0.14em] cursor-pointer rounded-[2px] px-[13px] py-[9px] border-[1.5px] bg-transparent"
+                                    className="inline-flex items-center font-mono-field text-[13px] font-bold leading-none uppercase tracking-[0.14em] cursor-pointer rounded-[2px] px-[13px] py-[9px] border-[1.5px] bg-transparent"
                                     style={{
                                         borderColor: "var(--cw-ink)",
                                         color: "var(--cw-ink)",
@@ -262,7 +262,7 @@ export default function AccountPage() {
 
                         {/* Notifications section */}
                         <section className="rounded-md border border-cw-ink bg-cw-cream p-6 sm:p-8">
-                            <div className="font-mono-field text-[11px] font-bold uppercase tracking-[0.18em] text-cw-forest mb-2">
+                            <div className="font-mono-field text-[13px] font-bold uppercase tracking-[0.18em] text-cw-forest mb-2">
                                 Notifications
                             </div>
                             <h2 className="font-poster text-[28px] font-black uppercase tracking-[0.005em] mb-1">
@@ -282,7 +282,7 @@ export default function AccountPage() {
                                 <div className="flex flex-col gap-0.5">
                                     <Label
                                         htmlFor="notif-enabled"
-                                        className="font-mono-field text-[10px] font-bold uppercase tracking-[0.16em] text-cw-ink cursor-pointer"
+                                        className="font-mono-field text-[12px] font-bold uppercase tracking-[0.16em] text-cw-ink cursor-pointer"
                                     >
                                         Email me when new sites open up
                                     </Label>
@@ -296,7 +296,7 @@ export default function AccountPage() {
                             <div className="space-y-2 mb-6">
                                 <Label
                                     htmlFor="notif-frequency"
-                                    className="font-mono-field text-[10px] font-bold uppercase tracking-[0.16em] text-cw-clay"
+                                    className="font-mono-field text-[12px] font-bold uppercase tracking-[0.16em] text-cw-clay"
                                 >
                                     Check frequency
                                 </Label>
@@ -324,7 +324,7 @@ export default function AccountPage() {
                                 type="button"
                                 onClick={saveNotifications}
                                 disabled={!notifDirty || savingNotif}
-                                className="inline-flex items-center font-mono-field text-[11px] font-bold leading-none uppercase tracking-[0.14em] cursor-pointer rounded-[2px] px-[13px] py-[9px] border-[1.5px] disabled:opacity-40 disabled:cursor-not-allowed"
+                                className="inline-flex items-center font-mono-field text-[13px] font-bold leading-none uppercase tracking-[0.14em] cursor-pointer rounded-[2px] px-[13px] py-[9px] border-[1.5px] disabled:opacity-40 disabled:cursor-not-allowed"
                                 style={{
                                     background: "var(--cw-ink)",
                                     color: "var(--cw-cream)",
@@ -337,7 +337,7 @@ export default function AccountPage() {
 
                         {/* Danger zone section */}
                         <section className="rounded-md border border-red-700/40 bg-cw-cream p-6 sm:p-8">
-                            <div className="font-mono-field text-[11px] font-bold uppercase tracking-[0.18em] text-red-700 mb-2">
+                            <div className="font-mono-field text-[13px] font-bold uppercase tracking-[0.18em] text-red-700 mb-2">
                                 Danger zone
                             </div>
                             <h2 className="font-poster text-[28px] font-black uppercase tracking-[0.005em] mb-1">
@@ -351,7 +351,7 @@ export default function AccountPage() {
                                 <AlertDialogTrigger asChild>
                                     <button
                                         type="button"
-                                        className="inline-flex items-center font-mono-field text-[11px] font-bold leading-none uppercase tracking-[0.14em] cursor-pointer rounded-[2px] px-[13px] py-[9px] border-[1.5px] bg-cw-cream text-red-700 border-red-700"
+                                        className="inline-flex items-center font-mono-field text-[13px] font-bold leading-none uppercase tracking-[0.14em] cursor-pointer rounded-[2px] px-[13px] py-[9px] border-[1.5px] bg-cw-cream text-red-700 border-red-700"
                                     >
                                         Delete account
                                     </button>

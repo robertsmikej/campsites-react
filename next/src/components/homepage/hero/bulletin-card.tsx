@@ -18,7 +18,7 @@ export function BulletinCard({ lastPollAt, nowMs }: BulletinCardProps) {
             >
                 <div className="flex justify-between items-start mb-[10px]">
                     <div>
-                        <div className="font-mono-field text-[10px] leading-none tracking-[0.18em] text-cw-clay font-medium">
+                        <div className="font-mono-field text-[12px] leading-none tracking-[0.18em] text-cw-clay font-medium">
                             FIELD STATION
                         </div>
                         <div className="font-poster text-[24px] leading-none mt-[6px] uppercase font-black">
@@ -31,7 +31,7 @@ export function BulletinCard({ lastPollAt, nowMs }: BulletinCardProps) {
                     <DCompass size={44} color={C.forest} />
                 </div>
                 <div className="my-3 h-px bg-cw-rule" />
-                <div className="grid grid-cols-2 gap-y-2 font-mono-field text-[10px] leading-none tracking-[0.14em] text-cw-ink-soft font-medium">
+                <div className="grid grid-cols-2 gap-y-2 font-mono-field text-[12px] leading-none tracking-[0.14em] text-cw-ink-soft font-medium">
                     <span>ELEV</span>
                     <span className="text-right text-cw-ink">6,512 FT</span>
                     <span>SITES</span>

@@ -16,7 +16,7 @@ export function GroupingToggle({ groupBy, onGroupBy }: GroupingToggleProps) {
                 <button
                     key={v}
                     onClick={() => onGroupBy(v)}
-                    className="font-mono-field text-[10px] md:text-[11px] font-bold leading-none tracking-[0.12em] uppercase px-[10px] py-2 md:px-3 md:py-[9px] cursor-pointer"
+                    className="font-mono-field text-[12px] md:text-[13px] font-bold leading-none tracking-[0.12em] uppercase px-[10px] py-2 md:px-3 md:py-[9px] cursor-pointer"
                     style={{
                         background: groupBy === v ? CW.ink : "transparent",
                         color: groupBy === v ? CW.cream : CW.ink,

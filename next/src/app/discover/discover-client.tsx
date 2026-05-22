@@ -102,7 +102,7 @@ export function DiscoverClient() {
                                 </p>
                                 <a
                                     href="/auth/google/start?returnTo=/app"
-                                    className="font-mono-field text-[11px] font-bold uppercase tracking-[0.14em] px-[13px] py-[9px] rounded-[2px] no-underline"
+                                    className="font-mono-field text-[13px] font-bold uppercase tracking-[0.14em] px-[13px] py-[9px] rounded-[2px] no-underline"
                                     style={{ background: "var(--cw-ink)", color: "var(--cw-cream)" }}
                                 >
                                     Sign in with Google →
@@ -112,7 +112,7 @@ export function DiscoverClient() {
 
                         {/* Page header */}
                         <div className="px-[22px] md:px-9 pt-6 pb-4">
-                            <div className="font-mono-field text-[11px] font-bold uppercase tracking-[0.18em] text-cw-clay mb-2">
+                            <div className="font-mono-field text-[13px] font-bold uppercase tracking-[0.18em] text-cw-clay mb-2">
                                 Picks · Curator&apos;s list
                             </div>
                             <h1 className="font-poster text-[36px] sm:text-[44px] font-black uppercase leading-[0.95] m-0">
@@ -146,7 +146,7 @@ export function DiscoverClient() {
                         />
 
                         {/* Footer */}
-                        <footer className="px-[22px] md:px-9 pt-5 pb-9 flex justify-between font-mono-field text-[11px] font-medium leading-none tracking-[0.12em] text-cw-ink-faint uppercase flex-wrap gap-2">
+                        <footer className="px-[22px] md:px-9 pt-5 pb-9 flex justify-between font-mono-field text-[13px] font-medium leading-none tracking-[0.12em] text-cw-ink-faint uppercase flex-wrap gap-2">
                             <span>Built by a camper, for campers</span>
                             <span>CampWatch</span>
                         </footer>

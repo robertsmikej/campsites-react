@@ -15,7 +15,7 @@ export function PostcardFooter({ lastPollAt, nowMs }: PostcardFooterProps) {
                     ? `Last poll · ${formatTimeAgo(nowMs - new Date(lastPollAt).getTime())} ago. All quiet.`
                     : "Polling resumes shortly."}
             </span>
-            <span className="font-mono-field text-[11px] leading-none text-cw-ink-soft tracking-[0.14em] uppercase font-medium">
+            <span className="font-mono-field text-[13px] leading-none text-cw-ink-soft tracking-[0.14em] uppercase font-medium">
                 signed N.L.
             </span>
         </div>

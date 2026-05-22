@@ -6,7 +6,7 @@ import { DBadge } from "@/components/field-notes/decorations";
 export function Intro() {
     return (
         <div>
-            <div className="font-mono-field text-[11px] leading-none tracking-[0.18em] text-cw-clay mb-[10px] font-medium uppercase">
+            <div className="font-mono-field text-[13px] leading-none tracking-[0.18em] text-cw-clay mb-[10px] font-medium uppercase">
                 DISPATCH
             </div>
             <h2 className="m-0 mb-6 tracking-[-0.005em]">

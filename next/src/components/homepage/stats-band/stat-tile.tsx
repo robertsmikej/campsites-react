@@ -10,7 +10,7 @@ interface StatTileProps {
 export function StatTile({ label, value, color, sub }: StatTileProps) {
     return (
         <div>
-            <div className="font-mono-field text-[11px] leading-none tracking-[0.16em] text-[rgba(251,246,234,0.55)] uppercase font-medium">
+            <div className="font-mono-field text-[13px] leading-none tracking-[0.16em] text-[rgba(251,246,234,0.55)] uppercase font-medium">
                 {label}
             </div>
             <div className="flex items-baseline gap-[10px] mt-2">

@@ -3,7 +3,7 @@
 export function FaqIntro() {
     return (
         <div>
-            <div className="font-mono-field text-[11px] leading-none tracking-[0.18em] text-cw-mustard mb-[10px] font-medium uppercase">
+            <div className="font-mono-field text-[13px] leading-none tracking-[0.18em] text-cw-mustard mb-[10px] font-medium uppercase">
                 COMMON QUESTIONS
             </div>
             <h2 className="m-0 tracking-[-0.005em]">

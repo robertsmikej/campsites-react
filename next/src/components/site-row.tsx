@@ -68,7 +68,7 @@ export function SiteRow({
                 />
                 <div className="min-w-0 flex-shrink-0 basis-32">
                     <p className="truncate text-sm font-medium">{site.siteName}</p>
-                    <p className="truncate text-[11px] text-muted-foreground">
+                    <p className="truncate text-[13px] text-muted-foreground">
                         {site.campsite_type ?? "Standard"}
                     </p>
                 </div>
@@ -99,11 +99,11 @@ export function SiteRow({
                     </button>
                 ) : null}
                 {availableDays > 0 ? (
-                    <Badge className="shrink-0 bg-primary text-primary-foreground text-[10px]">
+                    <Badge className="shrink-0 bg-primary text-primary-foreground text-[12px]">
                         {availableDays}n
                     </Badge>
                 ) : (
-                    <Badge variant="secondary" className="shrink-0 text-[10px]">
+                    <Badge variant="secondary" className="shrink-0 text-[12px]">
                         —
                     </Badge>
                 )}

@@ -43,7 +43,7 @@ export function LetterCard({ auth }: LetterCardProps) {
 
                     {/* Envelope-style header */}
                     <div className="border-b border-cw-rule pb-[14px] mb-4 flex justify-between items-start">
-                        <div className="font-mono-field text-[11px] leading-[1.6] text-cw-ink-soft tracking-[0.06em] font-medium">
+                        <div className="font-mono-field text-[13px] leading-[1.6] text-cw-ink-soft tracking-[0.06em] font-medium">
                             <div className="text-cw-ink-soft">FROM</div>
                             <div className="text-cw-ink mt-[2px]">CampWatch &lt;alerts@campwatch.dev&gt;</div>
                             <div className="text-cw-ink-soft mt-2">TO</div>
@@ -51,7 +51,7 @@ export function LetterCard({ auth }: LetterCardProps) {
                                 {auth.user?.email ?? "you@trail.example"}
                             </div>
                         </div>
-                        <div className="font-mono-field text-[10px] leading-[1.5] text-cw-ink-soft tracking-[0.1em] text-right font-medium">
+                        <div className="font-mono-field text-[12px] leading-[1.5] text-cw-ink-soft tracking-[0.1em] text-right font-medium">
                             <div>05.20.MMXXVI</div>
                             <div>07:14 MDT</div>
                         </div>

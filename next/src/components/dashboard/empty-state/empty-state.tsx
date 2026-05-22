@@ -26,7 +26,7 @@ export function EmptyState({ onClone }: EmptyStateProps) {
     return (
         <>
             <section className="px-[22px] md:px-9 py-16 max-w-[960px]">
-                <div className="font-mono-field text-[11px] font-medium leading-none tracking-[0.18em] text-cw-clay mb-[14px] uppercase">
+                <div className="font-mono-field text-[13px] font-medium leading-none tracking-[0.18em] text-cw-clay mb-[14px] uppercase">
                     Welcome aboard.
                 </div>
                 <h1 className="m-0 mb-[18px] tracking-[-0.005em]">
