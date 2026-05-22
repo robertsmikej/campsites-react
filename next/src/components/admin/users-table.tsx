@@ -8,9 +8,10 @@ interface UsersTableProps {
     users: UserProfile[];
     currentEmail: string;
     onToggleRole: (target: UserProfile, makeCurator: boolean) => Promise<void> | void;
+    onRemove: (target: UserProfile) => Promise<void> | void;
 }
 
-export function UsersTable({ users, currentEmail, onToggleRole }: UsersTableProps) {
+export function UsersTable({ users, currentEmail, onToggleRole, onRemove }: UsersTableProps) {
     if (users.length === 0) {
         return <p className="font-italic-serif text-[16px] italic text-cw-ink-soft">No users yet.</p>;
     }
@@ -32,8 +33,11 @@ export function UsersTable({ users, currentEmail, onToggleRole }: UsersTableProp
                         <th className="py-2 pr-4 text-left font-mono-field text-[12px] font-bold uppercase tracking-[0.16em] text-cw-clay">
                             Member since
                         </th>
-                        <th className="py-2 text-right font-mono-field text-[12px] font-bold uppercase tracking-[0.16em] text-cw-clay">
+                        <th className="py-2 pr-4 text-right font-mono-field text-[12px] font-bold uppercase tracking-[0.16em] text-cw-clay">
                             Curator
+                        </th>
+                        <th className="py-2 text-right font-mono-field text-[12px] font-bold uppercase tracking-[0.16em] text-cw-clay">
+                            Remove
                         </th>
                     </tr>
                 </thead>
@@ -64,7 +68,7 @@ export function UsersTable({ users, currentEmail, onToggleRole }: UsersTableProp
                                 <td className="py-3 pr-4 font-mono-field text-[12px] text-cw-ink-soft">
                                     {memberSince}
                                 </td>
-                                <td className="py-3 text-right">
+                                <td className="py-3 pr-4 text-right">
                                     {isSelf ? (
                                         <Tooltip>
                                             <TooltipTrigger asChild>
@@ -81,6 +85,28 @@ export function UsersTable({ users, currentEmail, onToggleRole }: UsersTableProp
                                             checked={isCurator}
                                             onCheckedChange={(checked) => onToggleRole(u, checked)}
                                         />
+                                    )}
+                                </td>
+                                <td className="py-3 text-right">
+                                    {isSelf ? (
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <span className="font-mono-field text-[12px] text-cw-ink-faint">
+                                                    —
+                                                </span>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                                Can&apos;t remove your own account here
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    ) : (
+                                        <button
+                                            type="button"
+                                            onClick={() => onRemove(u)}
+                                            className="font-mono-field text-[12px] font-bold uppercase tracking-[0.14em] text-cw-clay hover:text-cw-ink underline underline-offset-2 cursor-pointer"
+                                        >
+                                            Remove
+                                        </button>
                                     )}
                                 </td>
                             </tr>

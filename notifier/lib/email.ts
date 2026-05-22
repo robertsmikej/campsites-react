@@ -477,7 +477,14 @@ export const sendEmail = async (
             to: [to],
             subject,
             html,
-            ...(unsubscribeLink ? { headers: { "List-Unsubscribe": `<${unsubscribeLink}>` } } : {}),
+            ...(unsubscribeLink
+                ? {
+                      headers: {
+                          "List-Unsubscribe": `<${unsubscribeLink}>`,
+                          "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+                      },
+                  }
+                : {}),
         }),
     });
 

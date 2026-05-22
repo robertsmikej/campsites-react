@@ -166,6 +166,23 @@ export default function AdminPage() {
         toast.success(`Updated ${target.email}`);
     }
 
+    async function removeUser(target: UserProfile) {
+        if (!window.confirm(`Remove ${target.email}? This deletes their profile, watchlist, and sessions.`)) {
+            return;
+        }
+        const r = await fetch(`/api/admin/users/${encodeURIComponent(target.email)}`, {
+            method: "DELETE",
+            credentials: "include",
+        });
+        if (!r.ok) {
+            const body = (await r.json().catch(() => ({}))) as { error?: string };
+            toast.error(body.error ?? `Remove failed (${r.status})`);
+            return;
+        }
+        setUsers((current) => current?.filter((u) => u.email !== target.email) ?? null);
+        toast.success(`Removed ${target.email}`);
+    }
+
     async function runMigrate() {
         setMigrateRunning(true);
         setMigrateResult(null);
@@ -244,6 +261,7 @@ export default function AdminPage() {
                                     users={users}
                                     currentEmail={auth.user.email}
                                     onToggleRole={toggleRole}
+                                    onRemove={removeUser}
                                 />
                             )}
                         </section>
