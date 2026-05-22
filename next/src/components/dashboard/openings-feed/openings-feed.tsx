@@ -25,29 +25,22 @@ interface OpeningsFeedProps {
 
 export function OpeningsFeed({ openingItems, isMobile, nowMs, PAD }: OpeningsFeedProps) {
     return (
-        <section style={{ padding: isMobile ? `28px 0 12px` : `40px ${PAD}px 28px` }}>
-            <div style={{ padding: isMobile ? `0 ${PAD}px` : 0 }} className="mb-5">
-                <div className="flex items-baseline justify-between">
-                    <div>
-                        <div className="font-mono-field text-[13px] font-medium leading-none tracking-[0.18em] text-cw-clay mb-2 uppercase">
-                            § I — STILL BOOKABLE
-                        </div>
-                        <h2 className="m-0 tracking-[-0.005em]">
-                            <span
-                                className="font-poster font-black leading-none uppercase inline"
-                                style={{ fontSize: isMobile ? 22 : 32 }}
-                            >
-                                OPEN RIGHT NOW
-                            </span>
-                            <span
-                                className="font-italic-serif font-medium italic leading-none text-cw-forest tracking-[-0.01em]"
-                                style={{ fontSize: isMobile ? 22 : 32, marginLeft: 12 }}
-                            >
-                                across your watchlist.
-                            </span>
-                        </h2>
-                    </div>
+        <section style={{ padding: isMobile ? `16px 0 10px` : `20px ${PAD}px 16px` }}>
+            <div
+                style={{ padding: isMobile ? `0 ${PAD}px` : 0 }}
+                className="mb-3 flex items-baseline gap-3 flex-wrap"
+            >
+                <div className="font-mono-field text-[13px] font-bold leading-none tracking-[0.18em] text-cw-clay uppercase">
+                    Open right now
                 </div>
+                <span className="font-italic-serif text-[14px] italic leading-none text-cw-ink-soft">
+                    across your watchlist
+                </span>
+                {openingItems.length > 0 && (
+                    <span className="ml-auto font-mono-field text-[12px] font-medium leading-none tracking-[0.12em] text-cw-ink-subtle uppercase">
+                        {openingItems.length} {openingItems.length === 1 ? "opening" : "openings"}
+                    </span>
+                )}
             </div>
 
             {openingItems.length === 0 ? (
@@ -56,9 +49,9 @@ export function OpeningsFeed({ openingItems, isMobile, nowMs, PAD }: OpeningsFee
                 <div
                     style={{
                         display: "flex",
-                        gap: 12,
+                        gap: 10,
                         overflowX: "auto",
-                        padding: `4px ${PAD}px 16px`,
+                        padding: `2px ${PAD}px 10px`,
                         scrollSnapType: "x mandatory",
                     }}
                 >
@@ -71,7 +64,7 @@ export function OpeningsFeed({ openingItems, isMobile, nowMs, PAD }: OpeningsFee
                     style={{
                         display: "grid",
                         gridTemplateColumns: `repeat(${Math.min(openingItems.length, 4)}, 1fr)`,
-                        gap: 18,
+                        gap: 12,
                     }}
                 >
                     {openingItems.map((item) => (

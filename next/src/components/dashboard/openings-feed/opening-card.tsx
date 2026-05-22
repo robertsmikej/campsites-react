@@ -66,18 +66,18 @@ export function OpeningCard({ item, isMobile, nowMs }: OpeningCardProps) {
         <article
             className="bg-cw-cream border-[1.5px] border-cw-ink flex flex-col"
             style={{
-                boxShadow: isMobile ? `4px 4px 0 ${CW.forest}` : `6px 6px 0 ${CW.forest}`,
-                padding: isMobile ? "16px 18px" : "20px 22px 18px",
-                gap: isMobile ? 12 : 14,
-                minWidth: isMobile ? 270 : undefined,
+                boxShadow: `3px 3px 0 ${CW.forest}`,
+                padding: isMobile ? "10px 12px" : "10px 12px 9px",
+                gap: 6,
+                minWidth: isMobile ? 230 : undefined,
                 scrollSnapAlign: isMobile ? "start" : undefined,
                 flexShrink: isMobile ? 0 : undefined,
             }}
         >
             <div className="flex items-center gap-2">
-                <Pulse color={tagColor} size={6} />
+                <Pulse color={tagColor} size={5} />
                 <span
-                    className="font-mono-field text-[12px] font-bold leading-none tracking-[0.18em] uppercase"
+                    className="font-mono-field text-[12px] font-bold leading-none tracking-[0.16em] uppercase"
                     style={{ color: tagColor }}
                 >
                     {tag}
@@ -88,42 +88,33 @@ export function OpeningCard({ item, isMobile, nowMs }: OpeningCardProps) {
             </div>
             <div>
                 <div
-                    className="font-poster font-black leading-[1.1] uppercase tracking-[0.005em]"
-                    style={{ fontSize: isMobile ? 17 : 20 }}
+                    className="font-poster font-black leading-[1.1] uppercase tracking-[0.005em] truncate"
+                    style={{ fontSize: 15 }}
+                    title={item.campgroundName}
                 >
                     {item.campgroundName}
                 </div>
                 {item.siteName && (
-                    <div
-                        className="font-italic-serif font-medium italic leading-[1.3] text-cw-ink-soft mt-1"
-                        style={{ fontSize: isMobile ? 13 : 15 }}
-                    >
+                    <span className="font-italic-serif text-[13px] font-medium italic leading-none text-cw-ink-soft">
                         Site {item.siteName}
-                    </div>
+                    </span>
                 )}
             </div>
-            <div className="border-t border-dashed border-cw-rule" style={{ paddingTop: isMobile ? 10 : 12 }}>
-                <div
-                    className="font-body-serif font-semibold leading-[1.2] text-cw-ink"
-                    style={{ fontSize: isMobile ? 14 : 16 }}
-                >
+            <div className="flex items-baseline gap-2 flex-wrap">
+                <span className="font-body-serif text-[13px] font-semibold leading-none text-cw-ink">
                     {formatOpeningDates(item.from, item.to)}
-                </div>
-                <div className="font-mono-field text-[13px] font-medium leading-none tracking-[0.12em] text-cw-ink-soft mt-1 uppercase">
-                    {item.nights} night{item.nights !== 1 ? "s" : ""}
-                </div>
+                </span>
+                <span className="font-mono-field text-[12px] font-medium leading-none tracking-[0.1em] text-cw-ink-soft uppercase">
+                    · {item.nights}n
+                </span>
             </div>
             <a
                 href={recGovUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-poster font-black leading-none tracking-[0.14em] uppercase bg-cw-forest text-cw-cream no-underline text-center rounded-[2px] inline-flex items-center justify-center gap-2"
-                style={{
-                    fontSize: isMobile ? 11 : 12,
-                    padding: isMobile ? "12px" : "13px 14px",
-                }}
+                className="font-mono-field text-[12px] font-bold leading-none tracking-[0.14em] uppercase text-cw-forest no-underline hover:underline self-start"
             >
-                Book on rec.gov ↗
+                Book on rec.gov →
             </a>
         </article>
     );

@@ -61,15 +61,15 @@ describe("OpeningCard — content", () => {
         expect(screen.getByText(/site a14/i)).toBeInTheDocument();
     });
 
-    it("renders the nights label with correct pluralization", () => {
+    it("renders the night count for a multi-night stay", () => {
         render(<OpeningCard item={baseItem} isMobile={false} nowMs={NOW_MS} />);
-        expect(screen.getByText(/2 nights/i)).toBeInTheDocument();
+        expect(screen.getByText(/· 2n/i)).toBeInTheDocument();
     });
 
-    it("uses 'night' singular for a 1-night stay", () => {
+    it("renders the night count for a 1-night stay too", () => {
         const singleNight: OpeningItem = { ...baseItem, nights: 1, to: "2026-08-02" };
         render(<OpeningCard item={singleNight} isMobile={false} nowMs={NOW_MS} />);
-        expect(screen.getByText(/1 night$/i)).toBeInTheDocument();
+        expect(screen.getByText(/· 1n/i)).toBeInTheDocument();
     });
 
     it("renders a rec.gov booking link", () => {
