@@ -184,23 +184,22 @@ export function WatchlistPostcard() {
                         &ldquo;I&apos;d take it,&rdquo; dimmed for booked. The next eighteen weeks, at a
                         glance.
                     </p>
-                    <div className="flex items-center gap-6">
+                    <div className="flex items-center flex-wrap gap-x-5 gap-y-2 font-mono-field text-[12px] leading-none tracking-[0.1em] text-cw-ink-subtle uppercase">
+                        <span>Each tick = one night</span>
                         {(
                             [
-                                [C.forest, "favorite"],
-                                [C.mustard, "acceptable"],
-                                ["rgba(26,22,20,0.2)", "booked"],
+                                [C.forest, 22, "favorite"],
+                                [C.mustard, 16, "would take"],
+                                ["rgba(26,22,20,0.2)", 5, "booked"],
                             ] as const
-                        ).map(([color, label]) => (
-                            <div key={label} className="flex items-center gap-2">
+                        ).map(([color, height, label]) => (
+                            <span key={label} className="inline-flex items-center gap-[6px]">
                                 <span
-                                    className="w-3 h-3 rounded-[2px] inline-block"
-                                    style={{ background: color }}
+                                    className="inline-block w-[5px] rounded-[1px]"
+                                    style={{ height, background: color }}
                                 />
-                                <span className="font-italic-serif text-[17px] leading-none text-cw-ink-soft font-medium italic">
-                                    {label}
-                                </span>
-                            </div>
+                                {label}
+                            </span>
                         ))}
                     </div>
                 </div>
