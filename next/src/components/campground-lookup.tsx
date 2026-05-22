@@ -639,64 +639,6 @@ export function CampgroundLookup({ variant: _variant = "homepage" }: CampgroundL
                 </div>
             </div>
 
-            {/* ─── States reference panel — desktop only ─── */}
-            {!isMobile && (
-                <div className="mt-[72px] border-t-[1.5px] border-cw-ink pt-9">
-                    <div className="flex items-baseline justify-between mb-6">
-                        <h3 className="font-poster text-[22px] leading-none uppercase tracking-[0.005em] m-0 font-black">
-                            Result states
-                        </h3>
-                        <span className="font-italic-serif text-[16px] leading-none text-cw-ink-soft font-medium italic">
-                            One section, five possible responses.
-                        </span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-[18px]">
-                        {(
-                            [
-                                {
-                                    label: "01 · On your list already",
-                                    result: {
-                                        state: "on-list" as LookupState,
-                                        parsedId: "232358",
-                                        cg: { id: "232358", name: "Outlet Campground" },
-                                    },
-                                },
-                                {
-                                    label: "02 · On our watch",
-                                    result: {
-                                        state: "watched" as LookupState,
-                                        parsedId: "232312",
-                                        cg: { id: "232312", name: "Pine Flats Campground" },
-                                    },
-                                },
-                                {
-                                    label: "03 · New — we'll start",
-                                    result: {
-                                        state: "new" as LookupState,
-                                        parsedId: "233858",
-                                        cg: { id: "233858", name: "Stanley Lake Campground" },
-                                    },
-                                },
-                                {
-                                    label: "04 · Campground not found",
-                                    result: { state: "not-found" as LookupState, parsedId: "999999" },
-                                },
-                                {
-                                    label: "05 · Invalid URL",
-                                    result: { state: "invalid" as LookupState },
-                                },
-                            ] as { label: string; result: LookupResult }[]
-                        ).map((s) => (
-                            <div key={s.label}>
-                                <div className="font-mono-field text-[12px] leading-none tracking-[0.18em] text-cw-clay mb-2 uppercase font-medium">
-                                    {s.label}
-                                </div>
-                                <ResultCard result={s.result} compact />
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
         </section>
     );
 }

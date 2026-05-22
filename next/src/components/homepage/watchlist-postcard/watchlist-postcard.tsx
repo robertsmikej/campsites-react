@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { C } from "@/components/field-notes/tokens";
 import { DTopo } from "@/components/field-notes/decorations";
 import { useIsMobile } from "@/hooks/use-is-mobile";
@@ -8,8 +9,28 @@ import { PostcardHeader } from "./postcard-header";
 import { PostcardRow } from "./postcard-row";
 import { PostcardFooter } from "./postcard-footer";
 import { PostcardDecorations } from "./postcard-decorations";
+import type { Campground, ApiConfigResponse } from "@/types/campground";
 
-const ROWS = [
+interface PostcardDisplayRow {
+    name: string;
+    loc: string;
+    pattern: string;
+    tag: string;
+    tagColor: string;
+}
+
+interface RecentOpening {
+    campgroundId: string;
+    campgroundName: string;
+    from: string;
+    to: string;
+    nights: number;
+}
+
+// Fallback used during initial render and if either API call returns empty.
+// These four are real campgrounds from the curator's default list — so the
+// section never looks broken if KV hasn't been populated yet.
+const FALLBACK_ROWS: PostcardDisplayRow[] = [
     {
         name: "Outlet Campground",
         loc: "Redfish Lake, ID",
@@ -38,11 +59,96 @@ const ROWS = [
         tag: "2 open",
         tagColor: C.forest,
     },
-] as const;
+];
+
+const PATTERN_LEN = 25;
+
+function toIso(d: Date): string {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function buildPattern(openings: RecentOpening[]): string {
+    // Anchor the 25-day window at the earliest opening date so the bars are
+    // dense; if there are no openings, return all dots (caller handles that).
+    if (openings.length === 0) return ".".repeat(PATTERN_LEN);
+    const earliest = openings.reduce((min, o) => (o.from < min ? o.from : min), openings[0]!.from);
+    const start = new Date(`${earliest}T00:00:00`);
+    const days: string[] = [];
+    for (let i = 0; i < PATTERN_LEN; i++) {
+        const d = new Date(start);
+        d.setDate(start.getDate() + i);
+        const iso = toIso(d);
+        const hit = openings.some((o) => iso >= o.from && iso < o.to);
+        days.push(hit ? "g" : ".");
+    }
+    return days.join("");
+}
+
+function buildDisplayRows(defaults: Campground[], recent: RecentOpening[]): PostcardDisplayRow[] {
+    // Group openings by campground id.
+    const byId = new Map<string, RecentOpening[]>();
+    for (const o of recent) {
+        const list = byId.get(o.campgroundId) ?? [];
+        list.push(o);
+        byId.set(o.campgroundId, list);
+    }
+
+    // Prefer campgrounds with activity, then fill from the rest of the default
+    // list so we always have 4 rows.
+    const withActivity = defaults.filter((c) => (byId.get(c.id)?.length ?? 0) > 0);
+    const withoutActivity = defaults.filter((c) => (byId.get(c.id)?.length ?? 0) === 0);
+    const picked = [...withActivity, ...withoutActivity].slice(0, 4);
+    if (picked.length < 4) return [];
+
+    return picked.map((cg) => {
+        const openings = byId.get(cg.id) ?? [];
+        if (openings.length === 0) {
+            return {
+                name: cg.name,
+                loc: cg.area ?? "",
+                pattern: ".".repeat(PATTERN_LEN),
+                tag: "watching",
+                tagColor: "rgba(26,22,20,0.5)",
+            };
+        }
+        return {
+            name: cg.name,
+            loc: cg.area ?? "",
+            pattern: buildPattern(openings),
+            tag: `${openings.length} open`,
+            tagColor: C.forest,
+        };
+    });
+}
 
 export function WatchlistPostcard() {
     const isMobile = useIsMobile();
     const { stats, nowMs } = useStats();
+    const [rows, setRows] = useState<PostcardDisplayRow[]>(FALLBACK_ROWS);
+
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            try {
+                const [defResp, recResp] = await Promise.all([
+                    fetch("/api/default"),
+                    fetch("/api/openings/recent"),
+                ]);
+                if (!defResp.ok || !recResp.ok) return;
+                const defBody = (await defResp.json()) as ApiConfigResponse;
+                const recent = (await recResp.json()) as RecentOpening[];
+                const defaults = defBody.campgrounds?.["recreation.gov"] ?? [];
+                if (defaults.length < 4) return;
+                const built = buildDisplayRows(defaults, recent);
+                if (!cancelled && built.length === 4) setRows(built);
+            } catch {
+                // Keep the fallback rows on any error.
+            }
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
     return (
         <section className="relative py-[60px] px-[22px] md:py-[120px] md:px-14 md:pb-[110px]">
@@ -117,7 +223,7 @@ export function WatchlistPostcard() {
                     >
                         <PostcardHeader />
 
-                        {ROWS.map((row, i) => (
+                        {rows.map((row, i) => (
                             <PostcardRow
                                 key={row.name}
                                 name={row.name}
@@ -125,7 +231,7 @@ export function WatchlistPostcard() {
                                 pattern={row.pattern}
                                 tag={row.tag}
                                 tagColor={row.tagColor}
-                                isLast={i === ROWS.length - 1}
+                                isLast={i === rows.length - 1}
                                 isMobile={isMobile}
                             />
                         ))}
