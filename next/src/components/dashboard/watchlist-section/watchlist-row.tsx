@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { CW } from "@/components/field-notes/cw-tokens";
 import { toLocalIso } from "@/components/dashboard/helpers";
-import type { ProcessedCampground, SiteAvailability, GlobalSettings } from "@/types/campground";
+import type { ProcessedCampground, SiteAvailability, StayMatch, GlobalSettings } from "@/types/campground";
 
 // ─── Status pill ─────────────────────────────────────────────────────────────
 function StatusPill({ openCount }: { openCount: number }) {
@@ -26,24 +27,40 @@ function StatusPill({ openCount }: { openCount: number }) {
 }
 
 // ─── Day buckets for a single site ───────────────────────────────────────────
-function siteDayPattern(site: SiteAvailability, windowStart: Date, windowEnd: Date): string[] {
-    const days: string[] = [];
+function siteDayMatches(
+    site: SiteAvailability,
+    windowStart: Date,
+    windowEnd: Date,
+): (StayMatch | null)[] {
+    const days: (StayMatch | null)[] = [];
     const cursor = new Date(windowStart);
     cursor.setHours(0, 0, 0, 0);
     const winEndIso = toLocalIso(windowEnd);
     while (toLocalIso(cursor) <= winEndIso) {
         const iso = toLocalIso(cursor);
-        let hit = false;
+        let match: StayMatch | null = null;
         for (const m of site.matches ?? []) {
             if (m.from <= iso && m.to > iso) {
-                hit = true;
+                match = m;
                 break;
             }
         }
-        days.push(hit ? "g" : ".");
+        days.push(match);
         cursor.setDate(cursor.getDate() + 1);
     }
     return days;
+}
+
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+function fmtDate(iso: string): string {
+    const parts = iso.split("-").map(Number);
+    const y = parts[0] ?? 0;
+    const m = parts[1] ?? 1;
+    const d = parts[2] ?? 1;
+    const date = new Date(Date.UTC(y, m - 1, d));
+    return `${WEEKDAYS[date.getUTCDay()]} ${MONTHS[date.getUTCMonth()]} ${date.getUTCDate()}`;
 }
 
 function countOpenInWindow(site: SiteAvailability, windowStart: Date, windowEnd: Date): number {
@@ -56,7 +73,92 @@ function countOpenInWindow(site: SiteAvailability, windowStart: Date, windowEnd:
     return n;
 }
 
-// ─── Availability bars (campground-level or per-site) ────────────────────────
+// ─── Per-site bars with date-range tooltips ──────────────────────────────────
+function SiteBars({
+    dayMatches,
+    site,
+    height = 16,
+    bar = 4,
+}: {
+    dayMatches: (StayMatch | null)[];
+    site: SiteAvailability;
+    height?: number;
+    bar?: number;
+}) {
+    // Same downsample behavior as Bars so the columns line up.
+    const sample =
+        dayMatches.length > 42
+            ? dayMatches
+                  .filter((_, i) => i % Math.ceil(dayMatches.length / 42) === 0)
+                  .slice(0, 42)
+            : dayMatches;
+
+    return (
+        <div className="flex gap-[2px] items-end shrink-0" style={{ height: height + 2 }}>
+            {sample.map((m, i) => {
+                const isHit = m !== null;
+                const h = isHit ? height : Math.round(height * 0.22);
+                const bg = isHit ? CW.forest : CW.inkFaint;
+
+                if (!isHit) {
+                    return (
+                        <div
+                            key={i}
+                            aria-hidden
+                            style={{ width: bar, height: h, background: bg, borderRadius: 1 }}
+                        />
+                    );
+                }
+
+                const label = `${fmtDate(m.from)} → ${fmtDate(m.to)} · ${m.nights} ${m.nights === 1 ? "night" : "nights"}`;
+                const href = `https://www.recreation.gov/camping/campsites/${site.siteId}?arrivalDate=${m.from}&departureDate=${m.to}`;
+
+                return (
+                    <Tooltip key={i}>
+                        <TooltipTrigger asChild>
+                            <a
+                                href={href}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                aria-label={label}
+                                onClick={(e) => e.stopPropagation()}
+                                // Touch target larger than the visual bar (padded button)
+                                // so taps are easy on mobile.
+                                style={{
+                                    width: bar,
+                                    height: height + 2,
+                                    display: "inline-flex",
+                                    alignItems: "flex-end",
+                                    padding: "2px 0",
+                                    boxSizing: "content-box",
+                                    cursor: "pointer",
+                                }}
+                            >
+                                <span
+                                    style={{
+                                        width: bar,
+                                        height: h,
+                                        background: bg,
+                                        borderRadius: 1,
+                                        display: "block",
+                                    }}
+                                />
+                            </a>
+                        </TooltipTrigger>
+                        <TooltipContent
+                            side="top"
+                            className="font-mono-field text-[12px] tracking-[0.04em]"
+                        >
+                            {label}
+                        </TooltipContent>
+                    </Tooltip>
+                );
+            })}
+        </div>
+    );
+}
+
+// ─── Availability bars (campground-level) ────────────────────────────────────
 function Bars({ pattern, height = 22, bar = 5 }: { pattern: string[]; height?: number; bar?: number }) {
     const sample =
         pattern.length > 42
@@ -185,56 +287,61 @@ function ExpandedSites({
                 {ranked.map((s) => {
                     const isFav = favorites.has(s.siteName);
                     const open = countOpenInWindow(s, windowStart, windowEnd);
-                    const pattern = siteDayPattern(s, windowStart, windowEnd);
+                    const dayMatches = siteDayMatches(s, windowStart, windowEnd);
                     const url = reservationUrl(s);
 
                     if (isMobile) {
                         return (
                             <div
                                 key={s.siteId}
-                                className="flex items-center justify-between gap-3 py-1 border-b border-cw-rule-soft last:border-0"
+                                className="flex flex-col gap-[6px] py-2 border-b border-cw-rule-soft last:border-0"
                             >
-                                <div className="flex items-center gap-[6px] min-w-0 flex-1">
-                                    {onToggleSiteFavorite && campground.id ? (
-                                        <button
-                                            type="button"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                onToggleSiteFavorite(s.siteName, !isFav);
-                                            }}
-                                            className="bg-transparent border-none cursor-pointer p-0 shrink-0"
-                                            aria-label={isFav ? "Remove site favorite" : "Mark site favorite"}
-                                            style={{ color: isFav ? CW.mustard : CW.inkFaint }}
+                                <div className="flex items-center justify-between gap-3">
+                                    <div className="flex items-center gap-[6px] min-w-0 flex-1">
+                                        {onToggleSiteFavorite && campground.id ? (
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    onToggleSiteFavorite(s.siteName, !isFav);
+                                                }}
+                                                className="bg-transparent border-none cursor-pointer p-0 shrink-0"
+                                                aria-label={isFav ? "Remove site favorite" : "Mark site favorite"}
+                                                style={{ color: isFav ? CW.mustard : CW.inkFaint }}
+                                            >
+                                                <FavStar filled={isFav} />
+                                            </button>
+                                        ) : isFav ? (
+                                            <span style={{ color: CW.mustard }}>
+                                                <FavStar filled />
+                                            </span>
+                                        ) : null}
+                                        <a
+                                            href={url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            onClick={(e) => e.stopPropagation()}
+                                            className="font-body-serif text-[13px] font-semibold text-cw-ink hover:underline"
                                         >
-                                            <FavStar filled={isFav} />
-                                        </button>
-                                    ) : isFav ? (
-                                        <span style={{ color: CW.mustard }}>
-                                            <FavStar filled />
+                                            Site {s.siteName}
+                                        </a>
+                                        <span className="font-italic-serif text-[12px] italic text-cw-ink-soft truncate">
+                                            {humanKind(s, isFav)}
                                         </span>
-                                    ) : null}
-                                    <a
-                                        href={url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        onClick={(e) => e.stopPropagation()}
-                                        className="font-body-serif text-[13px] font-semibold text-cw-ink hover:underline"
+                                    </div>
+                                    <span
+                                        className="font-mono-field text-[12px] font-medium leading-none shrink-0"
+                                        style={{
+                                            color: open === 0 ? CW.inkFaint : CW.forest,
+                                            fontVariantNumeric: "tabular-nums",
+                                        }}
                                     >
-                                        Site {s.siteName}
-                                    </a>
-                                    <span className="font-italic-serif text-[12px] italic text-cw-ink-soft truncate">
-                                        {humanKind(s, isFav)}
+                                        {open || "—"}
                                     </span>
                                 </div>
-                                <span
-                                    className="font-mono-field text-[12px] font-medium leading-none shrink-0"
-                                    style={{
-                                        color: open === 0 ? CW.inkFaint : CW.forest,
-                                        fontVariantNumeric: "tabular-nums",
-                                    }}
-                                >
-                                    {open || "—"}
-                                </span>
+                                {open > 0 && (
+                                    <SiteBars dayMatches={dayMatches} site={s} height={14} bar={4} />
+                                )}
                             </div>
                         );
                     }
@@ -246,7 +353,7 @@ function ExpandedSites({
                             url={url}
                             isFavorite={isFav}
                             open={open}
-                            pattern={pattern}
+                            dayMatches={dayMatches}
                             campgroundId={campground.id}
                             onToggleSiteFavorite={onToggleSiteFavorite}
                         />
@@ -262,7 +369,7 @@ function SiteRow({
     url,
     isFavorite,
     open,
-    pattern,
+    dayMatches,
     campgroundId,
     onToggleSiteFavorite,
 }: {
@@ -270,7 +377,7 @@ function SiteRow({
     url: string;
     isFavorite: boolean;
     open: number;
-    pattern: string[];
+    dayMatches: (StayMatch | null)[];
     campgroundId?: string;
     onToggleSiteFavorite?: (siteName: string, isFavorite: boolean) => void;
 }) {
@@ -310,7 +417,7 @@ function SiteRow({
                     {humanKind(site, isFavorite)}
                 </span>
             </div>
-            <Bars pattern={pattern} height={16} bar={4} />
+            <SiteBars dayMatches={dayMatches} site={site} height={16} bar={4} />
             <span
                 className="text-right font-mono-field text-[13px] font-medium leading-none"
                 style={{
@@ -418,7 +525,7 @@ function DesktopRow({
                 aria-expanded={expanded}
                 className="grid gap-6 px-[22px] py-4 items-center border-b border-cw-rule-soft cursor-pointer hover:bg-cw-cream/40 transition-colors"
                 style={{
-                    gridTemplateColumns: "1fr 110px minmax(0,1fr) 70px 130px",
+                    gridTemplateColumns: "minmax(0,1fr) 110px minmax(0,1fr) 70px min-content",
                     background: openCount > 0 ? `rgba(31,61,42,0.04)` : "transparent",
                 }}
             >
