@@ -6,7 +6,8 @@
 import { fetchMonth, processCampgroundResults, getAllDatesInRange } from "./lib/fetch-availability";
 import { findNewMatches, generateSignature } from "./lib/diff";
 import { formatEmail, sendEmail } from "./lib/email";
-import type { Campground, GlobalSettings } from "../next/src/types/campground";
+import { resolveNotifyScope, matchPassesScope } from "./lib/notify-scope";
+import type { Campground, GlobalSettings, NotifyScope } from "../next/src/types/campground";
 import type { MatchResult, SiteConfigForDiff, CampgroundResult } from "./lib/diff";
 import type { SiteAvailabilityMap } from "./lib/fetch-availability";
 
@@ -33,6 +34,7 @@ interface NotificationTarget {
     email: string;
     roles?: string[];
     notifications?: NotificationSettings;
+    defaultNotifyScope?: NotifyScope;
     lastNotifiedAt?: string | null;
     notifierState?: NotifierState | null;
     campgrounds: {
@@ -236,11 +238,17 @@ function computeMatchesForUser(
     // findNewMatches with an empty previousSignatures set = all current matches.
     const allMatches = findNewMatches(syntheticResults, new Set(), siteConfigurations);
 
-    // Apply the notifyAll / favorites filter (mirrors the old logic).
-    const notifyAllIds = new Set(siteConfigurations.filter((c) => c.notifyAll).map((c) => c.id));
-    const filtered = allMatches.filter(
-        (m) => m.group === "favorites" || m.group === "worthwhile" || notifyAllIds.has(m.campgroundId),
-    );
+    // Apply per-campground notify scope (favorites / worthwhile / all). Falls
+    // back through legacy notifyAll, then the user's defaultNotifyScope.
+    const scopeByCampgroundId = new Map<string, NotifyScope>();
+    for (const c of target.campgrounds["recreation.gov"] ?? []) {
+        scopeByCampgroundId.set(c.id, resolveNotifyScope(c, target.defaultNotifyScope));
+    }
+    const filtered = allMatches.filter((m) => {
+        const scope = scopeByCampgroundId.get(m.campgroundId);
+        if (!scope) return false;
+        return matchPassesScope(m.group, scope);
+    });
 
     return filtered;
 }

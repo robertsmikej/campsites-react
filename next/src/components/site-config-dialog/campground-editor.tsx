@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/command";
 
 import { ALL_DAYS, STAY_MAX, STAY_MIN, DEFAULT_SHOW_HIDE, type EditableCampground } from "./types";
+import type { NotifyScope } from "@/types/campground";
 
 interface CampgroundEditorProps {
     campground: EditableCampground;
@@ -499,6 +500,56 @@ export function CampgroundEditor({
                                 Show {key}
                             </label>
                         ),
+                    )}
+                </div>
+
+                {/* Email scope */}
+                <div>
+                    <Label className="text-xs">Email me when</Label>
+                    <div className="mt-2 inline-flex rounded-[2px] border border-cw-rule overflow-hidden">
+                        {(
+                            [
+                                ["favorites", "Favorites"],
+                                ["worthwhile", "Favorites + worthwhile"],
+                                ["all", "Any site opens"],
+                            ] as const
+                        ).map(([value, label]) => {
+                            const active =
+                                (campground.notifyScope ?? (campground.notifyAll ? "all" : undefined)) === value;
+                            return (
+                                <button
+                                    key={value}
+                                    type="button"
+                                    onClick={() => {
+                                        onFieldChange("notifyScope", value as NotifyScope);
+                                        // Clear legacy notifyAll once the new field is set so the
+                                        // resolver doesn't have to fall through.
+                                        if (campground.notifyAll) onFieldChange("notifyAll", false);
+                                    }}
+                                    className={`font-mono-field text-[12px] font-bold uppercase tracking-[0.12em] px-3 py-[7px] cursor-pointer border-r border-cw-rule last:border-r-0 ${
+                                        active ? "bg-cw-ink text-cw-cream" : "bg-transparent text-cw-ink"
+                                    }`}
+                                >
+                                    {label}
+                                </button>
+                            );
+                        })}
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                        Leave blank to use your account default. Favorites = only sites you starred.
+                    </p>
+                    {(campground.notifyScope || campground.notifyAll) && (
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 text-xs mt-1"
+                            onClick={() => {
+                                onFieldChange("notifyScope", undefined);
+                                onFieldChange("notifyAll", undefined);
+                            }}
+                        >
+                            Use default
+                        </Button>
                     )}
                 </div>
 

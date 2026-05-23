@@ -2,7 +2,7 @@ import { getEnv, getKv } from "@/lib/cloudflare";
 import { jsonResponse, withCors } from "@/lib/responses";
 import { getUserCampgrounds } from "@/lib/user-campgrounds";
 import type { UserProfile, UserRole } from "@/types/user";
-import type { GlobalSettings, SiteConfig } from "@/types/campground";
+import type { GlobalSettings, NotifyScope, SiteConfig } from "@/types/campground";
 import { withErrorLogging } from "@/lib/route-helpers";
 
 interface NotificationTarget {
@@ -10,6 +10,7 @@ interface NotificationTarget {
     name: string;
     roles: UserRole[];
     notifications: { enabled: boolean; frequencyMinutes: 5 | 15 | 60 | 240 };
+    defaultNotifyScope?: NotifyScope;
     lastNotifiedAt?: string;
     campgrounds: SiteConfig;
     globalSettings: GlobalSettings;
@@ -55,6 +56,7 @@ async function getHandler(request: Request): Promise<Response> {
                 globalSettings: userList!.globalSettings,
                 notifierState: notifierState ?? null,
             };
+            if (profile.defaultNotifyScope) target.defaultNotifyScope = profile.defaultNotifyScope;
             if (profile.lastNotifiedAt) target.lastNotifiedAt = profile.lastNotifiedAt;
             targets.push(target);
         }

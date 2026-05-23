@@ -78,8 +78,9 @@ describe("Greeting — status sentence", () => {
     it("shows campground count when openings exist", () => {
         mockHour(10);
         render(<Greeting auth={baseAuth} isLoading={false} campgroundsWithOpenings={3} />);
-        // The count is in a <strong> node, text around it in sibling spans
-        expect(screen.getByText(/3/)).toBeInTheDocument();
+        // The count lives in a <strong> as "3 campgrounds"; assert against that
+        // element so a "3" in today's date (e.g. May 3rd or 23rd) doesn't false-match.
+        expect(screen.getByText(/^3 campgrounds$/i)).toBeInTheDocument();
         expect(screen.getByText(/bookable sites for your dates/i)).toBeInTheDocument();
     });
 });

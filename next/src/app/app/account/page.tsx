@@ -20,9 +20,18 @@ import {
 import { useAuth } from "@/hooks/use-auth";
 import { DashboardTopBar } from "@/components/dashboard/dashboard-top-bar";
 
+import type { NotifyScope } from "@/types/campground";
+
 type Frequency = 5 | 15 | 60 | 240;
 
 const DEFAULT_NOTIFICATIONS = { enabled: true, frequencyMinutes: 15 satisfies Frequency };
+const DEFAULT_NOTIFY_SCOPE: NotifyScope = "worthwhile";
+
+const SCOPE_LABELS: Record<NotifyScope, { label: string; hint: string }> = {
+    favorites: { label: "Favorites only", hint: "Only sites you've starred at each campground." },
+    worthwhile: { label: "Favorites + worthwhile", hint: "Starred sites and any you've marked worthwhile." },
+    all: { label: "All sites", hint: "Every site at the campground — most noise, no surprises." },
+};
 
 export default function AccountPage() {
     const auth = useAuth();
@@ -30,6 +39,7 @@ export default function AccountPage() {
     const [saving, setSaving] = useState(false);
     const [notifEnabled, setNotifEnabled] = useState<boolean>(true);
     const [notifFrequency, setNotifFrequency] = useState<Frequency>(15);
+    const [notifScope, setNotifScope] = useState<NotifyScope>(DEFAULT_NOTIFY_SCOPE);
     const [savingNotif, setSavingNotif] = useState(false);
 
     useEffect(() => {
@@ -46,8 +56,13 @@ export default function AccountPage() {
         const n = auth.user?.notifications ?? DEFAULT_NOTIFICATIONS;
         setNotifEnabled(n.enabled);
         setNotifFrequency(n.frequencyMinutes as Frequency);
+        setNotifScope(auth.user?.defaultNotifyScope ?? DEFAULT_NOTIFY_SCOPE);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [auth.user?.notifications?.enabled, auth.user?.notifications?.frequencyMinutes]);
+    }, [
+        auth.user?.notifications?.enabled,
+        auth.user?.notifications?.frequencyMinutes,
+        auth.user?.defaultNotifyScope,
+    ]);
 
     if (auth.isLoading || !auth.user) {
         return (
@@ -91,7 +106,11 @@ export default function AccountPage() {
     const currentNotifEnabled = auth.user.notifications?.enabled ?? DEFAULT_NOTIFICATIONS.enabled;
     const currentNotifFrequency =
         auth.user.notifications?.frequencyMinutes ?? DEFAULT_NOTIFICATIONS.frequencyMinutes;
-    const notifDirty = notifEnabled !== currentNotifEnabled || notifFrequency !== currentNotifFrequency;
+    const currentNotifScope = auth.user.defaultNotifyScope ?? DEFAULT_NOTIFY_SCOPE;
+    const notifDirty =
+        notifEnabled !== currentNotifEnabled ||
+        notifFrequency !== currentNotifFrequency ||
+        notifScope !== currentNotifScope;
 
     async function saveNotifications() {
         if (!notifDirty) return;
@@ -102,6 +121,7 @@ export default function AccountPage() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     notifications: { enabled: notifEnabled, frequencyMinutes: notifFrequency },
+                    defaultNotifyScope: notifScope,
                 }),
                 credentials: "include",
             });
@@ -317,6 +337,36 @@ export default function AccountPage() {
                                 </Select>
                                 <p className="font-italic-serif text-[14px] italic text-cw-ink-soft">
                                     The notifier runs every 5 minutes. Faster cadence = faster alerts.
+                                </p>
+                            </div>
+
+                            {/* Default scope select */}
+                            <div className="space-y-2 mb-6">
+                                <Label
+                                    htmlFor="notif-scope"
+                                    className="font-mono-field text-[12px] font-bold uppercase tracking-[0.16em] text-cw-clay"
+                                >
+                                    Default scope for new campgrounds
+                                </Label>
+                                <Select
+                                    value={notifScope}
+                                    onValueChange={(v) => setNotifScope(v as NotifyScope)}
+                                    disabled={!notifEnabled}
+                                >
+                                    <SelectTrigger id="notif-scope" className="max-w-xs">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {(["favorites", "worthwhile", "all"] as const).map((s) => (
+                                            <SelectItem key={s} value={s}>
+                                                {SCOPE_LABELS[s].label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <p className="font-italic-serif text-[14px] italic text-cw-ink-soft">
+                                    {SCOPE_LABELS[notifScope].hint} Each campground can override
+                                    this in its settings.
                                 </p>
                             </div>
 

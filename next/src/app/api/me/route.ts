@@ -16,12 +16,15 @@ export const GET = withErrorLogging(getHandler, "GET /api/me");
 interface PatchBody {
     name?: string;
     notifications?: { enabled: boolean; frequencyMinutes: 5 | 15 | 60 | 240 };
+    defaultNotifyScope?: "favorites" | "worthwhile" | "all";
 }
+
+const ALLOWED_PATCH_KEYS = new Set(["name", "notifications", "defaultNotifyScope"]);
 
 function isValidPatch(body: unknown): body is PatchBody {
     if (!body || typeof body !== "object") return false;
     const obj = body as Record<string, unknown>;
-    if (Object.keys(obj).some((k) => k !== "name" && k !== "notifications")) return false;
+    if (Object.keys(obj).some((k) => !ALLOWED_PATCH_KEYS.has(k))) return false;
     if (obj.name !== undefined && typeof obj.name !== "string") return false;
     if (obj.notifications !== undefined) {
         const n = obj.notifications as Record<string, unknown>;
@@ -34,6 +37,14 @@ function isValidPatch(body: unknown): body is PatchBody {
             n.frequencyMinutes !== 240
         )
             return false;
+    }
+    if (
+        obj.defaultNotifyScope !== undefined &&
+        obj.defaultNotifyScope !== "favorites" &&
+        obj.defaultNotifyScope !== "worthwhile" &&
+        obj.defaultNotifyScope !== "all"
+    ) {
+        return false;
     }
     return true;
 }
@@ -55,6 +66,7 @@ async function patchHandler(request: Request): Promise<Response> {
     const patch: Partial<UserProfile> = {};
     if (body.name !== undefined) patch.name = body.name;
     if (body.notifications !== undefined) patch.notifications = body.notifications;
+    if (body.defaultNotifyScope !== undefined) patch.defaultNotifyScope = body.defaultNotifyScope;
 
     const updated = await updateUserProfile(session.email, patch);
     if (!updated) return withCors(jsonResponse({ error: "Unauthorized" }, 401));

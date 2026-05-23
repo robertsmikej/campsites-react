@@ -38,6 +38,9 @@ export interface CampgroundShowOrHide {
 
 export type CampgroundType = "campground" | "cabin" | "lookout";
 
+export type NotifyScope = "favorites" | "worthwhile" | "all";
+export const NOTIFY_SCOPES: readonly NotifyScope[] = ["favorites", "worthwhile", "all"] as const;
+
 export interface Campground {
     id: string;
     name: string;
@@ -50,6 +53,10 @@ export interface Campground {
     mapImage?: string;
     sites: { favorites: string[]; worthwhile: string[] };
     showOrHide?: Partial<CampgroundShowOrHide>;
+    /** Which sites at this campground should trigger an email. Falls back
+     *  through `notifyAll` (legacy) and the user's defaultNotifyScope. */
+    notifyScope?: NotifyScope;
+    /** @deprecated use notifyScope. true == "all". */
     notifyAll?: boolean;
     enabled?: boolean;
     validStartDays?: string[];

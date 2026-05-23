@@ -98,6 +98,7 @@ export function sanitizeCampground(campground: EditableCampground): Campground {
         },
         ...(campground.validStartDays ? { validStartDays: campground.validStartDays } : {}),
         ...(campground.stayLengths ? { stayLengths: campground.stayLengths } : {}),
+        ...(campground.notifyScope ? { notifyScope: campground.notifyScope } : {}),
         ...(campground.notifyAll != null ? { notifyAll: campground.notifyAll } : {}),
         ...(campground.enabled === false ? { enabled: false } : {}),
     };

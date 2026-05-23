@@ -202,6 +202,37 @@ describe("PATCH /api/me", () => {
         );
         expect(res.status).toBe(400);
     });
+
+    it("accepts defaultNotifyScope and persists it on the profile", async () => {
+        const kv = createMockKv();
+        const session = await setupKvWithSession(kv);
+
+        const { PATCH } = await import("./route");
+        const res = await PATCH(
+            makeRequest("PATCH", "https://example.com/api/me", {
+                cookieHeader: `${SESSION_COOKIE}=${session.id}`,
+                body: { defaultNotifyScope: "favorites" },
+            }),
+        );
+
+        expect(res.status).toBe(200);
+        const body = (await res.json()) as { defaultNotifyScope: string };
+        expect(body.defaultNotifyScope).toBe("favorites");
+    });
+
+    it("rejects an invalid defaultNotifyScope", async () => {
+        const kv = createMockKv();
+        const session = await setupKvWithSession(kv);
+
+        const { PATCH } = await import("./route");
+        const res = await PATCH(
+            makeRequest("PATCH", "https://example.com/api/me", {
+                cookieHeader: `${SESSION_COOKIE}=${session.id}`,
+                body: { defaultNotifyScope: "everything" },
+            }),
+        );
+        expect(res.status).toBe(400);
+    });
 });
 
 describe("DELETE /api/me", () => {
