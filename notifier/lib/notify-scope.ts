@@ -3,7 +3,7 @@
 
 export type NotifyScope = "favorites" | "worthwhile" | "all";
 
-const DEFAULT_FALLBACK: NotifyScope = "worthwhile";
+const DEFAULT_FALLBACK: NotifyScope = "favorites";
 
 export function resolveNotifyScope(
     campground: { notifyScope?: NotifyScope; notifyAll?: boolean },

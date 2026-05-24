@@ -16,8 +16,8 @@ describe("resolveNotifyScope", () => {
         expect(resolveNotifyScope({}, "all")).toBe("all");
     });
 
-    it("falls back to 'worthwhile' when user default is undefined", () => {
-        expect(resolveNotifyScope({}, undefined)).toBe("worthwhile");
+    it("falls back to 'favorites' when user default is undefined", () => {
+        expect(resolveNotifyScope({}, undefined)).toBe("favorites");
     });
 
     it("treats notifyAll=false the same as undefined", () => {

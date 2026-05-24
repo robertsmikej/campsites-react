@@ -1,6 +1,6 @@
 import type { Campground, NotifyScope } from "@/types/campground";
 
-const DEFAULT_FALLBACK: NotifyScope = "worthwhile";
+const DEFAULT_FALLBACK: NotifyScope = "favorites";
 
 export function resolveNotifyScope(
     campground: Pick<Campground, "notifyScope" | "notifyAll">,

@@ -25,7 +25,7 @@ import type { NotifyScope } from "@/types/campground";
 type Frequency = 5 | 15 | 60 | 240;
 
 const DEFAULT_NOTIFICATIONS = { enabled: true, frequencyMinutes: 15 satisfies Frequency };
-const DEFAULT_NOTIFY_SCOPE: NotifyScope = "worthwhile";
+const DEFAULT_NOTIFY_SCOPE: NotifyScope = "favorites";
 
 const SCOPE_LABELS: Record<NotifyScope, { label: string; hint: string }> = {
     favorites: { label: "Favorites only", hint: "Only sites you've starred at each campground." },
