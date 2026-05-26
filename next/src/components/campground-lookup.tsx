@@ -434,7 +434,6 @@ export function CampgroundLookup({ variant: _variant = "homepage" }: CampgroundL
         { label: '"Redfish Lake" (name)', val: "Redfish Lake" },
         { label: "Outlet (catalog)", val: "232358" },
         { label: "Pine Flats (catalog)", val: "232312" },
-        { label: "Bad URL", val: "https://example.com/yosemite" },
     ];
 
     // PAD_M = 22px
