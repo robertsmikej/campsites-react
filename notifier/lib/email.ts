@@ -134,7 +134,7 @@ const buildHeader = (count: number, uniqueCampgroundNames: string[], logoUrl: st
                                                 </tbody>
                                             </table>
                                             <!-- Field Bulletin label — stacked below wordmark on mobile -->
-                                            <div style="font-family:${F.mono};font-size:12px;color:${C.creampale};letter-spacing:0.18em;text-transform:uppercase;margin-bottom:14px;">Field Bulletin &middot; No. 0142</div>
+                                            <div style="font-family:${F.mono};font-weight:700;font-size:12px;color:${C.creampale};letter-spacing:0.18em;text-transform:uppercase;margin-bottom:14px;">Field Bulletin &middot; No. 0142</div>
                                             <!-- Poster headline -->
                                             <div style="font-family:${F.poster};font-weight:900;font-size:26px;line-height:28px;color:${C.cream};letter-spacing:-0.005em;text-transform:uppercase;margin-bottom:4px;">
                                                 <span style="color:${C.sand};">${headlineCount}</span><br/>
@@ -155,8 +155,8 @@ const buildMetaBar = (timestamp: string): string => {
                     <!-- META BAR — stacked (mobile-first) -->
                     <tr>
                         <td bgcolor="${C.paper}" style="background-color:${C.paper};padding:14px 18px;border-top:1px solid ${C.forest};border-bottom:1px solid ${C.rule};">
-                            <div style="font-family:${F.mono};font-size:12px;color:${C.inkSubtle};letter-spacing:0.14em;text-transform:uppercase;margin-bottom:4px;">Checked ${timestamp}</div>
-                            <div style="font-family:${F.mono};font-size:12px;color:${C.clay};letter-spacing:0.14em;text-transform:uppercase;">&#9679; LIVE &middot; Polling every 5 min</div>
+                            <div style="font-family:${F.mono};font-weight:700;font-size:12px;color:${C.inkSubtle};letter-spacing:0.14em;text-transform:uppercase;margin-bottom:4px;">Checked ${timestamp}</div>
+                            <div style="font-family:${F.mono};font-weight:700;font-size:12px;color:${C.clay};letter-spacing:0.14em;text-transform:uppercase;">&#9679; LIVE &middot; Polling every 5 min</div>
                         </td>
                     </tr>`;
 };
@@ -203,7 +203,7 @@ const buildOpeningCard = (match: MatchResult): string => {
                                                 <!-- Dates -->
                                                 <div style="font-family:${F.body};font-weight:bold;font-size:16px;line-height:22px;color:${C.ink};margin-top:6px;">${dateRange}</div>
                                                 <!-- Nights -->
-                                                <div style="font-family:${F.mono};font-size:13px;color:${C.inkSubtle};letter-spacing:0.12em;text-transform:uppercase;margin-top:4px;">${nightsText}</div>
+                                                <div style="font-family:${F.mono};font-weight:700;font-size:13px;color:${C.inkSubtle};letter-spacing:0.12em;text-transform:uppercase;margin-top:4px;">${nightsText}</div>
                                             </td>
                                         </tr>
                                         <!-- Book button — full-width, stacked below -->
@@ -252,7 +252,7 @@ const buildCampgroundSection = (
     sectionParts.push(`
                         <tr>
                             <td style="padding-bottom:8px;">
-                                <div style="font-family:${F.mono};font-size:13px;color:${C.clay};letter-spacing:0.18em;text-transform:uppercase;">${eyebrow}</div>
+                                <div style="font-family:${F.mono};font-weight:700;font-size:13px;color:${C.clay};letter-spacing:0.18em;text-transform:uppercase;">${eyebrow}</div>
                             </td>
                         </tr>`);
 
@@ -330,7 +330,7 @@ const buildFooter = (unsubscribeHtml: string, siteUrl: string | undefined): stri
                             <td>
                                 <div style="font-family:${F.ital};font-style:italic;font-size:18px;line-height:26px;color:${C.sand};margin-bottom:4px;">Yours from the trail,</div>
                                 <div style="font-family:${F.poster};font-weight:900;font-size:22px;line-height:28px;color:${C.cream};letter-spacing:0.04em;text-transform:uppercase;margin-bottom:16px;">&mdash;&nbsp;CampWatch</div>
-                                <div style="font-family:${F.mono};font-size:13px;color:${C.creampale};letter-spacing:0.12em;text-transform:uppercase;line-height:20px;">
+                                <div style="font-family:${F.mono};font-weight:700;font-size:13px;color:${C.creampale};letter-spacing:0.12em;text-transform:uppercase;line-height:20px;">
                                     You're getting this because you signed up for CampWatch alerts.<br/>
                                     <a href="${settingsLink}" style="color:${C.creamlink};text-decoration:underline;">Notification settings</a>
                                     &nbsp;&middot;&nbsp;
