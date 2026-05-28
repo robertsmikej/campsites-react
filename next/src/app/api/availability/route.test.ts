@@ -75,7 +75,7 @@ describe("GET /api/availability", () => {
 
         const response = await GET(new Request("http://x/api/availability"));
         expect(response.status).toBe(200);
-        const body = await response.json();
+        const body = (await response.json()) as { campgrounds: unknown[] };
         expect(body.campgrounds).toHaveLength(1);
         expect(fetchSpy).toHaveBeenCalled();
     });
@@ -108,7 +108,7 @@ describe("GET /api/availability", () => {
 
         const response = await GET(new Request("http://x/api/availability"));
         expect(response.status).toBe(200);
-        const body = await response.json();
+        const body = (await response.json()) as { campgrounds: unknown[] };
         expect(Array.isArray(body.campgrounds)).toBe(true);
     });
 

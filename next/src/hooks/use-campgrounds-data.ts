@@ -1,9 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { fetchCampgrounds } from "@/lib/recreation-gov";
 import { formatGroupsByFavorites } from "@/lib/campground-utils";
-import type { CampgroundsBySystem, ProcessedCampground, SiteConfig } from "@/types/campground";
+import type { AvailabilitySnapshot } from "@/lib/recgov";
+import type { CampgroundsBySystem, ProcessedCampground } from "@/types/campground";
+
+interface UseCampgroundsDataArgs {
+    enabled: boolean;
+}
 
 interface ProgressBarData {
     totalCalls: number;
@@ -11,23 +15,18 @@ interface ProgressBarData {
     progress: number;
 }
 
-interface UseCampgroundsDataArgs {
-    siteConfig: SiteConfig;
-    settings: unknown;
-    useMockData: boolean;
-    enabled: boolean;
-}
-
-export function useCampgroundsData({ siteConfig, settings, useMockData, enabled }: UseCampgroundsDataArgs) {
+export function useCampgroundsData({ enabled }: UseCampgroundsDataArgs) {
     const [campgroundsData, setCampgroundsData] = useState<CampgroundsBySystem>({});
     const [campgroundsByAreas, setCampgroundsByAreas] = useState<ProcessedCampground[]>([]);
     const [isFetching, setIsFetching] = useState(false);
-    const [progressBarData, setProgressBarData] = useState<ProgressBarData>({
-        totalCalls: 0,
-        currentCall: 0,
-        progress: 0,
-    });
     const [reloadKey, setReloadKey] = useState(0);
+
+    // Kept for component-API compatibility; progress is now binary (loading vs done).
+    const progressBarData: ProgressBarData = {
+        totalCalls: 1,
+        currentCall: isFetching ? 0 : 1,
+        progress: isFetching ? 0 : 1,
+    };
 
     const refresh = useCallback(() => setReloadKey((k) => k + 1), []);
 
@@ -37,31 +36,41 @@ export function useCampgroundsData({ siteConfig, settings, useMockData, enabled 
 
         async function run() {
             setIsFetching(true);
-            setProgressBarData({ totalCalls: 0, currentCall: 0, progress: 0 });
-            const data = await fetchCampgrounds(
-                siteConfig as unknown as Record<string, import("@/types/campground").Campground[]>,
-                settings as never,
-                (current: number, total: number) => {
-                    if (cancelled) return;
-                    setProgressBarData({
-                        currentCall: current,
-                        totalCalls: total,
-                        progress: total > 0 ? current / total : 0,
-                    });
-                },
-                false,
-                { useMockData },
-            );
-            if (cancelled) return;
-            setCampgroundsData((data as CampgroundsBySystem) ?? {});
-            setIsFetching(false);
+            try {
+                const response = await fetch("/api/availability");
+                if (!response.ok) {
+                    console.error(`[availability] HTTP ${response.status}`);
+                    if (!cancelled) setCampgroundsData({});
+                    return;
+                }
+                const snapshot = (await response.json()) as AvailabilitySnapshot;
+                if (cancelled) return;
+
+                // Reshape snapshot.campgrounds[] back into the system-keyed map the dashboard expects.
+                const bySystem: CampgroundsBySystem = { "recreation.gov": [] };
+                for (const cg of snapshot.campgrounds) {
+                    bySystem["recreation.gov"]?.push({
+                        campgroundId: cg.campgroundId,
+                        campgroundName: cg.campgroundName,
+                        campgroundArea: cg.campgroundArea,
+                        campgroundDescription: cg.campgroundDescription,
+                        sites: cg.sites,
+                    } as unknown as ProcessedCampground);
+                }
+                setCampgroundsData(bySystem);
+            } catch (e) {
+                console.error("[availability] fetch error:", e);
+                if (!cancelled) setCampgroundsData({});
+            } finally {
+                if (!cancelled) setIsFetching(false);
+            }
         }
 
         run();
         return () => {
             cancelled = true;
         };
-    }, [siteConfig, settings, useMockData, enabled, reloadKey]);
+    }, [enabled, reloadKey]);
 
     useEffect(() => {
         if (Object.keys(campgroundsData).length === 0) {

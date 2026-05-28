@@ -79,9 +79,6 @@ export default function AppPage() {
     );
 
     const { campgroundsByAreas, isFetching, progressBarData } = useCampgroundsData({
-        siteConfig,
-        settings,
-        useMockData,
         enabled: !isHydrating,
     });
 

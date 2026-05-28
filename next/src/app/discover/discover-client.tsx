@@ -22,8 +22,6 @@ const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
     validStartDays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
 };
 
-const EMPTY_SITE_CONFIG: SiteConfig = { "recreation.gov": [] };
-
 // 42-day window from today (same as dashboard default)
 function makeWindow() {
     const start = new Date();
@@ -46,7 +44,6 @@ export function DiscoverClient() {
             .catch(() => {});
     }, []);
 
-    const siteConfig = defaultRecord?.campgrounds ?? EMPTY_SITE_CONFIG;
     const globalSettings = defaultRecord?.globalSettings ?? DEFAULT_GLOBAL_SETTINGS;
 
     const settings = useMemo<SiteSettingsValue>(
@@ -62,10 +59,7 @@ export function DiscoverClient() {
     );
 
     const { campgroundsByAreas, isFetching, progressBarData } = useCampgroundsData({
-        siteConfig,
-        settings,
-        useMockData: false,
-        enabled: defaultRecord !== null,
+        enabled: true,
     });
 
     // Sort alphabetically for stable display on the public page
