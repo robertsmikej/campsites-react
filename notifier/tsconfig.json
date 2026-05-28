@@ -16,7 +16,10 @@
         "resolveJsonModule": true,
         "allowSyntheticDefaultImports": true,
         "isolatedModules": true,
-        "types": ["node"]
+        "types": ["node"],
+        "paths": {
+            "@/*": ["../next/src/*"]
+        }
     },
     "include": ["**/*.ts"],
     "exclude": ["node_modules"]

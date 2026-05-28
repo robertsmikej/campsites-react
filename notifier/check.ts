@@ -3,13 +3,17 @@
 // deduplicates recreation.gov fetches, and emails each user about their own matches.
 // Designed to run as a GitHub Actions scheduled workflow.
 
-import { fetchMonth, processCampgroundResults, getAllDatesInRange } from "./lib/fetch-availability";
+import {
+    fetchMonth,
+    processCampgroundResults,
+    getAllDatesInRange,
+} from "../next/src/lib/recgov";
 import { findNewMatches, generateSignature } from "./lib/diff";
 import { formatEmail, sendEmail } from "./lib/email";
 import { resolveNotifyScope, matchPassesScope } from "./lib/notify-scope";
 import type { Campground, GlobalSettings, NotifyScope } from "../next/src/types/campground";
 import type { MatchResult, SiteConfigForDiff, CampgroundResult } from "./lib/diff";
-import type { SiteAvailabilityMap } from "./lib/fetch-availability";
+import type { SiteAvailabilityMap } from "../next/src/lib/recgov";
 
 const DELAY_BETWEEN_FETCHES_MS = 500;
 
