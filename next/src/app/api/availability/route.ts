@@ -72,11 +72,8 @@ async function buildSnapshot(
             }
         }
         results.push({
-            campgroundId: cg.id,
-            campgroundName: cg.name,
-            campgroundArea: cg.area ?? "",
-            campgroundDescription: cg.description ?? "",
-            sites: sitesWithMatches,
+            ...cg,
+            siteAvailability: sitesWithMatches,
             totalSitesCount,
         });
     }

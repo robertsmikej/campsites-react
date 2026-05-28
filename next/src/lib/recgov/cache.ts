@@ -1,3 +1,4 @@
+import type { Campground } from "@/types/campground";
 import type { RawMonthResult, SiteAvailabilityMap } from "./types";
 
 export const RAW_CACHE_TTL_SECONDS = 5 * 60;
@@ -9,13 +10,12 @@ export const rawCacheKey = (facilityId: string, month: string): string =>
 export const snapshotCacheKey = (email: string): string => `snapshot:${email}`;
 
 // Snapshot value shape — the data the dashboard ultimately consumes.
-// One entry per campground the user watches; site availability already filtered.
-export interface SnapshotCampground {
-    campgroundId: string;
-    campgroundName: string;
-    campgroundArea: string;
-    campgroundDescription: string;
-    sites: SiteAvailabilityMap;
+// Embeds the source Campground config (so the dashboard has image/dates/ratings/etc.
+// without a separate config fetch) plus the processed availability for this poll
+// cycle. Site availability is filtered to sites with at least one match;
+// totalSitesCount tracks the original site total before filtering.
+export interface SnapshotCampground extends Campground {
+    siteAvailability: SiteAvailabilityMap;
     totalSitesCount: number;
 }
 

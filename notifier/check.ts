@@ -200,25 +200,30 @@ async function writeUserSnapshot(
     syntheticResults: CampgroundResult[],
 ): Promise<void> {
     if (!kvAdapter) return;
+    const cgById = new Map<string, Campground>();
+    for (const cg of target.campgrounds["recreation.gov"] ?? []) {
+        cgById.set(cg.id, cg);
+    }
+    const campgrounds: SnapshotCampground[] = [];
+    for (const r of syntheticResults) {
+        const cg = cgById.get(r.campgroundId);
+        if (!cg) continue;
+        const totalSitesCount = Object.keys(r.sites).length;
+        const sitesWithMatches: typeof r.sites = {};
+        for (const [siteId, site] of Object.entries(r.sites)) {
+            if (site.matches && site.matches.length > 0) {
+                sitesWithMatches[siteId] = site;
+            }
+        }
+        campgrounds.push({
+            ...cg,
+            siteAvailability: sitesWithMatches,
+            totalSitesCount,
+        });
+    }
     const snapshot: AvailabilitySnapshot = {
         updatedAt: new Date().toISOString(),
-        campgrounds: syntheticResults.map((r): SnapshotCampground => {
-            const totalSitesCount = Object.keys(r.sites).length;
-            const sitesWithMatches: typeof r.sites = {};
-            for (const [siteId, site] of Object.entries(r.sites)) {
-                if (site.matches && site.matches.length > 0) {
-                    sitesWithMatches[siteId] = site;
-                }
-            }
-            return {
-                campgroundId: r.campgroundId,
-                campgroundName: r.campgroundName,
-                campgroundArea: r.campgroundArea,
-                campgroundDescription: r.campgroundDescription,
-                sites: sitesWithMatches,
-                totalSitesCount,
-            };
-        }),
+        campgrounds,
     };
     try {
         await kvAdapter.putSnapshot(target.email, snapshot);

@@ -161,12 +161,12 @@ describe("GET /api/availability", () => {
 
         const response = await GET(new Request("http://x/api/availability"));
         const body = (await response.json()) as {
-            campgrounds: Array<{ sites: Record<string, unknown>; totalSitesCount: number }>;
+            campgrounds: Array<{ siteAvailability: Record<string, unknown>; totalSitesCount: number }>;
         };
         expect(body.campgrounds).toHaveLength(1);
         const cg = body.campgrounds[0]!;
         expect(cg.totalSitesCount).toBe(1);
-        expect(Object.keys(cg.sites)).toHaveLength(0);
+        expect(Object.keys(cg.siteAvailability)).toHaveLength(0);
     });
 
     it("filters out empty-match sites but keeps sites with matches; totalSitesCount reflects original total", async () => {
@@ -216,15 +216,15 @@ describe("GET /api/availability", () => {
 
         const response = await GET(new Request("http://x/api/availability"));
         const body = (await response.json()) as {
-            campgrounds: Array<{ sites: Record<string, unknown>; totalSitesCount: number }>;
+            campgrounds: Array<{ siteAvailability: Record<string, unknown>; totalSitesCount: number }>;
         };
         expect(body.campgrounds).toHaveLength(1);
         const cg = body.campgrounds[0]!;
         // 2 raw sites before filter.
         expect(cg.totalSitesCount).toBe(2);
         // Only the site with matches survives.
-        expect(Object.keys(cg.sites)).toHaveLength(1);
-        expect(cg.sites["1"]).toBeDefined();
-        expect(cg.sites["2"]).toBeUndefined();
+        expect(Object.keys(cg.siteAvailability)).toHaveLength(1);
+        expect(cg.siteAvailability["1"]).toBeDefined();
+        expect(cg.siteAvailability["2"]).toBeUndefined();
     });
 });

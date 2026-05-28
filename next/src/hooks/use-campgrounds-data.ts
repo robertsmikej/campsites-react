@@ -46,18 +46,11 @@ export function useCampgroundsData({ enabled }: UseCampgroundsDataArgs) {
                 const snapshot = (await response.json()) as AvailabilitySnapshot;
                 if (cancelled) return;
 
-                // Reshape snapshot.campgrounds[] back into the system-keyed map the dashboard expects.
-                const bySystem: CampgroundsBySystem = { "recreation.gov": [] };
-                for (const cg of snapshot.campgrounds) {
-                    bySystem["recreation.gov"]?.push({
-                        campgroundId: cg.campgroundId,
-                        campgroundName: cg.campgroundName,
-                        campgroundArea: cg.campgroundArea,
-                        campgroundDescription: cg.campgroundDescription,
-                        siteAvailability: cg.sites,
-                        totalSitesCount: cg.totalSitesCount,
-                    } as unknown as ProcessedCampground);
-                }
+                // Snapshot campgrounds embed the source Campground config, so they
+                // already have id/name/sites (ratings)/dates/image/etc. directly.
+                const bySystem: CampgroundsBySystem = {
+                    "recreation.gov": snapshot.campgrounds as unknown as ProcessedCampground[],
+                };
                 setCampgroundsData(bySystem);
             } catch (e) {
                 console.error("[availability] fetch error:", e);
