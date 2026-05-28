@@ -54,7 +54,8 @@ export function useCampgroundsData({ enabled }: UseCampgroundsDataArgs) {
                         campgroundName: cg.campgroundName,
                         campgroundArea: cg.campgroundArea,
                         campgroundDescription: cg.campgroundDescription,
-                        sites: cg.sites,
+                        siteAvailability: cg.sites,
+                        totalSitesCount: cg.totalSitesCount,
                     } as unknown as ProcessedCampground);
                 }
                 setCampgroundsData(bySystem);

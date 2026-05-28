@@ -16,6 +16,7 @@ export interface SnapshotCampground {
     campgroundArea: string;
     campgroundDescription: string;
     sites: SiteAvailabilityMap;
+    totalSitesCount: number;
 }
 
 export interface AvailabilitySnapshot {

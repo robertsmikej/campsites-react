@@ -65,6 +65,7 @@ export interface Campground {
 
 export interface ProcessedCampground extends Campground {
     siteAvailability: Record<string, SiteAvailability>;
+    totalSitesCount?: number;
     sitesGroupedByFavorites?: {
         Favorites: SiteAvailability[];
         Worthwhile: SiteAvailability[];

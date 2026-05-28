@@ -64,12 +64,20 @@ async function buildSnapshot(
         };
 
         const sites = processCampgroundResults(rawResults, allDates, effectiveSettings);
+        const totalSitesCount = Object.keys(sites).length;
+        const sitesWithMatches: typeof sites = {};
+        for (const [siteId, site] of Object.entries(sites)) {
+            if (site.matches && site.matches.length > 0) {
+                sitesWithMatches[siteId] = site;
+            }
+        }
         results.push({
             campgroundId: cg.id,
             campgroundName: cg.name,
             campgroundArea: cg.area ?? "",
             campgroundDescription: cg.description ?? "",
-            sites,
+            sites: sitesWithMatches,
+            totalSitesCount,
         });
     }
 

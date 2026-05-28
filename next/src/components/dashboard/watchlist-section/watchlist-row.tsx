@@ -248,7 +248,7 @@ function ExpandedSites({
         return a.siteName.localeCompare(b.siteName);
     });
 
-    const totalSites = sites.length;
+    const totalSites = campground.totalSitesCount ?? sites.length;
     const openSites = sites.filter((s) => countOpenInWindow(s, windowStart, windowEnd) > 0).length;
 
     if (totalSites === 0) {

@@ -127,4 +127,104 @@ describe("GET /api/availability", () => {
             expect.objectContaining({ expirationTtl: 600 }),
         );
     });
+
+    it("sets totalSitesCount > 0 and empty sites map when all sites have no matches", async () => {
+        vi.mocked(sessions.readSession).mockResolvedValue(null);
+        kv._store.set(
+            "config:campgrounds",
+            JSON.stringify({
+                campgrounds: {
+                    "recreation.gov": [
+                        {
+                            id: "232358",
+                            name: "No Match CG",
+                            enabled: true,
+                            dates: { startDate: "2026-07-01", endDate: "2026-07-03" },
+                            sites: { favorites: [], worthwhile: [] },
+                        },
+                    ],
+                },
+                globalSettings: { stayLengths: [2], validStartDays: ["Friday"] },
+            }),
+        );
+        // One site with no available dates → matches will be empty after processing.
+        fetchSpy.mockResolvedValue(
+            new Response(
+                JSON.stringify({
+                    campsites: {
+                        "1": { site: "001", campsite_type: "STANDARD", availabilities: {} },
+                    },
+                }),
+                { status: 200 },
+            ),
+        );
+
+        const response = await GET(new Request("http://x/api/availability"));
+        const body = (await response.json()) as {
+            campgrounds: Array<{ sites: Record<string, unknown>; totalSitesCount: number }>;
+        };
+        expect(body.campgrounds).toHaveLength(1);
+        const cg = body.campgrounds[0]!;
+        expect(cg.totalSitesCount).toBe(1);
+        expect(Object.keys(cg.sites)).toHaveLength(0);
+    });
+
+    it("filters out empty-match sites but keeps sites with matches; totalSitesCount reflects original total", async () => {
+        vi.mocked(sessions.readSession).mockResolvedValue(null);
+        kv._store.set(
+            "config:campgrounds",
+            JSON.stringify({
+                campgrounds: {
+                    "recreation.gov": [
+                        {
+                            id: "232358",
+                            name: "Mixed CG",
+                            enabled: true,
+                            // Two-month window that includes our test date (2026-07-04 is a Saturday).
+                            dates: { startDate: "2026-07-01", endDate: "2026-07-10" },
+                            sites: { favorites: [], worthwhile: [] },
+                        },
+                    ],
+                },
+                globalSettings: { stayLengths: [2], validStartDays: ["Saturday"] },
+            }),
+        );
+        // Site "1": has an Available Saturday that starts a 2-night run → will have matches.
+        // Site "2": no available dates → no matches, should be filtered out.
+        fetchSpy.mockResolvedValue(
+            new Response(
+                JSON.stringify({
+                    campsites: {
+                        "1": {
+                            site: "001",
+                            campsite_type: "STANDARD",
+                            availabilities: {
+                                "2026-07-04T00:00:00Z": "Available",
+                                "2026-07-05T00:00:00Z": "Available",
+                            },
+                        },
+                        "2": {
+                            site: "002",
+                            campsite_type: "STANDARD",
+                            availabilities: {},
+                        },
+                    },
+                }),
+                { status: 200 },
+            ),
+        );
+
+        const response = await GET(new Request("http://x/api/availability"));
+        const body = (await response.json()) as {
+            campgrounds: Array<{ sites: Record<string, unknown>; totalSitesCount: number }>;
+        };
+        expect(body.campgrounds).toHaveLength(1);
+        const cg = body.campgrounds[0]!;
+        // 2 raw sites before filter.
+        expect(cg.totalSitesCount).toBe(2);
+        // Only the site with matches survives.
+        expect(Object.keys(cg.sites)).toHaveLength(1);
+        expect(cg.sites["1"]).toBeDefined();
+        expect(cg.sites["2"]).toBeUndefined();
+    });
 });

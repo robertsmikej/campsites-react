@@ -202,13 +202,23 @@ async function writeUserSnapshot(
     if (!kvAdapter) return;
     const snapshot: AvailabilitySnapshot = {
         updatedAt: new Date().toISOString(),
-        campgrounds: syntheticResults.map((r): SnapshotCampground => ({
-            campgroundId: r.campgroundId,
-            campgroundName: r.campgroundName,
-            campgroundArea: r.campgroundArea,
-            campgroundDescription: r.campgroundDescription,
-            sites: r.sites,
-        })),
+        campgrounds: syntheticResults.map((r): SnapshotCampground => {
+            const totalSitesCount = Object.keys(r.sites).length;
+            const sitesWithMatches: typeof r.sites = {};
+            for (const [siteId, site] of Object.entries(r.sites)) {
+                if (site.matches && site.matches.length > 0) {
+                    sitesWithMatches[siteId] = site;
+                }
+            }
+            return {
+                campgroundId: r.campgroundId,
+                campgroundName: r.campgroundName,
+                campgroundArea: r.campgroundArea,
+                campgroundDescription: r.campgroundDescription,
+                sites: sitesWithMatches,
+                totalSitesCount,
+            };
+        }),
     };
     try {
         await kvAdapter.putSnapshot(target.email, snapshot);
