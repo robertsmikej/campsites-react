@@ -5,6 +5,7 @@ import { getUserCampgrounds, putUserCampgrounds } from "@/lib/user-campgrounds";
 import { getSitewideDefaultSettings } from "@/lib/settings";
 import type { Campground, GlobalSettings, SiteConfig } from "@/types/campground";
 import { withErrorLogging } from "@/lib/route-helpers";
+import { WorkerKvAdapter } from "@/lib/recgov/worker-kv";
 
 interface DefaultConfig {
     campgrounds?: SiteConfig;
@@ -67,6 +68,10 @@ async function postHandler(request: Request): Promise<Response> {
         campgrounds: next,
         globalSettings: userGlobalSettings,
     });
+
+    const adapter = new WorkerKvAdapter(getKv());
+    await adapter.deleteSnapshot(session.email);
+
     return withCors(jsonResponse(stored));
 }
 export const POST = withErrorLogging(postHandler, "POST /api/users/me/campgrounds/items");

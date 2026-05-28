@@ -5,6 +5,7 @@ import { getSitewideDefaultSettings } from "@/lib/settings";
 import { getUserProfile } from "@/lib/users";
 import { getKv } from "@/lib/cloudflare";
 import { withErrorLogging } from "@/lib/route-helpers";
+import { WorkerKvAdapter } from "@/lib/recgov/worker-kv";
 
 const DEFAULT_CONFIG_KEY = "config:campgrounds";
 
@@ -60,6 +61,9 @@ async function putHandler(request: Request): Promise<Response> {
     }
 
     const stored = await putUserCampgrounds(session.email, body as never);
+
+    const adapter = new WorkerKvAdapter(getKv());
+    await adapter.deleteSnapshot(session.email);
 
     // Write-through to the default config if the user is a curator.
     const profile = await getUserProfile(session.email);
