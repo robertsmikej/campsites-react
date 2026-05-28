@@ -13,6 +13,7 @@ import { resolveNotifyScope, matchPassesScope } from "./lib/notify-scope";
 import type { Campground, GlobalSettings, NotifyScope } from "../next/src/types/campground";
 import type { MatchResult, SiteConfigForDiff, CampgroundResult } from "./lib/diff";
 import type { SiteAvailabilityMap } from "../next/src/lib/recgov/types";
+import type { AvailabilitySnapshot, SnapshotCampground } from "../next/src/lib/recgov/cache";
 
 function buildKvAdapter(): RestKvAdapter | null {
     const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
@@ -192,13 +193,37 @@ async function fetchDeduped(plan: FetchPlanItem[]): Promise<Record<string, unkno
     return rawByCampground;
 }
 
+// ── Snapshot write ────────────────────────────────────────────────────────────
+
+async function writeUserSnapshot(
+    target: NotificationTarget,
+    syntheticResults: CampgroundResult[],
+): Promise<void> {
+    if (!kvAdapter) return;
+    const snapshot: AvailabilitySnapshot = {
+        updatedAt: new Date().toISOString(),
+        campgrounds: syntheticResults.map((r): SnapshotCampground => ({
+            campgroundId: r.campgroundId,
+            campgroundName: r.campgroundName,
+            campgroundArea: r.campgroundArea,
+            campgroundDescription: r.campgroundDescription,
+            sites: r.sites,
+        })),
+    };
+    try {
+        await kvAdapter.putSnapshot(target.email, snapshot);
+    } catch (e) {
+        console.error(`[Snapshot] put failed for ${target.email}:`, (e as Error).message);
+    }
+}
+
 // ── Compute matches for a single user from pre-fetched raw API data ───────────
 // Returns matches in the same shape as findNewMatches (without diff).
 
-function computeMatchesForUser(
+async function computeMatchesForUser(
     target: NotificationTarget,
     rawByCampground: Record<string, unknown[]>,
-): MatchResult[] {
+): Promise<MatchResult[]> {
     const globalSettings = target.globalSettings ?? ({} as Partial<GlobalSettings>);
     const defaultSettings = {
         stayLengths: [2, 3, 4, 5],
@@ -267,6 +292,8 @@ function computeMatchesForUser(
         if (!scope) return false;
         return matchPassesScope(m.group, scope);
     });
+
+    await writeUserSnapshot(target, syntheticResults);
 
     return filtered;
 }
@@ -405,7 +432,7 @@ async function main(): Promise<void> {
     const newFirstSeenMap: FirstSeenMap = {};
     const globalMatchesBySig: Record<string, Omit<RecentOpening, "signature" | "detectedAt">> = {};
     for (const target of eligible) {
-        const userMatches = computeMatchesForUser(target, rawByCampground);
+        const userMatches = await computeMatchesForUser(target, rawByCampground);
         for (const m of userMatches) {
             const sig = signatureForMatch(m);
             if (!newFirstSeenMap[sig]) {
@@ -430,7 +457,7 @@ async function main(): Promise<void> {
     // Tracks latency (ms from first-seen to email-sent) for each match emailed this cycle.
     const sentLatenciesMs: number[] = [];
     for (const target of eligible) {
-        const userMatches = computeMatchesForUser(target, rawByCampground);
+        const userMatches = await computeMatchesForUser(target, rawByCampground);
         const isCurator = (target.roles ?? []).includes("curator");
 
         // Apply curator lead-time: non-curators only see matches whose global first-sighting
