@@ -32,4 +32,7 @@ jobs:
           SUBSCRIBER_API_SECRET: ${{ secrets.SUBSCRIBER_API_SECRET }}
           SITE_URL: ${{ secrets.SITE_URL }}
           FORCE_EMAIL: ${{ github.event.inputs.force_email }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_KV_NAMESPACE_ID: ${{ secrets.CLOUDFLARE_KV_NAMESPACE_ID }}
         run: npx tsx check.ts
