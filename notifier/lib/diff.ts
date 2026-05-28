@@ -2,7 +2,7 @@
 // to identify NEW availability that should trigger a notification.
 
 import type { StayMatch } from "../../next/src/types/campground";
-import type { SiteAvailabilityMap } from "./fetch-availability";
+import type { SiteAvailabilityMap } from "../../next/src/lib/recgov";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
