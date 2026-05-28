@@ -3,17 +3,29 @@
 // deduplicates recreation.gov fetches, and emails each user about their own matches.
 // Designed to run as a GitHub Actions scheduled workflow.
 
-import {
-    fetchMonth,
-    processCampgroundResults,
-    getAllDatesInRange,
-} from "../next/src/lib/recgov";
+import { fetchMonth } from "../next/src/lib/recgov/fetch-month";
+import { processCampgroundResults, getAllDatesInRange } from "../next/src/lib/recgov/match-detection";
+import { RestKvAdapter } from "../next/src/lib/recgov/rest-kv";
+import { fetchMonthWithCache } from "../next/src/lib/recgov/fetch-with-cache";
 import { findNewMatches, generateSignature } from "./lib/diff";
 import { formatEmail, sendEmail } from "./lib/email";
 import { resolveNotifyScope, matchPassesScope } from "./lib/notify-scope";
 import type { Campground, GlobalSettings, NotifyScope } from "../next/src/types/campground";
 import type { MatchResult, SiteConfigForDiff, CampgroundResult } from "./lib/diff";
-import type { SiteAvailabilityMap } from "../next/src/lib/recgov";
+import type { SiteAvailabilityMap } from "../next/src/lib/recgov/types";
+
+function buildKvAdapter(): RestKvAdapter | null {
+    const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+    const namespaceId = process.env.CLOUDFLARE_KV_NAMESPACE_ID;
+    const apiToken = process.env.CLOUDFLARE_API_TOKEN;
+    if (!accountId || !namespaceId || !apiToken) {
+        console.warn("[KV] Cloudflare creds not configured — running without KV cache");
+        return null;
+    }
+    return new RestKvAdapter({ accountId, namespaceId, apiToken });
+}
+
+const kvAdapter = buildKvAdapter();
 
 const DELAY_BETWEEN_FETCHES_MS = 500;
 
@@ -168,7 +180,9 @@ async function fetchDeduped(plan: FetchPlanItem[]): Promise<Record<string, unkno
         const planEntry = plan[i];
         if (!planEntry) continue;
         const { campgroundId, month } = planEntry;
-        const result = await fetchMonth(campgroundId, month);
+        const result = kvAdapter
+            ? await fetchMonthWithCache(campgroundId, month, kvAdapter)
+            : await fetchMonth(campgroundId, month);
         if (!rawByCampground[campgroundId]) rawByCampground[campgroundId] = [];
         rawByCampground[campgroundId].push(result);
         if (i < plan.length - 1) {
