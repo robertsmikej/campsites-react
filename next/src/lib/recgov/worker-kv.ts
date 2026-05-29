@@ -9,6 +9,12 @@ import {
 } from "./cache";
 import type { RawMonthResult } from "./types";
 
+// Serialize a snapshot for change-detection: strip the timestamp so two
+// identical-content snapshots produced minutes apart compare equal.
+function snapshotComparable(snapshot: AvailabilitySnapshot): string {
+    return JSON.stringify({ ...snapshot, updatedAt: "" });
+}
+
 export class WorkerKvAdapter implements KvAdapter {
     constructor(private readonly kv: KVNamespace) {}
 
@@ -17,9 +23,11 @@ export class WorkerKvAdapter implements KvAdapter {
     }
 
     async putRaw(facilityId: string, month: string, value: RawMonthResult): Promise<void> {
-        await this.kv.put(rawCacheKey(facilityId, month), JSON.stringify(value), {
-            expirationTtl: RAW_CACHE_TTL_SECONDS,
-        });
+        const key = rawCacheKey(facilityId, month);
+        const existingRaw = await this.kv.get(key);
+        const newRaw = JSON.stringify(value);
+        if (existingRaw === newRaw) return;
+        await this.kv.put(key, newRaw, { expirationTtl: RAW_CACHE_TTL_SECONDS });
     }
 
     async getSnapshot(email: string): Promise<AvailabilitySnapshot | null> {
@@ -27,9 +35,10 @@ export class WorkerKvAdapter implements KvAdapter {
     }
 
     async putSnapshot(email: string, value: AvailabilitySnapshot): Promise<void> {
-        await this.kv.put(snapshotCacheKey(email), JSON.stringify(value), {
-            expirationTtl: SNAPSHOT_CACHE_TTL_SECONDS,
-        });
+        const key = snapshotCacheKey(email);
+        const existing = (await this.kv.get(key, "json")) as AvailabilitySnapshot | null;
+        if (existing && snapshotComparable(existing) === snapshotComparable(value)) return;
+        await this.kv.put(key, JSON.stringify(value), { expirationTtl: SNAPSHOT_CACHE_TTL_SECONDS });
     }
 
     async deleteSnapshot(email: string): Promise<void> {

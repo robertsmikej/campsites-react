@@ -55,6 +55,8 @@ export class RestKvAdapter implements KvAdapter {
     }
 
     async putRaw(facilityId: string, month: string, value: RawMonthResult): Promise<void> {
+        const existing = await this.getRaw(facilityId, month);
+        if (existing && JSON.stringify(existing) === JSON.stringify(value)) return;
         await this.put(rawCacheKey(facilityId, month), value, RAW_CACHE_TTL_SECONDS);
     }
 
@@ -63,6 +65,12 @@ export class RestKvAdapter implements KvAdapter {
     }
 
     async putSnapshot(email: string, value: AvailabilitySnapshot): Promise<void> {
+        const existing = await this.getSnapshot(email);
+        if (existing) {
+            const a = JSON.stringify({ ...existing, updatedAt: "" });
+            const b = JSON.stringify({ ...value, updatedAt: "" });
+            if (a === b) return;
+        }
         await this.put(snapshotCacheKey(email), value, SNAPSHOT_CACHE_TTL_SECONDS);
     }
 

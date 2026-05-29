@@ -1,7 +1,11 @@
 import type { Campground } from "@/types/campground";
 import type { RawMonthResult, SiteAvailabilityMap } from "./types";
 
-export const RAW_CACHE_TTL_SECONDS = 5 * 60;
+// Long TTL is intentional: the notifier always force-fetches fresh data each
+// cycle and only writes back when content actually changed (see putRaw in the
+// KV adapters). A long TTL lets identical-content data survive between cycles
+// without burning a write per cycle. Dashboard reads serve from this cache.
+export const RAW_CACHE_TTL_SECONDS = 60 * 60;
 export const SNAPSHOT_CACHE_TTL_SECONDS = 10 * 60;
 
 export const rawCacheKey = (facilityId: string, month: string): string =>

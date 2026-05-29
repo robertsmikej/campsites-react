@@ -182,7 +182,7 @@ async function fetchDeduped(plan: FetchPlanItem[]): Promise<Record<string, unkno
         if (!planEntry) continue;
         const { campgroundId, month } = planEntry;
         const result = kvAdapter
-            ? await fetchMonthWithCache(campgroundId, month, kvAdapter)
+            ? await fetchMonthWithCache(campgroundId, month, kvAdapter, { forceFresh: true })
             : await fetchMonth(campgroundId, month);
         if (!rawByCampground[campgroundId]) rawByCampground[campgroundId] = [];
         rawByCampground[campgroundId].push(result);

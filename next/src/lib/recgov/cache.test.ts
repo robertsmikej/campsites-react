@@ -10,8 +10,8 @@ describe("cache key helpers", () => {
         expect(snapshotCacheKey("alice@example.com")).toBe("snapshot:alice@example.com");
     });
 
-    it("raw cache TTL is 5 minutes", () => {
-        expect(RAW_CACHE_TTL_SECONDS).toBe(300);
+    it("raw cache TTL is 1 hour", () => {
+        expect(RAW_CACHE_TTL_SECONDS).toBe(3600);
     });
 
     it("snapshot cache TTL is 10 minutes", () => {
