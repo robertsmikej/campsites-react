@@ -138,6 +138,22 @@ export default function AppPage() {
         return ids;
     }, [siteConfig]);
 
+    // Build a lookup of currently-bookable (campgroundId, siteId, from, to) tuples
+    // from the snapshot, so we can suppress recent-openings entries that have
+    // already been booked.
+    const stillAvailable = useMemo(() => {
+        const set = new Set<string>();
+        for (const cg of campgroundsByAreas) {
+            if (!cg.id || !cg.siteAvailability) continue;
+            for (const site of Object.values(cg.siteAvailability)) {
+                for (const m of site.matches ?? []) {
+                    set.add(`${cg.id}|${site.siteId}|${m.from}|${m.to}`);
+                }
+            }
+        }
+        return set;
+    }, [campgroundsByAreas]);
+
     const openingItems = useMemo((): OpeningItem[] => {
         const winStartIso = toLocalIso(dateRange.start);
         const winEndIso = toLocalIso(dateRange.end);
@@ -146,6 +162,7 @@ export default function AppPage() {
             .filter((r) => {
                 if (!userCampgroundIds.has(r.campgroundId)) return false;
                 if (r.to <= winStartIso || r.from > winEndIso) return false;
+                if (!stillAvailable.has(`${r.campgroundId}|${r.siteId}|${r.from}|${r.to}`)) return false;
                 return true;
             })
             .map((r) => {
@@ -166,7 +183,7 @@ export default function AppPage() {
 
         items.sort((a, b) => b.detectedAt.localeCompare(a.detectedAt));
         return items.slice(0, 8);
-    }, [recentOpenings, userCampgroundIds, dateRange]);
+    }, [recentOpenings, userCampgroundIds, dateRange, stillAvailable]);
 
     // PAD kept for components that still use it for dynamic scroll containers / section padding
     const PAD = isMobile ? 22 : 36;
