@@ -1,6 +1,7 @@
 import { getEnv, getKv } from "@/lib/cloudflare";
 import { jsonResponse, withCors } from "@/lib/responses";
 import { withErrorLogging } from "@/lib/route-helpers";
+import { putIfChanged } from "@/lib/kv-utils";
 
 export interface RecentOpening {
     signature: string;
@@ -74,7 +75,7 @@ async function putHandler(request: Request): Promise<Response> {
         return withCors(jsonResponse({ error: "Body must be a RecentOpening[]" }, 400));
     }
 
-    await getKv().put(KV_KEY, JSON.stringify(body));
-    return withCors(jsonResponse({ ok: true, count: body.length }));
+    const { written } = await putIfChanged(getKv(), KV_KEY, JSON.stringify(body));
+    return withCors(jsonResponse({ ok: true, count: body.length, written }));
 }
 export const PUT = withErrorLogging(putHandler, "PUT /api/admin/openings/recent");

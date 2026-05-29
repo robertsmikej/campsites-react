@@ -1,6 +1,7 @@
 import { getEnv, getKv } from "@/lib/cloudflare";
 import { jsonResponse, withCors } from "@/lib/responses";
 import { withErrorLogging } from "@/lib/route-helpers";
+import { putIfChanged } from "@/lib/kv-utils";
 
 const KV_KEY = "notifier:first-seen";
 
@@ -57,7 +58,11 @@ async function putHandler(request: Request): Promise<Response> {
     }
 
     const kv = getKv();
-    await kv.put(KV_KEY, JSON.stringify((body as { map: FirstSeenMap }).map));
-    return withCors(jsonResponse({ ok: true }));
+    const { written } = await putIfChanged(
+        kv,
+        KV_KEY,
+        JSON.stringify((body as { map: FirstSeenMap }).map),
+    );
+    return withCors(jsonResponse({ ok: true, written }));
 }
 export const PUT = withErrorLogging(putHandler, "PUT /api/admin/first-seen");

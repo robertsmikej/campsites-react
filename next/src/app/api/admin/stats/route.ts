@@ -1,6 +1,7 @@
 import { getEnv, getKv } from "@/lib/cloudflare";
 import { jsonResponse, withCors } from "@/lib/responses";
 import { withErrorLogging } from "@/lib/route-helpers";
+import { putIfChanged } from "@/lib/kv-utils";
 
 export interface NotifierStats {
     lastPollAt: string;
@@ -52,7 +53,25 @@ async function putHandler(request: Request): Promise<Response> {
         _dailyHistory: Array.isArray(b._dailyHistory) ? b._dailyHistory : undefined,
     };
 
-    await getKv().put(KEY, JSON.stringify(stats));
-    return withCors(jsonResponse({ ok: true, stats }));
+    // Skip the write when every non-timestamp field matches the stored value AND
+    // lastPollAt hasn't advanced more than an hour. This conserves KV writes
+    // when nothing meaningful changed (most cron cycles).
+    const kv = getKv();
+    const existingRaw = await kv.get(KEY);
+    if (existingRaw) {
+        const existing = JSON.parse(existingRaw) as NotifierStatsInternal;
+        const sameNonTimestamp =
+            JSON.stringify({ ...existing, lastPollAt: "" }) ===
+            JSON.stringify({ ...stats, lastPollAt: "" });
+        const existingMs = Date.parse(existing.lastPollAt);
+        const newMs = Date.parse(stats.lastPollAt);
+        const lastPollFreshEnough = Number.isFinite(existingMs) && newMs - existingMs < 60 * 60 * 1000;
+        if (sameNonTimestamp && lastPollFreshEnough) {
+            return withCors(jsonResponse({ ok: true, stats: existing, written: false }));
+        }
+    }
+
+    const { written } = await putIfChanged(kv, KEY, JSON.stringify(stats));
+    return withCors(jsonResponse({ ok: true, stats, written }));
 }
 export const PUT = withErrorLogging(putHandler, "PUT /api/admin/stats");

@@ -2,6 +2,7 @@ import { getEnv, getKv } from "@/lib/cloudflare";
 import { jsonResponse, withCors } from "@/lib/responses";
 import { updateUserProfile } from "@/lib/users";
 import { withErrorLogging } from "@/lib/route-helpers";
+import { putIfChanged } from "@/lib/kv-utils";
 
 interface UpdateEntry {
     email: string;
@@ -43,14 +44,20 @@ async function putHandler(request: Request): Promise<Response> {
 
     const kv = getKv();
     let updated = 0;
+    let written = 0;
     for (const entry of body.updates) {
-        await kv.put(`user:${entry.email}:notifier-state`, JSON.stringify(entry.state));
+        const result = await putIfChanged(
+            kv,
+            `user:${entry.email}:notifier-state`,
+            JSON.stringify(entry.state),
+        );
+        if (result.written) written++;
         if (entry.lastNotifiedAt) {
             await updateUserProfile(entry.email, { lastNotifiedAt: entry.lastNotifiedAt });
         }
         updated++;
     }
 
-    return withCors(jsonResponse({ updated }));
+    return withCors(jsonResponse({ updated, written }));
 }
 export const PUT = withErrorLogging(putHandler, "PUT /api/admin/notifier-state");
