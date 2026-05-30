@@ -23,11 +23,16 @@ const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
 };
 
 // 42-day window from today (same as dashboard default)
-function makeWindow() {
+function makeWindow(maxEnd?: Date) {
     const start = new Date();
     start.setHours(0, 0, 0, 0);
     const end = new Date(start);
-    end.setDate(end.getDate() + 42);
+    end.setDate(end.getDate() + 120);
+    // Clamp to the latest season-end across the displayed campgrounds so we
+    // don't render dead ticks past the last bookable day.
+    if (maxEnd && maxEnd < end) {
+        return { start, end: maxEnd };
+    }
     return { start, end };
 }
 
@@ -35,7 +40,6 @@ export function DiscoverClient() {
     const auth = useAuth();
     const isMobile = useIsMobile();
     const [defaultRecord, setDefaultRecord] = useState<DefaultRecord | null>(null);
-    const dateRange = useMemo(() => makeWindow(), []);
 
     useEffect(() => {
         fetch("/api/default")
@@ -67,6 +71,17 @@ export function DiscoverClient() {
         () => [...campgroundsByAreas].sort((a, b) => a.name.localeCompare(b.name)),
         [campgroundsByAreas],
     );
+
+    const dateRange = useMemo(() => {
+        let latest: Date | null = null;
+        for (const cg of sortedCampgrounds) {
+            const iso = cg.dates?.endDate;
+            if (!iso) continue;
+            const d = new Date(iso + "T00:00:00");
+            if (!latest || d > latest) latest = d;
+        }
+        return makeWindow(latest ?? undefined);
+    }, [sortedCampgrounds]);
 
     const openCounts = useMemo(() => {
         const m = new Map<string, number>();

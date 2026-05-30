@@ -27,7 +27,7 @@ const DEFAULT_PREFS: DashboardPrefs = {
     groupBy: "region",
 };
 
-const DEFAULT_RANGE_DAYS = 42;
+const DEFAULT_RANGE_DAYS = 120;
 
 // ---------------------------------------------------------------------------
 // Storage helpers
@@ -77,21 +77,31 @@ function savePrefs(prefs: DashboardPrefs): void {
 // Date helpers
 // ---------------------------------------------------------------------------
 
-function getDefaultRange(): { start: Date; end: Date } {
+function getDefaultRange(maxEnd?: Date): { start: Date; end: Date } {
     const start = new Date();
     start.setHours(0, 0, 0, 0);
     const end = new Date(start);
     end.setDate(start.getDate() + DEFAULT_RANGE_DAYS - 1);
+    // When the watchlist's latest season-end falls before the default horizon,
+    // clamp the window to that end-date so we don't render dead ticks past the
+    // last bookable day. As the season closes the window naturally shrinks
+    // from 120 days down toward 0.
+    if (maxEnd && maxEnd < end) {
+        return { start, end: maxEnd };
+    }
     return { start, end };
 }
 
 /** Convert stored ISO strings back to Date objects, falling back to the default range. */
-function isoRangeToDates(stored: DashboardPrefs["dateRange"]): { start: Date; end: Date } {
-    if (!stored) return getDefaultRange();
+function isoRangeToDates(
+    stored: DashboardPrefs["dateRange"],
+    maxEnd?: Date,
+): { start: Date; end: Date } {
+    if (!stored) return getDefaultRange(maxEnd);
     try {
         return { start: new Date(stored.from), end: new Date(stored.to) };
     } catch {
-        return getDefaultRange();
+        return getDefaultRange(maxEnd);
     }
 }
 
@@ -111,7 +121,7 @@ export interface UseDashboardPrefsReturn {
     setGroupBy: (v: GroupBy) => void;
 }
 
-export function useDashboardPrefs(): UseDashboardPrefsReturn {
+export function useDashboardPrefs(options?: { maxEnd?: Date }): UseDashboardPrefsReturn {
     const [prefs, setPrefs] = useState<DashboardPrefs>(DEFAULT_PREFS);
     const [datePickerOpen, setDatePickerOpen] = useState(false);
 
@@ -126,7 +136,7 @@ export function useDashboardPrefs(): UseDashboardPrefsReturn {
         savePrefs(prefs);
     }, [prefs]);
 
-    const dateRange = isoRangeToDates(prefs.dateRange);
+    const dateRange = isoRangeToDates(prefs.dateRange, options?.maxEnd);
 
     const calRange: DateRange | undefined = prefs.dateRange
         ? { from: dateRange.start, to: dateRange.end }

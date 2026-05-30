@@ -41,9 +41,23 @@ export default function AppPage() {
     const [dismissedSync, setDismissedSync] = useState(false);
     const [addModalOpen, setAddModalOpen] = useState(false);
 
+    // Latest season-end across the user's watched campgrounds. The default
+    // date range clamps to this so the strip doesn't show dead ticks past the
+    // last bookable day.
+    const maxWatchlistEnd = useMemo(() => {
+        let latest: Date | null = null;
+        for (const cg of siteConfig["recreation.gov"] ?? []) {
+            const iso = cg.dates?.endDate;
+            if (!iso) continue;
+            const d = new Date(iso + "T00:00:00");
+            if (!latest || d > latest) latest = d;
+        }
+        return latest ?? undefined;
+    }, [siteConfig]);
+
     // Dashboard preferences (date range + grouping) — single persisted blob.
     const { dateRange, calRange, datePickerOpen, setDatePickerOpen, handleCalSelect, groupBy, setGroupBy } =
-        useDashboardPrefs();
+        useDashboardPrefs({ maxEnd: maxWatchlistEnd });
     const handleGroupBy = setGroupBy;
 
     // Favorites
