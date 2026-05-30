@@ -217,7 +217,9 @@ export function AvailabilityStrip({
             aria-label={`Availability over ${windowStart && windowEnd ? `selected date range` : `next ${days} days`}`}
         >
             {cells.map((cell) => {
-                const isWeekStart = new Date(cell.iso + "T00:00:00").getDay() === 0;
+                const day = new Date(cell.iso + "T00:00:00").getDay();
+                const isWeekStart = day === 0;
+                const isWeekend = day === 0 || day === 6;
                 const intensity = cell.availableCount > 0 ? Math.min(1, cell.availableCount / maxAvail) : 0;
                 // Show excluded accent only if toggle is on and there's excluded data but no hard availability
                 const showExc = showExcluded && cell.excludedCount > 0 && cell.availableCount === 0;
@@ -232,29 +234,34 @@ export function AvailabilityStrip({
                             cell.excludedCount > 0 ? ` (${cell.excludedCount} filtered)` : ""
                         }`}
                         className={cn(
-                            "flex-1 rounded-sm transition-all",
+                            "relative flex-1 self-stretch overflow-hidden rounded-sm transition-all",
                             isWeekStart && "border-l border-border/50",
+                            isWeekend && "bg-cw-clay/15",
                         )}
-                        style={
-                            intensity > 0
-                                ? {
-                                      backgroundColor: barColor,
-                                      opacity: 0.35 + intensity * 0.65,
-                                      height: `${30 + intensity * 70}%`,
-                                  }
-                                : showExc
-                                  ? {
-                                        backgroundColor: "var(--accent)",
-                                        opacity: 0.6,
-                                        height: "40%",
-                                    }
-                                  : {
-                                        height: "10%",
-                                        backgroundColor: "var(--muted-foreground)",
-                                        opacity: 0.15,
-                                    }
-                        }
-                    />
+                    >
+                        <div
+                            className="absolute right-0 bottom-0 left-0 rounded-sm transition-all"
+                            style={
+                                intensity > 0
+                                    ? {
+                                          backgroundColor: barColor,
+                                          opacity: 0.35 + intensity * 0.65,
+                                          height: `${30 + intensity * 70}%`,
+                                      }
+                                    : showExc
+                                      ? {
+                                            backgroundColor: "var(--accent)",
+                                            opacity: 0.6,
+                                            height: "40%",
+                                        }
+                                      : {
+                                            height: "10%",
+                                            backgroundColor: "var(--muted-foreground)",
+                                            opacity: 0.15,
+                                        }
+                            }
+                        />
+                    </div>
                 );
             })}
         </div>
