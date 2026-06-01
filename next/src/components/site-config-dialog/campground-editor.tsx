@@ -515,7 +515,8 @@ export function CampgroundEditor({
                             ] as const
                         ).map(([value, label]) => {
                             const active =
-                                (campground.notifyScope ?? (campground.notifyAll ? "all" : undefined)) === value;
+                                (campground.notifyScope ?? (campground.notifyAll ? "all" : undefined)) ===
+                                value;
                             return (
                                 <button
                                     key={value}

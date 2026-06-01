@@ -342,8 +342,8 @@ export default function AdminPage() {
                                 </button>
                             </form>
                             <p className="mt-2 font-italic-serif text-[14px] italic text-cw-ink-soft">
-                                Creates their profile and clones the default watchlist. They&apos;ll
-                                sign in later with this exact email and inherit it.
+                                Creates their profile and clones the default watchlist. They&apos;ll sign in
+                                later with this exact email and inherit it.
                             </p>
                         </section>
 

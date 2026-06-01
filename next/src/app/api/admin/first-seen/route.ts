@@ -58,11 +58,7 @@ async function putHandler(request: Request): Promise<Response> {
     }
 
     const kv = getKv();
-    const { written } = await putIfChanged(
-        kv,
-        KV_KEY,
-        JSON.stringify((body as { map: FirstSeenMap }).map),
-    );
+    const { written } = await putIfChanged(kv, KV_KEY, JSON.stringify((body as { map: FirstSeenMap }).map));
     return withCors(jsonResponse({ ok: true, written }));
 }
 export const PUT = withErrorLogging(putHandler, "PUT /api/admin/first-seen");

@@ -34,10 +34,7 @@ function monthsBetween(startDate: string, endDate: string): string[] {
     return months;
 }
 
-async function buildSnapshot(
-    config: SourceConfig,
-    adapter: WorkerKvAdapter,
-): Promise<AvailabilitySnapshot> {
+async function buildSnapshot(config: SourceConfig, adapter: WorkerKvAdapter): Promise<AvailabilitySnapshot> {
     const baseSettings = {
         stayLengths: config.globalSettings.stayLengths,
         validStartDays: config.globalSettings.validStartDays,

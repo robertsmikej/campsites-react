@@ -637,7 +637,6 @@ export function CampgroundLookup({ variant: _variant = "homepage" }: CampgroundL
                     </div>
                 </div>
             </div>
-
         </section>
     );
 }

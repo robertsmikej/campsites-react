@@ -17,10 +17,7 @@ export const getAllDatesInRange = (start: string, end: string): string[] => {
     return result;
 };
 
-export const findConsecutiveAvailableRanges = (
-    dates: string[],
-    length: number,
-): [string, string][] => {
+export const findConsecutiveAvailableRanges = (dates: string[], length: number): [string, string][] => {
     const ranges: [string, string][] = [];
     const timestamps = dates.map((d) => new Date(d).getTime());
     for (let i = 0; i <= timestamps.length - length; ) {

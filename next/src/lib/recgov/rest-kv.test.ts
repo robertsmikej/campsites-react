@@ -79,8 +79,6 @@ describe("RestKvAdapter", () => {
         fetchSpy
             .mockResolvedValueOnce(new Response("not found", { status: 404 }))
             .mockResolvedValueOnce(new Response("forbidden", { status: 403 }));
-        await expect(
-            adapter.putRaw("232358", "2026-07", { campsites: {} }),
-        ).rejects.toThrow(/403/);
+        await expect(adapter.putRaw("232358", "2026-07", { campsites: {} })).rejects.toThrow(/403/);
     });
 });

@@ -30,7 +30,9 @@ async function validate(request: Request): Promise<{ email: string } | { error: 
     const token = url.searchParams.get("token");
 
     if (!email || !token) {
-        return { error: htmlResponse(pageShell("Missing parameters", "<h2>Missing email or token.</h2>"), 400) };
+        return {
+            error: htmlResponse(pageShell("Missing parameters", "<h2>Missing email or token.</h2>"), 400),
+        };
     }
 
     const env = getEnv();

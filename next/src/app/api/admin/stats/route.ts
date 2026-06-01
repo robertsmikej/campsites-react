@@ -61,8 +61,7 @@ async function putHandler(request: Request): Promise<Response> {
     if (existingRaw) {
         const existing = JSON.parse(existingRaw) as NotifierStatsInternal;
         const sameNonTimestamp =
-            JSON.stringify({ ...existing, lastPollAt: "" }) ===
-            JSON.stringify({ ...stats, lastPollAt: "" });
+            JSON.stringify({ ...existing, lastPollAt: "" }) === JSON.stringify({ ...stats, lastPollAt: "" });
         const existingMs = Date.parse(existing.lastPollAt);
         const newMs = Date.parse(stats.lastPollAt);
         const lastPollFreshEnough = Number.isFinite(existingMs) && newMs - existingMs < 60 * 60 * 1000;

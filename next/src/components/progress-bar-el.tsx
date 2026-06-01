@@ -10,9 +10,7 @@ export function ProgressBarEl() {
     // With the current backend-driven hook this never happens, but keep the
     // path for future use if granular progress is ever re-introduced.
     const hasDeterminate = progress.totalCalls > 1 && progress.currentCall > 0;
-    const percent = hasDeterminate
-        ? Math.max(0, Math.min(100, Math.round(progress.progress * 100)))
-        : null;
+    const percent = hasDeterminate ? Math.max(0, Math.min(100, Math.round(progress.progress * 100))) : null;
 
     return (
         <div

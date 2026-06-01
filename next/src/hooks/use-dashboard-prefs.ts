@@ -102,10 +102,7 @@ function getDefaultRange(maxEnd?: Date): { start: Date; end: Date } {
 }
 
 /** Convert stored ISO strings back to Date objects, falling back to the default range. */
-function isoRangeToDates(
-    stored: DashboardPrefs["dateRange"],
-    maxEnd?: Date,
-): { start: Date; end: Date } {
+function isoRangeToDates(stored: DashboardPrefs["dateRange"], maxEnd?: Date): { start: Date; end: Date } {
     if (!stored) return getDefaultRange(maxEnd);
     try {
         return { start: parseLocalIso(stored.from), end: parseLocalIso(stored.to) };

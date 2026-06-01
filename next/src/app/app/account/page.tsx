@@ -365,8 +365,8 @@ export default function AccountPage() {
                                     </SelectContent>
                                 </Select>
                                 <p className="font-italic-serif text-[14px] italic text-cw-ink-soft">
-                                    {SCOPE_LABELS[notifScope].hint} Each campground can override
-                                    this in its settings.
+                                    {SCOPE_LABELS[notifScope].hint} Each campground can override this in its
+                                    settings.
                                 </p>
                             </div>
 

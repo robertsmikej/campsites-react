@@ -68,7 +68,9 @@ describe("GET /api/availability", () => {
         } as never);
         fetchSpy.mockResolvedValue(
             new Response(
-                JSON.stringify({ campsites: { "1": { site: "001", campsite_type: "STANDARD", availabilities: {} } } }),
+                JSON.stringify({
+                    campsites: { "1": { site: "001", campsite_type: "STANDARD", availabilities: {} } },
+                }),
                 { status: 200 },
             ),
         );
@@ -99,12 +101,7 @@ describe("GET /api/availability", () => {
                 globalSettings: { stayLengths: [2], validStartDays: ["Friday"] },
             }),
         );
-        fetchSpy.mockResolvedValue(
-            new Response(
-                JSON.stringify({ campsites: {} }),
-                { status: 200 },
-            ),
-        );
+        fetchSpy.mockResolvedValue(new Response(JSON.stringify({ campsites: {} }), { status: 200 }));
 
         const response = await GET(new Request("http://x/api/availability"));
         expect(response.status).toBe(200);

@@ -20,20 +20,12 @@ describe("getAllDatesInRange", () => {
 
 describe("findConsecutiveAvailableRanges", () => {
     it("finds 2-night range from 3 consecutive dates", () => {
-        const result = findConsecutiveAvailableRanges(
-            ["2026-07-01", "2026-07-02", "2026-07-03"],
-            2,
-        );
-        expect(result).toEqual([
-            ["2026-07-01", "2026-07-03"],
-        ]);
+        const result = findConsecutiveAvailableRanges(["2026-07-01", "2026-07-02", "2026-07-03"], 2);
+        expect(result).toEqual([["2026-07-01", "2026-07-03"]]);
     });
 
     it("skips when dates are not consecutive", () => {
-        const result = findConsecutiveAvailableRanges(
-            ["2026-07-01", "2026-07-03"],
-            2,
-        );
+        const result = findConsecutiveAvailableRanges(["2026-07-01", "2026-07-03"], 2);
         expect(result).toEqual([]);
     });
 });
@@ -58,9 +50,7 @@ describe("processCampgroundResults", () => {
             stayLengths: [2],
             validStartDays: ["Friday"],
         });
-        expect(result["site-1"]?.matches).toEqual([
-            { from: "2026-07-03", to: "2026-07-05", nights: 2 },
-        ]);
+        expect(result["site-1"]?.matches).toEqual([{ from: "2026-07-03", to: "2026-07-05", nights: 2 }]);
     });
 
     it("excludes IGNORE_CAMPSITE_TYPES", () => {

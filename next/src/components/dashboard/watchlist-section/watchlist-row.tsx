@@ -28,11 +28,7 @@ function StatusPill({ openCount }: { openCount: number }) {
 }
 
 // ─── Day buckets for a single site ───────────────────────────────────────────
-function siteDayMatches(
-    site: SiteAvailability,
-    windowStart: Date,
-    windowEnd: Date,
-): (StayMatch | null)[] {
+function siteDayMatches(site: SiteAvailability, windowStart: Date, windowEnd: Date): (StayMatch | null)[] {
     const days: (StayMatch | null)[] = [];
     const cursor = new Date(windowStart);
     cursor.setHours(0, 0, 0, 0);
@@ -139,10 +135,7 @@ function SiteBars({
                                 />
                             </a>
                         </TooltipTrigger>
-                        <TooltipContent
-                            side="top"
-                            className="font-mono-field text-[12px] tracking-[0.04em]"
-                        >
+                        <TooltipContent side="top" className="font-mono-field text-[12px] tracking-[0.04em]">
                             {label}
                         </TooltipContent>
                     </Tooltip>
@@ -185,11 +178,7 @@ function Bars({
     );
 }
 
-function campgroundDayPattern(
-    campground: ProcessedCampground,
-    windowStart: Date,
-    windowEnd: Date,
-): string[] {
+function campgroundDayPattern(campground: ProcessedCampground, windowStart: Date, windowEnd: Date): string[] {
     const days: string[] = [];
     const cursor = new Date(windowStart);
     cursor.setHours(0, 0, 0, 0);
@@ -289,9 +278,7 @@ function ExpandedSites({
             <div
                 className={isMobile ? "flex flex-col gap-3" : "grid gap-x-[18px] gap-y-2 items-center"}
                 style={
-                    isMobile
-                        ? undefined
-                        : { gridTemplateColumns: "minmax(180px, 1fr) minmax(0, 2fr) 60px" }
+                    isMobile ? undefined : { gridTemplateColumns: "minmax(180px, 1fr) minmax(0, 2fr) 60px" }
                 }
             >
                 {ranked.map((s) => {
@@ -316,7 +303,9 @@ function ExpandedSites({
                                                     onToggleSiteFavorite(s.siteName, !isFav);
                                                 }}
                                                 className="bg-transparent border-none cursor-pointer p-0 shrink-0"
-                                                aria-label={isFav ? "Remove site favorite" : "Mark site favorite"}
+                                                aria-label={
+                                                    isFav ? "Remove site favorite" : "Mark site favorite"
+                                                }
                                                 style={{ color: isFav ? CW.mustard : CW.inkFaint }}
                                             >
                                                 <FavStar filled={isFav} />
@@ -350,7 +339,12 @@ function ExpandedSites({
                                     </span>
                                 </div>
                                 {open > 0 && (
-                                    <SiteBars dayMatches={dayMatches} site={s} height={14} className="w-full" />
+                                    <SiteBars
+                                        dayMatches={dayMatches}
+                                        site={s}
+                                        height={14}
+                                        className="w-full"
+                                    />
                                 )}
                             </div>
                         );

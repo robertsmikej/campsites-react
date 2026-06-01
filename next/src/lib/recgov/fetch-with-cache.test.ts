@@ -35,7 +35,9 @@ describe("fetchMonthWithCache", () => {
     });
 
     it("returns cached value without calling rec.gov on hit", async () => {
-        const cached: RawMonthResult = { campsites: { "1": { site: "001", campsite_type: "STANDARD", availabilities: {} } } };
+        const cached: RawMonthResult = {
+            campsites: { "1": { site: "001", campsite_type: "STANDARD", availabilities: {} } },
+        };
         const adapter = createMockAdapter({ "232358:2026-07": cached });
         const result = await fetchMonthWithCache("232358", "2026-07", adapter);
         expect(result).toEqual(cached);

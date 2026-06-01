@@ -160,7 +160,9 @@ describe("POST /api/admin/users", () => {
         const storedCampgrounds = (await kv.get("user:new@example.com:campgrounds", "json")) as {
             campgrounds: { "recreation.gov": Array<{ id: string }> };
         };
-        expect(storedCampgrounds.campgrounds["recreation.gov"]).toEqual(defaultConfig.campgrounds["recreation.gov"]);
+        expect(storedCampgrounds.campgrounds["recreation.gov"]).toEqual(
+            defaultConfig.campgrounds["recreation.gov"],
+        );
     });
 
     it("falls back to an empty watchlist if no default config is set", async () => {

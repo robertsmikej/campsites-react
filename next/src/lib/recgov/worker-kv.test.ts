@@ -51,7 +51,9 @@ describe("WorkerKvAdapter", () => {
     it("putRaw skips the write when the existing value is identical", async () => {
         const kv = createMockKv();
         const adapter = new WorkerKvAdapter(kv as never);
-        const value: RawMonthResult = { campsites: { "1": { site: "001", campsite_type: "STANDARD", availabilities: {} } } };
+        const value: RawMonthResult = {
+            campsites: { "1": { site: "001", campsite_type: "STANDARD", availabilities: {} } },
+        };
         await adapter.putRaw("232358", "2026-07", value);
         kv.put.mockClear();
         await adapter.putRaw("232358", "2026-07", value);

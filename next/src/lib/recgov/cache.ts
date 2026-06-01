@@ -8,8 +8,7 @@ import type { RawMonthResult, SiteAvailabilityMap } from "./types";
 export const RAW_CACHE_TTL_SECONDS = 60 * 60;
 export const SNAPSHOT_CACHE_TTL_SECONDS = 10 * 60;
 
-export const rawCacheKey = (facilityId: string, month: string): string =>
-    `recgov:${facilityId}:${month}`;
+export const rawCacheKey = (facilityId: string, month: string): string => `recgov:${facilityId}:${month}`;
 
 export const snapshotCacheKey = (email: string): string => `snapshot:${email}`;
 
