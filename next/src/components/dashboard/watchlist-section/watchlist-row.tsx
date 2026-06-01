@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { CW } from "@/components/field-notes/cw-tokens";
 import { toLocalIso } from "@/components/dashboard/helpers";
+import { cn } from "@/lib/utils";
 import type { ProcessedCampground, SiteAvailability, StayMatch, GlobalSettings } from "@/types/campground";
 
 // ─── Status pill ─────────────────────────────────────────────────────────────
@@ -74,28 +75,22 @@ function countOpenInWindow(site: SiteAvailability, windowStart: Date, windowEnd:
 }
 
 // ─── Per-site bars with date-range tooltips ──────────────────────────────────
+// One tick per day across the window. Bars flex to fill the column width, so
+// the strip never overflows no matter how long the window is.
 function SiteBars({
     dayMatches,
     site,
     height = 16,
-    bar = 4,
+    className,
 }: {
     dayMatches: (StayMatch | null)[];
     site: SiteAvailability;
     height?: number;
-    bar?: number;
+    className?: string;
 }) {
-    // Same downsample behavior as Bars so the columns line up.
-    const sample =
-        dayMatches.length > 42
-            ? dayMatches
-                  .filter((_, i) => i % Math.ceil(dayMatches.length / 42) === 0)
-                  .slice(0, 42)
-            : dayMatches;
-
     return (
-        <div className="flex gap-[2px] items-end shrink-0" style={{ height: height + 2 }}>
-            {sample.map((m, i) => {
+        <div className={cn("flex items-end gap-px min-w-0", className)} style={{ height: height + 2 }}>
+            {dayMatches.map((m, i) => {
                 const isHit = m !== null;
                 const h = isHit ? height : Math.round(height * 0.22);
                 const bg = isHit ? CW.forest : CW.inkFaint;
@@ -105,7 +100,8 @@ function SiteBars({
                         <div
                             key={i}
                             aria-hidden
-                            style={{ width: bar, height: h, background: bg, borderRadius: 1 }}
+                            className="flex-1 min-w-0"
+                            style={{ height: h, background: bg, borderRadius: 1 }}
                         />
                     );
                 }
@@ -122,21 +118,19 @@ function SiteBars({
                                 rel="noopener noreferrer"
                                 aria-label={label}
                                 onClick={(e) => e.stopPropagation()}
-                                // Touch target larger than the visual bar (padded button)
-                                // so taps are easy on mobile.
+                                // Fill the per-day cell; vertical padding keeps a
+                                // tappable target taller than the visual bar.
+                                className="flex-1 min-w-0 inline-flex items-end"
                                 style={{
-                                    width: bar,
                                     height: height + 2,
-                                    display: "inline-flex",
-                                    alignItems: "flex-end",
                                     padding: "2px 0",
-                                    boxSizing: "content-box",
+                                    boxSizing: "border-box",
                                     cursor: "pointer",
                                 }}
                             >
                                 <span
                                     style={{
-                                        width: bar,
+                                        width: "100%",
                                         height: h,
                                         background: bg,
                                         borderRadius: 1,
@@ -159,17 +153,33 @@ function SiteBars({
 }
 
 // ─── Availability bars (campground-level) ────────────────────────────────────
-function Bars({ pattern, height = 22, bar = 5 }: { pattern: string[]; height?: number; bar?: number }) {
-    const sample =
-        pattern.length > 42
-            ? pattern.filter((_, i) => i % Math.ceil(pattern.length / 42) === 0).slice(0, 42)
-            : pattern;
+// One tick per day across the window. Bars flex to fill the column width so a
+// long window (up to 120 days) shows every day instead of being downsampled.
+function Bars({
+    pattern,
+    height = 22,
+    className,
+}: {
+    pattern: string[];
+    height?: number;
+    className?: string;
+}) {
     return (
-        <div className="flex gap-[2px] items-end shrink-0" style={{ height: height + 2 }}>
-            {sample.map((c, i) => {
+        <div
+            data-testid="availability-bars"
+            className={cn("flex items-end gap-px min-w-0", className)}
+            style={{ height: height + 2 }}
+        >
+            {pattern.map((c, i) => {
                 const h = c === "." ? Math.round(height * 0.22) : height;
                 const bg = c === "." ? CW.inkFaint : CW.forest;
-                return <div key={i} style={{ width: bar, height: h, background: bg, borderRadius: 1 }} />;
+                return (
+                    <div
+                        key={i}
+                        className="flex-1 min-w-0"
+                        style={{ height: h, background: bg, borderRadius: 1 }}
+                    />
+                );
             })}
         </div>
     );
@@ -340,7 +350,7 @@ function ExpandedSites({
                                     </span>
                                 </div>
                                 {open > 0 && (
-                                    <SiteBars dayMatches={dayMatches} site={s} height={14} bar={4} />
+                                    <SiteBars dayMatches={dayMatches} site={s} height={14} className="w-full" />
                                 )}
                             </div>
                         );
@@ -417,7 +427,7 @@ function SiteRow({
                     {humanKind(site, isFavorite)}
                 </span>
             </div>
-            <SiteBars dayMatches={dayMatches} site={site} height={16} bar={4} />
+            <SiteBars dayMatches={dayMatches} site={site} height={16} className="w-full" />
             <span
                 className="text-right font-mono-field text-[13px] font-medium leading-none"
                 style={{
@@ -558,7 +568,7 @@ function DesktopRow({
                 <Bars
                     pattern={campgroundDayPattern(campground, windowStart, windowEnd)}
                     height={22}
-                    bar={5}
+                    className="w-full"
                 />
 
                 <div
@@ -686,7 +696,7 @@ function MobileRow({
                     <Bars
                         pattern={campgroundDayPattern(campground, windowStart, windowEnd)}
                         height={18}
-                        bar={4}
+                        className="flex-1"
                     />
                 </div>
 

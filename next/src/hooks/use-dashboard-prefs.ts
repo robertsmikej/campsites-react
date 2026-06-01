@@ -77,6 +77,15 @@ function savePrefs(prefs: DashboardPrefs): void {
 // Date helpers
 // ---------------------------------------------------------------------------
 
+/** Parse a YYYY-MM-DD string as a local-midnight Date. Using `new Date(iso)`
+ *  parses date-only strings as UTC, which drifts a day in negative offsets;
+ *  the default range is built from local midnight, so parse stored ISO the
+ *  same way to keep the window aligned. */
+function parseLocalIso(iso: string): Date {
+    const [y, m, d] = iso.split("-").map(Number);
+    return new Date(y ?? 1970, (m ?? 1) - 1, d ?? 1);
+}
+
 function getDefaultRange(maxEnd?: Date): { start: Date; end: Date } {
     const start = new Date();
     start.setHours(0, 0, 0, 0);
@@ -99,7 +108,7 @@ function isoRangeToDates(
 ): { start: Date; end: Date } {
     if (!stored) return getDefaultRange(maxEnd);
     try {
-        return { start: new Date(stored.from), end: new Date(stored.to) };
+        return { start: parseLocalIso(stored.from), end: parseLocalIso(stored.to) };
     } catch {
         return getDefaultRange(maxEnd);
     }
@@ -110,13 +119,19 @@ function isoRangeToDates(
 // ---------------------------------------------------------------------------
 
 export interface UseDashboardPrefsReturn {
-    /** Concrete Date objects, always defined (falls back to 42-day window from today). */
+    /** Concrete Date objects, always defined (falls back to the default window from today). */
     dateRange: { start: Date; end: Date };
-    /** react-day-picker DateRange mirror of dateRange, for the calendar widget. */
+    /** In-progress calendar selection for the two-click range flow. `undefined`
+     *  means no custom range is picked — the calendar opens empty and the
+     *  dashboard uses the default window. */
     calRange: DateRange | undefined;
+    /** True when a custom date range is committed (vs. the default window). */
+    hasCustomRange: boolean;
     datePickerOpen: boolean;
     setDatePickerOpen: (open: boolean) => void;
     handleCalSelect: (range: DateRange | undefined) => void;
+    /** Drop the custom range and snap back to the default window. */
+    clearDateRange: () => void;
     groupBy: GroupBy;
     setGroupBy: (v: GroupBy) => void;
 }
@@ -124,11 +139,22 @@ export interface UseDashboardPrefsReturn {
 export function useDashboardPrefs(options?: { maxEnd?: Date }): UseDashboardPrefsReturn {
     const [prefs, setPrefs] = useState<DashboardPrefs>(DEFAULT_PREFS);
     const [datePickerOpen, setDatePickerOpen] = useState(false);
+    // Transient calendar selection. Holds the in-progress two-click range
+    // (and mirrors a committed custom range so reopening shows it). `undefined`
+    // means no custom range — the calendar opens empty so the first click
+    // starts a fresh range rather than collapsing a pre-selected one.
+    const [calRange, setCalRange] = useState<DateRange | undefined>(undefined);
 
     // Hydrate from localStorage on mount (avoids SSR mismatch).
     useEffect(() => {
         const loaded = loadPrefs();
         setPrefs(loaded);
+        if (loaded.dateRange) {
+            setCalRange({
+                from: parseLocalIso(loaded.dateRange.from),
+                to: parseLocalIso(loaded.dateRange.to),
+            });
+        }
     }, []);
 
     // Persist whenever prefs change.
@@ -138,11 +164,11 @@ export function useDashboardPrefs(options?: { maxEnd?: Date }): UseDashboardPref
 
     const dateRange = isoRangeToDates(prefs.dateRange, options?.maxEnd);
 
-    const calRange: DateRange | undefined = prefs.dateRange
-        ? { from: dateRange.start, to: dateRange.end }
-        : { from: dateRange.start, to: dateRange.end };
-
+    // react-day-picker fires this on every click. A partial range (`from` set,
+    // `to` undefined) just updates the in-progress selection and keeps the
+    // popover open; a complete range commits to prefs and closes.
     const handleCalSelect = useCallback((range: DateRange | undefined) => {
+        setCalRange(range);
         if (range?.from && range?.to) {
             setPrefs((p) => ({
                 ...p,
@@ -152,6 +178,12 @@ export function useDashboardPrefs(options?: { maxEnd?: Date }): UseDashboardPref
         }
     }, []);
 
+    const clearDateRange = useCallback(() => {
+        setCalRange(undefined);
+        setPrefs((p) => ({ ...p, dateRange: null }));
+        setDatePickerOpen(false);
+    }, []);
+
     const setGroupBy = useCallback((v: GroupBy) => {
         setPrefs((p) => ({ ...p, groupBy: v }));
     }, []);
@@ -159,9 +191,11 @@ export function useDashboardPrefs(options?: { maxEnd?: Date }): UseDashboardPref
     return {
         dateRange,
         calRange,
+        hasCustomRange: prefs.dateRange !== null,
         datePickerOpen,
         setDatePickerOpen,
         handleCalSelect,
+        clearDateRange,
         groupBy: prefs.groupBy,
         setGroupBy,
     };

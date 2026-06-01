@@ -18,6 +18,8 @@ interface DatePickerStripProps {
     isMobile: boolean;
     groupBy: "region" | "status" | "all";
     onGroupBy: (v: "region" | "status" | "all") => void;
+    hasCustomRange?: boolean;
+    onClearDates?: () => void;
 }
 
 export function DatePickerStrip({
@@ -29,6 +31,8 @@ export function DatePickerStrip({
     isMobile,
     groupBy,
     onGroupBy,
+    hasCustomRange,
+    onClearDates,
 }: DatePickerStripProps) {
     return (
         <div className="flex gap-[10px] items-center mb-6 flex-wrap">
@@ -40,6 +44,8 @@ export function DatePickerStrip({
                 setDatePickerOpen={setDatePickerOpen}
                 handleCalSelect={handleCalSelect}
                 isMobile={isMobile}
+                hasCustomRange={hasCustomRange}
+                onClearDates={onClearDates}
             />
 
             <span className="font-italic-serif text-[14px] font-medium italic leading-none text-cw-ink-soft">

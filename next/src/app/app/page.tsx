@@ -56,8 +56,17 @@ export default function AppPage() {
     }, [siteConfig]);
 
     // Dashboard preferences (date range + grouping) — single persisted blob.
-    const { dateRange, calRange, datePickerOpen, setDatePickerOpen, handleCalSelect, groupBy, setGroupBy } =
-        useDashboardPrefs({ maxEnd: maxWatchlistEnd });
+    const {
+        dateRange,
+        calRange,
+        hasCustomRange,
+        datePickerOpen,
+        setDatePickerOpen,
+        handleCalSelect,
+        clearDateRange,
+        groupBy,
+        setGroupBy,
+    } = useDashboardPrefs({ maxEnd: maxWatchlistEnd });
     const handleGroupBy = setGroupBy;
 
     // Favorites
@@ -295,9 +304,11 @@ export default function AppPage() {
                                             onGroupBy={handleGroupBy}
                                             dateRange={dateRange}
                                             calRange={calRange}
+                                            hasCustomRange={hasCustomRange}
                                             datePickerOpen={datePickerOpen}
                                             setDatePickerOpen={setDatePickerOpen}
                                             handleCalSelect={handleCalSelect}
+                                            onClearDates={clearDateRange}
                                             favorites={favorites}
                                             onToggleFavorite={toggleFavorite}
                                             settings={settings as { views?: { type?: "calendar" | "table" } }}

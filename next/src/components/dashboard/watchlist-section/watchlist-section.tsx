@@ -20,6 +20,8 @@ interface WatchlistSectionProps {
     datePickerOpen: boolean;
     setDatePickerOpen: (open: boolean) => void;
     handleCalSelect: (range: DateRange | undefined) => void;
+    hasCustomRange?: boolean;
+    onClearDates?: () => void;
     favorites: Set<string>;
     onToggleFavorite: (id: string) => void;
     settings: { views?: { type?: "calendar" | "table" } };
@@ -47,6 +49,8 @@ export function WatchlistSection({
     datePickerOpen,
     setDatePickerOpen,
     handleCalSelect,
+    hasCustomRange,
+    onClearDates,
     favorites,
     onToggleFavorite,
     settings,
@@ -153,6 +157,8 @@ export function WatchlistSection({
                     isMobile={isMobile}
                     groupBy={groupBy}
                     onGroupBy={onGroupBy}
+                    hasCustomRange={hasCustomRange}
+                    onClearDates={onClearDates}
                 />
             )}
 

@@ -6,6 +6,8 @@
  * load/save/migration logic directly via a stubbed localStorage.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { renderHook, act } from "@testing-library/react";
+import { useDashboardPrefs } from "./use-dashboard-prefs";
 
 // ---------------------------------------------------------------------------
 // localStorage stub
@@ -172,5 +174,78 @@ describe("useDashboardPrefs – storage layer", () => {
     it("returns DEFAULT_PREFS on corrupt JSON", () => {
         ls.setItem(STORAGE_KEY, "{bad json}");
         expect(loadPrefs()).toEqual(DEFAULT_PREFS);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Calendar selection flow — guards the "ticks vanish when picking dates" bug.
+// Before the fix, calRange was seeded with the full default window, so a single
+// click collapsed it and committed a tiny range. The picker now opens empty and
+// takes two clicks (start, end) to commit.
+// ---------------------------------------------------------------------------
+
+describe("useDashboardPrefs – calendar selection", () => {
+    beforeEach(() => {
+        localStorage.clear();
+    });
+
+    it("opens with no calendar selection", () => {
+        const { result } = renderHook(() => useDashboardPrefs());
+        expect(result.current.calRange).toBeUndefined();
+        expect(result.current.hasCustomRange).toBe(false);
+    });
+
+    it("a partial range (first click) updates calRange, keeps the popover open, does not commit", () => {
+        const { result } = renderHook(() => useDashboardPrefs());
+        const from = new Date(2026, 6, 4);
+
+        act(() => result.current.setDatePickerOpen(true));
+        act(() => result.current.handleCalSelect({ from, to: undefined }));
+
+        expect(result.current.calRange).toEqual({ from, to: undefined });
+        expect(result.current.datePickerOpen).toBe(true);
+        expect(result.current.hasCustomRange).toBe(false);
+    });
+
+    it("a complete range (second click) commits and closes the popover", () => {
+        const { result } = renderHook(() => useDashboardPrefs());
+        const from = new Date(2026, 6, 4);
+        const to = new Date(2026, 6, 10);
+
+        act(() => result.current.setDatePickerOpen(true));
+        act(() => result.current.handleCalSelect({ from, to }));
+
+        expect(result.current.hasCustomRange).toBe(true);
+        expect(result.current.datePickerOpen).toBe(false);
+        expect(result.current.dateRange.start.getMonth()).toBe(6);
+        expect(result.current.dateRange.start.getDate()).toBe(4);
+        expect(result.current.dateRange.end.getDate()).toBe(10);
+    });
+
+    it("clearDateRange drops the custom range and snaps back to the default window", () => {
+        const { result } = renderHook(() => useDashboardPrefs());
+
+        act(() => result.current.handleCalSelect({ from: new Date(2026, 6, 4), to: new Date(2026, 6, 10) }));
+        expect(result.current.hasCustomRange).toBe(true);
+
+        act(() => result.current.clearDateRange());
+
+        expect(result.current.hasCustomRange).toBe(false);
+        expect(result.current.calRange).toBeUndefined();
+        // Default window starts today.
+        expect(result.current.dateRange.start.getDate()).toBe(new Date().getDate());
+    });
+
+    it("reads a committed range back without timezone drift", () => {
+        localStorage.setItem(
+            STORAGE_KEY,
+            JSON.stringify({ dateRange: { from: "2026-07-04", to: "2026-07-10" }, groupBy: "region" }),
+        );
+        const { result } = renderHook(() => useDashboardPrefs());
+
+        // parseLocalIso keeps the calendar day stable regardless of UTC offset.
+        expect(result.current.dateRange.start.getDate()).toBe(4);
+        expect(result.current.dateRange.end.getDate()).toBe(10);
+        expect(result.current.calRange?.from?.getDate()).toBe(4);
     });
 });
