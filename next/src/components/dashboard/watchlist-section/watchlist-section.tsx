@@ -92,7 +92,9 @@ export function WatchlistSection({
     return (
         <section
             className="relative border-t-[1.5px] border-cw-ink"
-            style={{ padding: `24px ${PAD}px 60px` }}
+            // Trim the side padding so the timeline plate gets more width than the
+            // rest of the dashboard (every pixel helps on the shared axis).
+            style={{ padding: `24px ${Math.max(10, PAD - 12)}px 60px` }}
         >
             <div className="pt-7 mb-[18px]">
                 <div className="font-mono-field text-[13px] font-medium leading-none tracking-[0.18em] text-cw-clay mb-[10px] uppercase">
