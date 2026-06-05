@@ -73,6 +73,16 @@ describe("AvailabilityTimeline", () => {
         expect(screen.getAllByText("booked all season").length).toBeGreaterThan(0);
     });
 
+    it("reveals a site's date ranges with a recreation.gov link when the site is clicked", () => {
+        render(<AvailabilityTimeline rows={ROWS} dateRange={DATE_RANGE} defaultExpandFirst />);
+        // Windows are hidden until the site row is clicked.
+        expect(screen.queryByRole("link", { name: /book/i })).toBeNull();
+        fireEvent.click(screen.getByText("Site A-07"));
+        const link = screen.getByRole("link", { name: /book/i });
+        expect(link.getAttribute("href")).toContain("recreation.gov/camping/campsites/");
+        expect(link.getAttribute("href")).toContain("arrivalDate=2026-05-23");
+    });
+
     it("fires onEditSettings from a row's configure button", () => {
         const calls: string[] = [];
         render(

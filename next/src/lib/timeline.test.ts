@@ -11,6 +11,7 @@ import {
     monthTicks,
     nowIndex,
     buildDisplaySites,
+    siteRangeUrl,
 } from "./timeline";
 import type { ProcessedCampground, SiteAvailability } from "@/types/campground";
 
@@ -120,6 +121,15 @@ describe("buildDisplaySites", () => {
             ["B-23", "worth", false],
             ["C-31", "other", false],
         ]);
+    });
+});
+
+describe("siteRangeUrl", () => {
+    it("deep-links arrival=run start, departure=night after run end", () => {
+        // run [22,23] = nights May 23 & 24 -> arrival May 23, departure May 25.
+        expect(siteRangeUrl("69080", HORIZON, [22, 23])).toBe(
+            "https://www.recreation.gov/camping/campsites/69080?arrivalDate=2026-05-23&departureDate=2026-05-25",
+        );
     });
 });
 

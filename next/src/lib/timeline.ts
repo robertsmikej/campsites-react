@@ -1,4 +1,5 @@
 import type { ProcessedCampground, SiteAvailability } from "@/types/campground";
+import { toLocalIso } from "@/components/dashboard/helpers";
 
 export type Tier = "fav" | "worth" | "other";
 export const TIER_ORDER: Record<Tier, number> = { fav: 0, worth: 1, other: 2 };
@@ -202,9 +203,17 @@ export function buildDisplaySites(cg: ProcessedCampground): DisplaySite[] {
     );
 }
 
-/** Shared with the legacy table: reservation deep-link for a site. */
+/** Reservation deep-link for a site (uses its first match's dates). */
 export function reservationUrl(site: SiteAvailability): string {
     const m = site.matches?.[0];
     if (!m) return `https://www.recreation.gov/camping/campsites/${site.siteId}`;
     return `https://www.recreation.gov/camping/campsites/${site.siteId}?arrivalDate=${m.from}&departureDate=${m.to}`;
+}
+
+/** Reservation deep-link for a specific open run (night index range). Departure
+ *  is the night after the last open night (rec.gov departure date is exclusive). */
+export function siteRangeUrl(siteId: string, h: Horizon, run: [number, number]): string {
+    const arrival = toLocalIso(dateAt(h, run[0]));
+    const departure = toLocalIso(dateAt(h, run[1] + 1));
+    return `https://www.recreation.gov/camping/campsites/${siteId}?arrivalDate=${arrival}&departureDate=${departure}`;
 }
