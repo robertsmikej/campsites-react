@@ -8,8 +8,8 @@ vi.mock("@/lib/sessions");
 vi.mock("@/lib/cloudflare");
 vi.mock("@/lib/user-campgrounds");
 
-function createMockKv() {
-    const store = new Map<string, string>();
+function createMockKv(seed: Record<string, string> = {}) {
+    const store = new Map<string, string>(Object.entries(seed));
     return {
         get: vi.fn(async (key: string, type?: string) => {
             const v = store.get(key);
@@ -84,29 +84,47 @@ describe("GET /api/availability", () => {
 
     it("anonymous request uses curated default config", async () => {
         vi.mocked(sessions.readSession).mockResolvedValue(null);
-        kv._store.set(
-            "config:campgrounds",
-            JSON.stringify({
-                campgrounds: {
-                    "recreation.gov": [
-                        {
-                            id: "232358",
-                            name: "Default CG",
-                            enabled: true,
-                            dates: { startDate: "2026-07-01", endDate: "2026-07-03" },
-                            sites: { favorites: [], worthwhile: [] },
-                        },
-                    ],
-                },
-                globalSettings: { stayLengths: [2], validStartDays: ["Friday"] },
+        const cfg = {
+            campgrounds: {
+                "recreation.gov": [
+                    {
+                        id: "232358",
+                        name: "Default CG",
+                        enabled: true,
+                        dates: { startDate: "2026-07-01", endDate: "2026-07-03" },
+                        sites: { favorites: [], worthwhile: [] },
+                    },
+                ],
+            },
+            globalSettings: { stayLengths: [2], validStartDays: ["Friday"] },
+        };
+        const anonKv = createMockKv({
+            "user:boss@example.com:profile": JSON.stringify({
+                email: "boss@example.com",
+                name: "Boss",
+                roles: ["curator"],
+                createdAt: "2024-01-01",
             }),
-        );
+            "user:boss@example.com:campgrounds": JSON.stringify({
+                campgrounds: cfg.campgrounds,
+                globalSettings: cfg.globalSettings,
+                updatedAt: "2024-01-02",
+            }),
+        });
+        vi.mocked(cloudflare.getKv).mockReturnValue(anonKv as never);
+        vi.mocked(cloudflare.getEnv).mockReturnValue({ BOOTSTRAP_ADMIN_EMAIL: "boss@example.com", SUBSCRIBERS: anonKv } as never);
+        vi.mocked(userCampgrounds.getUserCampgrounds).mockResolvedValue({
+            campgrounds: cfg.campgrounds,
+            globalSettings: cfg.globalSettings,
+            updatedAt: "2024-01-02",
+        } as never);
         fetchSpy.mockResolvedValue(new Response(JSON.stringify({ campsites: {} }), { status: 200 }));
 
         const response = await GET(new Request("http://x/api/availability"));
         expect(response.status).toBe(200);
-        const body = (await response.json()) as { campgrounds: unknown[] };
-        expect(Array.isArray(body.campgrounds)).toBe(true);
+        const body = (await response.json()) as { campgrounds: { id: string }[] };
+        expect(body.campgrounds).toHaveLength(1);
+        expect(body.campgrounds[0].id).toBe("232358");
     });
 
     it("writes snapshot after live fetch (logged-in only)", async () => {
@@ -127,23 +145,40 @@ describe("GET /api/availability", () => {
 
     it("sets totalSitesCount > 0 and empty sites map when all sites have no matches", async () => {
         vi.mocked(sessions.readSession).mockResolvedValue(null);
-        kv._store.set(
-            "config:campgrounds",
-            JSON.stringify({
-                campgrounds: {
-                    "recreation.gov": [
-                        {
-                            id: "232358",
-                            name: "No Match CG",
-                            enabled: true,
-                            dates: { startDate: "2026-07-01", endDate: "2026-07-03" },
-                            sites: { favorites: [], worthwhile: [] },
-                        },
-                    ],
-                },
-                globalSettings: { stayLengths: [2], validStartDays: ["Friday"] },
+        const cfg = {
+            campgrounds: {
+                "recreation.gov": [
+                    {
+                        id: "232358",
+                        name: "No Match CG",
+                        enabled: true,
+                        dates: { startDate: "2026-07-01", endDate: "2026-07-03" },
+                        sites: { favorites: [], worthwhile: [] },
+                    },
+                ],
+            },
+            globalSettings: { stayLengths: [2], validStartDays: ["Friday"] },
+        };
+        const anonKv = createMockKv({
+            "user:boss@example.com:profile": JSON.stringify({
+                email: "boss@example.com",
+                name: "Boss",
+                roles: ["curator"],
+                createdAt: "2024-01-01",
             }),
-        );
+            "user:boss@example.com:campgrounds": JSON.stringify({
+                campgrounds: cfg.campgrounds,
+                globalSettings: cfg.globalSettings,
+                updatedAt: "2024-01-02",
+            }),
+        });
+        vi.mocked(cloudflare.getKv).mockReturnValue(anonKv as never);
+        vi.mocked(cloudflare.getEnv).mockReturnValue({ BOOTSTRAP_ADMIN_EMAIL: "boss@example.com", SUBSCRIBERS: anonKv } as never);
+        vi.mocked(userCampgrounds.getUserCampgrounds).mockResolvedValue({
+            campgrounds: cfg.campgrounds,
+            globalSettings: cfg.globalSettings,
+            updatedAt: "2024-01-02",
+        } as never);
         // One site with no available dates → matches will be empty after processing.
         fetchSpy.mockResolvedValue(
             new Response(
@@ -168,24 +203,41 @@ describe("GET /api/availability", () => {
 
     it("filters out empty-match sites but keeps sites with matches; totalSitesCount reflects original total", async () => {
         vi.mocked(sessions.readSession).mockResolvedValue(null);
-        kv._store.set(
-            "config:campgrounds",
-            JSON.stringify({
-                campgrounds: {
-                    "recreation.gov": [
-                        {
-                            id: "232358",
-                            name: "Mixed CG",
-                            enabled: true,
-                            // Two-month window that includes our test date (2026-07-04 is a Saturday).
-                            dates: { startDate: "2026-07-01", endDate: "2026-07-10" },
-                            sites: { favorites: [], worthwhile: [] },
-                        },
-                    ],
-                },
-                globalSettings: { stayLengths: [2], validStartDays: ["Saturday"] },
+        const cfg = {
+            campgrounds: {
+                "recreation.gov": [
+                    {
+                        id: "232358",
+                        name: "Mixed CG",
+                        enabled: true,
+                        // Two-month window that includes our test date (2026-07-04 is a Saturday).
+                        dates: { startDate: "2026-07-01", endDate: "2026-07-10" },
+                        sites: { favorites: [], worthwhile: [] },
+                    },
+                ],
+            },
+            globalSettings: { stayLengths: [2], validStartDays: ["Saturday"] },
+        };
+        const anonKv = createMockKv({
+            "user:boss@example.com:profile": JSON.stringify({
+                email: "boss@example.com",
+                name: "Boss",
+                roles: ["curator"],
+                createdAt: "2024-01-01",
             }),
-        );
+            "user:boss@example.com:campgrounds": JSON.stringify({
+                campgrounds: cfg.campgrounds,
+                globalSettings: cfg.globalSettings,
+                updatedAt: "2024-01-02",
+            }),
+        });
+        vi.mocked(cloudflare.getKv).mockReturnValue(anonKv as never);
+        vi.mocked(cloudflare.getEnv).mockReturnValue({ BOOTSTRAP_ADMIN_EMAIL: "boss@example.com", SUBSCRIBERS: anonKv } as never);
+        vi.mocked(userCampgrounds.getUserCampgrounds).mockResolvedValue({
+            campgrounds: cfg.campgrounds,
+            globalSettings: cfg.globalSettings,
+            updatedAt: "2024-01-02",
+        } as never);
         // Site "1": has an Available Saturday that starts a 2-night run → will have matches.
         // Site "2": no available dates → no matches, should be filtered out.
         fetchSpy.mockResolvedValue(

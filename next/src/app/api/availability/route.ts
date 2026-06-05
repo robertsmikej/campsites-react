@@ -1,6 +1,7 @@
 import { readSession } from "@/lib/sessions";
 import { getKv } from "@/lib/cloudflare";
 import { getUserCampgrounds } from "@/lib/user-campgrounds";
+import { getDefaultConfig } from "@/lib/default-config";
 import { jsonResponse, withCors } from "@/lib/responses";
 import { withErrorLogging } from "@/lib/route-helpers";
 import {
@@ -12,8 +13,6 @@ import {
     type SnapshotCampground,
 } from "@/lib/recgov";
 import type { Campground, GlobalSettings } from "@/types/campground";
-
-const DEFAULT_CONFIG_KEY = "config:campgrounds";
 
 interface SourceConfig {
     campgrounds: { "recreation.gov"?: Campground[] };
@@ -100,11 +99,8 @@ async function getHandler(request: Request): Promise<Response> {
         return withCors(jsonResponse(snapshot));
     }
 
-    // Anonymous: use curated default config; no snapshot persistence.
-    const defaultConfig = (await kv.get(DEFAULT_CONFIG_KEY, "json")) as SourceConfig | null;
-    if (!defaultConfig) {
-        return withCors(jsonResponse({ updatedAt: new Date().toISOString(), campgrounds: [] }));
-    }
+    // Anonymous: use the curator's watchlist as the default; no snapshot persistence.
+    const defaultConfig = await getDefaultConfig();
     const snapshot = await buildSnapshot(defaultConfig, adapter);
     return withCors(jsonResponse(snapshot));
 }
