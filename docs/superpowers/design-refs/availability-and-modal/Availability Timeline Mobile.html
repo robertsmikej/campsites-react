@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>CampWatch · Availability Timeline — Mobile</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@500;700;800;900&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600;1,700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=DM+Mono:wght@400;500&family=Caveat:wght@400;600&display=swap');
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:#E7DAC2; color:#1A1614; font-family:"Source Serif 4",Georgia,serif; -webkit-font-smoothing:antialiased;
+    background-image:radial-gradient(circle at 13px 13px, rgba(26,22,20,0.025) 0.9px, transparent 0.9px); background-size:6px 6px;
+  }
+  .page{max-width:1040px; margin:0 auto; padding:56px 40px 110px}
+  .masthead{border-bottom:2px solid #1A1614; padding-bottom:22px; margin-bottom:48px}
+  .kicker{font:500 11px/1 "DM Mono",monospace; letter-spacing:.22em; text-transform:uppercase; color:#B65C3F}
+  h1.title{margin:14px 0 0; font:900 56px/0.9 "Big Shoulders Display",sans-serif; text-transform:uppercase; letter-spacing:-.01em}
+  h1.title em{font:500 italic 44px/0.95 "Cormorant Garamond",serif; color:#1F3D2A; text-transform:none}
+  .dek{font:400 16px/1.6 "Source Serif 4",serif; color:rgba(26,22,20,0.7); max-width:760px; margin:16px 0 0}
+  .dek b{color:#1A1614; font-weight:600}
+  #root{margin-top:8px}
+  .foot{margin-top:60px; border-top:1px solid rgba(26,22,20,0.18); padding-top:20px; font:400 italic 17px/1.5 "Cormorant Garamond",serif; color:rgba(26,22,20,0.7); max-width:820px}
+  .foot b{font-family:"Caveat",cursive; font-style:normal; font-size:21px; color:#B65C3F; font-weight:600}
+</style>
+</head>
+<body>
+  <div class="page">
+    <div class="masthead">
+      <div class="kicker">CampWatch · Field Notes · Availability on a phone</div>
+      <h1 class="title">The timeline, <em>in your pocket.</em></h1>
+      <p class="dek">The shared-axis idea survives the narrow screen by <b>compressing the whole season to fit</b> rather than scrolling sideways — so the glance stays intact. The watchlist is <b>grouped by tier</b> (favorites first), and every opening is <b>two-tone</b>: weekday nights in the base colour, <b>Fri &amp; Sat nights brighter</b>, so weekend availability reads without a tap. Same data and palette as the desktop timeline.</p>
+    </div>
+    <div id="root"></div>
+    <p class="foot">If this reads right, the responsive rule is simple: <b>wide screens get the roomy desktop timeline, phones get this compressed-to-fit version</b> — same component, same data, one breakpoint. Want me to wire it into the dashboard?</p>
+  </div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script type="text/babel" src="ios-frame.jsx"></script>
+  <script type="text/babel" src="mobile-timeline.jsx"></script>
+  <script type="text/babel">
+    ReactDOM.createRoot(document.getElementById('root')).render(<MobileShowcase/>);
+  </script>
+</body>
+</html>

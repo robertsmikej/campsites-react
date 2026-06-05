@@ -19,7 +19,8 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogTitle } from "@/components/ui/dialog";
+import { CW } from "@/components/field-notes/cw-tokens";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion } from "@/components/ui/accordion";
@@ -259,12 +260,70 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
 
     return (
         <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-            <DialogContent className="flex max-h-[90vh] w-[95vw] max-w-[95vw] flex-col overflow-hidden sm:max-w-6xl">
-                <DialogHeader>
-                    <DialogTitle>Configure Campgrounds</DialogTitle>
-                </DialogHeader>
+            <DialogContent
+                showCloseButton={false}
+                className="flex max-h-[90vh] w-[95vw] max-w-[95vw] flex-col overflow-hidden rounded-none p-0 sm:max-w-6xl"
+                style={{
+                    background: CW.paper,
+                    border: `1.5px solid ${CW.ink}`,
+                    boxShadow: `10px 12px 0 ${CW.forest}, 0 40px 90px -30px rgba(20,15,12,0.8)`,
+                }}
+            >
+                {/* Masthead */}
+                <div
+                    className="flex items-start justify-between"
+                    style={{
+                        background: CW.cream,
+                        borderBottom: `2px solid ${CW.ink}`,
+                        padding: "24px 30px 20px",
+                    }}
+                >
+                    <div>
+                        <div
+                            className="font-mono-field font-medium uppercase"
+                            style={{ fontSize: 10, letterSpacing: "0.22em", color: CW.clay }}
+                        >
+                            § Watchlist · Field Station Setup
+                        </div>
+                        <DialogTitle
+                            className="font-poster font-black uppercase"
+                            style={{ fontSize: 38, lineHeight: 0.92, letterSpacing: "-0.01em", marginTop: 9 }}
+                        >
+                            Configure{" "}
+                            <span
+                                className="block font-italic-serif italic normal-case"
+                                style={{ fontSize: 30, lineHeight: 1, color: CW.forest, marginTop: 2 }}
+                            >
+                                campgrounds
+                            </span>
+                        </DialogTitle>
+                        <div
+                            className="font-italic-serif italic"
+                            style={{ fontSize: 16, lineHeight: 1.3, color: CW.inkSoft, marginTop: 7 }}
+                        >
+                            {campgrounds.length} place{campgrounds.length === 1 ? "" : "s"} on watch · drag to
+                            reorder, tag the sites that matter.
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        aria-label="Close"
+                        onClick={onClose}
+                        className="flex shrink-0 items-center justify-center rounded-[2px] transition-colors hover:bg-cw-ink [&:hover_svg]:stroke-cw-cream"
+                        style={{
+                            width: 38,
+                            height: 38,
+                            border: `1.5px solid ${CW.ink}`,
+                            background: CW.paper,
+                        }}
+                    >
+                        <svg width="16" height="16" viewBox="0 0 16 16">
+                            <path d="M3 3 L13 13 M13 3 L3 13" stroke={CW.ink} strokeWidth="1.8" fill="none" />
+                        </svg>
+                    </button>
+                </div>
 
-                <div className="flex-1 overflow-y-auto space-y-4 pr-1">
+                <div className="flex-1 space-y-4 overflow-y-auto" style={{ padding: "24px 30px 30px" }}>
                     {/* General settings */}
                     <GeneralSettings
                         stayRange={stayRange}
@@ -387,16 +446,63 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
                     )}
                 </div>
 
-                <DialogFooter className="gap-2 pt-4">
-                    <Button variant="destructive" onClick={onResetToDefaults}>
+                <DialogFooter
+                    className="flex-row items-center justify-between gap-3 sm:justify-between"
+                    style={{
+                        background: CW.cream,
+                        borderTop: `2px solid ${CW.ink}`,
+                        padding: "18px 30px",
+                        margin: 0,
+                    }}
+                >
+                    <button
+                        type="button"
+                        onClick={onResetToDefaults}
+                        className="cursor-pointer whitespace-nowrap rounded-[2px] font-poster font-extrabold uppercase transition-colors hover:bg-[color-mix(in_srgb,var(--cw-clay)_8%,transparent)]"
+                        style={{
+                            fontSize: 12,
+                            letterSpacing: "0.12em",
+                            padding: "14px 22px",
+                            color: CW.clay,
+                            border: "1.5px solid transparent",
+                        }}
+                    >
                         Reset to defaults
-                    </Button>
-                    <Button variant="outline" onClick={onClose}>
-                        Cancel
-                    </Button>
-                    <Button onClick={handleSave} disabled={isSaveDisabled}>
-                        Save
-                    </Button>
+                    </button>
+                    <div className="flex items-center gap-3">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="cursor-pointer whitespace-nowrap rounded-[2px] font-poster font-extrabold uppercase transition-colors hover:bg-cw-ink hover:text-cw-cream"
+                            style={{
+                                fontSize: 12,
+                                letterSpacing: "0.12em",
+                                padding: "14px 22px",
+                                background: CW.paper,
+                                color: CW.ink,
+                                border: `1.5px solid ${CW.ink}`,
+                            }}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleSave}
+                            disabled={isSaveDisabled}
+                            className="cursor-pointer whitespace-nowrap rounded-[2px] font-poster font-extrabold uppercase transition-transform hover:-translate-x-px hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-50"
+                            style={{
+                                fontSize: 12,
+                                letterSpacing: "0.12em",
+                                padding: "14px 22px",
+                                background: CW.forest,
+                                color: CW.cream,
+                                border: `1.5px solid ${CW.forest}`,
+                                boxShadow: `3px 3px 0 ${CW.forestDeep}`,
+                            }}
+                        >
+                            Save
+                        </button>
+                    </div>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

@@ -25,11 +25,8 @@ interface OpeningsFeedProps {
 
 export function OpeningsFeed({ openingItems, isMobile, nowMs, PAD }: OpeningsFeedProps) {
     return (
-        <section style={{ padding: isMobile ? `16px 0 10px` : `20px ${PAD}px 16px` }}>
-            <div
-                style={{ padding: isMobile ? `0 ${PAD}px` : 0 }}
-                className="mb-3 flex items-baseline gap-3 flex-wrap"
-            >
+        <section style={{ padding: isMobile ? `16px ${PAD}px 10px` : `20px ${PAD}px 16px` }}>
+            <div style={{ padding: 0 }} className="mb-3 flex items-baseline gap-3 flex-wrap">
                 <div className="font-mono-field text-[13px] font-bold leading-none tracking-[0.18em] text-cw-clay uppercase">
                     Open right now
                 </div>
@@ -51,7 +48,9 @@ export function OpeningsFeed({ openingItems, isMobile, nowMs, PAD }: OpeningsFee
                         display: "flex",
                         gap: 10,
                         overflowX: "auto",
-                        padding: `2px ${PAD}px 10px`,
+                        // Section provides the left/right inset; only vertical padding here
+                        // so the scroller's start padding can't be dropped on mobile.
+                        padding: `2px 0 10px`,
                         scrollSnapType: "x mandatory",
                     }}
                 >

@@ -120,6 +120,8 @@
     --cw-rule: rgba(26, 22, 20, 0.18);
     --cw-rule-soft: rgba(26, 22, 20, 0.07);
     --cw-forest: #1f3d2a;
+    --cw-forest-bright: #3c7a4f; /* Fri/Sat open nights — lighter green */
+    --cw-forest-deep: #142a1d; /* pressed-button shadow */
     --cw-clay: #9c4a31;
     --cw-mustard: #8e7416;
 }
@@ -134,6 +136,8 @@
     --cw-rule: rgba(244, 234, 216, 0.16);
     --cw-rule-soft: rgba(244, 234, 216, 0.07);
     --cw-forest: #7eb58f;
+    --cw-forest-bright: #5fa377;
+    --cw-forest-deep: #0f1f15;
     --cw-clay: #d88562;
     --cw-mustard: #e2bc4e;
 }
@@ -194,6 +198,8 @@
     --color-cw-rule: var(--cw-rule);
     --color-cw-rule-soft: var(--cw-rule-soft);
     --color-cw-forest: var(--cw-forest);
+    --color-cw-forest-bright: var(--cw-forest-bright);
+    --color-cw-forest-deep: var(--cw-forest-deep);
     --color-cw-clay: var(--cw-clay);
     --color-cw-mustard: var(--cw-mustard);
 

@@ -7,12 +7,10 @@ import { format } from "date-fns";
 import { AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -27,6 +25,8 @@ import {
 
 import { ALL_DAYS, STAY_MAX, STAY_MIN, DEFAULT_SHOW_HIDE, type EditableCampground } from "./types";
 import type { NotifyScope } from "@/types/campground";
+import { CW } from "@/components/field-notes/cw-tokens";
+import { FieldLabel, Hint, SectionDivider, SegmentedControl, TierChip } from "./field-primitives";
 
 interface CampgroundEditorProps {
     campground: EditableCampground;
@@ -63,15 +63,15 @@ function DatePickerField({
 
     return (
         <div className="flex-1">
-            <Label className="text-xs">{label}</Label>
+            <FieldLabel>{label}</FieldLabel>
             <Popover open={open} onOpenChange={setOpen}>
                 <PopoverTrigger asChild>
                     <Button
                         variant="outline"
-                        className="mt-1 w-full justify-start text-left font-normal"
+                        className="mt-1 w-full justify-start bg-cw-cream text-left font-mono-field text-sm font-normal"
                         size="sm"
                     >
-                        <CalendarIcon className="mr-2 size-4 opacity-50" />
+                        <CalendarIcon className="mr-2 size-4" style={{ color: CW.clay }} />
                         {parsed ? (
                             format(parsed, "MM/dd/yyyy")
                         ) : (
@@ -107,21 +107,21 @@ function DatePickerField({
                     />
                 </PopoverContent>
             </Popover>
-            <p className="mt-1 text-xs text-muted-foreground">
-                Optional. Leave blank to use global settings.
-            </p>
+            <Hint>Optional — leave blank to use global settings.</Hint>
         </div>
     );
 }
 
 function MultiSelectSites({
     label,
+    tier,
     value,
     options,
     onChange,
     helperText,
 }: {
     label: string;
+    tier: "fav" | "worth";
     value: string[];
     options: string[];
     onChange: (next: string[]) => void;
@@ -131,6 +131,9 @@ function MultiSelectSites({
     const [inputValue, setInputValue] = useState("");
 
     const allOptions = Array.from(new Set([...options, ...value]));
+    const isFav = tier === "fav";
+    const pillBg = isFav ? CW.clay : CW.forest;
+    const mark = isFav ? "★" : "◇";
 
     const handleSelect = (option: string) => {
         if (value.includes(option)) {
@@ -150,7 +153,9 @@ function MultiSelectSites({
 
     return (
         <div className="flex-1">
-            <Label className="text-xs">{label}</Label>
+            <FieldLabel>
+                <span style={{ color: pillBg }}>{mark}</span> {label}
+            </FieldLabel>
             {/* modal: the dialog's scroll-lock (react-remove-scroll) blocks wheel
                 scrolling on a non-modal popover portaled outside it, so a long site
                 list can't be scrolled. A modal popover owns its own scroll region. */}
@@ -158,18 +163,30 @@ function MultiSelectSites({
                 <PopoverTrigger asChild>
                     <Button
                         variant="outline"
-                        className="mt-1 w-full justify-start text-left font-normal h-auto min-h-9 flex-wrap gap-1 py-1.5"
+                        className="mt-1 h-auto min-h-9 w-full flex-wrap justify-start gap-1 bg-cw-cream py-1.5 text-left font-normal"
                         size="sm"
                     >
                         {value.length === 0 ? (
-                            <span className="text-muted-foreground">Select sites...</span>
+                            <span className="font-italic-serif italic" style={{ color: CW.inkFaint }}>
+                                Type to add a site…
+                            </span>
                         ) : (
                             value.map((v) => (
-                                <Badge key={v} variant="secondary" className="text-xs">
+                                <span
+                                    key={v}
+                                    className="inline-flex items-center gap-[6px] rounded-full font-mono-field font-semibold"
+                                    style={{
+                                        fontSize: 13,
+                                        padding: "4px 8px",
+                                        background: pillBg,
+                                        color: CW.cream,
+                                    }}
+                                >
+                                    <span style={{ fontSize: 11 }}>{mark}</span>
                                     {v}
                                     <span
                                         role="button"
-                                        className="ml-1 opacity-60 hover:opacity-100"
+                                        className="opacity-70 hover:opacity-100"
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             onChange(value.filter((s) => s !== v));
@@ -177,7 +194,7 @@ function MultiSelectSites({
                                     >
                                         <X className="size-2.5" />
                                     </span>
-                                </Badge>
+                                </span>
                             ))
                         )}
                     </Button>
@@ -224,7 +241,7 @@ function MultiSelectSites({
                     </Command>
                 </PopoverContent>
             </Popover>
-            {helperText && <p className="mt-1 text-xs text-muted-foreground">{helperText}</p>}
+            {helperText && <Hint>{helperText}</Hint>}
         </div>
     );
 }
@@ -233,6 +250,7 @@ export function CampgroundEditor({
     campground,
     index,
     isOnlyCampground,
+    expanded,
     availableSites,
     globalStayRange,
     globalValidStartDays,
@@ -283,25 +301,43 @@ export function CampgroundEditor({
     return (
         <AccordionItem
             value={`campground-${index}`}
-            className={`rounded-lg border ${!isEnabled ? "opacity-60" : ""}`}
+            className={`rounded-none border-0 ${!isEnabled ? "opacity-60" : ""}`}
+            style={{
+                background: CW.cream,
+                border: `1.5px solid ${CW.ink}`,
+                boxShadow: expanded ? `5px 5px 0 ${CW.forest}` : `4px 4px 0 rgba(26,22,20,0.14)`,
+            }}
         >
-            <AccordionTrigger className="px-3 py-2 hover:no-underline [&>svg]:hidden" asChild={false}>
-                <div className="flex w-full items-center gap-2">
+            <AccordionTrigger
+                className="px-[18px] py-[15px] hover:no-underline [&>svg]:hidden"
+                asChild={false}
+            >
+                <div className="flex w-full items-center gap-[14px]">
                     <span
-                        className="cursor-grab text-muted-foreground"
+                        className="cursor-grab"
+                        style={{ color: CW.inkFaint }}
                         {...(dragHandleProps as React.HTMLAttributes<HTMLSpanElement>)}
                         onClick={(e) => e.stopPropagation()}
                     >
                         <GripVertical className="size-4" />
                     </span>
-                    <span className="flex-1 text-left text-sm font-medium">
+                    <span
+                        className="flex-1 text-left font-italic-serif italic"
+                        style={{ fontSize: 23, color: expanded ? CW.ink : CW.inkSoft }}
+                    >
                         {campground.name || `Campground ${index + 1}`}
                         {!isEnabled && (
-                            <span className="ml-2 text-xs font-normal italic text-muted-foreground">
+                            <span className="ml-2 text-xs font-normal italic" style={{ color: CW.inkFaint }}>
                                 disabled
                             </span>
                         )}
                     </span>
+                    {campground.favoritesArray.length > 0 && (
+                        <TierChip tier="fav" count={campground.favoritesArray.length} />
+                    )}
+                    {campground.worthwhileArray.length > 0 && (
+                        <TierChip tier="worth" count={campground.worthwhileArray.length} />
+                    )}
                     <span className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                         <TooltipProvider>
                             <Tooltip>
@@ -337,65 +373,76 @@ export function CampgroundEditor({
                             </Tooltip>
                         </TooltipProvider>
                     </span>
+                    <span
+                        className="ml-1 inline-block transition-transform"
+                        style={{
+                            width: 9,
+                            height: 9,
+                            borderRight: `2px solid ${CW.inkSoft}`,
+                            borderBottom: `2px solid ${CW.inkSoft}`,
+                            transform: expanded ? "rotate(-135deg)" : "rotate(45deg)",
+                        }}
+                    />
                 </div>
             </AccordionTrigger>
 
             <AccordionContent className="space-y-4 px-3 pb-3 pt-1">
                 {/* Basic info */}
                 <div className="flex gap-3">
-                    <div className="flex-1 space-y-2">
+                    <div className="flex-1 space-y-3">
                         <div>
-                            <Label className="text-xs">Campground Name *</Label>
+                            <FieldLabel required>Campground Name</FieldLabel>
                             <Input
-                                className="mt-1"
+                                className="mt-1 bg-cw-cream"
                                 value={campground.name}
                                 onChange={(e) => onFieldChange("name", e.target.value)}
                                 placeholder="Campground name"
                             />
                         </div>
                         <div>
-                            <Label className="text-xs">Area / Region</Label>
+                            <FieldLabel>Area / Region</FieldLabel>
                             <Input
-                                className="mt-1"
+                                className="mt-1 bg-cw-cream"
                                 value={campground.area ?? ""}
                                 onChange={(e) => onFieldChange("area", e.target.value)}
                                 placeholder="e.g. Tahoe National Forest"
                             />
                         </div>
-                        <div>
-                            <Label className="text-xs">Facility ID *</Label>
-                            <Input
-                                className="mt-1"
-                                value={campground.id}
-                                onChange={(e) => onFieldChange("id", e.target.value)}
-                                placeholder="Recreation.gov facility ID"
-                            />
-                            <p className="mt-1 text-xs text-muted-foreground">
-                                Matches the Recreation.gov facility ID
-                            </p>
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <div>
+                                <FieldLabel required>Facility ID</FieldLabel>
+                                <Input
+                                    className="mt-1 bg-cw-cream font-mono-field text-sm"
+                                    value={campground.id}
+                                    onChange={(e) => onFieldChange("id", e.target.value)}
+                                    placeholder="Recreation.gov facility ID"
+                                />
+                                <Hint>Matches the recreation.gov facility ID.</Hint>
+                            </div>
+                            <div>
+                                <FieldLabel>Type</FieldLabel>
+                                <Input
+                                    className="mt-1 bg-cw-cream"
+                                    value={campground.type ?? ""}
+                                    onChange={(e) => onFieldChange("type", e.target.value)}
+                                    placeholder="campground"
+                                />
+                                <Hint>As listed on recreation.gov.</Hint>
+                            </div>
                         </div>
                         <div>
-                            <Label className="text-xs">Source</Label>
+                            <FieldLabel>Source</FieldLabel>
                             <Input
-                                className="mt-1"
+                                className="mt-1 bg-cw-cream font-mono-field text-sm"
                                 value={campground.site ?? ""}
                                 onChange={(e) => onFieldChange("site", e.target.value)}
                                 placeholder="recreation.gov"
                             />
                         </div>
                         <div>
-                            <Label className="text-xs">Type</Label>
-                            <Input
-                                className="mt-1"
-                                value={campground.type ?? ""}
-                                onChange={(e) => onFieldChange("type", e.target.value)}
-                                placeholder="campground"
-                            />
-                        </div>
-                        <div>
-                            <Label className="text-xs">Description</Label>
+                            <FieldLabel>Description</FieldLabel>
                             <Textarea
-                                className="mt-1"
+                                className="mt-1 bg-cw-cream"
                                 value={campground.description ?? ""}
                                 onChange={(e) => onFieldChange("description", e.target.value)}
                                 rows={3}
@@ -419,6 +466,7 @@ export function CampgroundEditor({
                     )}
                 </div>
 
+                <SectionDivider label="I — Season Window" />
                 {/* Date pickers */}
                 <div className="flex gap-3">
                     <DatePickerField
@@ -435,56 +483,63 @@ export function CampgroundEditor({
                     />
                 </div>
 
+                <SectionDivider label="II — Sites that matter" />
                 {/* Site multi-selects */}
                 <div className="flex gap-3">
                     {availableSites.length > 0 ? (
                         <>
                             <MultiSelectSites
                                 label="Favorite Sites"
+                                tier="fav"
                                 value={campground.favoritesArray}
                                 options={availableSites}
                                 onChange={(next) => {
                                     onFieldChange("favoritesArray", next);
                                     onFieldChange("favoritesText", next.join(", "));
                                 }}
-                                helperText="Select favorites. Type to add unlisted sites."
+                                helperText="The ones you'd drive back for. Type a site number to add."
                             />
                             <MultiSelectSites
                                 label="Worthwhile Sites"
+                                tier="worth"
                                 value={campground.worthwhileArray}
                                 options={availableSites}
                                 onChange={(next) => {
                                     onFieldChange("worthwhileArray", next);
                                     onFieldChange("worthwhileText", next.join(", "));
                                 }}
-                                helperText="Select worthwhile sites. Type to add unlisted."
+                                helperText="Good enough if a favorite won't free up."
                             />
                         </>
                     ) : (
                         <>
                             <div className="flex-1">
-                                <Label className="text-xs">Favorite Sites</Label>
+                                <FieldLabel>
+                                    <span style={{ color: CW.clay }}>★</span> Favorite Sites
+                                </FieldLabel>
                                 <Input
-                                    className="mt-1"
+                                    className="mt-1 bg-cw-cream font-mono-field text-sm"
                                     value={campground.favoritesText}
                                     onChange={(e) => onFieldChange("favoritesText", e.target.value)}
                                     placeholder="012, 014, 016"
                                 />
-                                <p className="mt-1 text-xs text-muted-foreground">
+                                <Hint>
                                     {campground.id
-                                        ? "Loading sites... or enter comma-separated"
-                                        : "Comma-separated list (e.g., 012, 014, 016)"}
-                                </p>
+                                        ? "Loading sites… or enter comma-separated."
+                                        : "Comma-separated list (e.g., 012, 014, 016)."}
+                                </Hint>
                             </div>
                             <div className="flex-1">
-                                <Label className="text-xs">Worthwhile Sites</Label>
+                                <FieldLabel>
+                                    <span style={{ color: CW.forest }}>◇</span> Worthwhile Sites
+                                </FieldLabel>
                                 <Input
-                                    className="mt-1"
+                                    className="mt-1 bg-cw-cream font-mono-field text-sm"
                                     value={campground.worthwhileText}
                                     onChange={(e) => onFieldChange("worthwhileText", e.target.value)}
                                     placeholder="017, 018"
                                 />
-                                <p className="mt-1 text-xs text-muted-foreground">Comma-separated list</p>
+                                <Hint>Good enough if a favorite won&apos;t free up.</Hint>
                             </div>
                         </>
                     )}
@@ -506,55 +561,46 @@ export function CampgroundEditor({
                     )}
                 </div>
 
+                <SectionDivider label="III — When to write you" />
                 {/* Email scope */}
                 <div>
-                    <Label className="text-xs">Email me when</Label>
-                    <div className="mt-2 inline-flex rounded-[2px] border border-cw-rule overflow-hidden">
-                        {(
-                            [
-                                ["favorites", "Favorites"],
-                                ["worthwhile", "Favorites + worthwhile"],
-                                ["all", "Any site opens"],
-                            ] as const
-                        ).map(([value, label]) => {
-                            const active =
-                                (campground.notifyScope ?? (campground.notifyAll ? "all" : undefined)) ===
-                                value;
-                            return (
-                                <button
-                                    key={value}
-                                    type="button"
-                                    onClick={() => {
-                                        onFieldChange("notifyScope", value as NotifyScope);
-                                        // Clear legacy notifyAll once the new field is set so the
-                                        // resolver doesn't have to fall through.
-                                        if (campground.notifyAll) onFieldChange("notifyAll", false);
-                                    }}
-                                    className={`font-mono-field text-[12px] font-bold uppercase tracking-[0.12em] px-3 py-[7px] cursor-pointer border-r border-cw-rule last:border-r-0 ${
-                                        active ? "bg-cw-ink text-cw-cream" : "bg-transparent text-cw-ink"
-                                    }`}
-                                >
-                                    {label}
-                                </button>
-                            );
-                        })}
+                    <div className="mb-2 flex flex-wrap items-baseline gap-3">
+                        <FieldLabel>Email me when</FieldLabel>
+                        {(campground.notifyScope || campground.notifyAll) && (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    onFieldChange("notifyScope", undefined);
+                                    onFieldChange("notifyAll", undefined);
+                                }}
+                                className="ml-auto cursor-pointer rounded-full font-mono-field font-semibold uppercase transition-colors"
+                                style={{
+                                    fontSize: 11,
+                                    letterSpacing: "0.08em",
+                                    padding: "6px 12px",
+                                    color: CW.forest,
+                                    border: `1px solid ${CW.rule}`,
+                                }}
+                            >
+                                Use account default
+                            </button>
+                        )}
                     </div>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                        Leave blank to use your account default. Favorites = only sites you starred.
-                    </p>
-                    {(campground.notifyScope || campground.notifyAll) && (
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 text-xs mt-1"
-                            onClick={() => {
-                                onFieldChange("notifyScope", undefined);
-                                onFieldChange("notifyAll", undefined);
-                            }}
-                        >
-                            Use default
-                        </Button>
-                    )}
+                    <SegmentedControl<NotifyScope>
+                        options={[
+                            { value: "favorites", label: "Favorites only" },
+                            { value: "worthwhile", label: "Favorites + Worthwhile" },
+                            { value: "all", label: "Any site opens" },
+                        ]}
+                        value={campground.notifyScope ?? (campground.notifyAll ? "all" : undefined)}
+                        onChange={(value) => {
+                            onFieldChange("notifyScope", value);
+                            // Clear legacy notifyAll once the new field is set so the
+                            // resolver doesn't have to fall through.
+                            if (campground.notifyAll) onFieldChange("notifyAll", false);
+                        }}
+                    />
+                    <Hint>Favorites means only the sites you&apos;ve starred above.</Hint>
                 </div>
 
                 {/* Per-campground start days */}
@@ -592,21 +638,30 @@ export function CampgroundEditor({
                         )}
                     </div>
                     <div className={`flex flex-wrap gap-3 ${!hasCampgroundDays ? "opacity-50" : ""}`}>
-                        {ALL_DAYS.map((day) => (
-                            <label key={day} className="flex items-center gap-2 text-sm">
-                                <Checkbox
-                                    checked={effectiveDays.includes(day)}
-                                    onCheckedChange={
-                                        hasCampgroundDays
-                                            ? (checked) => handleCampgroundDayToggle(day, !!checked)
-                                            : undefined
-                                    }
-                                    disabled={!hasCampgroundDays}
-                                />
-                                {day.slice(0, 3)}
-                            </label>
-                        ))}
+                        {ALL_DAYS.map((day) => {
+                            const isPrime = day === "Friday" || day === "Saturday";
+                            return (
+                                <label key={day} className="flex items-center gap-2 text-sm">
+                                    <Checkbox
+                                        checked={effectiveDays.includes(day)}
+                                        onCheckedChange={
+                                            hasCampgroundDays
+                                                ? (checked) => handleCampgroundDayToggle(day, !!checked)
+                                                : undefined
+                                        }
+                                        disabled={!hasCampgroundDays}
+                                        style={
+                                            isPrime
+                                                ? { boxShadow: "0 0 0 2px rgba(201,162,39,0.5)" }
+                                                : undefined
+                                        }
+                                    />
+                                    {day.slice(0, 3)}
+                                </label>
+                            );
+                        })}
                     </div>
+                    <Hint>Gold-ringed days are weekend (Fri/Sat) nights — your prime-time getaways.</Hint>
                 </div>
 
                 {/* Per-campground stay length */}

@@ -1,0 +1,91 @@
+"use client";
+
+import { useState } from "react";
+import { CW } from "@/components/field-notes/cw-tokens";
+import { buildHorizon } from "@/lib/timeline";
+import type { ProcessedCampground } from "@/types/campground";
+import { TimelineAxis } from "./timeline-axis";
+import { CampgroundTimelineRow } from "./campground-timeline-row";
+
+const META = 264;
+const PAD = 26;
+
+interface AvailabilityTimelineProps {
+    rows: ProcessedCampground[];
+    dateRange: { start: Date; end: Date };
+    defaultExpandFirst?: boolean;
+    onEditSettings?: (campgroundId: string) => void;
+}
+
+export function AvailabilityTimeline({
+    rows,
+    dateRange,
+    defaultExpandFirst,
+    onEditSettings,
+}: AvailabilityTimelineProps) {
+    const horizon = buildHorizon(dateRange.start, dateRange.end);
+    const [expandedIds, setExpandedIds] = useState<Set<string>>(() => {
+        const first = defaultExpandFirst ? rows[0]?.id : undefined;
+        return first ? new Set([first]) : new Set();
+    });
+
+    const toggle = (id: string) =>
+        setExpandedIds((prev) => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+        });
+
+    return (
+        <div
+            className="overflow-hidden bg-cw-cream"
+            style={{ border: `1.5px solid ${CW.ink}`, boxShadow: `8px 8px 0 ${CW.forest}` }}
+        >
+            <div
+                className="grid items-end"
+                style={{
+                    gridTemplateColumns: `${META}px 1fr`,
+                    borderBottom: `2px solid ${CW.ink}`,
+                    padding: `18px ${PAD}px 0`,
+                }}
+            >
+                <div
+                    className="font-mono-field font-bold uppercase"
+                    style={{ fontSize: 10, letterSpacing: "0.16em", color: CW.clay, paddingBottom: 12 }}
+                >
+                    Watchlist · click a row to expand its sites
+                </div>
+                <TimelineAxis horizon={horizon} />
+            </div>
+
+            <div>
+                {rows.map((cg) => (
+                    <CampgroundTimelineRow
+                        key={cg.id ?? cg.name}
+                        campground={cg}
+                        horizon={horizon}
+                        expanded={expandedIds.has(cg.id ?? cg.name)}
+                        onToggleExpand={() => toggle(cg.id ?? cg.name)}
+                        onEditSettings={onEditSettings}
+                    />
+                ))}
+            </div>
+
+            <div
+                className="flex items-center justify-between"
+                style={{ borderTop: `2px solid ${CW.ink}`, background: CW.paper, padding: `14px ${PAD}px` }}
+            >
+                <div className="font-italic-serif italic" style={{ fontSize: 16, color: CW.inkSoft }}>
+                    One axis, every campground on it.
+                </div>
+                <div
+                    className="font-mono-field uppercase"
+                    style={{ fontSize: 11, letterSpacing: "0.12em", color: CW.clay }}
+                >
+                    Updated every 5 min
+                </div>
+            </div>
+        </div>
+    );
+}
