@@ -84,13 +84,33 @@ const F = {
 
 // ── Composable helpers ────────────────────────────────────────────────────────
 
-const buildPreheader = (count: number, uniqueNames: string[]): string => {
-    const preheaderNames = uniqueNames.join(" · ");
-    const preheaderText = `${count} new opening${count === 1 ? "" : "s"} on your watchlist · ${preheaderNames}`;
+const buildPreheader = (matches: MatchResult[]): string => {
+    const count = matches.length;
+    const shortName = (n: string) => n.replace(/\s+campground$/i, "");
+    const siteLabel = (m: MatchResult) => m.siteName.replace(/^Site\s+/i, "");
+
+    const fav = matches.find((m) => m.group === "favorites");
+    const head = fav ?? matches[0];
+    const lead = head
+        ? `${fav ? "★ " : ""}${shortName(head.campgroundName)} site ${siteLabel(head)}`
+        : "New openings on your watchlist";
+
+    const remaining = count - 1;
+    const text =
+        remaining > 0
+            ? `${lead} + ${remaining} more opening${remaining === 1 ? "" : "s"}`
+            : count === 1
+              ? `${lead} just opened`
+              : lead;
+
+    // Padding (zero-width joiner + nbsp) so clients don't pull body boilerplate
+    // (the "Polling every 5 min" meta bar) into the preview snippet.
+    const pad = "&zwnj;&nbsp;".repeat(80);
+
     return `
-                    <!-- PRE-HEADER (hidden, inbox preview text) -->
+                    <!-- PRE-HEADER (hidden, inbox/watch preview text) -->
                     <tr>
-                        <td style="display:none;overflow:hidden;max-height:0;max-width:0;opacity:0;mso-hide:all;">${preheaderText}</td>
+                        <td style="display:none;overflow:hidden;max-height:0;max-width:0;opacity:0;mso-hide:all;">${text}${pad}</td>
                     </tr>`;
 };
 
@@ -432,7 +452,7 @@ export const formatEmail = (newMatches: MatchResult[], options: FormatEmailOptio
             <!-- Email card — max 600px -->
             <table cellpadding="0" cellspacing="0" border="0" width="600" style="max-width:600px;width:100%;border-collapse:collapse;">
                 <tbody>
-${buildPreheader(count, uniqueCampgroundNames)}
+${buildPreheader(newMatches)}
 ${buildHeader(count, uniqueCampgroundNames, logoUrl)}
 ${buildMetaBar(timestamp)}
 
