@@ -69,6 +69,59 @@ and Worker secrets.
 - **Staying on Free:** do **A** — reliable cadence at $0 and near-zero risk.
 - A now / B after the upgrade is also fine; A is fully reversible.
 
+## Speed & scale potential (Paid + B, with parallel fetches)
+
+### How fast
+
+End-to-end "site opens → email lands" budget:
+
+| Stage | Time |
+|---|---|
+| Wait for next poll (cron granularity) | up to 60s (avg ~30s) — **dominates** |
+| Poll: ~65 fetches parallel at 6-wide | ~5–6s (vs ~32s sequential today) |
+| Diff + snapshot | <1s |
+| Resend email | ~1s |
+
+- **Detection → email: ~5–8s** (the README's "<10s" — real and achievable).
+- **Open → inbox: ~30–60s**, governed by the **1-minute cron floor**, not compute.
+- Sub-minute requires **Durable Object alarms** (self-reschedule every ~15–30s)
+  → ~15–30s open→inbox. Below that, diminishing returns: can't beat rec.gov's
+  own publish cadence, and faster polling just risks blocks. Floor ≈ 15–30s,
+  set by rec.gov, not Cloudflare.
+- The 6-simultaneous-connections rule sets the ~6-wide parallelism (shapes poll
+  duration, not a hard cap).
+
+### How many campgrounds
+
+Design point: fetches are **deduped by unique `(campground, month)` across all
+users**, so users are nearly free — cost scales with **unique campgrounds**.
+
+Ceilings, first to bite:
+
+1. **rec.gov rate-limiting — the real governor (undocumented).** Requests/poll ≈
+   campgrounds × ~5 active months: 13 cg ≈ 65, 50 cg ≈ 250, 100 cg ≈ 500. At a
+   1-min cron that's 65→500 req/min to an unofficial API from CF egress IPs.
+   Estimate comfortable in the low hundreds per poll → **~30–50 campgrounds at
+   aggressive 1-min cadence** before risking 429s/blocks. Needs empirical
+   probing (start conservative, watch for 429s, add backoff).
+2. **Cloudflare (Paid) — not close.** Subrequests 10,000/invocation default
+   (~800–1000 campgrounds at ~10–12 subreq each), raisable to millions; cron CPU
+   15 min (parsing thousands = a few seconds); no wall-clock cap.
+3. **KV writes** — ~1 snapshot/user/poll + changed raw months. Fine on Paid
+   (per-op billing, cheap here); would blow Free's 1,000 writes/day immediately.
+
+To push past ~50 campgrounds: shard campgrounds across staggered invocations (or
+Queues), back off on 429s, keep active-window month trimming + change-only raw
+caching (both already present), slower cadence for less-hot campgrounds. Then CF
+scales to many hundreds; rec.gov tolerance stays the ceiling.
+
+**Tension:** speed and scale draw from the same rec.gov budget — polling faster
+*and* watching more campgrounds both raise request rate. Sweet spot: modest
+concurrency (~4–6) + 429 backoff + 1-min cron.
+
+**Bottom line:** ~30–60s alerts today on a 1-min cron; ~15–30s with DO alarms;
+~30–50 unique campgrounds before rec.gov (not Cloudflare) forces sharding.
+
 ## Evidence
 
 - Workers Free CPU limit: 10 ms/invocation. Paid: up to 5 min (HTTP) / 15 min
@@ -77,3 +130,8 @@ and Worker secrets.
 - Repo `robertsmikej/campsites-react` is public → unlimited free Actions minutes.
 - Notifier deps: none (devDeps only: tsx/typescript/prettier). Uses native
   `fetch`, `node:crypto.createHmac`, Resend via REST.
+- Subrequests (Paid): 10,000/invocation default (raised Feb 2026), configurable
+  up to 10M. Free: 50 external + 1,000 to CF services. Up to 6 connections may be
+  "waiting for headers" simultaneously.
+- Cron Triggers: minimum granularity 1 minute. Sub-minute needs Durable Object
+  alarms.
