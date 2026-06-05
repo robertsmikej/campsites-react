@@ -308,8 +308,8 @@ export default function AdminPage() {
                                 Reconcile legacy default
                             </h2>
                             <p className="font-italic-serif text-[16px] sm:text-[18px] italic leading-[1.3] text-cw-ink-soft mb-6">
-                                One-time: merges the old default-config list into your watchlist and
-                                retires the legacy key. Safe to re-run; no-op once done.
+                                One-time: merges the old default-config list into your watchlist and retires
+                                the legacy key. Safe to re-run; no-op once done.
                             </p>
                             <button
                                 type="button"
@@ -345,7 +345,6 @@ export default function AdminPage() {
                     </div>
                 </div>
             </main>
-
         </>
     );
 }

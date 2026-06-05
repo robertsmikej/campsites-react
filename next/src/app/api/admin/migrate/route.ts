@@ -41,17 +41,20 @@ async function postHandler(request: Request): Promise<Response> {
     // No legacy key -> nothing to reconcile.
     if (!legacy) {
         return withCors(
-            jsonResponse({ reconciled: false, owner: null, merged: 0, addedFromConfig: [], configKeyDeleted: false }),
+            jsonResponse({
+                reconciled: false,
+                owner: null,
+                merged: 0,
+                addedFromConfig: [],
+                configKeyDeleted: false,
+            }),
         );
     }
 
     const owner = await resolveDefaultOwnerEmail();
     if (!owner) {
         return withCors(
-            jsonResponse(
-                { error: "No curator to reconcile into; assign a curator first." },
-                409,
-            ),
+            jsonResponse({ error: "No curator to reconcile into; assign a curator first." }, 409),
         );
     }
 
@@ -63,8 +66,7 @@ async function postHandler(request: Request): Promise<Response> {
     const addedFromConfig = legacyList.filter((c) => !ownerIds.has(c.id));
     const mergedList: Campground[] = [...ownerList, ...addedFromConfig];
 
-    const globalSettings: GlobalSettings =
-        ownerRecord?.globalSettings ??
+    const globalSettings: GlobalSettings = ownerRecord?.globalSettings ??
         legacy.globalSettings ?? { stayLengths: [2, 3, 4, 5], validStartDays: [] };
 
     await putUserCampgrounds(owner, {

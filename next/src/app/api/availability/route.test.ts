@@ -112,7 +112,10 @@ describe("GET /api/availability", () => {
             }),
         });
         vi.mocked(cloudflare.getKv).mockReturnValue(anonKv as never);
-        vi.mocked(cloudflare.getEnv).mockReturnValue({ BOOTSTRAP_ADMIN_EMAIL: "boss@example.com", SUBSCRIBERS: anonKv } as never);
+        vi.mocked(cloudflare.getEnv).mockReturnValue({
+            BOOTSTRAP_ADMIN_EMAIL: "boss@example.com",
+            SUBSCRIBERS: anonKv,
+        } as never);
         vi.mocked(userCampgrounds.getUserCampgrounds).mockResolvedValue({
             campgrounds: cfg.campgrounds,
             globalSettings: cfg.globalSettings,
@@ -173,7 +176,10 @@ describe("GET /api/availability", () => {
             }),
         });
         vi.mocked(cloudflare.getKv).mockReturnValue(anonKv as never);
-        vi.mocked(cloudflare.getEnv).mockReturnValue({ BOOTSTRAP_ADMIN_EMAIL: "boss@example.com", SUBSCRIBERS: anonKv } as never);
+        vi.mocked(cloudflare.getEnv).mockReturnValue({
+            BOOTSTRAP_ADMIN_EMAIL: "boss@example.com",
+            SUBSCRIBERS: anonKv,
+        } as never);
         vi.mocked(userCampgrounds.getUserCampgrounds).mockResolvedValue({
             campgrounds: cfg.campgrounds,
             globalSettings: cfg.globalSettings,
@@ -232,7 +238,10 @@ describe("GET /api/availability", () => {
             }),
         });
         vi.mocked(cloudflare.getKv).mockReturnValue(anonKv as never);
-        vi.mocked(cloudflare.getEnv).mockReturnValue({ BOOTSTRAP_ADMIN_EMAIL: "boss@example.com", SUBSCRIBERS: anonKv } as never);
+        vi.mocked(cloudflare.getEnv).mockReturnValue({
+            BOOTSTRAP_ADMIN_EMAIL: "boss@example.com",
+            SUBSCRIBERS: anonKv,
+        } as never);
         vi.mocked(userCampgrounds.getUserCampgrounds).mockResolvedValue({
             campgrounds: cfg.campgrounds,
             globalSettings: cfg.globalSettings,
