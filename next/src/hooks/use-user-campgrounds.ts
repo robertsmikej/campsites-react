@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { WATCHLIST_CHANGED_EVENT } from "@/lib/events";
 import type { SiteConfig, GlobalSettings, Campground } from "@/types/campground";
 
 interface ApiRecord {
@@ -105,6 +106,11 @@ export function useUserCampgrounds(): UseUserCampgroundsState {
                 const stored = (await r.json()) as ApiRecord;
                 setRecord(stored);
                 setSyncStatus("success");
+                // Tell the dashboard's availability data to refetch so a newly
+                // added campground's site data shows without a manual reload.
+                if (typeof window !== "undefined") {
+                    window.dispatchEvent(new Event(WATCHLIST_CHANGED_EVENT));
+                }
                 // Re-fetch the default so missingFromDefault reflects any write-through
                 // the server performed (curator saves update the default KV key).
                 void fetchDefault();

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { formatGroupsByFavorites } from "@/lib/campground-utils";
+import { WATCHLIST_CHANGED_EVENT } from "@/lib/events";
 import type { AvailabilitySnapshot } from "@/lib/recgov";
 import type { CampgroundsBySystem, ProcessedCampground } from "@/types/campground";
 
@@ -65,6 +66,23 @@ export function useCampgroundsData({ enabled }: UseCampgroundsDataArgs) {
             cancelled = true;
         };
     }, [enabled, reloadKey]);
+
+    // Keep availability fresh without a manual page reload: refetch after the
+    // watchlist changes (campground added/edited) and whenever the tab regains
+    // focus. The snapshot is cache-backed, so a repeat fetch is cheap.
+    useEffect(() => {
+        if (!enabled) return;
+        const onChanged = () => setReloadKey((k) => k + 1);
+        const onVisible = () => {
+            if (document.visibilityState === "visible") setReloadKey((k) => k + 1);
+        };
+        window.addEventListener(WATCHLIST_CHANGED_EVENT, onChanged);
+        document.addEventListener("visibilitychange", onVisible);
+        return () => {
+            window.removeEventListener(WATCHLIST_CHANGED_EVENT, onChanged);
+            document.removeEventListener("visibilitychange", onVisible);
+        };
+    }, [enabled]);
 
     useEffect(() => {
         if (Object.keys(campgroundsData).length === 0) {
