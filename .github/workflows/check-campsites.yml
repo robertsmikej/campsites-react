@@ -1,8 +1,8 @@
 name: Check Campsite Availability
 
 on:
-  schedule:
-    - cron: '*/5 * * * *' # Every 5 minutes (GH Actions minimum)
+  # Scheduled polling moved to the campwatch-notifier Cloudflare Worker
+  # (reliable 5-min cron). This workflow is kept for manual runs only.
   workflow_dispatch:
     inputs:
       force_email:

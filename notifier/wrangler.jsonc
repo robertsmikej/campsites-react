@@ -14,7 +14,7 @@
         },
     ],
     "vars": {
-        "DRY_RUN": "true",
+        "DRY_RUN": "false",
         "SITE_URL": "https://campwatch.dev",
         "SUBSCRIBER_API_URL": "https://campwatch.dev",
     },
