@@ -124,7 +124,7 @@ describe("GET /api/availability", () => {
         expect(response.status).toBe(200);
         const body = (await response.json()) as { campgrounds: { id: string }[] };
         expect(body.campgrounds).toHaveLength(1);
-        expect(body.campgrounds[0].id).toBe("232358");
+        expect(body.campgrounds[0]?.id).toBe("232358");
     });
 
     it("writes snapshot after live fetch (logged-in only)", async () => {
