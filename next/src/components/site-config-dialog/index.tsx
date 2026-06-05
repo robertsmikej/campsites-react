@@ -25,6 +25,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion } from "@/components/ui/accordion";
 import { Separator } from "@/components/ui/separator";
 import type { Campground, SiteConfig } from "@/types/campground";
+import { useCampgroundSites } from "@/hooks/use-campground-sites";
 
 import { toEditableCampground, sanitizeCampground, createEmptyCampground } from "./serialize";
 import { DEFAULT_STAY_RANGE, type EditableCampground, type SiteConfigDialogProps } from "./types";
@@ -91,6 +92,17 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
     );
     const [validStartDays, setValidStartDays] = useState<string[]>(() => globalSettings.validStartDays ?? []);
     const [expandedPanels, setExpandedPanels] = useState<Set<number>>(new Set([0]));
+
+    const { sitesById, ensureLoaded } = useCampgroundSites();
+    // Fetch a campground's site roster the first time its panel is open, so the
+    // multi-select shows real site numbers (lazy = gentle on rec.gov).
+    useEffect(() => {
+        if (!open) return;
+        for (const i of expandedPanels) {
+            const id = campgrounds[i]?.id;
+            if (id) ensureLoaded(id);
+        }
+    }, [open, expandedPanels, campgrounds, ensureLoaded]);
 
     const previousViewMode = useRef(viewMode);
 
@@ -319,7 +331,11 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
                                             index={index}
                                             isOnlyCampground={campgrounds.length === 1}
                                             expanded={expandedPanels.has(index)}
-                                            availableSites={availableSites[campground.id] ?? []}
+                                            availableSites={
+                                                sitesById[campground.id] ??
+                                                availableSites[campground.id] ??
+                                                []
+                                            }
                                             globalStayRange={stayRange}
                                             globalValidStartDays={validStartDays}
                                             onToggleEnabled={(checked) =>
