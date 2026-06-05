@@ -151,7 +151,10 @@ function MultiSelectSites({
     return (
         <div className="flex-1">
             <Label className="text-xs">{label}</Label>
-            <Popover open={open} onOpenChange={setOpen}>
+            {/* modal: the dialog's scroll-lock (react-remove-scroll) blocks wheel
+                scrolling on a non-modal popover portaled outside it, so a long site
+                list can't be scrolled. A modal popover owns its own scroll region. */}
+            <Popover open={open} onOpenChange={setOpen} modal>
                 <PopoverTrigger asChild>
                     <Button
                         variant="outline"
