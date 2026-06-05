@@ -1,0 +1,24 @@
+{
+    "$schema": "node_modules/wrangler/config-schema.json",
+    "name": "campwatch-notifier",
+    "main": "worker.ts",
+    "compatibility_date": "2026-05-14",
+    "compatibility_flags": ["nodejs_compat"],
+    "triggers": {
+        "crons": ["* * * * *"],
+    },
+    "kv_namespaces": [
+        {
+            "binding": "SUBSCRIBERS",
+            "id": "41a67a8b06044ee38f0bf22cfbcc069d",
+        },
+    ],
+    "vars": {
+        "DRY_RUN": "true",
+        "SITE_URL": "https://campwatch.dev",
+        "SUBSCRIBER_API_URL": "https://campwatch.dev",
+    },
+    "observability": {
+        "enabled": true,
+    },
+}
