@@ -6,25 +6,21 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 import { DashboardTopBar } from "@/components/dashboard/dashboard-top-bar";
 import { UsersTable } from "@/components/admin/users-table";
-import { SiteConfigDialog } from "@/components/site-config-dialog";
 import { LoadingGhostRow } from "@/components/field-notes/loading";
 import type { UserProfile } from "@/types/user";
-import type { SiteConfig, GlobalSettings } from "@/types/campground";
 
 interface MigrateResult {
-    defaultUpdated: boolean;
-    addedCampgrounds: { id: string; name: string }[];
-    mapImagesBackfilled: number;
+    reconciled: boolean;
+    owner: string | null;
+    merged: number;
+    addedFromConfig: { id: string; name: string }[];
+    configKeyDeleted: boolean;
 }
 
 export default function AdminPage() {
     const auth = useAuth();
     const [users, setUsers] = useState<UserProfile[] | null>(null);
     const [usersError, setUsersError] = useState<string | null>(null);
-
-    const [defaultDialogOpen, setDefaultDialogOpen] = useState(false);
-    const [defaultConfig, setDefaultConfig] = useState<SiteConfig | null>(null);
-    const [defaultGlobalSettings, setDefaultGlobalSettings] = useState<GlobalSettings | null>(null);
 
     const [migrateRunning, setMigrateRunning] = useState(false);
     const [migrateResult, setMigrateResult] = useState<MigrateResult | null>(null);
@@ -103,50 +99,6 @@ export default function AdminPage() {
     }
 
     // ── Handlers ─────────────────────────────────────────────────────────────
-
-    async function openDefaultDialog() {
-        try {
-            const r = await fetch("/api/default", { credentials: "include" });
-            if (!r.ok) {
-                toast.error("Couldn't load the default list");
-                return;
-            }
-            const data = (await r.json()) as { campgrounds: SiteConfig; globalSettings?: GlobalSettings };
-            setDefaultConfig(data.campgrounds);
-            setDefaultGlobalSettings(
-                data.globalSettings ?? {
-                    stayLengths: [2, 3, 4, 5],
-                    validStartDays: [
-                        "Monday",
-                        "Tuesday",
-                        "Wednesday",
-                        "Thursday",
-                        "Friday",
-                        "Saturday",
-                        "Sunday",
-                    ],
-                },
-            );
-            setDefaultDialogOpen(true);
-        } catch {
-            toast.error("Couldn't load the default list");
-        }
-    }
-
-    async function saveDefault(config: SiteConfig, settings: GlobalSettings) {
-        const r = await fetch("/api/default", {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ campgrounds: config, globalSettings: settings }),
-            credentials: "include",
-        });
-        if (!r.ok) {
-            toast.error("Save failed");
-            return;
-        }
-        toast.success("Default list saved");
-        setDefaultDialogOpen(false);
-    }
 
     async function toggleRole(target: UserProfile, makeCurator: boolean) {
         const currentRoles = target.roles ?? [];
@@ -347,37 +299,17 @@ export default function AdminPage() {
                             </p>
                         </section>
 
-                        {/* Default config section */}
-                        <section className="rounded-md border border-cw-ink bg-cw-cream p-6 sm:p-8">
-                            <div className="font-mono-field text-[13px] font-bold uppercase tracking-[0.18em] text-cw-forest mb-2">
-                                Default config
-                            </div>
-                            <h2 className="font-poster text-[24px] sm:text-[28px] font-black uppercase tracking-[0.005em] mb-1">
-                                The starter list
-                            </h2>
-                            <p className="font-italic-serif text-[16px] sm:text-[18px] italic leading-[1.3] text-cw-ink-soft mb-6">
-                                The list new users see on /discover and can clone as their starting watchlist.
-                            </p>
-                            <button
-                                type="button"
-                                onClick={openDefaultDialog}
-                                className="font-mono-field text-[13px] font-bold uppercase tracking-[0.14em] cursor-pointer rounded-[2px] px-[13px] py-[9px] border-[1.5px] bg-cw-ink text-cw-cream border-cw-ink"
-                            >
-                                Edit default list
-                            </button>
-                        </section>
-
                         {/* Migrate section */}
                         <section className="rounded-md border border-cw-ink bg-cw-cream p-6 sm:p-8">
                             <div className="font-mono-field text-[13px] font-bold uppercase tracking-[0.18em] text-cw-mustard mb-2">
                                 Maintenance
                             </div>
                             <h2 className="font-poster text-[24px] sm:text-[28px] font-black uppercase tracking-[0.005em] mb-1">
-                                Migrate catalog
+                                Reconcile legacy default
                             </h2>
                             <p className="font-italic-serif text-[16px] sm:text-[18px] italic leading-[1.3] text-cw-ink-soft mb-6">
-                                Idempotent seed: merges any new catalog entries into the default KV config
-                                without touching existing ones.
+                                One-time: merges the old default-config list into your watchlist and
+                                retires the legacy key. Safe to re-run; no-op once done.
                             </p>
                             <button
                                 type="button"
@@ -414,21 +346,6 @@ export default function AdminPage() {
                 </div>
             </main>
 
-            {defaultConfig && defaultGlobalSettings ? (
-                <SiteConfigDialog
-                    open={defaultDialogOpen}
-                    onClose={() => setDefaultDialogOpen(false)}
-                    onSave={(config, settings) => {
-                        void saveDefault(config, settings);
-                    }}
-                    onResetToDefaults={() => undefined}
-                    initialData={defaultConfig}
-                    globalSettings={defaultGlobalSettings}
-                    availableSites={{}}
-                    useMockData={false}
-                    onToggleMockData={() => undefined}
-                />
-            ) : null}
         </>
     );
 }
