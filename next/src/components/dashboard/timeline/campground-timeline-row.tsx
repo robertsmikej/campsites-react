@@ -1,0 +1,248 @@
+import { CW } from "@/components/field-notes/cw-tokens";
+import {
+    type Horizon,
+    TIER_MARK,
+    buildDisplaySites,
+    campgroundRuns,
+    siteFeature,
+    siteOpenRuns,
+} from "@/lib/timeline";
+import type { ProcessedCampground } from "@/types/campground";
+import { TimelineTrack } from "./timeline-track";
+
+const META = 264;
+const PAD = 26;
+
+interface CampgroundTimelineRowProps {
+    campground: ProcessedCampground;
+    horizon: Horizon;
+    expanded: boolean;
+    onToggleExpand: () => void;
+    onEditSettings?: (campgroundId: string) => void;
+}
+
+export function CampgroundTimelineRow({
+    campground,
+    horizon,
+    expanded,
+    onToggleExpand,
+    onEditSettings,
+}: CampgroundTimelineRowProps) {
+    const runs = campgroundRuns(horizon, campground);
+    const favN = campground.sites?.favorites?.length ?? 0;
+    const worthN = campground.sites?.worthwhile?.length ?? 0;
+    const totalSites = campground.totalSitesCount ?? Object.keys(campground.siteAvailability ?? {}).length;
+    const favOpen = (campground.sites?.favorites ?? []).some((name) => {
+        const site = Object.values(campground.siteAvailability ?? {}).find((s) => s.siteName === name);
+        return site ? siteOpenRuns(horizon, site).length > 0 : false;
+    });
+
+    let count: string;
+    let countColor: string;
+    if (runs.openNights > 0) {
+        count = `${runs.openNights} nights open`;
+        countColor = CW.forest;
+    } else if (runs.limitedNights > 0) {
+        count = "limited only";
+        countColor = CW.mustard;
+    } else {
+        count = "watching";
+        countColor = CW.inkSoft;
+    }
+
+    return (
+        <>
+            <div
+                role="button"
+                tabIndex={0}
+                onClick={onToggleExpand}
+                onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        onToggleExpand();
+                    }
+                }}
+                className="grid cursor-pointer items-stretch border-b border-dotted hover:bg-[color-mix(in_srgb,var(--cw-forest)_3%,transparent)]"
+                style={{ gridTemplateColumns: `${META}px 1fr`, borderColor: CW.rule }}
+            >
+                <div
+                    className="relative flex flex-col justify-center"
+                    style={{ padding: `16px ${PAD}px`, borderRight: `1px solid ${CW.rule}` }}
+                >
+                    {onEditSettings && campground.id && (
+                        <button
+                            type="button"
+                            aria-label={`Configure ${campground.name}`}
+                            title="Configure"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onEditSettings(campground.id);
+                            }}
+                            className="absolute right-3 top-3 opacity-50 transition-opacity hover:opacity-100"
+                            style={{ color: CW.inkSoft }}
+                        >
+                            <svg
+                                width="14"
+                                height="14"
+                                viewBox="0 0 16 16"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="1.4"
+                            >
+                                <path d="M11.5 2.5 L13.5 4.5 L5 13 L2.5 13.5 L3 11 Z" />
+                            </svg>
+                        </button>
+                    )}
+                    <div
+                        className="font-italic-serif italic leading-[1.08]"
+                        style={{ fontSize: 22, color: CW.ink }}
+                    >
+                        {favN > 0 && <span style={{ color: CW.clay, marginRight: 7 }}>★</span>}
+                        {campground.name}
+                    </div>
+                    {campground.area && (
+                        <div
+                            className="font-body-serif"
+                            style={{ fontSize: 11, color: CW.inkSoft, marginTop: 4 }}
+                        >
+                            {campground.area}
+                        </div>
+                    )}
+                    <div
+                        className="font-mono-field font-semibold uppercase leading-none"
+                        style={{ fontSize: 10, letterSpacing: "0.1em", color: countColor, marginTop: 9 }}
+                    >
+                        {count}
+                        <span style={{ color: CW.clay, fontWeight: 500 }}>
+                            {" · "}
+                            {totalSites} sites{" "}
+                            <span
+                                className="inline-block transition-transform"
+                                style={{ fontSize: 9, transform: expanded ? "rotate(180deg)" : undefined }}
+                            >
+                                ▾
+                            </span>
+                        </span>
+                    </div>
+                    {(favN > 0 || worthN > 0 || favOpen) && (
+                        <div className="mt-[7px] flex flex-wrap items-center gap-[9px]">
+                            {favN > 0 && (
+                                <span
+                                    className="font-mono-field font-bold"
+                                    style={{ fontSize: 11, color: CW.clay }}
+                                >
+                                    ★{favN}
+                                </span>
+                            )}
+                            {worthN > 0 && (
+                                <span
+                                    className="font-mono-field font-bold"
+                                    style={{ fontSize: 11, color: CW.forest }}
+                                >
+                                    ◇{worthN}
+                                </span>
+                            )}
+                            {favOpen && (
+                                <span
+                                    className="font-mono-field font-bold uppercase"
+                                    style={{
+                                        fontSize: 9,
+                                        letterSpacing: "0.1em",
+                                        color: CW.clay,
+                                        border: `1px solid ${CW.clay}`,
+                                        borderRadius: 999,
+                                        padding: "4px 7px",
+                                    }}
+                                >
+                                    ★ favorite open
+                                </span>
+                            )}
+                        </div>
+                    )}
+                </div>
+                <TimelineTrack horizon={horizon} open={runs.open} limited={runs.limited} pad={PAD} />
+            </div>
+
+            {expanded && (
+                <div
+                    style={{
+                        background: "color-mix(in srgb, var(--cw-ink) 2%, transparent)",
+                        boxShadow: `inset 0 1px 0 ${CW.rule}, inset 0 -1px 0 ${CW.rule}`,
+                    }}
+                >
+                    {buildDisplaySites(campground).map(({ site, tier }) => (
+                        <div
+                            key={site.siteId}
+                            className="grid items-stretch border-b border-dotted last:border-b-0"
+                            style={{
+                                gridTemplateColumns: `${META}px 1fr`,
+                                borderColor: CW.ruleSoft,
+                                background:
+                                    tier === "fav"
+                                        ? "color-mix(in srgb, var(--cw-clay) 5.5%, transparent)"
+                                        : tier === "worth"
+                                          ? "color-mix(in srgb, var(--cw-forest) 3.5%, transparent)"
+                                          : undefined,
+                            }}
+                        >
+                            <div
+                                className="relative flex items-baseline gap-2"
+                                style={{
+                                    padding: `9px ${PAD}px 9px ${PAD + 24}px`,
+                                    borderRight: `1px solid ${CW.rule}`,
+                                }}
+                            >
+                                <span
+                                    className="absolute"
+                                    style={{
+                                        left: PAD + 4,
+                                        top: "50%",
+                                        width: 9,
+                                        height: 1,
+                                        background: CW.inkFaint,
+                                    }}
+                                />
+                                <span
+                                    className="font-mono-field font-bold"
+                                    style={{
+                                        fontSize: 13,
+                                        width: 13,
+                                        textAlign: "center",
+                                        color:
+                                            tier === "fav"
+                                                ? CW.clay
+                                                : tier === "worth"
+                                                  ? CW.forest
+                                                  : CW.inkFaint,
+                                    }}
+                                >
+                                    {TIER_MARK[tier]}
+                                </span>
+                                <span
+                                    className="font-mono-field font-semibold whitespace-nowrap"
+                                    style={{ fontSize: 12, letterSpacing: "0.04em", color: CW.ink }}
+                                >
+                                    Site {site.siteName}
+                                </span>
+                                <span
+                                    className="overflow-hidden font-italic-serif italic text-ellipsis whitespace-nowrap"
+                                    style={{ fontSize: 15, color: CW.inkSoft }}
+                                >
+                                    {siteFeature(site)}
+                                </span>
+                            </div>
+                            <TimelineTrack
+                                horizon={horizon}
+                                open={siteOpenRuns(horizon, site)}
+                                limited={[]}
+                                site
+                                ring={tier === "fav"}
+                                pad={PAD}
+                            />
+                        </div>
+                    ))}
+                </div>
+            )}
+        </>
+    );
+}

@@ -167,6 +167,41 @@ export function nowIndex(h: Horizon, now: Date = new Date()): number | null {
     return i >= 0 && i < h.totalDays ? i : null;
 }
 
+/** Cleaned, human-readable campsite type (no favorite suffix). */
+export function siteFeature(site: SiteAvailability): string {
+    const raw = site.campsite_type?.toLowerCase().replace(/_/g, " ").trim() ?? "";
+    return raw
+        .replace(/standard nonelectric/, "standard")
+        .replace(/group standard area/, "group")
+        .replace(/tent only nonelectric/, "tent only");
+}
+
+export interface DisplaySite {
+    site: SiteAvailability;
+    tier: Tier;
+    /** true when synthesized from a tagged name with no availability (booked all season). */
+    synthetic: boolean;
+}
+
+/** Sites with openings (from the snapshot) plus any tagged site that is booked
+ *  all season, so favorites/worthwhile always appear. Sorted favorites-first. */
+export function buildDisplaySites(cg: ProcessedCampground): DisplaySite[] {
+    const present = Object.values(cg.siteAvailability ?? {});
+    const presentNames = new Set(present.map((s) => s.siteName));
+    const synthetic: SiteAvailability[] = [];
+    for (const name of [...(cg.sites?.favorites ?? []), ...(cg.sites?.worthwhile ?? [])]) {
+        if (!presentNames.has(name)) {
+            synthetic.push({ siteId: name, siteName: name, dates: [], matches: [], excludedMatches: [] });
+        }
+    }
+    return [
+        ...present.map((s) => ({ site: s, tier: siteTier(cg, s.siteName), synthetic: false })),
+        ...synthetic.map((s) => ({ site: s, tier: siteTier(cg, s.siteName), synthetic: true })),
+    ].sort(
+        (a, b) => TIER_ORDER[a.tier] - TIER_ORDER[b.tier] || a.site.siteName.localeCompare(b.site.siteName),
+    );
+}
+
 /** Shared with the legacy table: reservation deep-link for a site. */
 export function reservationUrl(site: SiteAvailability): string {
     const m = site.matches?.[0];

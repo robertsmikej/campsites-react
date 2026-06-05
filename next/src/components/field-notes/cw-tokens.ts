@@ -11,6 +11,8 @@ export const CW = {
     rule: "var(--cw-rule)",
     ruleSoft: "var(--cw-rule-soft)",
     forest: "var(--cw-forest)",
+    forestBright: "var(--cw-forest-bright)",
+    forestDeep: "var(--cw-forest-deep)",
     clay: "var(--cw-clay)",
     mustard: "var(--cw-mustard)",
 } as const;

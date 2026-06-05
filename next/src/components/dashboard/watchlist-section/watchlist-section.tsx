@@ -2,8 +2,9 @@
 
 import { DatePickerStrip } from "@/components/dashboard/date-picker-strip/date-picker-strip";
 import { LoadingGhostRow } from "@/components/field-notes/loading";
-import { GroupHeader } from "./group-header";
-import { WatchlistTable } from "./watchlist-table";
+import { AvailabilityTimeline } from "@/components/dashboard/timeline/availability-timeline";
+import { MobileTimeline } from "@/components/dashboard/timeline/mobile-timeline";
+import { CW } from "@/components/field-notes/cw-tokens";
 import type { DateRange } from "react-day-picker";
 import type { ProcessedCampground, GlobalSettings } from "@/types/campground";
 
@@ -38,6 +39,20 @@ interface WatchlistSectionProps {
     PAD: number;
 }
 
+function LegendSwatch({ kind }: { kind: "open" | "weekend" | "limited" | "booked" }) {
+    const style: React.CSSProperties = { width: 22, height: 13, borderRadius: 3, display: "inline-block" };
+    if (kind === "open") style.background = CW.forest;
+    else if (kind === "weekend")
+        style.background = `linear-gradient(90deg, ${CW.forest} 0 50%, ${CW.forestBright} 50% 100%)`;
+    else if (kind === "limited")
+        style.background = `repeating-linear-gradient(45deg, ${CW.mustard} 0 4px, color-mix(in srgb, ${CW.mustard} 32%, transparent) 4px 8px)`;
+    else {
+        style.background = CW.ruleSoft;
+        style.border = `1px solid ${CW.rule}`;
+    }
+    return <span style={style} />;
+}
+
 export function WatchlistSection({
     campgroundsByAreas,
     openCounts,
@@ -51,39 +66,27 @@ export function WatchlistSection({
     handleCalSelect,
     hasCustomRange,
     onClearDates,
-    favorites,
-    onToggleFavorite,
-    settings,
-    globalSettings,
     isMobile,
     readOnly,
     showControls = true,
-    onRatingChange,
     onEditSettings,
     PAD,
 }: WatchlistSectionProps) {
-    const watchlistGroups = (() => {
-        const rows = campgroundsByAreas;
-        if (groupBy === "all") {
-            return [{ label: "All Campgrounds", rows }];
-        }
+    // The timeline is one shared-axis plate; groupBy now reorders rows rather
+    // than splitting them into separate tables.
+    const orderedRows = (() => {
+        const rows = [...campgroundsByAreas];
         if (groupBy === "status") {
-            const hasOpenings = rows.filter((c) => (openCounts.get(c.id ?? c.name) ?? 0) > 0);
-            const quiet = rows.filter((c) => (openCounts.get(c.id ?? c.name) ?? 0) === 0);
-            const groups = [];
-            if (hasOpenings.length > 0) groups.push({ label: "Has openings", rows: hasOpenings });
-            if (quiet.length > 0) groups.push({ label: "Quiet", rows: quiet });
-            return groups;
+            return rows.sort((a, b) => {
+                const ao = (openCounts.get(a.id ?? a.name) ?? 0) > 0 ? 1 : 0;
+                const bo = (openCounts.get(b.id ?? b.name) ?? 0) > 0 ? 1 : 0;
+                return bo - ao;
+            });
         }
-        // By region: group by area
-        const areaMap = new Map<string, ProcessedCampground[]>();
-        for (const c of rows) {
-            const key = c.area ?? "Other";
-            const arr = areaMap.get(key) ?? [];
-            arr.push(c);
-            areaMap.set(key, arr);
+        if (groupBy === "region") {
+            return rows.sort((a, b) => (a.area ?? "Other").localeCompare(b.area ?? "Other"));
         }
-        return Array.from(areaMap.entries()).map(([label, rows]) => ({ label, rows }));
+        return rows;
     })();
 
     return (
@@ -98,52 +101,44 @@ export function WatchlistSection({
                         : `§ II — THE WATCHLIST · ${campgroundsByAreas.length} CAMPGROUND${campgroundsByAreas.length !== 1 ? "S" : ""}`}
                 </div>
                 <h2 className="m-0 tracking-[-0.005em]">
-                    {readOnly ? (
-                        <>
-                            <span
-                                className="font-poster font-black leading-none uppercase inline"
-                                style={{ fontSize: isMobile ? 24 : 32 }}
-                            >
-                                ALL
-                            </span>
-                            <span
-                                className="font-italic-serif font-medium italic leading-none text-cw-forest tracking-[-0.01em]"
-                                style={{ fontSize: isMobile ? 24 : 32, marginLeft: 10 }}
-                            >
-                                the picks.
-                            </span>
-                        </>
-                    ) : (
-                        <>
-                            <span
-                                className="font-poster font-black leading-none uppercase inline"
-                                style={{ fontSize: isMobile ? 24 : 32 }}
-                            >
-                                EVERY PLACE
-                            </span>
-                            <span
-                                className="font-italic-serif font-medium italic leading-none text-cw-forest tracking-[-0.01em]"
-                                style={{ fontSize: isMobile ? 24 : 32, marginLeft: 10 }}
-                            >
-                                you&apos;re watching.
-                            </span>
-                        </>
-                    )}
+                    <span
+                        className="font-poster font-black leading-none uppercase inline"
+                        style={{ fontSize: isMobile ? 24 : 32 }}
+                    >
+                        {readOnly ? "ALL" : "EVERY PLACE"}
+                    </span>
+                    <span
+                        className="font-italic-serif font-medium italic leading-none text-cw-forest tracking-[-0.01em]"
+                        style={{ fontSize: isMobile ? 24 : 32, marginLeft: 10 }}
+                    >
+                        {readOnly ? "the picks." : "you're watching."}
+                    </span>
                 </h2>
             </div>
 
-            <div className="flex items-center flex-wrap gap-x-4 gap-y-2 mb-4 font-mono-field text-[12px] leading-none tracking-[0.1em] text-cw-ink-subtle uppercase">
-                <span>Each tick = one night</span>
-                <span className="inline-flex items-center gap-[6px]">
-                    <span className="inline-block w-[5px] h-[14px] bg-cw-forest rounded-[1px]" />
-                    opening
+            {/* Timeline legend */}
+            <div className="flex items-center flex-wrap gap-x-5 gap-y-2 mb-4 font-italic-serif italic text-[14px] text-cw-ink-soft">
+                <span className="inline-flex items-center gap-2">
+                    <LegendSwatch kind="open" />
+                    Open
                 </span>
-                <span className="inline-flex items-center gap-[6px]">
-                    <span className="inline-block w-[5px] h-[4px] bg-cw-ink-faint rounded-[1px]" />
-                    no opening
+                <span className="inline-flex items-center gap-2">
+                    <LegendSwatch kind="weekend" />
+                    Weekend (Fri/Sat)
                 </span>
-                <span className="font-italic-serif normal-case tracking-normal italic text-[13px] text-cw-ink-soft">
-                    expand a row to see which sites and hover a tick for the dates
+                <span className="inline-flex items-center gap-2">
+                    <LegendSwatch kind="limited" />
+                    Limited (1–2 sites)
+                </span>
+                <span className="inline-flex items-center gap-2">
+                    <LegendSwatch kind="booked" />
+                    Booked
+                </span>
+                <span className="inline-flex items-center gap-3 font-mono-field not-italic text-[11px] tracking-[0.12em] uppercase text-cw-ink-subtle">
+                    <span>Per-site:</span>
+                    <span style={{ color: CW.clay }}>★ favorite</span>
+                    <span style={{ color: CW.forest }}>◇ worthwhile</span>
+                    <span style={{ color: CW.inkFaint }}>· other</span>
                 </span>
             </div>
 
@@ -168,42 +163,15 @@ export function WatchlistSection({
                         <LoadingGhostRow key={i} height={56} />
                     ))}
                 </div>
+            ) : isMobile ? (
+                <MobileTimeline rows={orderedRows} dateRange={dateRange} onEditSettings={onEditSettings} />
             ) : (
-                <div className="grid gap-7">
-                    {watchlistGroups.map((group, gi) => {
-                        const openInGroup = group.rows.reduce(
-                            (sum, c) => sum + (openCounts.get(c.id ?? c.name) ?? 0),
-                            0,
-                        );
-                        return (
-                            <div key={group.label}>
-                                {groupBy !== "all" && (
-                                    <GroupHeader
-                                        index={gi}
-                                        label={group.label}
-                                        count={group.rows.length}
-                                        openInGroup={openInGroup}
-                                    />
-                                )}
-                                <WatchlistTable
-                                    rows={group.rows}
-                                    showHeader={gi === 0}
-                                    favorites={favorites}
-                                    onToggleFavorite={onToggleFavorite}
-                                    openCounts={openCounts}
-                                    windowStart={dateRange.start}
-                                    windowEnd={dateRange.end}
-                                    settings={settings}
-                                    globalSettings={globalSettings}
-                                    isMobile={isMobile}
-                                    readOnly={readOnly}
-                                    onRatingChange={onRatingChange}
-                                    onEditSettings={onEditSettings}
-                                />
-                            </div>
-                        );
-                    })}
-                </div>
+                <AvailabilityTimeline
+                    rows={orderedRows}
+                    dateRange={dateRange}
+                    defaultExpandFirst
+                    onEditSettings={onEditSettings}
+                />
             )}
         </section>
     );

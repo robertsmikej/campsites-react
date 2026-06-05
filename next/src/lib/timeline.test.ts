@@ -10,6 +10,7 @@ import {
     rangeLabel,
     monthTicks,
     nowIndex,
+    buildDisplaySites,
 } from "./timeline";
 import type { ProcessedCampground, SiteAvailability } from "@/types/campground";
 
@@ -99,6 +100,27 @@ describe("rangeLabel", () => {
     it("same month", () => expect(rangeLabel(HORIZON, 22, 23)).toBe("May 23–24"));
     it("single night", () => expect(rangeLabel(HORIZON, 22, 22)).toBe("May 23"));
     it("cross month", () => expect(rangeLabel(HORIZON, 30, 31)).toBe("May 31–Jun 1"));
+});
+
+describe("buildDisplaySites", () => {
+    it("sorts favorites first and synthesizes booked-all-season rows for untagged-with-no-data", () => {
+        const cg = {
+            sites: { favorites: ["A-07", "Z-99"], worthwhile: ["B-23"] },
+            siteAvailability: {
+                b: site("B-23", [["2026-06-11", "2026-06-14"]]),
+                a: site("A-07", [["2026-05-23", "2026-05-25"]]),
+                c: site("C-31", [["2026-07-01", "2026-07-03"]]),
+            },
+        } as unknown as ProcessedCampground;
+        const out = buildDisplaySites(cg);
+        // A-07 (fav) first, then Z-99 (fav, synthetic), then B-23 (worth), then C-31 (other)
+        expect(out.map((d) => [d.site.siteName, d.tier, d.synthetic])).toEqual([
+            ["A-07", "fav", false],
+            ["Z-99", "fav", true],
+            ["B-23", "worth", false],
+            ["C-31", "other", false],
+        ]);
+    });
 });
 
 describe("monthTicks / nowIndex", () => {
