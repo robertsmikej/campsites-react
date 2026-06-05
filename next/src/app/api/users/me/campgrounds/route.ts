@@ -2,12 +2,9 @@ import { readSession } from "@/lib/sessions";
 import { jsonResponse, withCors } from "@/lib/responses";
 import { getUserCampgrounds, putUserCampgrounds } from "@/lib/user-campgrounds";
 import { getSitewideDefaultSettings } from "@/lib/settings";
-import { getUserProfile } from "@/lib/users";
 import { getKv } from "@/lib/cloudflare";
 import { withErrorLogging } from "@/lib/route-helpers";
 import { WorkerKvAdapter } from "@/lib/recgov/worker-kv";
-
-const DEFAULT_CONFIG_KEY = "config:campgrounds";
 
 function emptyRecord() {
     const defaults = getSitewideDefaultSettings({});
@@ -64,17 +61,6 @@ async function putHandler(request: Request): Promise<Response> {
 
     const adapter = new WorkerKvAdapter(getKv());
     await adapter.deleteSnapshot(session.email);
-
-    // Write-through to the default config if the user is a curator.
-    const profile = await getUserProfile(session.email);
-    if (profile?.roles?.includes("curator")) {
-        try {
-            await getKv().put(DEFAULT_CONFIG_KEY, JSON.stringify(body));
-        } catch (err) {
-            console.error("[PUT /api/users/me/campgrounds] Failed to write default config:", err);
-            // Don't fail the user save.
-        }
-    }
 
     return withCors(jsonResponse(stored));
 }

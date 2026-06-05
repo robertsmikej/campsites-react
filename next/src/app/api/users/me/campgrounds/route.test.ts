@@ -11,13 +11,8 @@ vi.mock("@/lib/sessions", () => ({
     SESSION_COOKIE: "campwatch_session",
 }));
 
-vi.mock("@/lib/users", () => ({
-    getUserProfile: vi.fn(),
-}));
-
 import * as sessions from "@/lib/sessions";
 import * as cloudflare from "@/lib/cloudflare";
-import * as users from "@/lib/users";
 
 beforeEach(() => {
     vi.resetModules();
@@ -170,12 +165,6 @@ describe("PUT /api/users/me/campgrounds", () => {
             createdAt: "x",
             expiresAt: "x",
         });
-        vi.mocked(users.getUserProfile).mockResolvedValue({
-            email: "user@example.com",
-            name: "User",
-            roles: [],
-            createdAt: "x",
-        });
         const kv = createMockKv();
         vi.mocked(cloudflare.getKv).mockReturnValue(kv);
 
@@ -213,12 +202,6 @@ describe("PUT /api/users/me/campgrounds", () => {
             createdAt: "x",
             expiresAt: "x",
         });
-        vi.mocked(users.getUserProfile).mockResolvedValue({
-            email: "regular@example.com",
-            name: "Regular User",
-            roles: [],
-            createdAt: "x",
-        });
         const kv = createMockKv({
             "config:campgrounds": JSON.stringify({
                 campgrounds: {
@@ -250,18 +233,12 @@ describe("PUT /api/users/me/campgrounds", () => {
         expect(JSON.parse(defaultRaw as string).campgrounds["recreation.gov"][0].id).toBe("old");
     });
 
-    it("curator PUT updates user record AND writes through to default config", async () => {
+    it("curator PUT updates user record and does NOT write to default config", async () => {
         vi.mocked(sessions.readSession).mockResolvedValue({
             id: "x",
             email: "curator@example.com",
             createdAt: "x",
             expiresAt: "x",
-        });
-        vi.mocked(users.getUserProfile).mockResolvedValue({
-            email: "curator@example.com",
-            name: "Curator",
-            roles: ["curator"],
-            createdAt: "x",
         });
         const kv = createMockKv();
         vi.mocked(cloudflare.getKv).mockReturnValue(kv);
@@ -282,15 +259,8 @@ describe("PUT /api/users/me/campgrounds", () => {
         const userRaw = await kv.get("user:curator@example.com:campgrounds");
         expect(JSON.parse(userRaw as string).campgrounds["recreation.gov"][0].id).toBe("232312");
 
-        // Default config is also written with the same campgrounds + globalSettings.
+        // Default config is NOT written — the curator's user record IS the default now.
         const defaultRaw = await kv.get("config:campgrounds");
-        expect(defaultRaw).not.toBeNull();
-        const defaultParsed = JSON.parse(defaultRaw as string) as {
-            campgrounds: { "recreation.gov": { id: string }[] };
-            globalSettings: { stayLengths: number[] };
-        };
-        // Default config always has at least one campground, so [0] is guaranteed.
-        expect(defaultParsed.campgrounds["recreation.gov"][0]!.id).toBe("232312");
-        expect(defaultParsed.globalSettings.stayLengths).toEqual([2, 3, 4]);
+        expect(defaultRaw).toBeNull();
     });
 });
