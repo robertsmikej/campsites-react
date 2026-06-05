@@ -285,4 +285,52 @@ describe("GET /api/availability", () => {
         expect(cg.siteAvailability["1"]).toBeDefined();
         expect(cg.siteAvailability["2"]).toBeUndefined();
     });
+
+    it("omits a campground whose rec.gov fetch failed rather than emitting totalSitesCount 0", async () => {
+        vi.mocked(sessions.readSession).mockResolvedValue(null);
+        const cfg = {
+            campgrounds: {
+                "recreation.gov": [
+                    {
+                        id: "999999",
+                        name: "Unreachable CG",
+                        enabled: true,
+                        dates: { startDate: "2026-07-01", endDate: "2026-07-03" },
+                        sites: { favorites: [], worthwhile: [] },
+                    },
+                ],
+            },
+            globalSettings: { stayLengths: [2], validStartDays: ["Friday"] },
+        };
+        const anonKv = createMockKv({
+            "user:boss@example.com:profile": JSON.stringify({
+                email: "boss@example.com",
+                name: "Boss",
+                roles: ["curator"],
+                createdAt: "2024-01-01",
+            }),
+            "user:boss@example.com:campgrounds": JSON.stringify({
+                campgrounds: cfg.campgrounds,
+                globalSettings: cfg.globalSettings,
+                updatedAt: "2024-01-02",
+            }),
+        });
+        vi.mocked(cloudflare.getKv).mockReturnValue(anonKv as never);
+        vi.mocked(cloudflare.getEnv).mockReturnValue({
+            BOOTSTRAP_ADMIN_EMAIL: "boss@example.com",
+            SUBSCRIBERS: anonKv,
+        } as never);
+        vi.mocked(userCampgrounds.getUserCampgrounds).mockResolvedValue({
+            campgrounds: cfg.campgrounds,
+            globalSettings: cfg.globalSettings,
+            updatedAt: "2024-01-02",
+        } as never);
+        // rec.gov returns an error for every month → fetchMonth yields null.
+        fetchSpy.mockResolvedValue(new Response("nope", { status: 500 }));
+
+        const response = await GET(new Request("http://x/api/availability"));
+        const body = (await response.json()) as { campgrounds: unknown[] };
+        // The campground is omitted, not shown with a misleading totalSitesCount: 0.
+        expect(body.campgrounds).toHaveLength(0);
+    });
 });

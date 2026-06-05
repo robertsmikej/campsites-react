@@ -7,6 +7,7 @@ import { withErrorLogging } from "@/lib/route-helpers";
 import {
     WorkerKvAdapter,
     fetchMonthWithCache,
+    fetchProducedNoData,
     processCampgroundResults,
     getAllDatesInRange,
     type AvailabilitySnapshot,
@@ -51,6 +52,12 @@ async function buildSnapshot(config: SourceConfig, adapter: WorkerKvAdapter): Pr
         const rawResults = await Promise.all(
             months.map((month) => fetchMonthWithCache(cg.id, month, adapter)),
         );
+
+        // rec.gov returned nothing for every month (error / network failure).
+        // Omit the campground rather than caching a misleading totalSitesCount: 0
+        // ("Site-level data not loaded yet"); a later rebuild fills it in once the
+        // fetch succeeds.
+        if (fetchProducedNoData(rawResults)) continue;
 
         const allDates = getAllDatesInRange(start, end);
         const effectiveSettings = {

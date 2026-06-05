@@ -7,6 +7,7 @@ import { fetchMonth } from "../next/src/lib/recgov/fetch-month";
 import { processCampgroundResults, getAllDatesInRange } from "../next/src/lib/recgov/match-detection";
 import { RestKvAdapter } from "../next/src/lib/recgov/rest-kv";
 import { fetchMonthWithCache } from "../next/src/lib/recgov/fetch-with-cache";
+import { fetchProducedNoData } from "../next/src/lib/recgov/raw-results";
 import { findNewMatches, generateSignature } from "./lib/diff";
 import { formatEmail, sendEmail } from "./lib/email";
 import { resolveNotifyScope, matchPassesScope } from "./lib/notify-scope";
@@ -198,13 +199,21 @@ async function fetchDeduped(plan: FetchPlanItem[]): Promise<Record<string, unkno
 async function writeUserSnapshot(
     target: NotificationTarget,
     syntheticResults: CampgroundResult[],
+    failedCampgroundIds: Set<string>,
 ): Promise<void> {
     if (!kvAdapter) return;
     const cgById = new Map<string, Campground>();
     for (const cg of target.campgrounds["recreation.gov"] ?? []) {
         cgById.set(cg.id, cg);
     }
+
+    // Last-good snapshot, so we can carry forward campgrounds whose fetch failed
+    // this cycle instead of clobbering them with totalSitesCount: 0.
+    const prior = await kvAdapter.getSnapshot(target.email).catch(() => null);
+    const priorById = new Map<string, SnapshotCampground>((prior?.campgrounds ?? []).map((c) => [c.id, c]));
+
     const campgrounds: SnapshotCampground[] = [];
+    const emitted = new Set<string>();
     for (const r of syntheticResults) {
         const cg = cgById.get(r.campgroundId);
         if (!cg) continue;
@@ -220,7 +229,22 @@ async function writeUserSnapshot(
             siteAvailability: sitesWithMatches,
             totalSitesCount,
         });
+        emitted.add(r.campgroundId);
     }
+
+    // For campgrounds whose fetch produced no data this cycle, carry forward the
+    // last-good entry rather than writing a misleading totalSitesCount: 0. A
+    // brand-new campground with no prior entry is simply omitted until a fetch
+    // succeeds (the dashboard's on-demand rebuild also fills it).
+    for (const id of failedCampgroundIds) {
+        if (emitted.has(id)) continue;
+        const priorEntry = priorById.get(id);
+        if (priorEntry) {
+            campgrounds.push(priorEntry);
+            emitted.add(id);
+        }
+    }
+
     const snapshot: AvailabilitySnapshot = {
         updatedAt: new Date().toISOString(),
         campgrounds,
@@ -251,6 +275,9 @@ async function computeMatchesForUser(
 
     // Build synthetic fetchCampground-style result objects so we can reuse findNewMatches.
     const syntheticResults: CampgroundResult[] = [];
+    // Campgrounds whose rec.gov fetch produced no data this cycle. Their snapshot
+    // entry is carried forward from last-good instead of zeroed out.
+    const failedCampgroundIds = new Set<string>();
 
     for (const c of target.campgrounds["recreation.gov"] ?? []) {
         if (c.enabled === false) continue;
@@ -259,7 +286,10 @@ async function computeMatchesForUser(
         if (!start || !end) continue;
 
         const rawApiResults = rawByCampground[c.id];
-        if (!rawApiResults) continue;
+        if (fetchProducedNoData(rawApiResults)) {
+            failedCampgroundIds.add(c.id);
+            continue;
+        }
 
         const allDates = getAllDatesInRange(start, end);
         const effectiveSettings = {
@@ -308,7 +338,7 @@ async function computeMatchesForUser(
         return matchPassesScope(m.group, scope);
     });
 
-    await writeUserSnapshot(target, syntheticResults);
+    await writeUserSnapshot(target, syntheticResults, failedCampgroundIds);
 
     return filtered;
 }
