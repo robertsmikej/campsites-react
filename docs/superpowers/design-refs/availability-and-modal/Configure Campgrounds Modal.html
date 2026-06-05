@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>CampWatch · Configure Campgrounds</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@500;700;800;900&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600;1,700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;1,8..60,400&family=DM+Mono:wght@400;500&family=Caveat:wght@400;600&display=swap');
+  :root{
+    --paper:#F4EAD8; --cream:#FBF6EA; --ink:#1A1614; --inkSoft:rgba(26,22,20,0.62);
+    --rule:rgba(26,22,20,0.18); --ruleSoft:rgba(26,22,20,0.09);
+    --forest:#1F3D2A; --forestDeep:#142a1d; --forestBright:#3c7a4f; --clay:#B65C3F; --mustard:#C9A227;
+    --field:#FBF6EA; --bookedInk:rgba(26,22,20,0.22);
+    --head:"Big Shoulders Display",sans-serif; --ital:"Cormorant Garamond",Georgia,serif;
+    --body:"Source Serif 4",Georgia,serif; --mono:"DM Mono",ui-monospace,monospace; --hand:"Caveat",cursive;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0; height:100%}
+  body{ background:#cdbfa3; font-family:var(--body); color:var(--ink); -webkit-font-smoothing:antialiased; }
+
+  /* faint dashboard backdrop so the modal has context */
+  .backdrop{ position:fixed; inset:0; overflow:hidden; background:#E7DAC2;
+    background-image:radial-gradient(circle at 13px 13px, rgba(26,22,20,0.03) 0.9px, transparent 0.9px); background-size:7px 7px; }
+  .backdrop::after{ content:''; position:absolute; inset:0; background:rgba(20,15,12,0.5); backdrop-filter:blur(2px); }
+  .bd-strip{ position:absolute; left:0; right:0; height:48px; display:flex; align-items:center; gap:28px; padding:0 40px;
+    font:700 12px/1 var(--mono); letter-spacing:.14em; text-transform:uppercase; color:rgba(26,22,20,0.32) }
+
+  /* ── modal shell ── */
+  .scrim{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; padding:34px 24px; z-index:10 }
+  .modal{ width:min(960px,100%); max-height:92vh; display:flex; flex-direction:column;
+    background:var(--paper); border:1.5px solid var(--ink); box-shadow:10px 12px 0 var(--forest), 0 40px 90px -30px rgba(20,15,12,0.8);
+    position:relative; }
+  .modal::before{ /* paper grain */
+    content:''; position:absolute; inset:0; pointer-events:none; opacity:.5;
+    background-image:radial-gradient(circle at 11px 11px, rgba(26,22,20,0.022) 0.8px, transparent 0.8px); background-size:5px 5px; }
+
+  /* header */
+  .mhead{ position:relative; z-index:2; display:flex; align-items:flex-start; justify-content:space-between;
+    padding:24px 30px 20px; border-bottom:2px solid var(--ink); background:var(--cream); }
+  .mhead .kick{ font:500 10px/1 var(--mono); letter-spacing:.22em; text-transform:uppercase; color:var(--clay) }
+  .mhead h1{ margin:9px 0 0; font:900 38px/0.92 var(--head); text-transform:uppercase; letter-spacing:-.01em }
+  .mhead h1 em{ display:block; font:500 italic 30px/1 var(--ital); color:var(--forest); text-transform:none; letter-spacing:0; margin-top:2px }
+  .mhead .sub{ font:500 italic 16px/1.3 var(--ital); color:var(--inkSoft); margin-top:7px }
+  .xbtn{ flex-shrink:0; width:38px; height:38px; border:1.5px solid var(--ink); background:var(--paper); cursor:pointer;
+    display:flex; align-items:center; justify-content:center; border-radius:2px; transition:background .15s, transform .1s }
+  .xbtn:hover{ background:var(--ink) } .xbtn:hover svg{ stroke:var(--cream) } .xbtn:active{ transform:scale(.94) }
+  .xbtn svg{ stroke:var(--ink); transition:stroke .15s }
+
+  /* body */
+  .mbody{ position:relative; z-index:2; overflow:auto; padding:24px 30px 30px; }
+
+  /* campground card */
+  .cg{ background:var(--cream); border:1.5px solid var(--ink); margin-bottom:16px; box-shadow:4px 4px 0 rgba(26,22,20,0.14) }
+  .cg.expanded{ box-shadow:5px 5px 0 var(--forest) }
+  .cg-head{ display:flex; align-items:center; gap:14px; padding:15px 18px; cursor:pointer; }
+  .cg-head .grip{ display:grid; grid-template-columns:repeat(2,3px); gap:3px; flex-shrink:0; cursor:grab; opacity:.4 }
+  .cg-head .grip i{ width:3px; height:3px; background:var(--ink); border-radius:50% }
+  .cg-head .nm{ font:500 italic 23px/1 var(--ital); color:var(--ink); flex:1 }
+  .cg-head .tier-chips{ display:flex; gap:6px; align-items:center }
+  .tchip{ font:700 10px/1 var(--mono); letter-spacing:.04em; padding:5px 8px; border-radius:999px; display:inline-flex; align-items:center; gap:4px; white-space:nowrap }
+  .tchip.fav{ background:rgba(182,92,63,0.14); color:var(--clay) }
+  .tchip.worth{ background:rgba(31,61,42,0.12); color:var(--forest) }
+  .cg-head .act{ width:32px; height:32px; border:1px solid var(--rule); background:var(--paper); border-radius:2px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all .15s }
+  .cg-head .act:hover{ border-color:var(--clay) } .cg-head .act:hover svg{ stroke:var(--clay) }
+  .cg-head .chev{ width:11px; height:11px; border-right:2px solid var(--inkSoft); border-bottom:2px solid var(--inkSoft); transform:rotate(45deg); transition:transform .2s; margin:0 4px }
+  .cg.expanded .cg-head .chev{ transform:rotate(-135deg) }
+  .cg-head.collapsed .nm{ color:var(--inkSoft) }
+
+  .cg-body{ border-top:1px dashed var(--rule); padding:22px 20px 24px; display:none }
+  .cg.expanded .cg-body{ display:block }
+
+  /* form primitives */
+  .field{ margin-bottom:18px }
+  .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:22px }
+  label.lab, .lab{ display:block; font:500 10px/1 var(--mono); letter-spacing:.16em; text-transform:uppercase; color:var(--clay); margin-bottom:8px; white-space:nowrap }
+  .lab .req{ color:var(--clay); margin-left:3px }
+  .inp{ width:100%; background:var(--field); border:1.5px solid var(--rule); border-radius:3px; padding:12px 13px;
+    font:400 16px/1.35 var(--body); color:var(--ink); transition:border-color .15s, box-shadow .15s; }
+  .inp::placeholder{ color:var(--bookedInk); font-style:italic }
+  .inp:focus{ outline:none; border-color:var(--forest); box-shadow:0 0 0 3px rgba(31,61,42,0.12) }
+  textarea.inp{ resize:vertical; min-height:78px; line-height:1.5 }
+  .hint{ font:400 italic 14px/1.3 var(--ital); color:var(--inkSoft); margin-top:7px }
+  .inp.mono{ font-family:var(--mono); font-size:14px; letter-spacing:.02em }
+  /* date field */
+  .datewrap{ position:relative; display:flex; align-items:center }
+  .datewrap svg.cal{ position:absolute; left:13px; pointer-events:none }
+  .datewrap .inp{ padding-left:40px; font-family:var(--mono); font-size:14px }
+  .datewrap .clr{ position:absolute; right:11px; width:22px; height:22px; border:none; background:transparent; cursor:pointer; color:var(--inkSoft); display:flex; align-items:center; justify-content:center; border-radius:50% }
+  .datewrap .clr:hover{ background:var(--ruleSoft); color:var(--clay) }
+
+  /* multiselect (sites) */
+  .ms{ background:var(--field); border:1.5px solid var(--rule); border-radius:3px; padding:8px 9px; min-height:48px; display:flex; flex-wrap:wrap; gap:7px; align-items:center; cursor:text; transition:border-color .15s, box-shadow .15s }
+  .ms:focus-within{ border-color:var(--forest); box-shadow:0 0 0 3px rgba(31,61,42,0.12) }
+  .ms.fav:focus-within{ border-color:var(--clay); box-shadow:0 0 0 3px rgba(182,92,63,0.12) }
+  .pill{ display:inline-flex; align-items:center; gap:6px; padding:6px 9px; border-radius:999px; font:600 13px/1 var(--mono); letter-spacing:.02em; white-space:nowrap; flex-shrink:0 }
+  .pill.fav{ background:var(--clay); color:var(--cream) }
+  .pill.worth{ background:var(--forest); color:var(--cream) }
+  .pill .mk{ font-size:11px }
+  .pill .x{ cursor:pointer; opacity:.7; font-size:14px; line-height:1 } .pill .x:hover{ opacity:1 }
+  .ms .ph{ font:400 italic 15px/1 var(--ital); color:var(--bookedInk); padding:4px 2px }
+
+  /* toggles */
+  .togrow{ display:flex; gap:26px; align-items:center; flex-wrap:wrap; margin:6px 0 4px }
+  .tog{ display:inline-flex; align-items:center; gap:10px; cursor:pointer; user-select:none }
+  .tog .sw{ width:38px; height:21px; border-radius:999px; background:var(--bookedInk); position:relative; transition:background .18s; flex-shrink:0 }
+  .tog .sw::after{ content:''; position:absolute; top:2px; left:2px; width:17px; height:17px; border-radius:50%; background:var(--cream); transition:transform .18s; box-shadow:0 1px 2px rgba(0,0,0,.3) }
+  .tog.on .sw{ background:var(--forest) } .tog.on .sw::after{ transform:translateX(17px) }
+  .tog .tl{ font:500 16px/1 var(--body); color:var(--ink) }
+  .tog .star{ color:var(--clay); margin-right:2px } .tog .dia{ color:var(--forest); margin-right:2px }
+
+  /* segmented */
+  .seg{ display:inline-flex; border:1.5px solid var(--ink); border-radius:3px; overflow:hidden }
+  .seg button{ font:700 11px/1 var(--mono); letter-spacing:.1em; text-transform:uppercase; padding:11px 15px; background:var(--cream); color:var(--inkSoft); border:none; border-right:1.5px solid var(--ink); cursor:pointer; transition:all .15s; white-space:nowrap }
+  .seg button:last-child{ border-right:none }
+  .seg button.active{ background:var(--forest); color:var(--cream) }
+  .seg button:not(.active):hover{ background:var(--paper); color:var(--ink) }
+
+  /* small ghost link-buttons for "use default / use global / customize" */
+  .ghost{ font:600 11px/1 var(--mono); letter-spacing:.08em; text-transform:uppercase; color:var(--forest); background:transparent; border:1px solid var(--rule); border-radius:999px; padding:6px 12px; cursor:pointer; transition:all .15s; white-space:nowrap; flex-shrink:0 }
+  .ghost:hover{ border-color:var(--forest); background:rgba(31,61,42,0.06) }
+
+  .seclabel{ display:flex; align-items:center; gap:12px; margin:24px 0 12px }
+  .seclabel .t{ font:500 10px/1 var(--mono); letter-spacing:.16em; text-transform:uppercase; color:var(--clay); white-space:nowrap; flex-shrink:0 }
+  .seclabel .line{ flex:1; height:1px; background:var(--rule) }
+
+  /* day checkboxes */
+  .days{ display:flex; gap:9px; flex-wrap:wrap; margin-top:4px }
+  .day{ display:inline-flex; align-items:center; gap:7px; cursor:pointer; user-select:none }
+  .day .box{ width:20px; height:20px; border:1.5px solid var(--rule); border-radius:4px; background:var(--field); display:flex; align-items:center; justify-content:center; transition:all .15s }
+  .day .box svg{ opacity:0; transition:opacity .12s }
+  .day.on .box{ background:var(--forest); border-color:var(--forest) } .day.on .box svg{ opacity:1 }
+  .day .dl{ font:500 14px/1 var(--body); color:var(--ink) }
+  .day.prime .box{ box-shadow:0 0 0 2px rgba(201,162,39,0.5) }
+
+  .inline-head{ display:flex; align-items:baseline; gap:14px; margin-bottom:8px; flex-wrap:wrap }
+  .inline-head .lab{ margin-bottom:0; flex-shrink:0 }
+  .inline-head .ghost{ margin-left:auto }
+  .inline-head .ghost + .ghost{ margin-left:0 }
+
+  /* footer */
+  .mfoot{ position:relative; z-index:2; display:flex; align-items:center; justify-content:space-between; gap:14px;
+    padding:18px 30px; border-top:2px solid var(--ink); background:var(--cream); }
+  .btn{ font:800 12px/1 var(--head); letter-spacing:.12em; text-transform:uppercase; padding:14px 22px; border-radius:2px; cursor:pointer; border:1.5px solid var(--ink); transition:all .15s; white-space:nowrap }
+  .btn.solid{ background:var(--forest); color:var(--cream); border-color:var(--forest); box-shadow:3px 3px 0 var(--forestDeep) }
+  .btn.solid:hover{ transform:translate(-1px,-1px); box-shadow:4px 4px 0 var(--forestDeep) }
+  .btn.solid:active{ transform:translate(2px,2px); box-shadow:1px 1px 0 var(--forestDeep) }
+  .btn.ghostbtn{ background:var(--paper); color:var(--ink) }
+  .btn.ghostbtn:hover{ background:var(--ink); color:var(--cream) }
+  .btn.danger{ background:transparent; color:var(--clay); border-color:transparent; box-shadow:none; white-space:nowrap }
+  .btn.danger:hover{ border-color:var(--clay); background:rgba(182,92,63,0.08) }
+  .foot-r{ display:flex; gap:12px; align-items:center }
+</style>
+</head>
+<body>
+  <div class="backdrop">
+    <div class="bd-strip" style="top:0; border-bottom:1px solid rgba(26,22,20,0.1)"><span>CampWatch</span><span>Dashboard</span><span>Watchlist · 6 campgrounds</span></div>
+  </div>
+
+  <div class="scrim">
+    <div class="modal" role="dialog" aria-modal="true" aria-label="Configure Campgrounds">
+      <!-- HEADER -->
+      <div class="mhead">
+        <div>
+          <div class="kick">§ Watchlist · Field Station Setup</div>
+          <h1>CONFIGURE <em>campgrounds</em></h1>
+          <div class="sub">Six places on watch · drag to reorder, tag the sites that matter.</div>
+        </div>
+        <button class="xbtn" aria-label="Close">
+          <svg width="16" height="16" viewBox="0 0 16 16"><path d="M3 3 L13 13 M13 3 L3 13" stroke-width="1.8" fill="none"/></svg>
+        </button>
+      </div>
+
+      <!-- BODY -->
+      <div class="mbody">
+
+        <!-- collapsed example -->
+        <div class="cg" data-cg>
+          <div class="cg-head collapsed">
+            <span class="grip"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+            <span class="nm">Lookout Butte</span>
+            <span class="tier-chips"><span class="tchip fav">★ 1</span></span>
+            <span class="act" title="Delete"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#1A1614" stroke-width="1.4"><path d="M3 4 H13 M6 4 V2.5 H10 V4 M5 4 L5.5 14 H10.5 L11 4"/></svg></span>
+            <span class="chev"></span>
+          </div>
+          <div class="cg-body"></div>
+        </div>
+
+        <!-- expanded -->
+        <div class="cg expanded" data-cg>
+          <div class="cg-head">
+            <span class="grip"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+            <span class="nm">Black Rock</span>
+            <span class="tier-chips"><span class="tchip fav">★ 2</span><span class="tchip worth">◇ 1</span></span>
+            <span class="act" title="Delete"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#1A1614" stroke-width="1.4"><path d="M3 4 H13 M6 4 V2.5 H10 V4 M5 4 L5.5 14 H10.5 L11 4"/></svg></span>
+            <span class="chev"></span>
+          </div>
+          <div class="cg-body">
+
+            <div class="field">
+              <label class="lab">Campground Name <span class="req">*</span></label>
+              <input class="inp" value="Black Rock"/>
+            </div>
+
+            <div class="field">
+              <label class="lab">Area / Region</label>
+              <input class="inp" value="Idaho City"/>
+            </div>
+
+            <div class="grid2">
+              <div class="field">
+                <label class="lab">Facility ID <span class="req">*</span></label>
+                <input class="inp mono" value="234007"/>
+                <div class="hint">Matches the recreation.gov facility ID.</div>
+              </div>
+              <div class="field">
+                <label class="lab">Type</label>
+                <input class="inp" value="Campground"/>
+                <div class="hint">As listed on recreation.gov.</div>
+              </div>
+            </div>
+
+            <div class="field">
+              <label class="lab">Source</label>
+              <input class="inp mono" value="recreation.gov"/>
+            </div>
+
+            <div class="field">
+              <label class="lab">Description</label>
+              <textarea class="inp">Black Rock Campground sits about 20 miles from Idaho City, on the North Fork of the Boise River at 4,300 feet. Fishing, swimming, and a handful of quiet trails.</textarea>
+            </div>
+
+            <div class="seclabel"><span class="t">§ I — Season Window</span><span class="line"></span></div>
+            <div class="grid2">
+              <div class="field">
+                <label class="lab">Start Date</label>
+                <div class="datewrap">
+                  <svg class="cal" width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#B65C3F" stroke-width="1.4"><rect x="2" y="3" width="12" height="11" rx="1"/><path d="M2 6 H14 M5 1.5 V4 M11 1.5 V4"/></svg>
+                  <input class="inp" value="06 / 01 / 2026"/>
+                  <button class="clr" title="Clear">×</button>
+                </div>
+                <div class="hint">Optional — leave blank to use global settings.</div>
+              </div>
+              <div class="field">
+                <label class="lab">End Date</label>
+                <div class="datewrap">
+                  <svg class="cal" width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#B65C3F" stroke-width="1.4"><rect x="2" y="3" width="12" height="11" rx="1"/><path d="M2 6 H14 M5 1.5 V4 M11 1.5 V4"/></svg>
+                  <input class="inp" value="09 / 30 / 2026"/>
+                  <button class="clr" title="Clear">×</button>
+                </div>
+                <div class="hint">Optional — leave blank to use global settings.</div>
+              </div>
+            </div>
+
+            <div class="seclabel"><span class="t">§ II — Sites that matter</span><span class="line"></span></div>
+            <div class="grid2">
+              <div class="field">
+                <label class="lab"><span style="color:var(--clay)">★</span> Favorite Sites</label>
+                <div class="ms fav" data-ms="fav">
+                  <span class="pill fav"><span class="mk">★</span>A-07<span class="x">×</span></span>
+                  <span class="pill fav"><span class="mk">★</span>A-12<span class="x">×</span></span>
+                  <span class="ph">Type to add a site…</span>
+                </div>
+                <div class="hint">The ones you'd drive back for. Type a site number to add.</div>
+              </div>
+              <div class="field">
+                <label class="lab"><span style="color:var(--forest)">◇</span> Worthwhile Sites</label>
+                <div class="ms" data-ms="worth">
+                  <span class="pill worth"><span class="mk">◇</span>B-23<span class="x">×</span></span>
+                  <span class="ph">Type to add a site…</span>
+                </div>
+                <div class="hint">Good enough if a favorite won't free up.</div>
+              </div>
+            </div>
+
+            <div class="togrow">
+              <span class="tog on" data-tog><span class="sw"></span><span class="tl"><span class="star">★</span>Show favorites</span></span>
+              <span class="tog on" data-tog><span class="sw"></span><span class="tl"><span class="dia">◇</span>Show worthwhile</span></span>
+              <span class="tog on" data-tog><span class="sw"></span><span class="tl">Show all others</span></span>
+            </div>
+
+            <div class="seclabel"><span class="t">§ III — When to write you</span><span class="line"></span></div>
+            <div class="field">
+              <div class="inline-head">
+                <label class="lab">Email me when</label>
+                <button class="ghost" data-usedefault>Use account default</button>
+              </div>
+              <div class="seg" data-seg>
+                <button class="active">Favorites only</button>
+                <button>Favorites + Worthwhile</button>
+                <button>Any site opens</button>
+              </div>
+              <div class="hint">Favorites means only the sites you've starred above.</div>
+            </div>
+
+            <div class="field">
+              <div class="inline-head">
+                <label class="lab">Start Days</label>
+                <button class="ghost" data-allcal>Use global</button>
+                <button class="ghost" data-prime>Prime days only</button>
+              </div>
+              <div class="days" data-days>
+                <span class="day on"><span class="box"><svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="#FBF6EA" stroke-width="2"><path d="M2.5 6 L5 8.5 L9.5 3.5"/></svg></span><span class="dl">Sun</span></span>
+                <span class="day on"><span class="box"><svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="#FBF6EA" stroke-width="2"><path d="M2.5 6 L5 8.5 L9.5 3.5"/></svg></span><span class="dl">Mon</span></span>
+                <span class="day on"><span class="box"><svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="#FBF6EA" stroke-width="2"><path d="M2.5 6 L5 8.5 L9.5 3.5"/></svg></span><span class="dl">Tue</span></span>
+                <span class="day on"><span class="box"><svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="#FBF6EA" stroke-width="2"><path d="M2.5 6 L5 8.5 L9.5 3.5"/></svg></span><span class="dl">Wed</span></span>
+                <span class="day on"><span class="box"><svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="#FBF6EA" stroke-width="2"><path d="M2.5 6 L5 8.5 L9.5 3.5"/></svg></span><span class="dl">Thu</span></span>
+                <span class="day on prime"><span class="box"><svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="#FBF6EA" stroke-width="2"><path d="M2.5 6 L5 8.5 L9.5 3.5"/></svg></span><span class="dl">Fri</span></span>
+                <span class="day on prime"><span class="box"><svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="#FBF6EA" stroke-width="2"><path d="M2.5 6 L5 8.5 L9.5 3.5"/></svg></span><span class="dl">Sat</span></span>
+              </div>
+              <div class="hint">Gold-ringed days are weekend (Fri/Sat) nights — your prime-time getaways.</div>
+            </div>
+
+            <div class="field" style="margin-bottom:4px">
+              <div class="inline-head">
+                <label class="lab">Stay Length</label>
+                <button class="ghost" data-stay>Customize</button>
+              </div>
+              <div class="hint">Currently 1–3 nights · matching your account default.</div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- FOOTER -->
+      <div class="mfoot">
+        <button class="btn danger">Reset to defaults</button>
+        <div class="foot-r">
+          <button class="btn ghostbtn">Cancel</button>
+          <button class="btn solid">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // accordion
+  document.querySelectorAll('[data-cg] .cg-head').forEach(h=>{
+    h.addEventListener('click', e=>{
+      if(e.target.closest('.act')) return; // don't toggle on delete
+      h.closest('.cg').classList.toggle('expanded');
+    });
+  });
+  // toggles
+  document.querySelectorAll('[data-tog]').forEach(t=> t.addEventListener('click', ()=> t.classList.toggle('on')));
+  // segmented
+  document.querySelectorAll('[data-seg]').forEach(seg=>{
+    seg.querySelectorAll('button').forEach(b=> b.addEventListener('click', ()=>{
+      seg.querySelectorAll('button').forEach(x=>x.classList.remove('active')); b.classList.add('active');
+    }));
+  });
+  // day checkboxes
+  document.querySelectorAll('[data-days] .day').forEach(d=> d.addEventListener('click', ()=> d.classList.toggle('on')));
+  // prime-days shortcut: only Fri/Sat
+  document.querySelector('[data-prime]')?.addEventListener('click', ()=>{
+    document.querySelectorAll('[data-days] .day').forEach(d=>{
+      d.classList.toggle('on', d.classList.contains('prime'));
+    });
+  });
+  document.querySelector('[data-allcal]')?.addEventListener('click', ()=>{
+    document.querySelectorAll('[data-days] .day').forEach(d=> d.classList.add('on'));
+  });
+  // chip removal
+  document.querySelectorAll('.pill .x').forEach(x=> x.addEventListener('click', e=>{ e.stopPropagation(); x.closest('.pill').remove(); }));
+  // date clear
+  document.querySelectorAll('.datewrap .clr').forEach(c=> c.addEventListener('click', ()=>{ c.previousElementSibling.value=''; c.previousElementSibling.focus(); }));
+</script>
+</body>
+</html>
