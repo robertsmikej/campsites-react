@@ -190,7 +190,11 @@ async function fetchDeduped(plan: FetchPlanItem[]): Promise<Record<string, unkno
             kvAdapter
                 ? fetchMonthWithCache(campgroundId, month, kvAdapter, { forceFresh: true })
                 : fetchMonth(campgroundId, month),
-        { concurrency: 6, maxRetries: 2, backoffMs: [500, 1000] },
+        // Gentle on rec.gov: one request at a time, ~500ms apart, no retries
+        // (a 429 just carries forward last-good and retries next cycle). This
+        // mirrors the old notifier's tolerated footprint. Burst fetching at a
+        // 1-min cadence got us rate-limited (429s).
+        { concurrency: 1, maxRetries: 0, delayMs: 500 },
     );
 }
 

@@ -10,6 +10,13 @@ export interface FetchDedupedOptions {
     maxRetries?: number;
     /** Backoff before each retry, ms; index clamps to last entry. */
     backoffMs?: number[];
+    /**
+     * Pause this long after each fetch before the worker grabs the next item.
+     * Throttles the request rate to stay under an upstream rate limit
+     * (e.g., rec.gov 429s). With concurrency 1 this spaces every request by
+     * roughly delayMs. Default 0 (no throttle).
+     */
+    delayMs?: number;
 }
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
@@ -29,6 +36,7 @@ export async function fetchDedupedConcurrent<T>(
     const concurrency = Math.max(1, options.concurrency ?? 6);
     const maxRetries = Math.max(0, options.maxRetries ?? 2);
     const backoffMs = options.backoffMs ?? [500, 1000];
+    const delayMs = Math.max(0, options.delayMs ?? 0);
 
     // Pre-size per-campground result arrays so out-of-order completion still
     // lands each result at its correct month index.
@@ -54,6 +62,7 @@ export async function fetchDedupedConcurrent<T>(
                 }
             }
             results[item.campgroundId]![slotIndex[i]!] = value;
+            if (delayMs > 0 && next < plan.length) await sleep(delayMs);
         }
     }
 

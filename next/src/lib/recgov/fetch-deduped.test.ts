@@ -50,6 +50,27 @@ it("retries on null then succeeds", async () => {
     expect(calls).toBe(2);
 });
 
+it("spaces requests by delayMs (sequential throttle)", async () => {
+    const times: number[] = [];
+    const fetchOne = vi.fn(async () => {
+        times.push(Date.now());
+        return { ok: true };
+    });
+    await fetchDedupedConcurrent(
+        [
+            { campgroundId: "A", month: "2026-07" },
+            { campgroundId: "A", month: "2026-08" },
+            { campgroundId: "A", month: "2026-09" },
+        ],
+        fetchOne,
+        { concurrency: 1, maxRetries: 0, delayMs: 25 },
+    );
+    expect(times.length).toBe(3);
+    // Lower-bound spacing (allow scheduler slop); proves the throttle ran.
+    expect(times[1]! - times[0]!).toBeGreaterThanOrEqual(20);
+    expect(times[2]! - times[1]!).toBeGreaterThanOrEqual(20);
+});
+
 it("gives up after maxRetries and records null", async () => {
     const fetchOne = vi.fn(async () => null);
     const out = await fetchDedupedConcurrent([{ campgroundId: "A", month: "2026-07" }], fetchOne, {
