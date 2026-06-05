@@ -8,6 +8,7 @@ import { processCampgroundResults, getAllDatesInRange } from "../next/src/lib/re
 import { RestKvAdapter } from "../next/src/lib/recgov/rest-kv";
 import { fetchMonthWithCache } from "../next/src/lib/recgov/fetch-with-cache";
 import { fetchProducedNoData } from "../next/src/lib/recgov/raw-results";
+import { fetchDedupedConcurrent } from "../next/src/lib/recgov/fetch-deduped";
 import { findNewMatches, generateSignature } from "./lib/diff";
 import { formatEmail, sendEmail } from "./lib/email";
 import { resolveNotifyScope, matchPassesScope } from "./lib/notify-scope";
@@ -15,8 +16,20 @@ import type { Campground, GlobalSettings, NotifyScope } from "../next/src/types/
 import type { MatchResult, SiteConfigForDiff, CampgroundResult } from "./lib/diff";
 import type { SiteAvailabilityMap } from "../next/src/lib/recgov/types";
 import type { AvailabilitySnapshot, SnapshotCampground } from "../next/src/lib/recgov/cache";
+import type { KvAdapter } from "../next/src/lib/recgov/cache";
 
-function buildKvAdapter(): RestKvAdapter | null {
+export interface RunConfig {
+    subscriberApiUrl: string;
+    subscriberApiSecret: string;
+    resendApiKey: string;
+    siteUrl: string;
+    forceEmail: boolean;
+    dryRun: boolean;
+    kvAdapter: KvAdapter | null;
+    now: Date;
+}
+
+export function buildKvAdapter(): RestKvAdapter | null {
     const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
     const namespaceId = process.env.CLOUDFLARE_KV_NAMESPACE_ID;
     const apiToken = process.env.CLOUDFLARE_API_TOKEN;
@@ -27,15 +40,11 @@ function buildKvAdapter(): RestKvAdapter | null {
     return new RestKvAdapter({ accountId, namespaceId, apiToken });
 }
 
-const kvAdapter = buildKvAdapter();
-
-const DELAY_BETWEEN_FETCHES_MS = 500;
+let kvAdapter: KvAdapter | null = null;
 
 // Non-curator users don't receive an email about a new match until this many
 // milliseconds after the global first-sighting. Curators are notified immediately.
 const LEAD_TIME_MS = 15 * 60 * 1000;
-
-const delay = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
 // ── API response types ────────────────────────────────────────────────────────
 
@@ -167,7 +176,6 @@ function buildDedupedFetchPlan(targets: NotificationTarget[]): FetchPlanItem[] {
 // ── Fetch deduped: returns { [campgroundId]: [apiResult, ...] } across all months ──
 
 async function fetchDeduped(plan: FetchPlanItem[]): Promise<Record<string, unknown[]>> {
-    // Group months by campgroundId so we can log nicely
     const byCampground = new Map<string, string[]>();
     for (const { campgroundId, month } of plan) {
         if (!byCampground.has(campgroundId)) byCampground.set(campgroundId, []);
@@ -176,22 +184,14 @@ async function fetchDeduped(plan: FetchPlanItem[]): Promise<Record<string, unkno
     for (const [id, months] of byCampground) {
         console.log(`[Fetch] Campground ${id}: ${months.length} month(s) to fetch`);
     }
-
-    const rawByCampground: Record<string, unknown[]> = {};
-    for (let i = 0; i < plan.length; i++) {
-        const planEntry = plan[i];
-        if (!planEntry) continue;
-        const { campgroundId, month } = planEntry;
-        const result = kvAdapter
-            ? await fetchMonthWithCache(campgroundId, month, kvAdapter, { forceFresh: true })
-            : await fetchMonth(campgroundId, month);
-        if (!rawByCampground[campgroundId]) rawByCampground[campgroundId] = [];
-        rawByCampground[campgroundId].push(result);
-        if (i < plan.length - 1) {
-            await delay(DELAY_BETWEEN_FETCHES_MS);
-        }
-    }
-    return rawByCampground;
+    return fetchDedupedConcurrent(
+        plan,
+        (campgroundId, month) =>
+            kvAdapter
+                ? fetchMonthWithCache(campgroundId, month, kvAdapter, { forceFresh: true })
+                : fetchMonth(campgroundId, month),
+        { concurrency: 6, maxRetries: 2, backoffMs: [500, 1000] },
+    );
 }
 
 // ── Snapshot write ────────────────────────────────────────────────────────────
@@ -369,15 +369,17 @@ async function sendEmailToUser({
     resendApiKey,
     siteUrl,
     apiSecret,
+    subscriberApiUrl,
 }: {
     user: NotificationTarget;
     matches: MatchResult[];
     resendApiKey: string;
     siteUrl: string;
     apiSecret: string;
+    subscriberApiUrl: string;
 }): Promise<void> {
     const { subject, html, unsubscribeLink } = formatEmail(matches, {
-        unsubscribeUrl: `${process.env.SUBSCRIBER_API_URL}/api/unsubscribe`,
+        unsubscribeUrl: `${subscriberApiUrl}/api/unsubscribe`,
         email: user.email,
         apiSecret,
         siteUrl,
@@ -422,30 +424,19 @@ async function putFirstSeenMap(
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 
-async function main(): Promise<void> {
-    const subscriberApiUrl = process.env.SUBSCRIBER_API_URL;
-    const subscriberApiSecret = process.env.SUBSCRIBER_API_SECRET;
-    const resendApiKey = process.env.RESEND_API_KEY;
-    const siteUrl = process.env.SITE_URL ?? "";
-    const forceEmail = process.env.FORCE_EMAIL === "true";
-    const now = new Date();
+export async function run(config: RunConfig): Promise<void> {
+    const { subscriberApiUrl, subscriberApiSecret, resendApiKey, siteUrl, forceEmail, dryRun, now } = config;
+    kvAdapter = config.kvAdapter;
 
-    if (!subscriberApiUrl || !subscriberApiSecret) {
-        console.error("[Error] Missing SUBSCRIBER_API_URL or SUBSCRIBER_API_SECRET");
-        process.exit(1);
-    }
-    if (!resendApiKey) {
-        console.error("[Error] Missing RESEND_API_KEY");
-        process.exit(1);
-    }
+    if (!subscriberApiUrl || !subscriberApiSecret) throw new Error("Missing subscriberApiUrl/Secret");
+    if (!resendApiKey) throw new Error("Missing resendApiKey");
 
     // 1. Fetch targets from the new endpoint.
     const targetsResponse = await fetch(`${subscriberApiUrl}/api/admin/notification-targets`, {
         headers: { Authorization: `Bearer ${subscriberApiSecret}` },
     });
     if (!targetsResponse.ok) {
-        console.error(`[Error] notification-targets returned ${targetsResponse.status}`);
-        process.exit(1);
+        throw new Error(`notification-targets returned ${targetsResponse.status}`);
     }
     const { targets } = (await targetsResponse.json()) as NotificationTargetsResponse;
     console.log(`[Targets] ${targets.length} users with non-empty campground lists`);
@@ -534,48 +525,54 @@ async function main(): Promise<void> {
         }
 
         console.log(`[${target.email}] ${newMatches.length} new match(es) — sending email`);
-        try {
-            const sentAtMs = Date.now();
-            await sendEmailToUser({
-                user: target,
-                matches: newMatches,
-                resendApiKey,
-                siteUrl,
-                apiSecret: subscriberApiSecret,
-            });
-            // Record latency for each match in this email.
-            for (const m of newMatches) {
-                const sig = signatureForMatch(m);
-                const firstSeenIso = newFirstSeenMap[sig];
-                if (firstSeenIso) {
-                    sentLatenciesMs.push(sentAtMs - new Date(firstSeenIso).getTime());
-                }
-            }
-            updates.push({ email: target.email, state: nextState, lastNotifiedAt: now.toISOString() });
-        } catch (err) {
-            console.error(`[${target.email}] email send failed: ${(err as Error).message}`);
+        if (dryRun) {
+            console.log(`[dry-run] would email ${newMatches.length} match(es) to ${target.email}`);
             updates.push({ email: target.email, state: nextState });
+        } else {
+            try {
+                const sentAtMs = Date.now();
+                await sendEmailToUser({
+                    user: target,
+                    matches: newMatches,
+                    resendApiKey,
+                    siteUrl,
+                    apiSecret: subscriberApiSecret,
+                    subscriberApiUrl,
+                });
+                // Record latency for each match in this email.
+                for (const m of newMatches) {
+                    const sig = signatureForMatch(m);
+                    const firstSeenIso = newFirstSeenMap[sig];
+                    if (firstSeenIso) sentLatenciesMs.push(sentAtMs - new Date(firstSeenIso).getTime());
+                }
+                updates.push({ email: target.email, state: nextState, lastNotifiedAt: now.toISOString() });
+            } catch (err) {
+                console.error(`[${target.email}] email send failed: ${(err as Error).message}`);
+                updates.push({ email: target.email, state: nextState });
+            }
         }
     }
 
     // 8. Push state back to the API.
-    const stateResponse = await fetch(`${subscriberApiUrl}/api/admin/notifier-state`, {
-        method: "PUT",
-        headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${subscriberApiSecret}`,
-        },
-        body: JSON.stringify({ updates }),
-    });
-    if (!stateResponse.ok) {
-        console.error(`[Warn] notifier-state PUT returned ${stateResponse.status}`);
-    } else {
-        const result = (await stateResponse.json()) as { updated: number };
-        console.log(`[Done] Updated state for ${result.updated} user(s)`);
+    if (!dryRun) {
+        const stateResponse = await fetch(`${subscriberApiUrl}/api/admin/notifier-state`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${subscriberApiSecret}`,
+            },
+            body: JSON.stringify({ updates }),
+        });
+        if (!stateResponse.ok) {
+            console.error(`[Warn] notifier-state PUT returned ${stateResponse.status}`);
+        } else {
+            const result = (await stateResponse.json()) as { updated: number };
+            console.log(`[Done] Updated state for ${result.updated} user(s)`);
+        }
     }
 
     // 9. Persist the updated first-seen map (pruned to only currently-visible signatures).
-    await putFirstSeenMap(subscriberApiUrl, subscriberApiSecret, newFirstSeenMap);
+    if (!dryRun) await putFirstSeenMap(subscriberApiUrl, subscriberApiSecret, newFirstSeenMap);
 
     // 9.5: Maintain recent-openings log.
     // Fetch the prior log from the public endpoint (no auth needed, falls back to []).
@@ -606,24 +603,26 @@ async function main(): Promise<void> {
     recent.sort((a, b) => b.detectedAt.localeCompare(a.detectedAt));
     const trimmedRecent = recent.slice(0, 200);
 
-    try {
-        const recentPutResp = await fetch(`${subscriberApiUrl}/api/admin/openings/recent`, {
-            method: "PUT",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${subscriberApiSecret}`,
-            },
-            body: JSON.stringify(trimmedRecent),
-        });
-        if (!recentPutResp.ok) {
-            console.error(`[Warn] /api/admin/openings/recent PUT returned ${recentPutResp.status}`);
-        } else {
-            console.log(
-                `[Recent] ${trimmedRecent.length} entries in log (${recent.length - priorRecent.filter((r) => r.detectedAt && Date.now() - new Date(r.detectedAt).getTime() < RECENT_WINDOW_MS).length} new this cycle)`,
-            );
+    if (!dryRun) {
+        try {
+            const recentPutResp = await fetch(`${subscriberApiUrl}/api/admin/openings/recent`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${subscriberApiSecret}`,
+                },
+                body: JSON.stringify(trimmedRecent),
+            });
+            if (!recentPutResp.ok) {
+                console.error(`[Warn] /api/admin/openings/recent PUT returned ${recentPutResp.status}`);
+            } else {
+                console.log(
+                    `[Recent] ${trimmedRecent.length} entries in log (${recent.length - priorRecent.filter((r) => r.detectedAt && Date.now() - new Date(r.detectedAt).getTime() < RECENT_WINDOW_MS).length} new this cycle)`,
+                );
+            }
+        } catch (err) {
+            console.error(`[Warn] /api/admin/openings/recent PUT failed: ${(err as Error).message}`);
         }
-    } catch (err) {
-        console.error(`[Warn] /api/admin/openings/recent PUT failed: ${(err as Error).message}`);
     }
 
     // 10. Compute and PUT stats.
@@ -692,25 +691,29 @@ async function main(): Promise<void> {
         _dailyHistory: dailyHistory,
     };
 
-    try {
-        const statsResponse = await fetch(`${subscriberApiUrl}/api/admin/stats`, {
-            method: "PUT",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${subscriberApiSecret}`,
-            },
-            body: JSON.stringify(statsBody),
-        });
-        if (!statsResponse.ok) {
-            console.error(`[Warn] /api/admin/stats PUT returned ${statsResponse.status}`);
-        } else {
-            console.log(
-                `[Stats] ${trackedIds.size} cgs tracked, ${sentLatenciesMs.length} sent this cycle, ${openingsSentLast7Days} last 7d, ${medianLatencyMs}ms median`,
-            );
+    if (!dryRun) {
+        try {
+            const statsResponse = await fetch(`${subscriberApiUrl}/api/admin/stats`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${subscriberApiSecret}`,
+                },
+                body: JSON.stringify(statsBody),
+            });
+            if (!statsResponse.ok) {
+                console.error(`[Warn] /api/admin/stats PUT returned ${statsResponse.status}`);
+            } else {
+                console.log(
+                    `[Stats] ${trackedIds.size} cgs tracked, ${sentLatenciesMs.length} sent this cycle, ${openingsSentLast7Days} last 7d, ${medianLatencyMs}ms median`,
+                );
+            }
+        } catch (err) {
+            console.error(`[Warn] /api/admin/stats PUT failed: ${(err as Error).message}`);
         }
-    } catch (err) {
-        console.error(`[Warn] /api/admin/stats PUT failed: ${(err as Error).message}`);
     }
+
+    if (dryRun) console.log("[dry-run] complete — no writes performed");
 }
 
 // Returns a new daily-history array with today's entry updated/inserted and
@@ -735,8 +738,3 @@ function updateDailyHistory(
     filtered.sort((a, b) => a.date.localeCompare(b.date));
     return filtered;
 }
-
-main().catch((err) => {
-    console.error("[Fatal]", err);
-    process.exit(1);
-});

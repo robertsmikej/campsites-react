@@ -5,8 +5,8 @@
     "private": true,
     "description": "CampWatch notifier — sends email alerts via Resend when new favorite campsites open up on recreation.gov.",
     "scripts": {
-        "check": "tsx check.ts",
-        "dev": "tsx check.ts",
+        "check": "tsx cli.ts",
+        "dev": "tsx cli.ts",
         "typecheck": "tsc --noEmit",
         "format": "prettier --write .",
         "format:check": "prettier --check .",
