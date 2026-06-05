@@ -5,7 +5,18 @@ import {
     getEmptyGroupedSites,
     deepMerge,
     buildReservationLink,
+    overlayConfigRatings,
 } from "./campground-utils";
+import type { ProcessedCampground } from "@/types/campground";
+
+function processed(id: string, favorites: string[], worthwhile: string[] = []): ProcessedCampground {
+    return {
+        id,
+        name: `cg-${id}`,
+        sites: { favorites, worthwhile },
+        siteAvailability: {},
+    } as unknown as ProcessedCampground;
+}
 
 describe("formatToMMDDYYYY", () => {
     it("converts ISO date to MM/DD/YYYY", () => {
@@ -51,5 +62,31 @@ describe("buildReservationLink", () => {
         expect(url).toBe(
             "https://www.recreation.gov/camping/campsites/69080?arrivalDate=2026-05-27&departureDate=2026-05-29",
         );
+    });
+});
+
+describe("overlayConfigRatings", () => {
+    it("replaces a campground's favorites/worthwhile with the live config by id", () => {
+        // The snapshot embeds a stale copy of sites; the live config is authoritative.
+        const data = { "recreation.gov": [processed("234007", ["001"], ["002"])] };
+        const ratings = new Map([["234007", { favorites: ["011", "008"], worthwhile: ["009"] }]]);
+
+        const out = overlayConfigRatings(data, ratings);
+
+        expect(out["recreation.gov"]![0]!.sites).toEqual({
+            favorites: ["011", "008"],
+            worthwhile: ["009"],
+        });
+    });
+
+    it("leaves campgrounds without a config entry untouched", () => {
+        const data = { "recreation.gov": [processed("99", ["005"])] };
+        const out = overlayConfigRatings(data, new Map([["234007", { favorites: ["x"], worthwhile: [] }]]));
+        expect(out["recreation.gov"]![0]!.sites.favorites).toEqual(["005"]);
+    });
+
+    it("returns the input unchanged when there are no ratings", () => {
+        const data = { "recreation.gov": [processed("1", ["a"])] };
+        expect(overlayConfigRatings(data, new Map())).toBe(data);
     });
 });

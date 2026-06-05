@@ -148,6 +148,30 @@ export const checkForAppropriateGroups = (
     });
 };
 
+// Favorite/worthwhile classification is config, not availability — but the
+// availability snapshot embeds a copy of sites that goes stale the moment the
+// user edits favorites (the rebuild round-trips through eventually-consistent
+// KV). Overlay the live config ratings (keyed by campground id) so the dashboard
+// reflects edits instantly, independent of snapshot timing.
+export const overlayConfigRatings = (
+    data: Record<string, ProcessedCampground[]>,
+    ratingsById: Map<string, { favorites: string[]; worthwhile: string[] }>,
+): Record<string, ProcessedCampground[]> => {
+    if (ratingsById.size === 0) return data;
+    const out: Record<string, ProcessedCampground[]> = {};
+    for (const [system, campgrounds] of Object.entries(data)) {
+        out[system] = campgrounds.map((cg) => {
+            const ratings = cg.id ? ratingsById.get(cg.id) : undefined;
+            if (!ratings) return cg;
+            return {
+                ...cg,
+                sites: { favorites: ratings.favorites, worthwhile: ratings.worthwhile },
+            };
+        });
+    }
+    return out;
+};
+
 export const formatGroupsByFavorites = (
     data: Record<string, ProcessedCampground[]>,
 ): ProcessedCampground[] => {

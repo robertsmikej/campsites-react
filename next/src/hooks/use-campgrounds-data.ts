@@ -1,13 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { formatGroupsByFavorites } from "@/lib/campground-utils";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { formatGroupsByFavorites, overlayConfigRatings } from "@/lib/campground-utils";
 import { WATCHLIST_CHANGED_EVENT } from "@/lib/events";
 import type { AvailabilitySnapshot } from "@/lib/recgov";
-import type { CampgroundsBySystem, ProcessedCampground } from "@/types/campground";
+import type { CampgroundsBySystem, ProcessedCampground, SiteConfig } from "@/types/campground";
 
 interface UseCampgroundsDataArgs {
     enabled: boolean;
+    /** Live watchlist config; favorite/worthwhile labels are overlaid from here
+     * so dashboard edits show instantly instead of waiting for a snapshot rebuild. */
+    siteConfig?: SiteConfig;
 }
 
 interface ProgressBarData {
@@ -16,7 +19,7 @@ interface ProgressBarData {
     progress: number;
 }
 
-export function useCampgroundsData({ enabled }: UseCampgroundsDataArgs) {
+export function useCampgroundsData({ enabled, siteConfig }: UseCampgroundsDataArgs) {
     const [campgroundsData, setCampgroundsData] = useState<CampgroundsBySystem>({});
     const [campgroundsByAreas, setCampgroundsByAreas] = useState<ProcessedCampground[]>([]);
     const [isFetching, setIsFetching] = useState(false);
@@ -84,15 +87,32 @@ export function useCampgroundsData({ enabled }: UseCampgroundsDataArgs) {
         };
     }, [enabled]);
 
+    // Map of campground id -> live favorite/worthwhile lists from the watchlist
+    // config. Recomputed only when the config changes.
+    const ratingsById = useMemo(() => {
+        const map = new Map<string, { favorites: string[]; worthwhile: string[] }>();
+        for (const cg of siteConfig?.["recreation.gov"] ?? []) {
+            if (cg.id) {
+                map.set(cg.id, {
+                    favorites: cg.sites?.favorites ?? [],
+                    worthwhile: cg.sites?.worthwhile ?? [],
+                });
+            }
+        }
+        return map;
+    }, [siteConfig]);
+
     useEffect(() => {
         if (Object.keys(campgroundsData).length === 0) {
             setCampgroundsByAreas([]);
             return;
         }
-        setCampgroundsByAreas(
-            formatGroupsByFavorites(campgroundsData as Record<string, ProcessedCampground[]>) ?? [],
+        const overlaid = overlayConfigRatings(
+            campgroundsData as Record<string, ProcessedCampground[]>,
+            ratingsById,
         );
-    }, [campgroundsData]);
+        setCampgroundsByAreas(formatGroupsByFavorites(overlaid) ?? []);
+    }, [campgroundsData, ratingsById]);
 
     return { campgroundsData, campgroundsByAreas, isFetching, progressBarData, refresh };
 }

@@ -103,6 +103,7 @@ export default function AppPage() {
 
     const { campgroundsByAreas, isFetching, progressBarData } = useCampgroundsData({
         enabled: !isHydrating,
+        siteConfig,
     });
 
     // Rating change handler
