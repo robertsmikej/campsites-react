@@ -12,6 +12,7 @@ import { resolveDefaultOwnerEmail } from "@/lib/default-config";
 import { jsonResponse, withCors } from "@/lib/responses";
 import type { Campground, GlobalSettings, SiteConfig } from "@/types/campground";
 import { withErrorLogging } from "@/lib/route-helpers";
+import { WorkerKvAdapter } from "@/lib/recgov/worker-kv";
 
 interface LegacyConfig {
     campgrounds?: SiteConfig;
@@ -71,6 +72,10 @@ async function postHandler(request: Request): Promise<Response> {
         globalSettings,
     });
     await kv.delete("config:campgrounds");
+
+    // The owner's cached availability snapshot is now stale; clear it so the
+    // dashboard rebuilds from the merged list on next load.
+    await new WorkerKvAdapter(kv).deleteSnapshot(owner);
 
     return withCors(
         jsonResponse({
