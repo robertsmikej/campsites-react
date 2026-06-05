@@ -68,12 +68,13 @@ export function toEditableCampground(
 }
 
 export function sanitizeCampground(campground: EditableCampground): Campground {
-    const favorites =
-        campground.favoritesArray != null ? campground.favoritesArray : parseList(campground.favoritesText);
-    const worthwhile =
-        campground.worthwhileArray != null
-            ? campground.worthwhileArray
-            : parseList(campground.worthwhileText);
+    // The *Text fields are the canonical edit buffer: both the multi-select
+    // (which sets *Text alongside *Array) and the comma-separated textarea (which
+    // sets only *Text) keep them current, and toEditableCampground seeds them
+    // from the saved favorites. *Array can lag behind the textarea, so deriving
+    // from text is what makes dialog edits actually persist (add and clear alike).
+    const favorites = parseList(campground.favoritesText);
+    const worthwhile = parseList(campground.worthwhileText);
 
     return {
         name: campground.name.trim(),

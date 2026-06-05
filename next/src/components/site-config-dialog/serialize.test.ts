@@ -39,8 +39,8 @@ describe("sanitizeCampground", () => {
         const editable = createEmptyCampground();
         editable.id = "1";
         editable.name = "Test";
-        editable.favoritesArray = ["A"];
-        editable.worthwhileArray = ["B"];
+        editable.favoritesText = "A";
+        editable.worthwhileText = "B";
 
         const out = sanitizeCampground(editable);
         expect(out).toMatchObject({
@@ -48,6 +48,36 @@ describe("sanitizeCampground", () => {
             name: "Test",
             sites: { favorites: ["A"], worthwhile: ["B"] },
         });
+    });
+
+    it("saves favorites/worthwhile typed in the textarea even when the array fields are stale", () => {
+        // Reproduces the configure-dialog bug: when availableSites is empty the
+        // editor shows a textarea that updates only *Text, leaving *Array stale.
+        const editable = toEditableCampground({
+            id: "234007",
+            name: "Black Rock",
+            sites: { favorites: [], worthwhile: [] },
+        });
+        editable.favoritesText = "011, 008";
+        editable.worthwhileText = "009";
+
+        const out = sanitizeCampground(editable);
+        expect(out.sites.favorites).toEqual(["011", "008"]);
+        expect(out.sites.worthwhile).toEqual(["009"]);
+    });
+
+    it("clears favorites when the textarea is emptied", () => {
+        const editable = toEditableCampground({
+            id: "1",
+            name: "X",
+            sites: { favorites: ["011"], worthwhile: ["009"] },
+        });
+        editable.favoritesText = "";
+        editable.worthwhileText = "";
+
+        const out = sanitizeCampground(editable);
+        expect(out.sites.favorites).toEqual([]);
+        expect(out.sites.worthwhile).toEqual([]);
     });
 
     it("omits notifyAll/validStartDays/stayLengths/enabled when not set", () => {
