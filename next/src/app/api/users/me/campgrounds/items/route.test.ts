@@ -107,18 +107,23 @@ describe("POST /api/users/me/campgrounds/items", () => {
         expect(res.status).toBe(400);
     });
 
-    it("returns 404 when KV has no default config", async () => {
+    it("returns 404 when campground id is not in the default list (catalog fallback, no curator)", async () => {
         vi.mocked(sessions.readSession).mockResolvedValue({
             id: "x",
             email: "user@x.com",
             createdAt: "x",
             expiresAt: "x",
         });
-        vi.mocked(cloudflare.getKv).mockReturnValue(createMockKv());
-        const res = await post({ id: "campground-a" });
+        const kv = createMockKv();
+        vi.mocked(cloudflare.getKv).mockReturnValue(kv);
+        vi.mocked(cloudflare.getEnv).mockReturnValue({
+            BOOTSTRAP_ADMIN_EMAIL: "boss@example.com",
+            SUBSCRIBERS: kv,
+        } as never);
+        const res = await post({ id: "not-a-real-id" });
         expect(res.status).toBe(404);
         const body = (await res.json()) as { error: string };
-        expect(body.error).toBe("No default config to copy from");
+        expect(body.error).toBe("Campground not in default list");
     });
 
     it("returns 404 when campground id is not in the default list", async () => {
@@ -129,9 +134,22 @@ describe("POST /api/users/me/campgrounds/items", () => {
             expiresAt: "x",
         });
         const kv = createMockKv({
-            "config:campgrounds": JSON.stringify(DEFAULT_CONFIG),
+            "user:boss@example.com:profile": JSON.stringify({
+                email: "boss@example.com",
+                roles: ["curator"],
+                createdAt: "2024-01-01",
+            }),
+            "user:boss@example.com:campgrounds": JSON.stringify({
+                campgrounds: DEFAULT_CONFIG.campgrounds,
+                globalSettings: DEFAULT_CONFIG.globalSettings,
+                updatedAt: "2024-01-02",
+            }),
         });
         vi.mocked(cloudflare.getKv).mockReturnValue(kv);
+        vi.mocked(cloudflare.getEnv).mockReturnValue({
+            BOOTSTRAP_ADMIN_EMAIL: "boss@example.com",
+            SUBSCRIBERS: kv,
+        } as never);
         const res = await post({ id: "nonexistent-id" });
         expect(res.status).toBe(404);
         const body = (await res.json()) as { error: string };
@@ -146,9 +164,22 @@ describe("POST /api/users/me/campgrounds/items", () => {
             expiresAt: "x",
         });
         const kv = createMockKv({
-            "config:campgrounds": JSON.stringify(DEFAULT_CONFIG),
+            "user:boss@example.com:profile": JSON.stringify({
+                email: "boss@example.com",
+                roles: ["curator"],
+                createdAt: "2024-01-01",
+            }),
+            "user:boss@example.com:campgrounds": JSON.stringify({
+                campgrounds: DEFAULT_CONFIG.campgrounds,
+                globalSettings: DEFAULT_CONFIG.globalSettings,
+                updatedAt: "2024-01-02",
+            }),
         });
         vi.mocked(cloudflare.getKv).mockReturnValue(kv);
+        vi.mocked(cloudflare.getEnv).mockReturnValue({
+            BOOTSTRAP_ADMIN_EMAIL: "boss@example.com",
+            SUBSCRIBERS: kv,
+        } as never);
 
         const res = await post({ id: "campground-a" });
         expect(res.status).toBe(200);
@@ -181,10 +212,23 @@ describe("POST /api/users/me/campgrounds/items", () => {
             updatedAt: "2026-01-01T00:00:00.000Z",
         };
         const kv = createMockKv({
-            "config:campgrounds": JSON.stringify(DEFAULT_CONFIG),
+            "user:boss@example.com:profile": JSON.stringify({
+                email: "boss@example.com",
+                roles: ["curator"],
+                createdAt: "2024-01-01",
+            }),
+            "user:boss@example.com:campgrounds": JSON.stringify({
+                campgrounds: DEFAULT_CONFIG.campgrounds,
+                globalSettings: DEFAULT_CONFIG.globalSettings,
+                updatedAt: "2024-01-02",
+            }),
             "user:user@x.com:campgrounds": JSON.stringify(existingRecord),
         });
         vi.mocked(cloudflare.getKv).mockReturnValue(kv);
+        vi.mocked(cloudflare.getEnv).mockReturnValue({
+            BOOTSTRAP_ADMIN_EMAIL: "boss@example.com",
+            SUBSCRIBERS: kv,
+        } as never);
 
         const res = await post({ id: "campground-b" });
         expect(res.status).toBe(200);
@@ -205,10 +249,23 @@ describe("POST /api/users/me/campgrounds/items", () => {
             updatedAt: "2026-01-01T00:00:00.000Z",
         };
         const kv = createMockKv({
-            "config:campgrounds": JSON.stringify(DEFAULT_CONFIG),
+            "user:boss@example.com:profile": JSON.stringify({
+                email: "boss@example.com",
+                roles: ["curator"],
+                createdAt: "2024-01-01",
+            }),
+            "user:boss@example.com:campgrounds": JSON.stringify({
+                campgrounds: DEFAULT_CONFIG.campgrounds,
+                globalSettings: DEFAULT_CONFIG.globalSettings,
+                updatedAt: "2024-01-02",
+            }),
             "user:user@x.com:campgrounds": JSON.stringify(existingRecord),
         });
         vi.mocked(cloudflare.getKv).mockReturnValue(kv);
+        vi.mocked(cloudflare.getEnv).mockReturnValue({
+            BOOTSTRAP_ADMIN_EMAIL: "boss@example.com",
+            SUBSCRIBERS: kv,
+        } as never);
 
         const res = await post({ id: "campground-a" });
         expect(res.status).toBe(200);

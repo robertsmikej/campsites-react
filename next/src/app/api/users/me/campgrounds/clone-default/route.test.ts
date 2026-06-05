@@ -51,9 +51,22 @@ describe("POST /api/users/me/campgrounds/clone-default", () => {
         };
 
         const kv = createMockKv({
-            "config:campgrounds": JSON.stringify(curatedDefault),
+            "user:boss@example.com:profile": JSON.stringify({
+                email: "boss@example.com",
+                roles: ["curator"],
+                createdAt: "2024-01-01",
+            }),
+            "user:boss@example.com:campgrounds": JSON.stringify({
+                campgrounds: curatedDefault.campgrounds,
+                globalSettings: curatedDefault.globalSettings,
+                updatedAt: "2024-01-02",
+            }),
         });
         vi.mocked(cloudflare.getKv).mockReturnValue(kv);
+        vi.mocked(cloudflare.getEnv).mockReturnValue({
+            BOOTSTRAP_ADMIN_EMAIL: "boss@example.com",
+            SUBSCRIBERS: kv,
+        } as never);
 
         const res = await doPost();
         expect(res.status).toBe(200);
@@ -78,6 +91,10 @@ describe("POST /api/users/me/campgrounds/clone-default", () => {
 
         const kv = createMockKv();
         vi.mocked(cloudflare.getKv).mockReturnValue(kv);
+        vi.mocked(cloudflare.getEnv).mockReturnValue({
+            BOOTSTRAP_ADMIN_EMAIL: "boss@example.com",
+            SUBSCRIBERS: kv,
+        } as never);
 
         const res = await doPost();
         expect(res.status).toBe(200);
@@ -87,7 +104,7 @@ describe("POST /api/users/me/campgrounds/clone-default", () => {
             updatedAt: string;
         };
 
-        // Static defaults should have campgrounds (from sites.ts)
+        // Static defaults should have campgrounds (from the in-repo catalog fallback)
         expect(Array.isArray(body.campgrounds["recreation.gov"])).toBe(true);
         expect(body.campgrounds["recreation.gov"].length).toBeGreaterThan(0);
         // globalSettings should have the sitewide defaults

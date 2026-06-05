@@ -6,11 +6,7 @@ import { getSitewideDefaultSettings } from "@/lib/settings";
 import type { Campground, GlobalSettings, SiteConfig } from "@/types/campground";
 import { withErrorLogging } from "@/lib/route-helpers";
 import { WorkerKvAdapter } from "@/lib/recgov/worker-kv";
-
-interface DefaultConfig {
-    campgrounds?: SiteConfig;
-    globalSettings?: GlobalSettings;
-}
+import { getDefaultConfig } from "@/lib/default-config";
 
 function defaultGlobalSettings(): GlobalSettings {
     const defaults = getSitewideDefaultSettings({});
@@ -35,10 +31,7 @@ async function postHandler(request: Request): Promise<Response> {
         return withCors(jsonResponse({ error: "Body must include id: string" }, 400));
     }
 
-    const def = (await getKv().get("config:campgrounds", "json")) as DefaultConfig | null;
-    if (!def?.campgrounds) {
-        return withCors(jsonResponse({ error: "No default config to copy from" }, 404));
-    }
+    const def = await getDefaultConfig();
 
     const fromDefault: Campground | undefined = def.campgrounds["recreation.gov"]?.find((c) => c.id === id);
     if (!fromDefault) {

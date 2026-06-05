@@ -143,9 +143,17 @@ describe("POST /api/admin/users", () => {
             globalSettings: { stayLengths: [2, 3], validStartDays: ["Friday", "Saturday"] },
         };
         const kv = createMockKv({
-            "config:campgrounds": JSON.stringify(defaultConfig),
+            "user:curator@x.com:campgrounds": JSON.stringify({
+                campgrounds: defaultConfig.campgrounds,
+                globalSettings: defaultConfig.globalSettings,
+                updatedAt: "2024-01-02",
+            }),
         });
         mockCurator(kv);
+        vi.mocked(cloudflare.getEnv).mockReturnValue({
+            BOOTSTRAP_ADMIN_EMAIL: "curator@x.com",
+            SUBSCRIBERS: kv,
+        } as never);
 
         const res = await post({ email: "  NEW@example.COM  ", name: "New Friend" });
 
@@ -165,9 +173,13 @@ describe("POST /api/admin/users", () => {
         );
     });
 
-    it("falls back to an empty watchlist if no default config is set", async () => {
+    it("falls back to catalog defaults when no curator campgrounds are set", async () => {
         const kv = createMockKv();
         mockCurator(kv);
+        vi.mocked(cloudflare.getEnv).mockReturnValue({
+            BOOTSTRAP_ADMIN_EMAIL: "curator@x.com",
+            SUBSCRIBERS: kv,
+        } as never);
 
         const res = await post({ email: "fresh@example.com" });
 
@@ -175,7 +187,9 @@ describe("POST /api/admin/users", () => {
         const storedCampgrounds = (await kv.get("user:fresh@example.com:campgrounds", "json")) as {
             campgrounds: { "recreation.gov": unknown[] };
         };
-        expect(storedCampgrounds.campgrounds["recreation.gov"]).toEqual([]);
+        // getDefaultConfig falls back to the in-repo catalog when no campgrounds record exists
+        expect(Array.isArray(storedCampgrounds.campgrounds["recreation.gov"])).toBe(true);
+        expect(storedCampgrounds.campgrounds["recreation.gov"].length).toBeGreaterThan(0);
     });
 
     it("returns 409 if the user already exists", async () => {
@@ -191,6 +205,10 @@ describe("POST /api/admin/users", () => {
     it("defaults the name to the email when not provided", async () => {
         const kv = createMockKv();
         mockCurator(kv);
+        vi.mocked(cloudflare.getEnv).mockReturnValue({
+            BOOTSTRAP_ADMIN_EMAIL: "curator@x.com",
+            SUBSCRIBERS: kv,
+        } as never);
 
         const res = await post({ email: "noname@example.com" });
         expect(res.status).toBe(201);

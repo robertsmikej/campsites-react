@@ -5,15 +5,8 @@ import { putUserCampgrounds } from "@/lib/user-campgrounds";
 import { jsonResponse, withCors } from "@/lib/responses";
 import { isValidEmail, normalizeEmail } from "@/lib/email";
 import { withErrorLogging } from "@/lib/route-helpers";
+import { getDefaultConfig } from "@/lib/default-config";
 import type { UserProfile } from "@/types/user";
-import type { SiteConfig, GlobalSettings } from "@/types/campground";
-
-const DEFAULT_CONFIG_KEY = "config:campgrounds";
-
-const FALLBACK_GLOBAL_SETTINGS: GlobalSettings = {
-    stayLengths: [2, 3, 4, 5],
-    validStartDays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
-};
 
 async function listAllUsers(): Promise<UserProfile[]> {
     const kv = getKv();
@@ -91,14 +84,10 @@ async function postHandler(request: Request): Promise<Response> {
     const profile = await createUserProfile(email, { name: body.name?.trim() || email });
 
     // Clone the curator's default watchlist so the new user gets alerts right away.
-    const defaultConfig = (await getKv().get(DEFAULT_CONFIG_KEY, "json")) as {
-        campgrounds?: SiteConfig;
-        globalSettings?: GlobalSettings;
-    } | null;
-
+    const defaultConfig = await getDefaultConfig();
     await putUserCampgrounds(email, {
-        campgrounds: defaultConfig?.campgrounds ?? { "recreation.gov": [] },
-        globalSettings: defaultConfig?.globalSettings ?? FALLBACK_GLOBAL_SETTINGS,
+        campgrounds: defaultConfig.campgrounds,
+        globalSettings: defaultConfig.globalSettings,
     });
 
     return withCors(jsonResponse(profile, 201));
