@@ -51,3 +51,29 @@ jobs:
                   GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
                   SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
                   BOOTSTRAP_ADMIN_EMAIL: ${{ secrets.BOOTSTRAP_ADMIN_EMAIL }}
+
+    deploy-notifier:
+        runs-on: ubuntu-latest
+        defaults:
+            run:
+                working-directory: notifier
+        steps:
+            - uses: actions/checkout@v5
+            - uses: actions/setup-node@v5
+              with:
+                  node-version: 22
+            - name: Install notifier dependencies
+              run: npm install
+            - name: Deploy notifier Worker
+              uses: cloudflare/wrangler-action@v4
+              with:
+                  apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+                  accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+                  workingDirectory: notifier
+                  command: deploy
+                  secrets: |
+                      RESEND_API_KEY
+                      SUBSCRIBER_API_SECRET
+              env:
+                  RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+                  SUBSCRIBER_API_SECRET: ${{ secrets.SUBSCRIBER_API_SECRET }}
