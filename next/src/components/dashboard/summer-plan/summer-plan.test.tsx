@@ -73,6 +73,18 @@ describe("SummerPlan", () => {
         expect(screen.getByText("May CG")).toBeTruthy();
     });
 
+    it("favorites-only toggle hides non-favorite picks", () => {
+        const rows = [
+            cg("1", "Fav CG", [site("a", "2026-06-12", "2026-06-14")], ["a"]),
+            cg("2", "Other CG", [site("b", "2026-07-17", "2026-07-19")], []),
+        ];
+        render(<SummerPlan rows={rows} seasonYear={2026} />);
+        expect(screen.getByText("Other CG")).toBeTruthy();
+        fireEvent.click(screen.getByRole("button", { name: /favorites only/i }));
+        expect(screen.queryByText("Other CG")).toBeNull();
+        expect(screen.getByText("Fav CG")).toBeTruthy();
+    });
+
     it("the trip-count stepper raises the target", () => {
         const rows = [
             cg("1", "June CG", [site("a", "2026-06-12", "2026-06-14")], ["a"]),

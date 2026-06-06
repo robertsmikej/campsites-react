@@ -143,6 +143,26 @@ describe("planSummer", () => {
         expect(plan2.trips.some((t) => t.id === lockId && t.locked)).toBe(true);
     });
 
+    it("favoritesOnly drops non-favorite candidates", () => {
+        const mixed = [
+            cg("30", "Fav CG", ["f"], [site("f", [["2026-07-10", "2026-07-12"]])]),
+            cg("31", "Other CG", [], [site("o", [["2026-08-10", "2026-08-12"]])]),
+        ];
+        const plan = planSummer(mixed, { window: W, targetTrips: 5, favoritesOnly: true });
+        expect(plan.trips.every((t) => t.tier === "fav")).toBe(true);
+        expect(plan.trips.some((t) => t.campgroundId === "31")).toBe(false);
+    });
+
+    it("weekendOnly drops trips without a Fri/Sat night", () => {
+        const mixed = [
+            cg("40", "Weekend", ["a"], [site("a", [["2026-07-10", "2026-07-12"]])]), // Fri Jul 10
+            cg("41", "Weekday", ["b"], [site("b", [["2026-07-07", "2026-07-09"]])]), // Tue Jul 7
+        ];
+        const plan = planSummer(mixed, { window: W, targetTrips: 5, weekendOnly: true });
+        expect(plan.trips.every((t) => t.includesWeekend)).toBe(true);
+        expect(plan.trips.some((t) => t.campgroundId === "41")).toBe(false);
+    });
+
     it("excludeTripIds avoids re-picking when an alternative exists", () => {
         const twoInJuly = [
             cg("20", "First", ["a"], [site("a", [["2026-07-10", "2026-07-12"]])]),

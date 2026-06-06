@@ -18,8 +18,16 @@ interface PlanPrefs {
     startMonth: number;
     endMonth: number;
     tripCount: number;
+    weekendOnly: boolean;
+    favoritesOnly: boolean;
 }
-const DEFAULT_PREFS: PlanPrefs = { startMonth: 5, endMonth: 8, tripCount: 5 }; // Jun–Sep, 5 trips
+const DEFAULT_PREFS: PlanPrefs = {
+    startMonth: 5,
+    endMonth: 8,
+    tripCount: 5,
+    weekendOnly: false,
+    favoritesOnly: false,
+}; // Jun–Sep, 5 trips, no filters
 
 function loadPlanPrefs(): PlanPrefs | null {
     if (typeof window === "undefined") return null;
@@ -34,7 +42,13 @@ function loadPlanPrefs(): PlanPrefs | null {
         ) {
             return null;
         }
-        return { startMonth: p.startMonth, endMonth: p.endMonth, tripCount: p.tripCount };
+        return {
+            startMonth: p.startMonth,
+            endMonth: p.endMonth,
+            tripCount: p.tripCount,
+            weekendOnly: p.weekendOnly === true,
+            favoritesOnly: p.favoritesOnly === true,
+        };
     } catch {
         return null;
     }
@@ -62,10 +76,17 @@ export function SummerPlan({ rows, seasonYear }: { rows: ProcessedCampground[]; 
     useEffect(() => {
         savePlanPrefs(prefs);
     }, [prefs]);
-    // A changed window or trip count means a fresh plan — drop the swap/regenerate exclusions.
+    // A changed window, trip count, or filter means a fresh plan — drop the swap/regenerate exclusions.
     useEffect(() => {
         setExclude(new Set());
-    }, [prefs.startMonth, prefs.endMonth, prefs.tripCount, seasonYear]);
+    }, [
+        prefs.startMonth,
+        prefs.endMonth,
+        prefs.tripCount,
+        prefs.weekendOnly,
+        prefs.favoritesOnly,
+        seasonYear,
+    ]);
 
     const window = useMemo(
         () => monthWindow(seasonYear, prefs.startMonth, prefs.endMonth),
@@ -79,8 +100,10 @@ export function SummerPlan({ rows, seasonYear }: { rows: ProcessedCampground[]; 
                 targetTrips: prefs.tripCount,
                 lockedTripIds: [...locked],
                 excludeTripIds: [...exclude],
+                weekendOnly: prefs.weekendOnly,
+                favoritesOnly: prefs.favoritesOnly,
             }),
-        [rows, window, prefs.tripCount, locked, exclude],
+        [rows, window, prefs.tripCount, prefs.weekendOnly, prefs.favoritesOnly, locked, exclude],
     );
 
     const setStartMonth = (m: number) =>
@@ -89,6 +112,8 @@ export function SummerPlan({ rows, seasonYear }: { rows: ProcessedCampground[]; 
         setPrefs((p) => ({ ...p, endMonth: m, startMonth: Math.min(m, p.startMonth) }));
     const bumpTrips = (delta: number) =>
         setPrefs((p) => ({ ...p, tripCount: Math.min(MAX_TRIPS, Math.max(MIN_TRIPS, p.tripCount + delta)) }));
+    const toggleWeekend = () => setPrefs((p) => ({ ...p, weekendOnly: !p.weekendOnly }));
+    const toggleFavorites = () => setPrefs((p) => ({ ...p, favoritesOnly: !p.favoritesOnly }));
 
     const toggleLock = (id: string) =>
         setLocked((prev) => {
@@ -124,6 +149,13 @@ export function SummerPlan({ rows, seasonYear }: { rows: ProcessedCampground[]; 
         color: CW.ink,
         lineHeight: 1,
     };
+    const pillStyle = (active: boolean): React.CSSProperties => ({
+        padding: "8px 12px",
+        borderRadius: 999,
+        border: `1.5px solid ${active ? CW.forest : CW.rule}`,
+        background: active ? CW.forest : CW.cream,
+        color: active ? CW.cream : CW.inkSoft,
+    });
 
     return (
         <div>
@@ -239,6 +271,27 @@ export function SummerPlan({ rows, seasonYear }: { rows: ProcessedCampground[]; 
                         style={stepBtnStyle}
                     >
                         +
+                    </button>
+                </div>
+
+                <div className="flex items-center gap-2">
+                    <button
+                        type="button"
+                        onClick={toggleFavorites}
+                        aria-pressed={prefs.favoritesOnly}
+                        className="font-mono-field font-bold uppercase"
+                        style={{ fontSize: 10, letterSpacing: "0.1em", ...pillStyle(prefs.favoritesOnly) }}
+                    >
+                        ★ Favorites only
+                    </button>
+                    <button
+                        type="button"
+                        onClick={toggleWeekend}
+                        aria-pressed={prefs.weekendOnly}
+                        className="font-mono-field font-bold uppercase"
+                        style={{ fontSize: 10, letterSpacing: "0.1em", ...pillStyle(prefs.weekendOnly) }}
+                    >
+                        Weekend only
                     </button>
                 </div>
             </div>

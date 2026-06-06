@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useCallback } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
 import { Sparkles, X } from "lucide-react";
 import { SiteConfigDialog } from "@/components/site-config-dialog";
@@ -286,6 +287,38 @@ export default function AppPage() {
                                             campgroundsWithOpenings={campgroundsWithOpenings}
                                         />
                                     </DashboardErrorBoundary>
+
+                                    <div style={{ padding: `8px ${PAD}px` }}>
+                                        <Link
+                                            href="/app/plan"
+                                            className="flex items-center justify-between gap-4 no-underline border-[1.5px] border-cw-ink bg-cw-cream text-cw-ink"
+                                            style={{
+                                                boxShadow: "4px 4px 0 var(--cw-forest)",
+                                                padding: "14px 18px",
+                                            }}
+                                        >
+                                            <span className="min-w-0">
+                                                <span
+                                                    className="block font-mono-field uppercase text-cw-clay"
+                                                    style={{ fontSize: 10, letterSpacing: "0.22em" }}
+                                                >
+                                                    § New · Trip planner
+                                                </span>
+                                                <span
+                                                    className="font-italic-serif italic"
+                                                    style={{ fontSize: 19 }}
+                                                >
+                                                    Plan your ideal summer — a few trips across the season
+                                                </span>
+                                            </span>
+                                            <span
+                                                className="shrink-0 font-poster font-extrabold uppercase text-cw-forest"
+                                                style={{ fontSize: 12, letterSpacing: "0.12em" }}
+                                            >
+                                                Open →
+                                            </span>
+                                        </Link>
+                                    </div>
 
                                     <DashboardErrorBoundary section="Openings feed">
                                         <OpeningsFeed

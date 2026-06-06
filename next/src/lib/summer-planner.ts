@@ -41,6 +41,10 @@ export interface PlanOptions {
     targetTrips: number;
     lockedTripIds?: string[];
     excludeTripIds?: string[];
+    /** Only consider trips that include a Fri/Sat night. */
+    weekendOnly?: boolean;
+    /** Only consider ★ favorite-tagged sites. */
+    favoritesOnly?: boolean;
 }
 
 function parseLocalIso(iso: string): Date {
@@ -178,7 +182,9 @@ export function planSummer(campgrounds: ProcessedCampground[], opts: PlanOptions
     const { window, targetTrips } = opts;
     const locked = new Set(opts.lockedTripIds ?? []);
     const excluded = new Set(opts.excludeTripIds ?? []);
-    const candidates = buildCandidates(campgrounds, window);
+    let candidates = buildCandidates(campgrounds, window);
+    if (opts.favoritesOnly) candidates = candidates.filter((c) => c.tier === "fav");
+    if (opts.weekendOnly) candidates = candidates.filter((c) => c.includesWeekend);
     const byId = new Map(candidates.map((c) => [tripId(c), c]));
 
     const chosen: CandidateTrip[] = [];
