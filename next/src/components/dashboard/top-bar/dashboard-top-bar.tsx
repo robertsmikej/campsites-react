@@ -26,6 +26,7 @@ interface NavLink {
 
 const NAV_LINKS: NavLink[] = [
     { href: "/app", label: "Dashboard", active: (p) => p === "/app" || p === "/app/" },
+    { href: "/app/plan", label: "Plan summer", active: (p) => p.startsWith("/app/plan") },
     { href: "/discover", label: "Picks", active: (p) => p.startsWith("/discover") },
     { href: "/app/account", label: "Account", active: (p) => p.startsWith("/app/account") },
 ];

@@ -210,7 +210,9 @@ export function planSummer(campgrounds: ProcessedCampground[], opts: PlanOptions
         if (!chosenC) {
             chosenC = pick(inSlot.filter((c) => !chosen.some((x) => overlaps(x, c))));
             if (chosenC)
-                notes.push(`Repeated ${chosenC.campgroundName} to fill ${slotLabel(window, s, targetTrips)}.`);
+                notes.push(
+                    `Repeated ${chosenC.campgroundName} to fill ${slotLabel(window, s, targetTrips)}.`,
+                );
         }
         // 4) borrow the best unused, non-overlapping candidate from anywhere in the season
         if (!chosenC) {

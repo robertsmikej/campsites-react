@@ -51,10 +51,15 @@ describe("pickSummerYear", () => {
 describe("buildCandidates", () => {
     it("emits one candidate per match whose arrival is in the window, tagged tier + weekend", () => {
         const camps = [
-            cg("1", "Outlet", ["001"], [
-                site("001", [["2026-07-03", "2026-07-05"]]), // Fri Jul 3 -> includes weekend, fav
-                site("002", [["2026-05-20", "2026-05-22"]]), // before window -> excluded
-            ]),
+            cg(
+                "1",
+                "Outlet",
+                ["001"],
+                [
+                    site("001", [["2026-07-03", "2026-07-05"]]), // Fri Jul 3 -> includes weekend, fav
+                    site("002", [["2026-05-20", "2026-05-22"]]), // before window -> excluded
+                ],
+            ),
         ];
         const cands = buildCandidates(camps, summerWindow(2026));
         expect(cands).toHaveLength(1);
