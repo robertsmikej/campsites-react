@@ -1,7 +1,6 @@
 "use client";
 
 import type { DateRange } from "react-day-picker";
-import { GroupingToggle } from "./grouping-toggle";
 import { DateRangeCalendar } from "./date-range-calendar";
 import { Legend } from "./legend";
 function formatShortRange(start: Date, end: Date): string {
@@ -16,8 +15,6 @@ interface DatePickerStripProps {
     setDatePickerOpen: (open: boolean) => void;
     handleCalSelect: (range: DateRange | undefined) => void;
     isMobile: boolean;
-    groupBy: "region" | "status" | "all";
-    onGroupBy: (v: "region" | "status" | "all") => void;
     hasCustomRange?: boolean;
     onClearDates?: () => void;
 }
@@ -29,15 +26,11 @@ export function DatePickerStrip({
     setDatePickerOpen,
     handleCalSelect,
     isMobile,
-    groupBy,
-    onGroupBy,
     hasCustomRange,
     onClearDates,
 }: DatePickerStripProps) {
     return (
         <div className="flex gap-[10px] items-center mb-6 flex-wrap">
-            <GroupingToggle groupBy={groupBy} onGroupBy={onGroupBy} />
-
             <DateRangeCalendar
                 calRange={calRange}
                 datePickerOpen={datePickerOpen}

@@ -137,8 +137,6 @@ export function DiscoverClient() {
                             campgroundsByAreas={sortedCampgrounds}
                             openCounts={openCounts}
                             isLoading={isFetching && sortedCampgrounds.length === 0}
-                            groupBy="all"
-                            onGroupBy={() => {}}
                             dateRange={dateRange}
                             calRange={undefined}
                             datePickerOpen={false}

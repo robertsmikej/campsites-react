@@ -14,8 +14,6 @@ interface WatchlistSectionProps {
     campgroundsByAreas: ProcessedCampground[];
     openCounts: Map<string, number>;
     isLoading: boolean;
-    groupBy: GroupBy;
-    onGroupBy: (v: GroupBy) => void;
     dateRange: { start: Date; end: Date };
     calRange: DateRange | undefined;
     datePickerOpen: boolean;
@@ -55,10 +53,7 @@ function LegendSwatch({ kind }: { kind: "open" | "weekend" | "limited" | "booked
 
 export function WatchlistSection({
     campgroundsByAreas,
-    openCounts,
     isLoading,
-    groupBy,
-    onGroupBy,
     dateRange,
     calRange,
     datePickerOpen,
@@ -72,23 +67,8 @@ export function WatchlistSection({
     onEditSettings,
     PAD,
 }: WatchlistSectionProps) {
-    // The timeline is one shared-axis plate; groupBy now reorders rows rather
-    // than splitting them into separate tables.
-    const orderedRows = (() => {
-        const rows = [...campgroundsByAreas];
-        if (groupBy === "status") {
-            return rows.sort((a, b) => {
-                const ao = (openCounts.get(a.id ?? a.name) ?? 0) > 0 ? 1 : 0;
-                const bo = (openCounts.get(b.id ?? b.name) ?? 0) > 0 ? 1 : 0;
-                return bo - ao;
-            });
-        }
-        if (groupBy === "region") {
-            return rows.sort((a, b) => (a.area ?? "Other").localeCompare(b.area ?? "Other"));
-        }
-        return rows;
-    })();
-
+    // Campgrounds render in the saved Configure (drag) order — campgroundsByAreas
+    // preserves the user's config order, so the dashboard matches Configure.
     return (
         <section
             className="relative border-t-[1.5px] border-cw-ink"
@@ -152,8 +132,6 @@ export function WatchlistSection({
                     setDatePickerOpen={setDatePickerOpen}
                     handleCalSelect={handleCalSelect}
                     isMobile={isMobile}
-                    groupBy={groupBy}
-                    onGroupBy={onGroupBy}
                     hasCustomRange={hasCustomRange}
                     onClearDates={onClearDates}
                 />
@@ -166,10 +144,14 @@ export function WatchlistSection({
                     ))}
                 </div>
             ) : isMobile ? (
-                <MobileTimeline rows={orderedRows} dateRange={dateRange} onEditSettings={onEditSettings} />
+                <MobileTimeline
+                    rows={campgroundsByAreas}
+                    dateRange={dateRange}
+                    onEditSettings={onEditSettings}
+                />
             ) : (
                 <AvailabilityTimeline
-                    rows={orderedRows}
+                    rows={campgroundsByAreas}
                     dateRange={dateRange}
                     defaultExpandFirst
                     onEditSettings={onEditSettings}

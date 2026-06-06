@@ -56,7 +56,7 @@ export default function AppPage() {
         return latest ?? undefined;
     }, [siteConfig]);
 
-    // Dashboard preferences (date range + grouping) — single persisted blob.
+    // Dashboard preferences (date range) — single persisted blob.
     const {
         dateRange,
         calRange,
@@ -65,10 +65,7 @@ export default function AppPage() {
         setDatePickerOpen,
         handleCalSelect,
         clearDateRange,
-        groupBy,
-        setGroupBy,
     } = useDashboardPrefs({ maxEnd: maxWatchlistEnd });
-    const handleGroupBy = setGroupBy;
 
     // Favorites
     const [favorites, setFavorites] = useState<Set<string>>(() => {
@@ -334,8 +331,6 @@ export default function AppPage() {
                                             campgroundsByAreas={campgroundsByAreas}
                                             openCounts={openCounts}
                                             isLoading={isLoading}
-                                            groupBy={groupBy}
-                                            onGroupBy={handleGroupBy}
                                             dateRange={dateRange}
                                             calRange={calRange}
                                             hasCustomRange={hasCustomRange}
