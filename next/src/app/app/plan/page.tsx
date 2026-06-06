@@ -6,7 +6,7 @@ import { CW } from "@/components/field-notes/cw-tokens";
 import { useAuth } from "@/hooks/use-auth";
 import { useUserCampgrounds } from "@/hooks/use-user-campgrounds";
 import { useCampgroundsData } from "@/hooks/use-campgrounds-data";
-import { pickSummerYear, summerWindow } from "@/lib/summer-planner";
+import { pickSummerYear } from "@/lib/summer-planner";
 import { DashboardTopBar } from "@/components/dashboard/dashboard-top-bar";
 import { SummerPlan } from "@/components/dashboard/summer-plan/summer-plan";
 
@@ -15,10 +15,7 @@ export default function PlanPage() {
     const { siteConfig, isHydrating } = useUserCampgrounds();
     const { campgroundsByAreas, isFetching } = useCampgroundsData({ enabled: !isHydrating, siteConfig });
 
-    const window = useMemo(
-        () => summerWindow(pickSummerYear(campgroundsByAreas, new Date())),
-        [campgroundsByAreas],
-    );
+    const seasonYear = useMemo(() => pickSummerYear(campgroundsByAreas, new Date()), [campgroundsByAreas]);
 
     const loading = isHydrating || (isFetching && campgroundsByAreas.length === 0);
 
@@ -67,7 +64,7 @@ export default function PlanPage() {
                             Reading your watchlist availability…
                         </div>
                     ) : (
-                        <SummerPlan rows={campgroundsByAreas} window={window} />
+                        <SummerPlan rows={campgroundsByAreas} seasonYear={seasonYear} />
                     )}
                 </div>
             </main>

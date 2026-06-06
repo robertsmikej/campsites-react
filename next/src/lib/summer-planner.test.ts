@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { summerWindow, pickSummerYear, buildCandidates, planSummer } from "./summer-planner";
+import { summerWindow, monthWindow, pickSummerYear, buildCandidates, planSummer } from "./summer-planner";
 import type { ProcessedCampground, SiteAvailability } from "@/types/campground";
 
 function site(siteName: string, matches: Array<[string, string]>): SiteAvailability {
@@ -33,6 +33,21 @@ describe("summerWindow", () => {
         expect(w.start.getDate()).toBe(1);
         expect(w.end.getMonth()).toBe(8); // September
         expect(w.end.getDate()).toBe(30);
+    });
+});
+
+describe("monthWindow", () => {
+    it("spans first day of startMonth to last day of endMonth", () => {
+        const w = monthWindow(2027, 4, 8); // May–Sep 2027
+        expect(w.start.getMonth()).toBe(4); // May
+        expect(w.start.getDate()).toBe(1);
+        expect(w.end.getMonth()).toBe(8); // Sep
+        expect(w.end.getDate()).toBe(30);
+    });
+    it("handles end months with 31 days", () => {
+        const w = monthWindow(2027, 4, 9); // May–Oct
+        expect(w.end.getMonth()).toBe(9); // Oct
+        expect(w.end.getDate()).toBe(31);
     });
 });
 

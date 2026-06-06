@@ -1,28 +1,94 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CW } from "@/components/field-notes/cw-tokens";
-import { planSummer, type PlanWindow } from "@/lib/summer-planner";
+import { monthWindow, planSummer } from "@/lib/summer-planner";
 import type { ProcessedCampground } from "@/types/campground";
 import { TripCard } from "./trip-card";
 import { SummerStrip } from "./summer-strip";
 
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+// Months offered in the window pickers (Apr–Oct covers any realistic camping season).
+const MONTH_OPTIONS = [3, 4, 5, 6, 7, 8, 9];
+const MIN_TRIPS = 2;
+const MAX_TRIPS = 8;
 
-export function SummerPlan({ rows, window }: { rows: ProcessedCampground[]; window: PlanWindow }) {
+const PREFS_KEY = "campwatch:plan-prefs";
+interface PlanPrefs {
+    startMonth: number;
+    endMonth: number;
+    tripCount: number;
+}
+const DEFAULT_PREFS: PlanPrefs = { startMonth: 5, endMonth: 8, tripCount: 5 }; // Jun–Sep, 5 trips
+
+function loadPlanPrefs(): PlanPrefs | null {
+    if (typeof window === "undefined") return null;
+    try {
+        const raw = window.localStorage.getItem(PREFS_KEY);
+        if (!raw) return null;
+        const p = JSON.parse(raw) as Partial<PlanPrefs>;
+        if (
+            typeof p.startMonth !== "number" ||
+            typeof p.endMonth !== "number" ||
+            typeof p.tripCount !== "number"
+        ) {
+            return null;
+        }
+        return { startMonth: p.startMonth, endMonth: p.endMonth, tripCount: p.tripCount };
+    } catch {
+        return null;
+    }
+}
+
+function savePlanPrefs(prefs: PlanPrefs): void {
+    if (typeof window === "undefined") return;
+    try {
+        window.localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+    } catch {
+        // ignore storage errors
+    }
+}
+
+export function SummerPlan({ rows, seasonYear }: { rows: ProcessedCampground[]; seasonYear: number }) {
+    // Default first to avoid SSR/hydration mismatch; hydrate from storage on mount.
+    const [prefs, setPrefs] = useState<PlanPrefs>(DEFAULT_PREFS);
     const [locked, setLocked] = useState<Set<string>>(new Set());
     const [exclude, setExclude] = useState<Set<string>>(new Set());
+
+    useEffect(() => {
+        const stored = loadPlanPrefs();
+        if (stored) setPrefs(stored);
+    }, []);
+    useEffect(() => {
+        savePlanPrefs(prefs);
+    }, [prefs]);
+    // A changed window or trip count means a fresh plan — drop the swap/regenerate exclusions.
+    useEffect(() => {
+        setExclude(new Set());
+    }, [prefs.startMonth, prefs.endMonth, prefs.tripCount, seasonYear]);
+
+    const window = useMemo(
+        () => monthWindow(seasonYear, prefs.startMonth, prefs.endMonth),
+        [seasonYear, prefs.startMonth, prefs.endMonth],
+    );
 
     const plan = useMemo(
         () =>
             planSummer(rows, {
                 window,
-                targetTrips: 5,
+                targetTrips: prefs.tripCount,
                 lockedTripIds: [...locked],
                 excludeTripIds: [...exclude],
             }),
-        [rows, window, locked, exclude],
+        [rows, window, prefs.tripCount, locked, exclude],
     );
+
+    const setStartMonth = (m: number) =>
+        setPrefs((p) => ({ ...p, startMonth: m, endMonth: Math.max(m, p.endMonth) }));
+    const setEndMonth = (m: number) =>
+        setPrefs((p) => ({ ...p, endMonth: m, startMonth: Math.min(m, p.startMonth) }));
+    const bumpTrips = (delta: number) =>
+        setPrefs((p) => ({ ...p, tripCount: Math.min(MAX_TRIPS, Math.max(MIN_TRIPS, p.tripCount + delta)) }));
 
     const toggleLock = (id: string) =>
         setLocked((prev) => {
@@ -43,9 +109,26 @@ export function SummerPlan({ rows, window }: { rows: ProcessedCampground[]; wind
         setLocked(new Set());
     };
 
+    const selectStyle: React.CSSProperties = {
+        background: CW.cream,
+        border: `1.5px solid ${CW.ink}`,
+        borderRadius: 3,
+        padding: "6px 8px",
+        color: CW.ink,
+    };
+    const stepBtnStyle: React.CSSProperties = {
+        width: 30,
+        height: 30,
+        border: `1.5px solid ${CW.ink}`,
+        background: CW.cream,
+        color: CW.ink,
+        lineHeight: 1,
+    };
+
     return (
         <div>
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            {/* Summary + primary actions */}
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
                 <div className="font-italic-serif italic" style={{ fontSize: 16, color: CW.inkSoft }}>
                     {plan.stats.tripCount} trip{plan.stats.tripCount === 1 ? "" : "s"} ·{" "}
                     {plan.stats.campgroundCount} campground{plan.stats.campgroundCount === 1 ? "" : "s"} ·{" "}
@@ -86,9 +169,83 @@ export function SummerPlan({ rows, window }: { rows: ProcessedCampground[]; wind
                 </div>
             </div>
 
+            {/* Window + trip-count controls */}
+            <div className="mb-5 flex flex-wrap items-center gap-x-5 gap-y-3">
+                <label className="flex items-center gap-2">
+                    <span
+                        className="font-mono-field font-bold uppercase"
+                        style={{ fontSize: 10, letterSpacing: "0.16em", color: CW.clay }}
+                    >
+                        Window
+                    </span>
+                    <select
+                        aria-label="Start month"
+                        value={prefs.startMonth}
+                        onChange={(e) => setStartMonth(Number(e.target.value))}
+                        className="font-mono-field"
+                        style={selectStyle}
+                    >
+                        {MONTH_OPTIONS.map((m) => (
+                            <option key={m} value={m}>
+                                {MON[m]}
+                            </option>
+                        ))}
+                    </select>
+                    <span style={{ color: CW.inkSoft }}>–</span>
+                    <select
+                        aria-label="End month"
+                        value={prefs.endMonth}
+                        onChange={(e) => setEndMonth(Number(e.target.value))}
+                        className="font-mono-field"
+                        style={selectStyle}
+                    >
+                        {MONTH_OPTIONS.map((m) => (
+                            <option key={m} value={m}>
+                                {MON[m]}
+                            </option>
+                        ))}
+                    </select>
+                </label>
+
+                <div className="flex items-center gap-2">
+                    <span
+                        className="font-mono-field font-bold uppercase"
+                        style={{ fontSize: 10, letterSpacing: "0.16em", color: CW.clay }}
+                    >
+                        Trips
+                    </span>
+                    <button
+                        type="button"
+                        aria-label="Fewer trips"
+                        onClick={() => bumpTrips(-1)}
+                        disabled={prefs.tripCount <= MIN_TRIPS}
+                        className="font-poster font-extrabold disabled:opacity-40"
+                        style={stepBtnStyle}
+                    >
+                        −
+                    </button>
+                    <span
+                        className="font-mono-field font-bold tabular-nums"
+                        style={{ fontSize: 14, color: CW.ink, minWidth: 16, textAlign: "center" }}
+                    >
+                        {prefs.tripCount}
+                    </span>
+                    <button
+                        type="button"
+                        aria-label="More trips"
+                        onClick={() => bumpTrips(1)}
+                        disabled={prefs.tripCount >= MAX_TRIPS}
+                        className="font-poster font-extrabold disabled:opacity-40"
+                        style={stepBtnStyle}
+                    >
+                        +
+                    </button>
+                </div>
+            </div>
+
             {plan.trips.length === 0 ? (
                 <div className="font-italic-serif italic" style={{ fontSize: 16, color: CW.inkFaint }}>
-                    No summer openings yet — check back as sites free up.
+                    No openings in this window yet — widen it or check back as sites free up.
                 </div>
             ) : (
                 <>

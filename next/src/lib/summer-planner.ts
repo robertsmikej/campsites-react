@@ -48,13 +48,18 @@ function parseLocalIso(iso: string): Date {
     return new Date(y ?? 1970, (m ?? 1) - 1, d ?? 1);
 }
 
-/** Jun 1 – Sep 30 of `year`. */
-export function summerWindow(year: number): PlanWindow {
-    const start = new Date(year, 5, 1);
+/** First day of `startMonth` to the last day of `endMonth` (0-indexed months). */
+export function monthWindow(year: number, startMonth: number, endMonth: number): PlanWindow {
+    const start = new Date(year, startMonth, 1);
     start.setHours(0, 0, 0, 0);
-    const end = new Date(year, 8, 30);
+    const end = new Date(year, endMonth + 1, 0); // day 0 of next month = last day of endMonth
     end.setHours(0, 0, 0, 0);
     return { start, end };
+}
+
+/** Jun 1 – Sep 30 of `year` (the default summer window). */
+export function summerWindow(year: number): PlanWindow {
+    return monthWindow(year, 5, 8);
 }
 
 /** Year with the most Jun–Sep openings across the snapshot; falls back to now's year. */
