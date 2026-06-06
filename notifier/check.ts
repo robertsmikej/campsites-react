@@ -55,11 +55,15 @@ const COOLDOWN_MS = 24 * 60 * 60 * 1000;
 // ── API response types ────────────────────────────────────────────────────────
 
 interface NotifierState {
-    /** signature -> ISO timestamp the opening was last seen. Persisted across
-     *  cycles (pruned by age, NOT by current visibility) so a still-open or
-     *  flickering opening keeps a recent last-seen and isn't re-alerted. */
+    /** site key ("campgroundId:siteId") -> alerted date ranges, each with the ISO
+     *  time it was last seen. Overlapping windows at a site are merged into one
+     *  range, so a window shrinking/growing/shifting (e.g. Jun13–18 -> Jun14–18)
+     *  counts as the same opening and isn't re-alerted. Retained until the range
+     *  ages past the cooldown, then pruned. */
+    sites?: Record<string, Array<{ from: string; to: string; seen: string }>>;
+    /** @deprecated v1 cooldown shape (signature -> last-seen ISO); migrated on read. */
     notified?: Record<string, string>;
-    /** @deprecated legacy shape (currently-visible signatures); migrated on read. */
+    /** @deprecated original shape (currently-visible signatures); migrated on read. */
     signatures?: string[];
 }
 
@@ -366,49 +370,120 @@ function signatureForMatch(m: MatchResult): string {
     return generateSignature(m.campgroundId, m.siteId, m.match);
 }
 
-// Persistent cooldown dedup. An opening is emailed only when its signature was
-// never seen, or last seen longer ago than the cooldown. Every currently-visible
-// signature has its last-seen refreshed (so a continuously-open opening never
-// re-alerts); prior entries that have dropped out are retained until they age
-// past the cooldown (so a brief flicker stays suppressed), then pruned.
+interface SeenRange {
+    from: string;
+    to: string;
+    seen: number; // ms
+}
+
+// Half-open [from, to) overlap on ISO date strings (lexicographic compare works).
+function rangesOverlap(aFrom: string, aTo: string, bFrom: string, bTo: string): boolean {
+    return aFrom < bTo && bFrom < aTo;
+}
+
+function siteKeyOf(m: MatchResult): string {
+    return `${m.campgroundId}:${m.siteId}`;
+}
+
+// Parse an exact signature "campgroundId:siteId:from:to:nights" into site key + range.
+// from/to are ISO dates (no colons), so a plain split is safe.
+function parseSig(sig: string): { siteKey: string; from: string; to: string } | null {
+    const p = sig.split(":");
+    if (p.length < 5) return null;
+    return { siteKey: `${p[0]}:${p[1]}`, from: p[2]!, to: p[3]! };
+}
+
+// Merge overlapping ranges into consolidated spans, keeping the latest `seen`.
+function mergeRanges(ranges: SeenRange[]): SeenRange[] {
+    const sorted = [...ranges].sort((a, b) => a.from.localeCompare(b.from) || a.to.localeCompare(b.to));
+    const out: SeenRange[] = [];
+    for (const r of sorted) {
+        const last = out[out.length - 1];
+        if (last && r.from < last.to) {
+            if (r.to > last.to) last.to = r.to;
+            if (r.seen > last.seen) last.seen = r.seen;
+        } else {
+            out.push({ ...r });
+        }
+    }
+    return out;
+}
+
+// Overlap-aware persistent dedup. An opening is emailed only when its date window
+// overlaps NO already-alerted window for that site (within the cooldown). So a
+// window shifting/shrinking/growing (Jun13–18 -> Jun14–18) is one opening, and a
+// still-open or flickering one isn't re-alerted. A genuinely separate date window
+// at the same site (e.g. a July opening) still alerts. Ranges are pruned once they
+// age past the cooldown.
 export function diffPerUser(
     matches: MatchResult[],
     priorState: NotifierState | null | undefined,
     nowMs: number,
     cooldownMs: number = COOLDOWN_MS,
 ): { newMatches: MatchResult[]; nextState: NotifierState } {
-    const nowIso = new Date(nowMs).toISOString();
     const cutoff = nowMs - cooldownMs;
 
-    // Prior last-seen map (ms). Migrate the legacy {signatures:[]} shape by
-    // treating those as seen "now" so a deploy doesn't re-alert everything.
-    const prior: Record<string, number> = {};
-    if (priorState?.notified) {
-        for (const [sig, isoTs] of Object.entries(priorState.notified)) {
-            const t = Date.parse(isoTs);
-            if (!Number.isNaN(t)) prior[sig] = t;
+    // Prior alerted ranges per site (within cooldown), migrating older state shapes.
+    const prior: Record<string, SeenRange[]> = {};
+    const addPrior = (siteKey: string, from: string, to: string, seenMs: number) => {
+        if (Number.isNaN(seenMs) || seenMs <= cutoff) return;
+        (prior[siteKey] ??= []).push({ from, to, seen: seenMs });
+    };
+    if (priorState?.sites) {
+        for (const [siteKey, ranges] of Object.entries(priorState.sites))
+            for (const r of ranges) addPrior(siteKey, r.from, r.to, Date.parse(r.seen));
+    } else if (priorState?.notified) {
+        for (const [sig, iso] of Object.entries(priorState.notified)) {
+            const ps = parseSig(sig);
+            if (ps) addPrior(ps.siteKey, ps.from, ps.to, Date.parse(iso));
         }
     } else if (priorState?.signatures) {
-        for (const sig of priorState.signatures) prior[sig] = nowMs;
+        for (const sig of priorState.signatures) {
+            const ps = parseSig(sig);
+            if (ps) addPrior(ps.siteKey, ps.from, ps.to, nowMs);
+        }
     }
 
-    const visibleSigs = new Set<string>();
+    // Group current matches per site; process earliest-arrival, longest-stay first
+    // so the representative alert for an opening is the fullest window.
+    const currentBySite: Record<string, MatchResult[]> = {};
+    for (const m of matches) (currentBySite[siteKeyOf(m)] ??= []).push(m);
+    for (const list of Object.values(currentBySite))
+        list.sort((a, b) => a.match.from.localeCompare(b.match.from) || b.match.nights - a.match.nights);
+
+    // A current match is new if it overlaps no already-alerted range for its site
+    // (prior within cooldown, or one accepted earlier this cycle — collapses the
+    // multiple stay-length permutations of one opening into a single alert).
     const newMatches: MatchResult[] = [];
-    for (const m of matches) {
-        const sig = signatureForMatch(m);
-        visibleSigs.add(sig);
-        const last = prior[sig];
-        if (last === undefined || last <= cutoff) newMatches.push(m);
+    for (const [siteKey, list] of Object.entries(currentBySite)) {
+        const known: SeenRange[] = [...(prior[siteKey] ?? [])];
+        for (const m of list) {
+            const { from, to } = m.match;
+            if (known.some((r) => rangesOverlap(r.from, r.to, from, to))) continue;
+            newMatches.push(m);
+            known.push({ from, to, seen: nowMs });
+        }
     }
 
-    const notified: Record<string, string> = {};
-    for (const sig of visibleSigs) notified[sig] = nowIso; // refresh last-seen
-    for (const [sig, t] of Object.entries(prior)) {
-        if (visibleSigs.has(sig)) continue; // already refreshed above
-        if (t > cutoff) notified[sig] = new Date(t).toISOString(); // retain within cooldown
+    // Next state: merge prior (within cooldown) with all currently-visible ranges
+    // (seen = now). Visible openings refresh their last-seen; gone-but-recent ones
+    // are retained until they age past the cooldown.
+    const sites: NonNullable<NotifierState["sites"]> = {};
+    const siteKeys = new Set([...Object.keys(prior), ...Object.keys(currentBySite)]);
+    for (const siteKey of siteKeys) {
+        const ranges: SeenRange[] = [...(prior[siteKey] ?? [])];
+        for (const m of currentBySite[siteKey] ?? [])
+            ranges.push({ from: m.match.from, to: m.match.to, seen: nowMs });
+        const merged = mergeRanges(ranges).filter((r) => r.seen > cutoff);
+        if (merged.length)
+            sites[siteKey] = merged.map((r) => ({
+                from: r.from,
+                to: r.to,
+                seen: new Date(r.seen).toISOString(),
+            }));
     }
 
-    return { newMatches, nextState: { notified } };
+    return { newMatches, nextState: { sites } };
 }
 
 // ── Send email to a single user ───────────────────────────────────────────────

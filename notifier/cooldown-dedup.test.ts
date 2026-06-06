@@ -3,12 +3,15 @@ import { diffPerUser } from "./check";
 import type { MatchResult } from "./lib/diff";
 
 const COOLDOWN = 24 * 60 * 60 * 1000;
-const NOW = Date.parse("2026-06-06T12:00:00.000Z");
+const NOW = Date.parse("2026-06-06T18:35:00.000Z");
+const CG = "232050";
+const SITE = "15750"; // Glacier View site 016
+const KEY = `${CG}:${SITE}`;
 
-function m(cg: string, siteId: string, from: string, to: string, nights: number): MatchResult {
+function m(from: string, to: string, nights: number, siteId = SITE): MatchResult {
     return {
-        campgroundId: cg,
-        campgroundName: cg,
+        campgroundId: CG,
+        campgroundName: "Glacier View",
         campgroundArea: "",
         campgroundDescription: "",
         siteId,
@@ -17,60 +20,91 @@ function m(cg: string, siteId: string, from: string, to: string, nights: number)
         group: "all-others",
     };
 }
-function sig(x: MatchResult): string {
-    return `${x.campgroundId}:${x.siteId}:${x.match.from}:${x.match.to}:${x.match.nights}`;
-}
 const iso = (ms: number) => new Date(ms).toISOString();
+const HOUR = 60 * 60 * 1000;
 
-describe("diffPerUser — persistent cooldown dedup", () => {
-    const opening = m("232358", "69803", "2026-06-13", "2026-06-15", 2);
-    const S = sig(opening);
-
-    it("alerts an opening never seen before and stamps it", () => {
-        const { newMatches, nextState } = diffPerUser([opening], null, NOW, COOLDOWN);
+describe("diffPerUser — overlap-aware persistent dedup", () => {
+    it("alerts a never-seen opening and records its range", () => {
+        const { newMatches, nextState } = diffPerUser(
+            [m("2026-06-13", "2026-06-18", 5)],
+            null,
+            NOW,
+            COOLDOWN,
+        );
         expect(newMatches).toHaveLength(1);
-        expect(nextState.notified?.[S]).toBe(iso(NOW));
+        expect(nextState.sites?.[KEY]).toEqual([{ from: "2026-06-13", to: "2026-06-18", seen: iso(NOW) }]);
     });
 
-    it("suppresses the same opening on the next cycle within the cooldown", () => {
-        const prior = { notified: { [S]: iso(NOW - 60 * 60 * 1000) } }; // seen 1h ago
-        const { newMatches, nextState } = diffPerUser([opening], prior, NOW, COOLDOWN);
+    it("suppresses an overlapping window next cycle (window shrank Jun13–18 -> Jun14–18)", () => {
+        const prior = { sites: { [KEY]: [{ from: "2026-06-13", to: "2026-06-18", seen: iso(NOW - HOUR) }] } };
+        const { newMatches, nextState } = diffPerUser(
+            [m("2026-06-14", "2026-06-18", 4)],
+            prior,
+            NOW,
+            COOLDOWN,
+        );
         expect(newMatches).toHaveLength(0);
-        expect(nextState.notified?.[S]).toBe(iso(NOW)); // refreshed last-seen
+        // merged into one span, last-seen refreshed
+        expect(nextState.sites?.[KEY]).toEqual([{ from: "2026-06-13", to: "2026-06-18", seen: iso(NOW) }]);
     });
 
-    it("does NOT re-alert a continuously-open opening even past 24h (last-seen keeps refreshing)", () => {
-        // Simulate it having been refreshed recently; even if the original alert was >24h ago,
-        // last-seen is recent because it's been visible every cycle.
-        const prior = { notified: { [S]: iso(NOW - 60 * 60 * 1000) } };
-        const { newMatches } = diffPerUser([opening], prior, NOW, COOLDOWN);
-        expect(newMatches).toHaveLength(0);
+    it("collapses multiple stay-lengths of one opening into a single alert in the same cycle", () => {
+        const matches = [
+            m("2026-06-13", "2026-06-18", 5),
+            m("2026-06-14", "2026-06-18", 4),
+            m("2026-06-13", "2026-06-17", 4),
+        ];
+        const { newMatches } = diffPerUser(matches, null, NOW, COOLDOWN);
+        expect(newMatches).toHaveLength(1);
+        expect(newMatches[0]!.match).toEqual({ from: "2026-06-13", to: "2026-06-18", nights: 5 });
     });
 
-    it("re-alerts when last seen longer ago than the cooldown (genuinely freed up again)", () => {
-        const prior = { notified: { [S]: iso(NOW - 25 * 60 * 60 * 1000) } }; // 25h ago
-        const { newMatches } = diffPerUser([opening], prior, NOW, COOLDOWN);
+    it("still alerts a genuinely separate (non-overlapping) window at the same site", () => {
+        const prior = { sites: { [KEY]: [{ from: "2026-06-13", to: "2026-06-18", seen: iso(NOW - HOUR) }] } };
+        const { newMatches } = diffPerUser([m("2026-07-04", "2026-07-07", 3)], prior, NOW, COOLDOWN);
         expect(newMatches).toHaveLength(1);
     });
 
-    it("retains a disappeared opening within the cooldown so a flicker stays suppressed", () => {
-        const prior = { notified: { [S]: iso(NOW - 60 * 60 * 1000) } };
-        // opening not present this cycle (booked)
+    it("re-alerts an opening last seen longer ago than the cooldown", () => {
+        const prior = {
+            sites: { [KEY]: [{ from: "2026-06-13", to: "2026-06-18", seen: iso(NOW - 25 * HOUR) }] },
+        };
+        const { newMatches } = diffPerUser([m("2026-06-13", "2026-06-18", 5)], prior, NOW, COOLDOWN);
+        expect(newMatches).toHaveLength(1);
+    });
+
+    it("retains a disappeared opening within the cooldown (flicker stays suppressed)", () => {
+        const prior = { sites: { [KEY]: [{ from: "2026-06-13", to: "2026-06-18", seen: iso(NOW - HOUR) }] } };
         const { newMatches, nextState } = diffPerUser([], prior, NOW, COOLDOWN);
         expect(newMatches).toHaveLength(0);
-        expect(nextState.notified?.[S]).toBe(iso(NOW - 60 * 60 * 1000)); // retained, not refreshed
+        expect(nextState.sites?.[KEY]).toEqual([
+            { from: "2026-06-13", to: "2026-06-18", seen: iso(NOW - HOUR) },
+        ]);
     });
 
-    it("prunes a disappeared opening once it's older than the cooldown", () => {
-        const prior = { notified: { [S]: iso(NOW - 25 * 60 * 60 * 1000) } };
+    it("prunes a disappeared opening older than the cooldown", () => {
+        const prior = {
+            sites: { [KEY]: [{ from: "2026-06-13", to: "2026-06-18", seen: iso(NOW - 25 * HOUR) }] },
+        };
         const { nextState } = diffPerUser([], prior, NOW, COOLDOWN);
-        expect(nextState.notified?.[S]).toBeUndefined();
+        expect(nextState.sites?.[KEY]).toBeUndefined();
     });
 
-    it("migrates the legacy {signatures:[]} shape as seen-now (no deploy-time re-alert burst)", () => {
-        const prior = { signatures: [S] };
-        const { newMatches, nextState } = diffPerUser([opening], prior, NOW, COOLDOWN);
+    it("migrates legacy {signatures:[]} as seen-now (no deploy-time burst)", () => {
+        const prior = { signatures: [`${CG}:${SITE}:2026-06-13:2026-06-18:5`] };
+        const { newMatches } = diffPerUser([m("2026-06-14", "2026-06-18", 4)], prior, NOW, COOLDOWN);
+        expect(newMatches).toHaveLength(0); // overlaps the migrated range
+    });
+
+    it("migrates v1 {notified:{sig:iso}} as ranges", () => {
+        const prior = { notified: { [`${CG}:${SITE}:2026-06-13:2026-06-18:5`]: iso(NOW - HOUR) } };
+        const { newMatches } = diffPerUser([m("2026-06-14", "2026-06-18", 4)], prior, NOW, COOLDOWN);
         expect(newMatches).toHaveLength(0);
-        expect(nextState.notified?.[S]).toBe(iso(NOW));
+    });
+
+    it("does not let one site's ranges suppress another site", () => {
+        const prior = { sites: { [KEY]: [{ from: "2026-06-13", to: "2026-06-18", seen: iso(NOW - HOUR) }] } };
+        const { newMatches } = diffPerUser([m("2026-06-13", "2026-06-18", 5, "99999")], prior, NOW, COOLDOWN);
+        expect(newMatches).toHaveLength(1);
     });
 });
