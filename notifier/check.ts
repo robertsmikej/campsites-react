@@ -46,10 +46,21 @@ let kvAdapter: KvAdapter | null = null;
 // milliseconds after the global first-sighting. Curators are notified immediately.
 const LEAD_TIME_MS = 15 * 60 * 1000;
 
+// Once an opening (exact signature) has been emailed, suppress re-alerting it for
+// this long after it was last seen. This is the dedup cooldown: it stops the same
+// opening from re-sending every cycle and absorbs brief disappear→reappear flicker,
+// while still re-alerting if the opening genuinely frees up again a day+ later.
+const COOLDOWN_MS = 24 * 60 * 60 * 1000;
+
 // ── API response types ────────────────────────────────────────────────────────
 
 interface NotifierState {
-    signatures: string[];
+    /** signature -> ISO timestamp the opening was last seen. Persisted across
+     *  cycles (pruned by age, NOT by current visibility) so a still-open or
+     *  flickering opening keeps a recent last-seen and isn't re-alerted. */
+    notified?: Record<string, string>;
+    /** @deprecated legacy shape (currently-visible signatures); migrated on read. */
+    signatures?: string[];
 }
 
 interface NotificationSettings {
@@ -355,14 +366,49 @@ function signatureForMatch(m: MatchResult): string {
     return generateSignature(m.campgroundId, m.siteId, m.match);
 }
 
-function diffPerUser(
+// Persistent cooldown dedup. An opening is emailed only when its signature was
+// never seen, or last seen longer ago than the cooldown. Every currently-visible
+// signature has its last-seen refreshed (so a continuously-open opening never
+// re-alerts); prior entries that have dropped out are retained until they age
+// past the cooldown (so a brief flicker stays suppressed), then pruned.
+export function diffPerUser(
     matches: MatchResult[],
     priorState: NotifierState | null | undefined,
+    nowMs: number,
+    cooldownMs: number = COOLDOWN_MS,
 ): { newMatches: MatchResult[]; nextState: NotifierState } {
-    const priorSignatures = new Set(priorState?.signatures ?? []);
-    const newMatches = matches.filter((m) => !priorSignatures.has(signatureForMatch(m)));
-    const nextState: NotifierState = { signatures: matches.map(signatureForMatch) };
-    return { newMatches, nextState };
+    const nowIso = new Date(nowMs).toISOString();
+    const cutoff = nowMs - cooldownMs;
+
+    // Prior last-seen map (ms). Migrate the legacy {signatures:[]} shape by
+    // treating those as seen "now" so a deploy doesn't re-alert everything.
+    const prior: Record<string, number> = {};
+    if (priorState?.notified) {
+        for (const [sig, isoTs] of Object.entries(priorState.notified)) {
+            const t = Date.parse(isoTs);
+            if (!Number.isNaN(t)) prior[sig] = t;
+        }
+    } else if (priorState?.signatures) {
+        for (const sig of priorState.signatures) prior[sig] = nowMs;
+    }
+
+    const visibleSigs = new Set<string>();
+    const newMatches: MatchResult[] = [];
+    for (const m of matches) {
+        const sig = signatureForMatch(m);
+        visibleSigs.add(sig);
+        const last = prior[sig];
+        if (last === undefined || last <= cutoff) newMatches.push(m);
+    }
+
+    const notified: Record<string, string> = {};
+    for (const sig of visibleSigs) notified[sig] = nowIso; // refresh last-seen
+    for (const [sig, t] of Object.entries(prior)) {
+        if (visibleSigs.has(sig)) continue; // already refreshed above
+        if (t > cutoff) notified[sig] = new Date(t).toISOString(); // retain within cooldown
+    }
+
+    return { newMatches, nextState: { notified } };
 }
 
 // ── Send email to a single user ───────────────────────────────────────────────
@@ -514,7 +560,7 @@ export async function run(config: RunConfig): Promise<void> {
 
         const priorState = target.notifierState ?? null;
         const isFirstRun = priorState === null;
-        const { newMatches, nextState } = diffPerUser(visible, priorState);
+        const { newMatches, nextState } = diffPerUser(visible, priorState, now.getTime());
 
         if (isFirstRun && !forceEmail) {
             console.log(`[${target.email}] first run — seeding state, no email`);

@@ -11,9 +11,9 @@ function siteAvail(siteId: string, siteName: string): SiteAvailabilityMap[string
     return {
         siteId,
         siteName,
+        campsite_type: "STANDARD",
         dates: [],
         matches: [{ from: "2026-07-04", to: "2026-07-06", nights: 2 }],
-        excludedMatches: [],
     };
 }
 
