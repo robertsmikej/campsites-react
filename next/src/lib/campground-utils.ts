@@ -148,15 +148,14 @@ export const checkForAppropriateGroups = (
     });
 };
 
-// Favorite/worthwhile classification and the show/hide toggles are config, not
-// availability — but the availability snapshot embeds a copy that goes stale the
-// moment the user edits them (the rebuild round-trips through eventually-consistent
-// KV). Overlay the live config (keyed by campground id) so the dashboard reflects
-// edits instantly, independent of snapshot timing.
+// Favorite/worthwhile classification is config, not availability — but the
+// availability snapshot embeds a copy that goes stale the moment the user edits
+// favorites (the rebuild round-trips through eventually-consistent KV). Overlay
+// the live config ratings (keyed by campground id) so the dashboard reflects edits
+// instantly, independent of snapshot timing.
 export interface ConfigOverlay {
     favorites: string[];
     worthwhile: string[];
-    showOrHide?: ProcessedCampground["showOrHide"];
 }
 
 export const overlayConfigRatings = (
@@ -172,7 +171,6 @@ export const overlayConfigRatings = (
             return {
                 ...cg,
                 sites: { favorites: overlay.favorites, worthwhile: overlay.worthwhile },
-                ...(overlay.showOrHide ? { showOrHide: overlay.showOrHide } : {}),
             };
         });
     }

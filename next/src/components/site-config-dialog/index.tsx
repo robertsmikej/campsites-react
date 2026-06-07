@@ -48,7 +48,6 @@ function SortableCampgroundEditor(props: {
     onToggleEnabled: (checked: boolean) => void;
     onFieldChange: <K extends keyof EditableCampground>(field: K, value: EditableCampground[K]) => void;
     onDateChange: (key: "startDate" | "endDate", value: string) => void;
-    onShowOrHideChange: (key: "Favorites" | "Worthwhile" | "All Others", checked: boolean) => void;
     onRemove: () => void;
     onExpandedChange: (expanded: boolean) => void;
 }) {
@@ -173,17 +172,6 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
         updateCampground(index, (c) => ({
             ...c,
             dates: { ...c.dates, [key]: value },
-        }));
-    };
-
-    const handleShowOrHideChange = (
-        index: number,
-        key: "Favorites" | "Worthwhile" | "All Others",
-        checked: boolean,
-    ) => {
-        updateCampground(index, (c) => ({
-            ...c,
-            showOrHide: { ...c.showOrHide, [key]: checked },
         }));
     };
 
@@ -404,9 +392,6 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
                                                 handleFieldChange(index, field, value)
                                             }
                                             onDateChange={(key, value) => handleDateChange(index, key, value)}
-                                            onShowOrHideChange={(key, checked) =>
-                                                handleShowOrHideChange(index, key, checked)
-                                            }
                                             onRemove={() => handleRemoveCampground(index)}
                                             onExpandedChange={(expanded) => {
                                                 setExpandedPanels((prev) => {

@@ -87,8 +87,8 @@ export function useCampgroundsData({ enabled, siteConfig }: UseCampgroundsDataAr
         };
     }, [enabled]);
 
-    // Map of campground id -> live favorites/worthwhile + show/hide toggles from
-    // the watchlist config. Recomputed only when the config changes.
+    // Map of campground id -> live favorites/worthwhile from the watchlist config.
+    // Recomputed only when the config changes.
     const ratingsById = useMemo(() => {
         const map = new Map<string, ConfigOverlay>();
         for (const cg of siteConfig?.["recreation.gov"] ?? []) {
@@ -96,7 +96,6 @@ export function useCampgroundsData({ enabled, siteConfig }: UseCampgroundsDataAr
                 map.set(cg.id, {
                     favorites: cg.sites?.favorites ?? [],
                     worthwhile: cg.sites?.worthwhile ?? [],
-                    showOrHide: cg.showOrHide,
                 });
             }
         }

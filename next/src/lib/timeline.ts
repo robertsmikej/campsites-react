@@ -205,7 +205,11 @@ export function buildDisplaySites(cg: ProcessedCampground, roster?: string[]): D
         ...present.map((s) => ({ site: s, tier: siteTier(cg, s.siteName), synthetic: false })),
         ...synthetic.map((s) => ({ site: s, tier: siteTier(cg, s.siteName), synthetic: true })),
     ].sort(
-        (a, b) => TIER_ORDER[a.tier] - TIER_ORDER[b.tier] || a.site.siteName.localeCompare(b.site.siteName),
+        // favorites/worthwhile/other, then open (present) before booked, then name
+        (a, b) =>
+            TIER_ORDER[a.tier] - TIER_ORDER[b.tier] ||
+            Number(a.synthetic) - Number(b.synthetic) ||
+            a.site.siteName.localeCompare(b.site.siteName),
     );
 }
 

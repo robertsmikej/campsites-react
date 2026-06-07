@@ -23,7 +23,7 @@ import {
     CommandList,
 } from "@/components/ui/command";
 
-import { ALL_DAYS, STAY_MAX, STAY_MIN, DEFAULT_SHOW_HIDE, type EditableCampground } from "./types";
+import { ALL_DAYS, STAY_MAX, STAY_MIN, type EditableCampground } from "./types";
 import type { NotifyScope } from "@/types/campground";
 import { CW } from "@/components/field-notes/cw-tokens";
 import { FieldLabel, Hint, SectionDivider, SegmentedControl, TierChip } from "./field-primitives";
@@ -40,7 +40,6 @@ interface CampgroundEditorProps {
     onToggleEnabled: (checked: boolean) => void;
     onFieldChange: <K extends keyof EditableCampground>(field: K, value: EditableCampground[K]) => void;
     onDateChange: (key: "startDate" | "endDate", value: string) => void;
-    onShowOrHideChange: (key: "Favorites" | "Worthwhile" | "All Others", checked: boolean) => void;
     onRemove: () => void;
     onExpandedChange: (expanded: boolean) => void;
 }
@@ -258,7 +257,6 @@ export function CampgroundEditor({
     onToggleEnabled,
     onFieldChange,
     onDateChange,
-    onShowOrHideChange,
     onRemove,
 }: CampgroundEditorProps) {
     const isEnabled = campground.enabled !== false;
@@ -542,22 +540,6 @@ export function CampgroundEditor({
                                 <Hint>Good enough if a favorite won&apos;t free up.</Hint>
                             </div>
                         </>
-                    )}
-                </div>
-
-                {/* Show/hide toggles */}
-                <div className="flex flex-wrap gap-4">
-                    {(Object.keys(DEFAULT_SHOW_HIDE) as Array<"Favorites" | "Worthwhile" | "All Others">).map(
-                        (key) => (
-                            <label key={key} className="flex items-center gap-2 text-sm">
-                                <Switch
-                                    checked={campground.showOrHide?.[key] ?? DEFAULT_SHOW_HIDE[key]}
-                                    onCheckedChange={(checked) => onShowOrHideChange(key, checked)}
-                                    className="scale-75"
-                                />
-                                Show {key}
-                            </label>
-                        ),
                     )}
                 </div>
 
