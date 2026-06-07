@@ -182,113 +182,128 @@ export function CampgroundTimelineRow({
                         boxShadow: `inset 0 1px 0 ${CW.rule}, inset 0 -1px 0 ${CW.rule}`,
                     }}
                 >
-                    {buildDisplaySites(campground).map(({ site, tier }) => {
-                        const hasOpen = siteOpenRuns(horizon, site).length > 0;
-                        const showWindows = openSites.has(site.siteId);
-                        return (
-                            <Fragment key={site.siteId}>
-                                <div
-                                    role={hasOpen ? "button" : undefined}
-                                    tabIndex={hasOpen ? 0 : undefined}
-                                    onClick={hasOpen ? () => toggleSite(site.siteId) : undefined}
-                                    onKeyDown={
-                                        hasOpen
-                                            ? (e) => {
-                                                  if (e.key === "Enter" || e.key === " ") {
-                                                      e.preventDefault();
-                                                      toggleSite(site.siteId);
-                                                  }
-                                              }
-                                            : undefined
-                                    }
-                                    className="grid items-stretch border-b border-dotted last:border-b-0"
-                                    style={{
-                                        gridTemplateColumns: `${META}px 1fr`,
-                                        borderColor: CW.ruleSoft,
-                                        cursor: hasOpen ? "pointer" : "default",
-                                        background:
-                                            tier === "fav"
-                                                ? "color-mix(in srgb, var(--cw-clay) 5.5%, transparent)"
-                                                : tier === "worth"
-                                                  ? "color-mix(in srgb, var(--cw-forest) 3.5%, transparent)"
-                                                  : undefined,
-                                    }}
-                                >
+                    {buildDisplaySites(campground)
+                        .filter(({ tier }) => {
+                            const sh = campground.showOrHide ?? {};
+                            if (tier === "fav") return sh.Favorites ?? true;
+                            if (tier === "worth") return sh.Worthwhile ?? true;
+                            return sh["All Others"] ?? true;
+                        })
+                        .map(({ site, tier }) => {
+                            const hasOpen = siteOpenRuns(horizon, site).length > 0;
+                            const showWindows = openSites.has(site.siteId);
+                            return (
+                                <Fragment key={site.siteId}>
                                     <div
-                                        className="relative flex items-baseline gap-2"
+                                        role={hasOpen ? "button" : undefined}
+                                        tabIndex={hasOpen ? 0 : undefined}
+                                        onClick={hasOpen ? () => toggleSite(site.siteId) : undefined}
+                                        onKeyDown={
+                                            hasOpen
+                                                ? (e) => {
+                                                      if (e.key === "Enter" || e.key === " ") {
+                                                          e.preventDefault();
+                                                          toggleSite(site.siteId);
+                                                      }
+                                                  }
+                                                : undefined
+                                        }
+                                        className="grid items-stretch border-b border-dotted last:border-b-0"
                                         style={{
-                                            padding: `9px ${PAD}px 9px ${PAD + 24}px`,
-                                            borderRight: `1px solid ${CW.rule}`,
+                                            gridTemplateColumns: `${META}px 1fr`,
+                                            borderColor: CW.ruleSoft,
+                                            cursor: hasOpen ? "pointer" : "default",
+                                            background:
+                                                tier === "fav"
+                                                    ? "color-mix(in srgb, var(--cw-clay) 5.5%, transparent)"
+                                                    : tier === "worth"
+                                                      ? "color-mix(in srgb, var(--cw-forest) 3.5%, transparent)"
+                                                      : undefined,
                                         }}
                                     >
-                                        <span
-                                            className="absolute"
+                                        <div
+                                            className="relative flex items-baseline gap-2"
                                             style={{
-                                                left: PAD + 4,
-                                                top: "50%",
-                                                width: 9,
-                                                height: 1,
-                                                background: CW.inkFaint,
-                                            }}
-                                        />
-                                        <span
-                                            className="font-mono-field font-bold"
-                                            style={{
-                                                fontSize: 13,
-                                                width: 13,
-                                                textAlign: "center",
-                                                color:
-                                                    tier === "fav"
-                                                        ? CW.clay
-                                                        : tier === "worth"
-                                                          ? CW.forest
-                                                          : CW.inkFaint,
+                                                padding: `9px ${PAD}px 9px ${PAD + 24}px`,
+                                                borderRight: `1px solid ${CW.rule}`,
                                             }}
                                         >
-                                            {TIER_MARK[tier]}
-                                        </span>
-                                        <span
-                                            className="font-mono-field font-semibold whitespace-nowrap"
-                                            style={{ fontSize: 12, letterSpacing: "0.04em", color: CW.ink }}
-                                        >
-                                            Site {site.siteName}
-                                        </span>
-                                        <span
-                                            className="overflow-hidden font-italic-serif italic text-ellipsis whitespace-nowrap"
-                                            style={{ fontSize: 15, color: CW.inkSoft }}
-                                        >
-                                            {siteFeature(site)}
-                                        </span>
-                                        {hasOpen && (
                                             <span
-                                                className="ml-auto inline-block transition-transform"
+                                                className="absolute"
                                                 style={{
-                                                    fontSize: 9,
-                                                    color: CW.inkFaint,
-                                                    transform: showWindows ? "rotate(180deg)" : undefined,
+                                                    left: PAD + 4,
+                                                    top: "50%",
+                                                    width: 9,
+                                                    height: 1,
+                                                    background: CW.inkFaint,
+                                                }}
+                                            />
+                                            <span
+                                                className="font-mono-field font-bold"
+                                                style={{
+                                                    fontSize: 13,
+                                                    width: 13,
+                                                    textAlign: "center",
+                                                    color:
+                                                        tier === "fav"
+                                                            ? CW.clay
+                                                            : tier === "worth"
+                                                              ? CW.forest
+                                                              : CW.inkFaint,
                                                 }}
                                             >
-                                                ▾
+                                                {TIER_MARK[tier]}
                                             </span>
-                                        )}
+                                            <span
+                                                className="font-mono-field font-semibold whitespace-nowrap"
+                                                style={{
+                                                    fontSize: 12,
+                                                    letterSpacing: "0.04em",
+                                                    color: CW.ink,
+                                                }}
+                                            >
+                                                Site {site.siteName}
+                                            </span>
+                                            <span
+                                                className="overflow-hidden font-italic-serif italic text-ellipsis whitespace-nowrap"
+                                                style={{ fontSize: 15, color: CW.inkSoft }}
+                                            >
+                                                {siteFeature(site)}
+                                            </span>
+                                            {hasOpen && (
+                                                <span
+                                                    className="ml-auto inline-block transition-transform"
+                                                    style={{
+                                                        fontSize: 9,
+                                                        color: CW.inkFaint,
+                                                        transform: showWindows ? "rotate(180deg)" : undefined,
+                                                    }}
+                                                >
+                                                    ▾
+                                                </span>
+                                            )}
+                                        </div>
+                                        <TimelineTrack
+                                            horizon={horizon}
+                                            open={siteOpenRuns(horizon, site)}
+                                            limited={[]}
+                                            site
+                                            ring={tier === "fav"}
+                                            pad={PAD}
+                                        />
                                     </div>
-                                    <TimelineTrack
-                                        horizon={horizon}
-                                        open={siteOpenRuns(horizon, site)}
-                                        limited={[]}
-                                        site
-                                        ring={tier === "fav"}
-                                        pad={PAD}
-                                    />
-                                </div>
-                                {hasOpen && showWindows && (
-                                    <div style={{ borderBottom: `1px dotted ${CW.ruleSoft}` }}>
-                                        <SiteWindowsList horizon={horizon} site={site} indent={PAD + 24} />
-                                    </div>
-                                )}
-                            </Fragment>
-                        );
-                    })}
+                                    {hasOpen && showWindows && (
+                                        <div style={{ borderBottom: `1px dotted ${CW.ruleSoft}` }}>
+                                            <SiteWindowsList
+                                                horizon={horizon}
+                                                site={site}
+                                                indent={PAD + 24}
+                                            />
+                                        </div>
+                                    )}
+                                </Fragment>
+                            );
+                        })}
                 </div>
             )}
         </>

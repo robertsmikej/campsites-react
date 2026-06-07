@@ -83,6 +83,26 @@ describe("AvailabilityTimeline", () => {
         expect(link.getAttribute("href")).toContain("arrivalDate=2026-05-23");
     });
 
+    it("hides a tier's site rows when its show toggle is off", () => {
+        const rows = [
+            {
+                id: "9",
+                name: "Outlet",
+                area: "",
+                sites: { favorites: ["A-07"], worthwhile: [] },
+                showOrHide: { Favorites: false, Worthwhile: true, "All Others": true },
+                totalSitesCount: 2,
+                siteAvailability: {
+                    "A-07": site("A-07", [["2026-05-23", "2026-05-25"]]), // favorite, open
+                    "016": site("016", [["2026-05-23", "2026-05-25"]]), // other, open
+                },
+            } as unknown as ProcessedCampground,
+        ];
+        render(<AvailabilityTimeline rows={rows} dateRange={DATE_RANGE} defaultExpandFirst />);
+        expect(screen.queryByText("Site A-07")).toBeNull(); // favorites hidden by the toggle
+        expect(screen.getByText("Site 016")).toBeTruthy(); // "all others" still shown
+    });
+
     it("fires onEditSettings from a row's configure button", () => {
         const calls: string[] = [];
         render(

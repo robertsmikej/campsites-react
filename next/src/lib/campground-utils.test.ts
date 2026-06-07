@@ -89,4 +89,24 @@ describe("overlayConfigRatings", () => {
         const data = { "recreation.gov": [processed("1", ["a"])] };
         expect(overlayConfigRatings(data, new Map())).toBe(data);
     });
+
+    it("overlays the live showOrHide toggles when present", () => {
+        const data = { "recreation.gov": [processed("1", ["a"], [])] };
+        const ratings = new Map([
+            [
+                "1",
+                {
+                    favorites: ["a"],
+                    worthwhile: [],
+                    showOrHide: { Favorites: false, Worthwhile: true, "All Others": true },
+                },
+            ],
+        ]);
+        const out = overlayConfigRatings(data, ratings);
+        expect(out["recreation.gov"]![0]!.showOrHide).toEqual({
+            Favorites: false,
+            Worthwhile: true,
+            "All Others": true,
+        });
+    });
 });

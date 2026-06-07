@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { formatGroupsByFavorites, overlayConfigRatings } from "@/lib/campground-utils";
+import { formatGroupsByFavorites, overlayConfigRatings, type ConfigOverlay } from "@/lib/campground-utils";
 import { WATCHLIST_CHANGED_EVENT } from "@/lib/events";
 import type { AvailabilitySnapshot } from "@/lib/recgov";
 import type { CampgroundsBySystem, ProcessedCampground, SiteConfig } from "@/types/campground";
@@ -87,15 +87,16 @@ export function useCampgroundsData({ enabled, siteConfig }: UseCampgroundsDataAr
         };
     }, [enabled]);
 
-    // Map of campground id -> live favorite/worthwhile lists from the watchlist
-    // config. Recomputed only when the config changes.
+    // Map of campground id -> live favorites/worthwhile + show/hide toggles from
+    // the watchlist config. Recomputed only when the config changes.
     const ratingsById = useMemo(() => {
-        const map = new Map<string, { favorites: string[]; worthwhile: string[] }>();
+        const map = new Map<string, ConfigOverlay>();
         for (const cg of siteConfig?.["recreation.gov"] ?? []) {
             if (cg.id) {
                 map.set(cg.id, {
                     favorites: cg.sites?.favorites ?? [],
                     worthwhile: cg.sites?.worthwhile ?? [],
+                    showOrHide: cg.showOrHide,
                 });
             }
         }
