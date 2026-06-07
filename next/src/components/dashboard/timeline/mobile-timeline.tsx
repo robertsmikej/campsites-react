@@ -70,12 +70,32 @@ export function MobileTimeline({ rows, dateRange, onEditSettings }: MobileTimeli
         if (selected?.id) ensureLoaded(selected.id);
     }, [selected?.id, ensureLoaded]);
 
+    // Opening a campground pushes a history entry so the phone's back-swipe (and
+    // the back button) returns to the watchlist instead of leaving the app.
+    const openDetail = (id: string) => {
+        setSelectedId(id);
+        if (typeof window !== "undefined") window.history.pushState({ cwCampgroundDetail: true }, "");
+    };
+    const closeDetail = () => {
+        const state = typeof window !== "undefined" ? window.history.state : null;
+        if ((state as { cwCampgroundDetail?: boolean } | null)?.cwCampgroundDetail) {
+            window.history.back(); // pops our entry -> popstate closes the detail
+        } else {
+            setSelectedId(null);
+        }
+    };
+    useEffect(() => {
+        const onPop = () => setSelectedId(null);
+        window.addEventListener("popstate", onPop);
+        return () => window.removeEventListener("popstate", onPop);
+    }, []);
+
     if (selected) {
         return (
             <DetailScreen
                 campground={selected}
                 horizon={horizon}
-                onBack={() => setSelectedId(null)}
+                onBack={closeDetail}
                 onEditSettings={onEditSettings}
                 roster={selected.id ? sitesById[selected.id] : undefined}
             />
@@ -108,7 +128,7 @@ export function MobileTimeline({ rows, dateRange, onEditSettings }: MobileTimeli
                     <button
                         key={cg.id ?? cg.name}
                         type="button"
-                        onClick={() => setSelectedId(cg.id ?? cg.name)}
+                        onClick={() => openDetail(cg.id ?? cg.name)}
                         className="block w-full border-b border-dotted text-left last:border-b-0"
                         style={{ borderColor: CW.rule, padding: `12px ${PAD}px 14px` }}
                     >
