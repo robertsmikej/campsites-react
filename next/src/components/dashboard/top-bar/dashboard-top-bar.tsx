@@ -124,6 +124,9 @@ export function DashboardTopBar({ auth, onAddCampground }: DashboardTopBarProps)
                                     <DropdownMenuItem asChild>
                                         <Link href="/app/account">Account</Link>
                                     </DropdownMenuItem>
+                                    <DropdownMenuItem asChild>
+                                        <Link href="/?home=1">Home page</Link>
+                                    </DropdownMenuItem>
                                     <DropdownMenuSeparator />
                                     <DropdownMenuItem
                                         className="text-destructive focus:text-destructive"

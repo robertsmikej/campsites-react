@@ -11,7 +11,23 @@ function requiresAuth(pathname: string): boolean {
 }
 
 export function middleware(request: NextRequest) {
-    const { pathname } = request.nextUrl;
+    const { pathname, searchParams } = request.nextUrl;
+
+    // Signed-in visitors to the marketing homepage go straight to their dashboard,
+    // unless they explicitly asked to see it (?home — the account menu's "Home page"
+    // link uses this). Dev skips the redirect (the DEV_USER bypass has no cookie).
+    if (pathname === "/") {
+        if (process.env.NODE_ENV !== "production") return NextResponse.next();
+        if (searchParams.has("home")) return NextResponse.next();
+        if (request.cookies.get(SESSION_COOKIE)?.value) {
+            const url = request.nextUrl.clone();
+            url.pathname = "/app";
+            url.search = "";
+            return NextResponse.redirect(url);
+        }
+        return NextResponse.next();
+    }
+
     if (!requiresAuth(pathname)) return NextResponse.next();
 
     // In dev, the DEV_USER bypass authenticates via env var without ever
@@ -30,5 +46,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-    matcher: ["/app", "/app/:path*"],
+    matcher: ["/", "/app", "/app/:path*"],
 };
