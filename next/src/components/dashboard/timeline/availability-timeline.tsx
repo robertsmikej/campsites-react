@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CW } from "@/components/field-notes/cw-tokens";
 import { buildHorizon } from "@/lib/timeline";
+import { useCampgroundSites } from "@/hooks/use-campground-sites";
 import type { ProcessedCampground } from "@/types/campground";
 import { TimelineAxis } from "./timeline-axis";
 import { CampgroundTimelineRow } from "./campground-timeline-row";
@@ -24,10 +25,19 @@ export function AvailabilityTimeline({
     onEditSettings,
 }: AvailabilityTimelineProps) {
     const horizon = buildHorizon(dateRange.start, dateRange.end);
+    const { sitesById, ensureLoaded } = useCampgroundSites();
     const [expandedIds, setExpandedIds] = useState<Set<string>>(() => {
         const first = defaultExpandFirst ? rows[0]?.id : undefined;
         return first ? new Set([first]) : new Set();
     });
+
+    // Lazily fetch the full site roster for an expanded campground so every site
+    // shows (not just the open + tagged ones). Cached server-side; gentle.
+    useEffect(() => {
+        for (const cg of rows) {
+            if (cg.id && expandedIds.has(cg.id ?? cg.name)) ensureLoaded(cg.id);
+        }
+    }, [expandedIds, rows, ensureLoaded]);
 
     const toggle = (id: string) =>
         setExpandedIds((prev) => {
@@ -68,6 +78,7 @@ export function AvailabilityTimeline({
                         expanded={expandedIds.has(cg.id ?? cg.name)}
                         onToggleExpand={() => toggle(cg.id ?? cg.name)}
                         onEditSettings={onEditSettings}
+                        roster={cg.id ? sitesById[cg.id] : undefined}
                     />
                 ))}
             </div>

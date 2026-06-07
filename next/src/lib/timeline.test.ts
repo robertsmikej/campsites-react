@@ -122,6 +122,18 @@ describe("buildDisplaySites", () => {
             ["C-31", "other", false],
         ]);
     });
+
+    it("shows every roster site (untagged booked ones included) when a roster is provided", () => {
+        const cg = {
+            sites: { favorites: ["A-07"], worthwhile: [] },
+            siteAvailability: { a: site("A-07", [["2026-07-04", "2026-07-06"]]) }, // only A-07 open
+        } as unknown as ProcessedCampground;
+        const out = buildDisplaySites(cg, ["A-07", "016", "017"]);
+        const byName = Object.fromEntries(out.map((d) => [d.site.siteName, [d.tier, d.synthetic]]));
+        expect(byName["A-07"]).toEqual(["fav", false]); // open favorite
+        expect(byName["016"]).toEqual(["other", true]); // untagged + booked -> now shown
+        expect(byName["017"]).toEqual(["other", true]);
+    });
 });
 
 describe("siteRangeUrl", () => {

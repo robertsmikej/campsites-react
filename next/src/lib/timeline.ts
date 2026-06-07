@@ -184,17 +184,23 @@ export interface DisplaySite {
     synthetic: boolean;
 }
 
-/** Sites with openings (from the snapshot) plus any tagged site that is booked
- *  all season, so favorites/worthwhile always appear. Sorted favorites-first. */
-export function buildDisplaySites(cg: ProcessedCampground): DisplaySite[] {
+/** Sites with openings (from the snapshot), plus a "booked all season" row for
+ *  every other site we know about — the full `roster` when loaded, else at least
+ *  the tagged (favorite/worthwhile) sites so those always appear. Favorites-first. */
+export function buildDisplaySites(cg: ProcessedCampground, roster?: string[]): DisplaySite[] {
     const present = Object.values(cg.siteAvailability ?? {});
     const presentNames = new Set(present.map((s) => s.siteName));
-    const synthetic: SiteAvailability[] = [];
-    for (const name of [...(cg.sites?.favorites ?? []), ...(cg.sites?.worthwhile ?? [])]) {
-        if (!presentNames.has(name)) {
-            synthetic.push({ siteId: name, siteName: name, dates: [], matches: [], excludedMatches: [] });
-        }
+    const syntheticNames = new Set<string>();
+    for (const name of [...(cg.sites?.favorites ?? []), ...(cg.sites?.worthwhile ?? []), ...(roster ?? [])]) {
+        if (name && !presentNames.has(name)) syntheticNames.add(name);
     }
+    const synthetic: SiteAvailability[] = [...syntheticNames].map((name) => ({
+        siteId: name,
+        siteName: name,
+        dates: [],
+        matches: [],
+        excludedMatches: [],
+    }));
     return [
         ...present.map((s) => ({ site: s, tier: siteTier(cg, s.siteName), synthetic: false })),
         ...synthetic.map((s) => ({ site: s, tier: siteTier(cg, s.siteName), synthetic: true })),

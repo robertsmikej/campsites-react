@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CW } from "@/components/field-notes/cw-tokens";
+import { useCampgroundSites } from "@/hooks/use-campground-sites";
 import {
     type Horizon,
     TIER_MARK,
@@ -60,8 +61,14 @@ export function MobileTimeline({ rows, dateRange, onEditSettings }: MobileTimeli
         [dateRange.start, dateRange.end],
     );
     const [selectedId, setSelectedId] = useState<string | null>(null);
+    const { sitesById, ensureLoaded } = useCampgroundSites();
 
     const selected = selectedId ? rows.find((r) => (r.id ?? r.name) === selectedId) : undefined;
+
+    // Lazily fetch the full roster for the open detail so every site shows.
+    useEffect(() => {
+        if (selected?.id) ensureLoaded(selected.id);
+    }, [selected?.id, ensureLoaded]);
 
     if (selected) {
         return (
@@ -70,6 +77,7 @@ export function MobileTimeline({ rows, dateRange, onEditSettings }: MobileTimeli
                 horizon={horizon}
                 onBack={() => setSelectedId(null)}
                 onEditSettings={onEditSettings}
+                roster={selected.id ? sitesById[selected.id] : undefined}
             />
         );
     }
@@ -163,11 +171,13 @@ function DetailScreen({
     horizon,
     onBack,
     onEditSettings,
+    roster,
 }: {
     campground: ProcessedCampground;
     horizon: Horizon;
     onBack: () => void;
     onEditSettings?: (campgroundId: string) => void;
+    roster?: string[];
 }) {
     const { runs, openDays, limitedDays } = dayStatusSets(horizon, campground);
     const [openSites, setOpenSites] = useState<Set<string>>(new Set());
@@ -271,7 +281,7 @@ function DetailScreen({
 
             {/* Per-site rows — tap a site with openings to see its dates */}
             <div style={{ borderTop: `1px solid ${CW.rule}` }}>
-                {buildDisplaySites(campground)
+                {buildDisplaySites(campground, roster)
                     .filter(({ tier }) => {
                         const sh = campground.showOrHide ?? {};
                         if (tier === "fav") return sh.Favorites ?? true;

@@ -23,6 +23,8 @@ interface CampgroundTimelineRowProps {
     expanded: boolean;
     onToggleExpand: () => void;
     onEditSettings?: (campgroundId: string) => void;
+    /** full site roster (all site labels) so every site can show, not just open/tagged */
+    roster?: string[];
 }
 
 export function CampgroundTimelineRow({
@@ -31,6 +33,7 @@ export function CampgroundTimelineRow({
     expanded,
     onToggleExpand,
     onEditSettings,
+    roster,
 }: CampgroundTimelineRowProps) {
     const [openSites, setOpenSites] = useState<Set<string>>(new Set());
     const toggleSite = (id: string) =>
@@ -182,7 +185,7 @@ export function CampgroundTimelineRow({
                         boxShadow: `inset 0 1px 0 ${CW.rule}, inset 0 -1px 0 ${CW.rule}`,
                     }}
                 >
-                    {buildDisplaySites(campground)
+                    {buildDisplaySites(campground, roster)
                         .filter(({ tier }) => {
                             const sh = campground.showOrHide ?? {};
                             if (tier === "fav") return sh.Favorites ?? true;
