@@ -143,33 +143,33 @@ function tierTarget(campgrounds: unknown[]) {
     };
 }
 
+const HIGH = tierCampground("111", "High Camp", "high");
+const NORMAL = tierCampground("222", "Normal Camp"); // no field = normal
+const LOW = tierCampground("333", "Low Camp", "low");
+
+async function runAt(
+    isoNow: string,
+    opts: { targets?: unknown[]; kv?: KvAdapter; forceEmail?: boolean } = {},
+): Promise<string[]> {
+    const fetchSpy = vi
+        .spyOn(globalThis, "fetch")
+        .mockImplementation(mockFetch(opts.targets ?? [tierTarget([HIGH, NORMAL, LOW])]) as never);
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    await run({
+        subscriberApiUrl: "https://campwatch.dev",
+        subscriberApiSecret: "secret",
+        resendApiKey: "re_x",
+        siteUrl: "https://campwatch.dev",
+        forceEmail: opts.forceEmail ?? false,
+        dryRun: true,
+        kvAdapter: opts.kv ?? stubKv(),
+        now: new Date(isoNow),
+    });
+    return fetchSpy.mock.calls.map((c) => String(c[0]));
+}
+
 describe("per-campground check tiers", () => {
     beforeEach(() => vi.restoreAllMocks());
-
-    const HIGH = tierCampground("111", "High Camp", "high");
-    const NORMAL = tierCampground("222", "Normal Camp"); // no field = normal
-    const LOW = tierCampground("333", "Low Camp", "low");
-
-    async function runAt(
-        isoNow: string,
-        opts: { targets?: unknown[]; kv?: KvAdapter; forceEmail?: boolean } = {},
-    ): Promise<string[]> {
-        const fetchSpy = vi
-            .spyOn(globalThis, "fetch")
-            .mockImplementation(mockFetch(opts.targets ?? [tierTarget([HIGH, NORMAL, LOW])]) as never);
-        vi.spyOn(console, "log").mockImplementation(() => {});
-        await run({
-            subscriberApiUrl: "https://campwatch.dev",
-            subscriberApiSecret: "secret",
-            resendApiKey: "re_x",
-            siteUrl: "https://campwatch.dev",
-            forceEmail: opts.forceEmail ?? false,
-            dryRun: true,
-            kvAdapter: opts.kv ?? stubKv(),
-            now: new Date(isoNow),
-        });
-        return fetchSpy.mock.calls.map((c) => String(c[0]));
-    }
 
     it("fetches only high-tier campgrounds on an off minute", async () => {
         const urls = await runAt("2026-07-06T00:03:00Z");
@@ -229,5 +229,41 @@ describe("per-campground check tiers", () => {
         };
         const carried = written.campgrounds.find((c) => c.id === "222");
         expect(carried?.totalSitesCount).toBe(7);
+    });
+});
+
+describe("past months are not fetched", () => {
+    beforeEach(() => vi.restoreAllMocks());
+
+    it("starts the fetch window at the current month when startDate is in the past", async () => {
+        // Window May–July, "now" July 6 (minute 0, all tiers due) → only 2026-07 fetched.
+        const stale = {
+            ...tierCampground("444", "Stale Start"),
+            dates: { startDate: "2026-05-01", endDate: "2026-07-10" },
+        };
+        const urls = await runAt("2026-07-06T00:00:00Z", { targets: [tierTarget([stale])] });
+        expect(urls.some((u) => u.includes("/campground/444/month?start_date=2026-07-01"))).toBe(true);
+        expect(urls.some((u) => u.includes("/campground/444/month?start_date=2026-05-01"))).toBe(false);
+        expect(urls.some((u) => u.includes("/campground/444/month?start_date=2026-06-01"))).toBe(false);
+    });
+
+    it("skips a campground whose whole window is in the past", async () => {
+        const past = {
+            ...tierCampground("555", "Long Gone"),
+            dates: { startDate: "2026-01-01", endDate: "2026-02-15" },
+        };
+        const urls = await runAt("2026-07-06T00:00:00Z", { targets: [tierTarget([past])] });
+        expect(urls.some((u) => u.includes("/campground/555/"))).toBe(false);
+    });
+
+    it("still fetches the current month even when today is mid-month", async () => {
+        // The month containing "now" is always relevant — only fully past months drop.
+        const current = {
+            ...tierCampground("666", "Current"),
+            dates: { startDate: "2026-07-01", endDate: "2026-08-10" },
+        };
+        const urls = await runAt("2026-07-06T00:00:00Z", { targets: [tierTarget([current])] });
+        expect(urls.some((u) => u.includes("/campground/666/month?start_date=2026-07-01"))).toBe(true);
+        expect(urls.some((u) => u.includes("/campground/666/month?start_date=2026-08-01"))).toBe(true);
     });
 });

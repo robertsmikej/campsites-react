@@ -48,7 +48,11 @@ async function buildSnapshot(config: SourceConfig, adapter: WorkerKvAdapter): Pr
         const end = cg.dates?.endDate;
         if (!start || !end) continue;
 
-        const months = monthsBetween(start, end);
+        // Fully past months can't produce bookable openings — skip their fetches.
+        // The month containing today always stays. Mirrors the notifier's plan clamp.
+        const nowMonth = new Date().toISOString().slice(0, 7);
+        const months = monthsBetween(start, end).filter((m) => m >= nowMonth);
+        if (months.length === 0) continue;
         const rawResults = await Promise.all(
             months.map((month) => fetchMonthWithCache(cg.id, month, adapter)),
         );

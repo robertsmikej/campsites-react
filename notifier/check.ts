@@ -172,7 +172,11 @@ function tierIntervalMinutes(c: Campground): number {
     return CHECK_PRIORITY_INTERVAL_MINUTES[c.checkPriority ?? "normal"];
 }
 
-function buildDedupedFetchPlan(targets: NotificationTarget[], minute: number): FetchPlanItem[] {
+function buildDedupedFetchPlan(
+    targets: NotificationTarget[],
+    minute: number,
+    nowMonth: string,
+): FetchPlanItem[] {
     // campgroundId → Set<"YYYY-MM">
     const ranges = new Map<string, Set<string>>();
     for (const target of targets) {
@@ -184,7 +188,10 @@ function buildDedupedFetchPlan(targets: NotificationTarget[], minute: number): F
             const start = c.dates?.startDate;
             const end = c.dates?.endDate;
             if (!start || !end) continue;
-            const months = monthsBetween(start, end);
+            // Fully past months can't produce bookable openings — don't burn
+            // rec.gov requests on them. The month containing "now" always stays.
+            const months = monthsBetween(start, end).filter((m) => m >= nowMonth);
+            if (months.length === 0) continue;
             if (!ranges.has(c.id)) ranges.set(c.id, new Set());
             for (const m of months) ranges.get(c.id)!.add(m);
         }
@@ -584,8 +591,10 @@ export async function run(config: RunConfig): Promise<void> {
 
     // 3. Build dedup'd fetch plan. The minute-of-hour drives which tiers fire
     //    (high=1m, normal=5m, low=10m). forceEmail acts like minute 0: all due.
+    //    Months before the current one are dropped — the past isn't bookable.
     const minute = forceEmail ? 0 : now.getUTCMinutes();
-    const plan = buildDedupedFetchPlan(eligible, minute);
+    const nowMonth = now.toISOString().slice(0, 7);
+    const plan = buildDedupedFetchPlan(eligible, minute, nowMonth);
 
     // Count distinct campgrounds in the plan by tier. The plan is a union across users,
     // so when multiple users watch the same campground, the fastest tier wins (same
