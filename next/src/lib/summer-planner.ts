@@ -189,7 +189,9 @@ export function planSummer(campgrounds: ProcessedCampground[], opts: PlanOptions
     if (opts.favoritesOnly) candidates = candidates.filter((c) => c.tier === "fav");
     if (opts.weekendOnly) candidates = candidates.filter((c) => c.includesWeekend);
     if (opts.blackoutDates?.length)
-        candidates = candidates.filter((c) => !stayOverlapsBlackout(c.from, c.to, opts.blackoutDates));
+        candidates = candidates.filter(
+            (c) => locked.has(tripId(c)) || !stayOverlapsBlackout(c.from, c.to, opts.blackoutDates),
+        );
     const byId = new Map(candidates.map((c) => [tripId(c), c]));
 
     const chosen: CandidateTrip[] = [];

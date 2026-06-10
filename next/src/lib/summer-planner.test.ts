@@ -188,6 +188,29 @@ describe("planSummer", () => {
         expect(keys).toContain("2026-07-07|2026-07-09");
     });
 
+    it("locked trip survives even when its dates overlap a blackout", () => {
+        // CG "11" trip 2026-07-10→2026-07-12 overlaps a blackout — but it's locked (user booked it).
+        // CG "10" trip 2026-07-07→2026-07-09 also overlaps a different blackout, and is NOT locked — must be excluded.
+        const mixed = [
+            cg("10", "Weekday Other", [], [site("x", [["2026-07-07", "2026-07-09"]])]),
+            cg("11", "Weekend Fav", ["y"], [site("y", [["2026-07-10", "2026-07-12"]])]),
+        ];
+        const blackoutDates: BlackoutRange[] = [
+            { from: "2026-07-07", to: "2026-07-07" }, // blocks unlocked CG "10"
+            { from: "2026-07-10", to: "2026-07-10" }, // blocks CG "11" — but it's locked
+        ];
+        const lockedId = "11:id-y:2026-07-10:2026-07-12";
+        const plan = planSummer(mixed, {
+            window: W,
+            targetTrips: 5,
+            blackoutDates,
+            lockedTripIds: [lockedId],
+        });
+        const keys = plan.trips.map((t) => `${t.from}|${t.to}`);
+        expect(keys).toContain("2026-07-10|2026-07-12"); // locked — must survive
+        expect(keys).not.toContain("2026-07-07|2026-07-09"); // unlocked — must be excluded
+    });
+
     it("without blackoutDates the plan is unchanged", () => {
         const mixed = [
             cg("10", "Weekday Other", [], [site("x", [["2026-07-07", "2026-07-09"]])]),
