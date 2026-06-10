@@ -41,6 +41,23 @@ export default function AccountPage() {
     const [notifFrequency, setNotifFrequency] = useState<Frequency>(15);
     const [notifScope, setNotifScope] = useState<NotifyScope>(DEFAULT_NOTIFY_SCOPE);
     const [savingNotif, setSavingNotif] = useState(false);
+    const [sendTo, setSendTo] = useState("");
+    const [savingSendTo, setSavingSendTo] = useState(false);
+
+    const loginEmail = auth.user?.email ?? "";
+    const effectiveSendTo = auth.user?.notificationEmail ?? loginEmail;
+    const pendingSendTo = auth.user?.pendingNotificationEmail;
+
+    useEffect(() => {
+        setSendTo(effectiveSendTo);
+    }, [effectiveSendTo]);
+
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get("emailVerified") === "1") {
+            toast.success("Alert address verified — future alerts go there");
+        }
+    }, []);
 
     useEffect(() => {
         if (!auth.isLoading && !auth.user) {
@@ -134,6 +151,31 @@ export default function AccountPage() {
             await auth.refresh();
         } finally {
             setSavingNotif(false);
+        }
+    }
+
+    async function saveSendTo(address: string) {
+        setSavingSendTo(true);
+        try {
+            const response = await fetch("/api/me", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ notificationEmail: address }),
+                credentials: "include",
+            });
+            if (!response.ok) {
+                const body = (await response.json().catch(() => ({}))) as { error?: string };
+                toast.error(body.error ?? `Save failed (${response.status})`);
+                return;
+            }
+            if (address.trim() !== "" && address.trim().toLowerCase() !== loginEmail.toLowerCase()) {
+                toast.success(`Verification sent to ${address.trim().toLowerCase()}`);
+            } else {
+                toast.success("Alerts will go to your login email");
+            }
+            await auth.refresh();
+        } finally {
+            setSavingSendTo(false);
         }
     }
 
@@ -369,6 +411,67 @@ export default function AccountPage() {
                                 <p className="font-italic-serif text-[14px] italic text-cw-ink-soft">
                                     {SCOPE_LABELS[notifScope].hint} Each campground can override this in its
                                     settings.
+                                </p>
+                            </div>
+
+                            {/* Alert delivery address */}
+                            <div className="space-y-2 mb-6">
+                                <Label
+                                    htmlFor="notif-sendto"
+                                    className="font-mono-field text-[12px] font-bold uppercase tracking-[0.16em] text-cw-clay"
+                                >
+                                    Send alerts to
+                                </Label>
+                                <div className="flex gap-2 max-w-md">
+                                    <Input
+                                        id="notif-sendto"
+                                        type="email"
+                                        value={sendTo}
+                                        onChange={(e) => setSendTo(e.target.value)}
+                                        disabled={!notifEnabled || savingSendTo}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => void saveSendTo(sendTo)}
+                                        disabled={
+                                            savingSendTo ||
+                                            sendTo.trim().toLowerCase() === effectiveSendTo.toLowerCase()
+                                        }
+                                        className="inline-flex items-center font-mono-field text-[13px] font-bold leading-none uppercase tracking-[0.14em] cursor-pointer rounded-[2px] px-[13px] py-[9px] border-[1.5px] disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                                        style={{
+                                            background: "var(--cw-ink)",
+                                            color: "var(--cw-cream)",
+                                            borderColor: "var(--cw-ink)",
+                                        }}
+                                    >
+                                        {savingSendTo ? "Saving…" : "Save"}
+                                    </button>
+                                </div>
+                                {pendingSendTo && (
+                                    <div className="font-mono-field text-[12px] text-cw-clay">
+                                        Verification sent to {pendingSendTo} — alerts keep going to{" "}
+                                        {effectiveSendTo} until you confirm.{" "}
+                                        <button
+                                            type="button"
+                                            className="underline cursor-pointer"
+                                            onClick={() => void saveSendTo(pendingSendTo)}
+                                        >
+                                            Resend link
+                                        </button>
+                                        {" · "}
+                                        <button
+                                            type="button"
+                                            className="underline cursor-pointer"
+                                            onClick={() => void saveSendTo("")}
+                                        >
+                                            Use login email
+                                        </button>
+                                    </div>
+                                )}
+                                <p className="font-italic-serif text-[14px] italic text-cw-ink-soft">
+                                    Alerts go to your login email unless you point them somewhere faster. Tip:
+                                    your phone gets instant push for iCloud addresses in Apple Mail, and for
+                                    Gmail addresses in the Gmail app — pick whichever inbox buzzes.
                                 </p>
                             </div>
 
