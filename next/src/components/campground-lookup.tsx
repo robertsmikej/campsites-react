@@ -8,6 +8,7 @@ import type { SearchResult } from "@/app/api/campgrounds/search/route";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { C } from "@/components/field-notes/tokens";
 import { LoadingGhostRow } from "@/components/field-notes/loading";
+import { defaultDates } from "@/lib/default-dates";
 
 // Heuristic: does this input look like a URL attempt (vs a name search)?
 function looksLikeUrlAttempt(s: string): boolean {
@@ -47,19 +48,13 @@ function parseInput(s: string): string | null {
 
 // ─── Build a default Campground entry for a new addition ──────────────────────
 function buildNewCampground(id: string, name: string, previewImageUrl?: string | null): Campground {
-    const now = new Date();
-    const sixMonths = new Date(now);
-    sixMonths.setMonth(sixMonths.getMonth() + 6);
-    const pad = (n: number) => String(n).padStart(2, "0");
-    const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
     return {
         id,
         name,
         image: previewImageUrl ?? undefined,
-        dates: {
-            startDate: fmt(now),
-            endDate: fmt(sixMonths),
-        },
+        // Shared season-capped window (never defaults past Sep 30) — keeps this
+        // add path consistent with the site-config dialog's.
+        dates: defaultDates(),
         sites: { favorites: [], worthwhile: [] },
         notifyAll: false,
     };
@@ -112,6 +107,8 @@ interface ResultCardProps {
     onAdd?: () => void;
     adding?: boolean;
     addedSuccess?: boolean;
+    /** Dashboard add-flow: add-first copy and a stacked footer that fits a dialog. */
+    dashboard?: boolean;
 }
 
 function ResultCard({
@@ -121,6 +118,7 @@ function ResultCard({
     onAdd,
     adding = false,
     addedSuccess = false,
+    dashboard = false,
 }: ResultCardProps) {
     const padding = compact ? "py-4 px-[18px]" : "py-[22px] px-[26px]";
     if (!result) return null;
@@ -175,7 +173,12 @@ function ResultCard({
     let statusLabel: string;
     if (isOnList) statusLabel = "Already on your watchlist";
     else if (isWatched) statusLabel = "On our watch";
-    else statusLabel = "We can add this — we don't track it yet";
+    // Homepage frames this as a "check a spot" verdict; the dashboard dialog is an
+    // add flow, where "we don't track it yet" reads like a rejection. Flip to add-first.
+    else
+        statusLabel = dashboard
+            ? "Not watched yet — ready to add"
+            : "We can add this — we don't track it yet";
 
     let bodyText: string;
     if (isOnList) bodyText = "You're already watching this — we'll email you next time a site opens.";
@@ -210,7 +213,11 @@ function ResultCard({
             </div>
 
             {!compact && (
-                <div className="border-t border-dashed border-cw-rule mt-4 pt-[14px] flex justify-between items-center gap-4">
+                <div
+                    className={`border-t border-dashed border-cw-rule mt-4 pt-[14px] flex gap-4 ${
+                        dashboard ? "flex-col items-start" : "justify-between items-center"
+                    }`}
+                >
                     <div className="font-italic-serif text-[15px] leading-[1.4] text-cw-ink-soft max-w-[420px] font-medium italic">
                         {bodyText}
                     </div>
@@ -277,7 +284,8 @@ function ResultSkeleton() {
 }
 
 // ─── Main section ─────────────────────────────────────────────────────────────
-export function CampgroundLookup({ variant: _variant = "homepage" }: CampgroundLookupProps) {
+export function CampgroundLookup({ variant = "homepage" }: CampgroundLookupProps) {
+    const isDashboard = variant === "dashboard";
     const auth = useAuth();
     const userCampgrounds = useUserCampgrounds();
     const isMobile = useIsMobile();
@@ -439,13 +447,135 @@ export function CampgroundLookup({ variant: _variant = "homepage" }: CampgroundL
     // PAD_M = 22px
     const PAD_M = 22;
 
+    // Hover/focus styles — injected once, no @import
+    const injectedStyles = (
+        <style>{`
+            .cw-chip:hover { background: ${C.ink} !important; color: ${C.cream} !important; border-color: ${C.ink} !important; }
+            .cw-input:focus { outline: none; border-color: ${C.forest}; box-shadow: 0 0 0 3px rgba(31,61,42,0.12); }
+        `}</style>
+    );
+
+    if (isDashboard) {
+        // Dialog/dashboard embed: no marketing wrapper, container-width layout.
+        // The homepage's viewport-keyed grid squeezes the input to nothing inside
+        // a dialog, so this variant gets a plain full-width input row.
+        return (
+            <div className="px-4 pb-2 font-body-serif text-cw-ink">
+                {injectedStyles}
+                <div className="bg-cw-cream border-[1.5px] border-cw-ink flex items-stretch">
+                    <input
+                        className="cw-input font-mono-field bg-transparent border-none text-cw-ink w-full min-w-0"
+                        style={{ fontSize: 15, padding: "16px 14px" }}
+                        type="text"
+                        value={value}
+                        placeholder="recreation.gov URL, ID, or name"
+                        onChange={(e) => {
+                            setValue(e.target.value);
+                            setTouched(true);
+                            setFetchedResult(null);
+                            setSearchResults(null);
+                            setAddedSuccess(false);
+                        }}
+                        onFocus={() => setTouched(true)}
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter") void doLookup();
+                        }}
+                    />
+                    <button
+                        onClick={() => void doLookup()}
+                        className="font-poster text-[13px] leading-none tracking-[0.14em] uppercase bg-cw-forest text-cw-cream border-none cursor-pointer flex items-center justify-center gap-[10px] font-extrabold"
+                        style={{ padding: "0 22px", borderLeft: `1.5px solid ${C.ink}` }}
+                    >
+                        Check
+                        <svg width="14" height="14" viewBox="0 0 14 14">
+                            <path
+                                d="M1 7 L13 7 M8 2 L13 7 L8 12"
+                                stroke={C.cream}
+                                strokeWidth="1.8"
+                                fill="none"
+                            />
+                        </svg>
+                    </button>
+                </div>
+
+                {/* Search results (name search) */}
+                {(isSearching || (searchResults && searchResults.length > 0)) && (
+                    <div className="mt-[18px] bg-cw-cream border-[1.5px] border-cw-ink">
+                        <div className="font-mono-field text-[12px] leading-none tracking-[0.18em] uppercase text-cw-clay py-3 px-[18px] border-b border-cw-rule font-bold">
+                            {isSearching
+                                ? "Searching recreation.gov…"
+                                : `${searchResults?.length ?? 0} matches`}
+                        </div>
+                        {isSearching ? (
+                            <div className="p-[18px]">
+                                <ResultSkeleton />
+                            </div>
+                        ) : (
+                            <ul className="list-none m-0 p-0">
+                                {(searchResults ?? []).map((r) => (
+                                    <li key={r.id}>
+                                        <button
+                                            type="button"
+                                            onClick={() => pickSearchResult(r)}
+                                            className="block w-full text-left bg-transparent border-none border-t border-dashed border-cw-rule py-[14px] px-[18px] cursor-pointer font-body-serif text-[16px] leading-[1.3] text-cw-ink"
+                                        >
+                                            <div className="font-poster text-[18px] leading-[1.05] uppercase tracking-[0.005em] font-black">
+                                                {r.name}
+                                            </div>
+                                            <div className="font-italic-serif text-[14px] leading-[1.3] text-cw-ink-soft mt-[2px] font-medium italic">
+                                                {[r.area, r.state].filter(Boolean).join(" · ") ||
+                                                    "Recreation.gov"}
+                                            </div>
+                                            <div className="font-mono-field text-[12px] leading-none text-cw-ink-soft tracking-[0.14em] mt-[6px] uppercase font-medium">
+                                                ID {r.id}
+                                            </div>
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </div>
+                )}
+
+                {/* No-match hint when search returned empty */}
+                {!isSearching && searchResults && searchResults.length === 0 && !displayResult && (
+                    <div className="mt-[18px] bg-transparent border-[1.5px] border-dashed border-cw-rule py-5 px-[22px] font-italic-serif text-[16px] leading-[1.4] text-cw-ink-soft italic">
+                        No recreation.gov campgrounds match &ldquo;{value.trim()}&rdquo;. Try a shorter or
+                        different name.
+                    </div>
+                )}
+
+                {/* Result area */}
+                <div className="mt-[18px]">
+                    {(auth.isLoading && touched) || isLoading ? (
+                        <ResultSkeleton />
+                    ) : displayResult ? (
+                        <ResultCard
+                            result={displayResult}
+                            signedIn={signedIn}
+                            onAdd={() => void handleAdd()}
+                            adding={adding}
+                            addedSuccess={addedSuccess}
+                            dashboard
+                        />
+                    ) : !searchResults && !isSearching ? (
+                        <div className="bg-transparent border-[1.5px] border-dashed border-cw-rule py-5 px-[22px] flex flex-col justify-center gap-2">
+                            <div className="font-body-serif text-[14px] leading-[1.5] text-cw-ink-soft">
+                                Search by campground name (e.g.{" "}
+                                <span className="font-mono-field text-[12px]">Stanley Lake</span>), paste a
+                                recreation.gov URL, or a bare numeric ID like{" "}
+                                <span className="font-mono-field text-[12px]">232358</span>.
+                            </div>
+                        </div>
+                    ) : null}
+                </div>
+            </div>
+        );
+    }
+
     return (
         <section className="relative py-[60px] px-[22px] md:py-[88px] md:px-14 bg-cw-paper font-body-serif text-cw-ink border-t-[1.5px] border-cw-ink">
-            {/* Hover style for chips — injected once, no @import */}
-            <style>{`
-                .cw-chip:hover { background: ${C.ink} !important; color: ${C.cream} !important; border-color: ${C.ink} !important; }
-                .cw-input:focus { outline: none; border-color: ${C.forest}; box-shadow: 0 0 0 3px rgba(31,61,42,0.12); }
-            `}</style>
+            {injectedStyles}
 
             <div className="grid grid-cols-1 md:grid-cols-[1.1fr_1fr] gap-6 md:gap-14 items-start">
                 {/* LEFT — copy */}

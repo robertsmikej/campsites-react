@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { defaultDates } from "./add-campground";
+import { defaultDates } from "./default-dates";
 
 describe("defaultDates", () => {
     it("keeps the rolling 3-month window when it ends before season end", () => {
