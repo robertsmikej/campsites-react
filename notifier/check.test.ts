@@ -232,6 +232,43 @@ describe("per-campground check tiers", () => {
     });
 });
 
+describe("delivery address override", () => {
+    beforeEach(() => vi.restoreAllMocks());
+
+    it("addresses the alert to notificationEmail but keeps unsubscribe on the account email", async () => {
+        const target = {
+            ...tierTarget([tierCampground("232358", "Outlet")]),
+            notificationEmail: "boss@icloud.example",
+            notifierState: { sites: {} }, // not first run → email branch reachable
+        };
+        const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(mockFetch([target]) as never);
+        vi.spyOn(console, "log").mockImplementation(() => {});
+
+        await run({
+            subscriberApiUrl: "https://campwatch.dev",
+            subscriberApiSecret: "secret",
+            resendApiKey: "re_x",
+            siteUrl: "https://campwatch.dev",
+            forceEmail: false,
+            dryRun: false, // real send path — Resend is mocked by mockFetch's fallback
+            kvAdapter: stubKv(),
+            now: new Date("2026-07-06T00:00:00Z"),
+        });
+
+        const resendCalls = fetchSpy.mock.calls.filter((c) => String(c[0]).includes("api.resend.com"));
+        expect(resendCalls.length).toBeGreaterThan(0);
+        const payload = JSON.parse(String(resendCalls[0]![1]?.body)) as {
+            to: string | string[];
+            html: string;
+        };
+        // sendEmail wraps the address in an array for the Resend API.
+        const toAddresses = Array.isArray(payload.to) ? payload.to : [payload.to];
+        expect(toAddresses).toContain("boss@icloud.example");
+        // Unsubscribe identity stays the ACCOUNT email.
+        expect(payload.html).toContain(encodeURIComponent("boss@example.com"));
+    });
+});
+
 describe("past months are not fetched", () => {
     beforeEach(() => vi.restoreAllMocks());
 

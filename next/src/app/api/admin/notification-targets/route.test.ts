@@ -180,4 +180,54 @@ describe("GET /api/admin/notification-targets", () => {
         // Each test sets up exactly one user in KV, so targets[0] is guaranteed.
         expect(body.targets[0]!.notifierState).toBeNull();
     });
+
+    it("passes notificationEmail through to the target", async () => {
+        vi.mocked(cloudflare.getEnv).mockReturnValue({ API_SECRET: SECRET } as never);
+        const kv = createMockKv({
+            "user:user@x.com:profile": JSON.stringify({
+                email: "user@x.com",
+                name: "User",
+                roles: [],
+                createdAt: "2026-01-01T00:00:00.000Z",
+                notificationEmail: "me@icloud.com",
+            }),
+            "user:user@x.com:campgrounds": JSON.stringify({
+                campgrounds: {
+                    "recreation.gov": [{ id: "1", name: "X", sites: { favorites: [], worthwhile: [] } }],
+                },
+                globalSettings: { stayLengths: [2], validStartDays: ["Monday"] },
+                updatedAt: "2026-01-02T00:00:00.000Z",
+            }),
+        });
+        vi.mocked(cloudflare.getKv).mockReturnValue(kv);
+
+        const res = await get(`Bearer ${SECRET}`);
+        expect(res.status).toBe(200);
+        const body = (await res.json()) as { targets: Array<Record<string, unknown>> };
+        expect(body.targets[0]?.notificationEmail).toBe("me@icloud.com");
+    });
+
+    it("omits notificationEmail from the target when the profile has none", async () => {
+        vi.mocked(cloudflare.getEnv).mockReturnValue({ API_SECRET: SECRET } as never);
+        const kv = createMockKv({
+            "user:user@x.com:profile": JSON.stringify({
+                email: "user@x.com",
+                name: "User",
+                roles: [],
+                createdAt: "2026-01-01T00:00:00.000Z",
+            }),
+            "user:user@x.com:campgrounds": JSON.stringify({
+                campgrounds: {
+                    "recreation.gov": [{ id: "1", name: "X", sites: { favorites: [], worthwhile: [] } }],
+                },
+                globalSettings: { stayLengths: [2], validStartDays: ["Monday"] },
+                updatedAt: "2026-01-02T00:00:00.000Z",
+            }),
+        });
+        vi.mocked(cloudflare.getKv).mockReturnValue(kv);
+
+        const res = await get(`Bearer ${SECRET}`);
+        const body = (await res.json()) as { targets: Array<Record<string, unknown>> };
+        expect(body.targets[0]?.notificationEmail).toBeUndefined();
+    });
 });

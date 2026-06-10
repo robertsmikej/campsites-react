@@ -79,6 +79,8 @@ interface NotificationTarget {
     notifications?: NotificationSettings;
     defaultNotifyScope?: NotifyScope;
     lastNotifiedAt?: string | null;
+    /** Verified alert-delivery override. Absent = deliver to the account email. */
+    notificationEmail?: string;
     notifierState?: NotifierState | null;
     campgrounds: {
         "recreation.gov"?: Campground[];
@@ -524,8 +526,10 @@ async function sendEmailToUser({
         apiSecret,
         siteUrl,
     });
-    console.log(`[Email] Sending to ${user.email}: "${subject}"`);
-    await sendEmail(user.email, subject, html, resendApiKey, unsubscribeLink);
+    // Deliver to the verified override when set; unsubscribe identity stays the account email.
+    const deliverTo = user.notificationEmail ?? user.email;
+    console.log(`[Email] Sending to ${deliverTo} (account ${user.email}): "${subject}"`);
+    await sendEmail(deliverTo, subject, html, resendApiKey, unsubscribeLink);
 }
 
 // ── First-seen map helpers ────────────────────────────────────────────────────

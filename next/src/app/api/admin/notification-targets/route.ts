@@ -12,6 +12,7 @@ interface NotificationTarget {
     notifications: { enabled: boolean; frequencyMinutes: 1 | 5 | 15 | 60 | 240 };
     defaultNotifyScope?: NotifyScope;
     lastNotifiedAt?: string;
+    notificationEmail?: string;
     campgrounds: SiteConfig;
     globalSettings: GlobalSettings;
     notifierState: unknown | null;
@@ -58,6 +59,7 @@ async function getHandler(request: Request): Promise<Response> {
             };
             if (profile.defaultNotifyScope) target.defaultNotifyScope = profile.defaultNotifyScope;
             if (profile.lastNotifiedAt) target.lastNotifiedAt = profile.lastNotifiedAt;
+            if (profile.notificationEmail) target.notificationEmail = profile.notificationEmail;
             targets.push(target);
         }
         cursor = list.list_complete ? undefined : list.cursor;
