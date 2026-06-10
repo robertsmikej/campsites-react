@@ -7,6 +7,8 @@ import { withErrorLogging } from "@/lib/route-helpers";
 import { WorkerKvAdapter } from "@/lib/recgov/worker-kv";
 import { HIGH_PRIORITY_CAP } from "@/types/campground";
 
+const VALID_CHECK_PRIORITIES = new Set(["high", "normal", "low"]);
+
 function emptyRecord() {
     const defaults = getSitewideDefaultSettings({});
     return {
@@ -56,6 +58,17 @@ async function putHandler(request: Request): Promise<Response> {
     }
     if (!isValidBody(body)) {
         return withCors(jsonResponse({ error: "Body must include campgrounds and globalSettings" }, 400));
+    }
+
+    const invalidPriority = body.campgrounds["recreation.gov"].some((cg) => {
+        if (!cg || typeof cg !== "object") return false;
+        const c = cg as { checkPriority?: unknown };
+        return c.checkPriority !== undefined && !VALID_CHECK_PRIORITIES.has(c.checkPriority as string);
+    });
+    if (invalidPriority) {
+        return withCors(
+            jsonResponse({ error: 'checkPriority must be "high", "normal", or "low"' }, 400),
+        );
     }
 
     const highCount = body.campgrounds["recreation.gov"].filter((cg) => {

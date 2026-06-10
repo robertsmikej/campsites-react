@@ -316,6 +316,43 @@ describe("PUT /api/users/me/campgrounds", () => {
         expect(JSON.parse(defaultRaw as string).campgrounds["recreation.gov"][0].id).toBe("old");
     });
 
+    it("returns 400 for an invalid checkPriority value", async () => {
+        vi.mocked(sessions.readSession).mockResolvedValue({
+            id: "x",
+            email: "user@example.com",
+            createdAt: "x",
+            expiresAt: "x",
+        });
+        vi.mocked(cloudflare.getKv).mockReturnValue(createMockKv());
+
+        const res = await doPut({
+            campgrounds: { "recreation.gov": [cgWithPriority("1", "HIGH")] },
+            globalSettings: GLOBAL_SETTINGS,
+        });
+        expect(res.status).toBe(400);
+        const body = (await res.json()) as { error: string };
+        expect(body.error).toContain("checkPriority");
+    });
+
+    it("tolerates malformed array entries without crashing", async () => {
+        vi.mocked(sessions.readSession).mockResolvedValue({
+            id: "x",
+            email: "user@example.com",
+            createdAt: "x",
+            expiresAt: "x",
+        });
+        vi.mocked(cloudflare.getKv).mockReturnValue(createMockKv());
+
+        const res = await doPut({
+            campgrounds: {
+                "recreation.gov": [null, "high", cgWithPriority("1", "high")],
+            },
+            globalSettings: GLOBAL_SETTINGS,
+        });
+        // Malformed entries have no valid checkPriority — they're not high, not invalid-string objects.
+        expect(res.status).toBe(200);
+    });
+
     it("curator PUT updates user record and does NOT write to default config", async () => {
         vi.mocked(sessions.readSession).mockResolvedValue({
             id: "x",
