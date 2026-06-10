@@ -32,7 +32,7 @@ export function AvailabilityBlock({ horizon, run, kind, site, ring }: Availabili
     let showTag = false;
     if (site) {
         if (width >= 6.5)
-            inline = <span className="relative z-[1] font-mono-field text-[9px] font-semibold">{label}</span>;
+            inline = <span className="relative z-[1] font-mono-field text-[8px] font-semibold">{label}</span>;
         else showTag = true;
     } else if (width >= 11) {
         inline = (
