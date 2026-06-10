@@ -1,10 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-
-// The hook itself is a React hook and requires a DOM + React renderer.
-// Vitest is configured with environment:"node", so we test the observable
-// contract via a thin manual driver that patches globalThis.fetch and
-// invokes the underlying fetch logic directly — matching the same URL /
-// method / body shapes the hook uses.
+import { renderHook, act, waitFor } from "@testing-library/react";
+import { useUserCampgrounds } from "./use-user-campgrounds";
 
 const ENDPOINT = "/api/users/me/campgrounds";
 
@@ -145,25 +141,46 @@ describe("useUserCampgrounds fetch contract", () => {
         expect(typeof mod.useUserCampgrounds).toBe("function");
     });
 
-    it("save returning 400 with {error: '...'} exposes that message via syncError", async () => {
-        const errorBody = { error: "At most 3 campgrounds may use high-frequency checking" };
-        const fetchMock = vi.fn().mockResolvedValue({
-            ok: false,
-            status: 400,
-            json: () => Promise.resolve(errorBody),
-        });
-        globalThis.fetch = fetchMock;
+    it("save returning 400 with {error: '...'} exposes that message via syncError, and clearSyncStatus resets it", async () => {
+        const errorMessage = "At most 3 campgrounds can be set to every-minute checking";
 
-        // Simulate the save path: non-ok response, parse body for error string
-        const res = await fetch(ENDPOINT, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ campgrounds: { "recreation.gov": [] }, globalSettings: {} }),
-            credentials: "include",
+        // Mount the hook; initial GET + default GET must succeed so hydration completes.
+        const okRecord = makeFakeRecord({ updatedAt: "2024-01-01T00:00:00.000Z" });
+        const okDefault = { campgrounds: { "recreation.gov": [] }, globalSettings: okRecord.globalSettings };
+        let callCount = 0;
+        globalThis.fetch = vi.fn().mockImplementation(() => {
+            callCount++;
+            if (callCount === 1) {
+                // GET /api/users/me/campgrounds
+                return Promise.resolve(new Response(JSON.stringify(okRecord), { status: 200 }));
+            }
+            if (callCount === 2) {
+                // GET /api/default
+                return Promise.resolve(new Response(JSON.stringify(okDefault), { status: 200 }));
+            }
+            // All subsequent calls (the save PUT) return 400.
+            return Promise.resolve(new Response(JSON.stringify({ error: errorMessage }), { status: 400 }));
         });
-        expect(res.ok).toBe(false);
-        const body = (await res.json()) as { error?: string };
-        expect(body.error).toBe("At most 3 campgrounds may use high-frequency checking");
+
+        const { result } = renderHook(() => useUserCampgrounds());
+
+        // Wait for hydration to complete (isHydrating becomes false).
+        await waitFor(() => expect(result.current.isHydrating).toBe(false));
+
+        await act(async () => {
+            await result.current.save(
+                { "recreation.gov": [] },
+                { stayLengths: [2, 3], validStartDays: ["Friday"] },
+            );
+        });
+
+        expect(result.current.syncError).toBe(errorMessage);
+        expect(result.current.syncStatus).toBe("error");
+
+        // clearSyncStatus should reset both fields.
+        act(() => result.current.clearSyncStatus());
+        expect(result.current.syncError).toBeNull();
+        expect(result.current.syncStatus).toBeNull();
     });
 });
 
