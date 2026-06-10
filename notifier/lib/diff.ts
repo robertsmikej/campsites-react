@@ -34,6 +34,8 @@ export interface MatchResult {
     siteName: string;
     match: StayMatch;
     group: MatchGroup;
+    /** ISO timestamp of the opening's first global sighting; annotated by run() before email send. */
+    firstSeenAt?: string;
 }
 
 // ── Exported functions ────────────────────────────────────────────────────────

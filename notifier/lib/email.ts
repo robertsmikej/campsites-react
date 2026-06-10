@@ -181,11 +181,51 @@ const buildMetaBar = (timestamp: string): string => {
                     </tr>`;
 };
 
+const MT_TIME = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Boise",
+    hour: "numeric",
+    minute: "2-digit",
+});
+const MT_DATE_TIME = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Boise",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+});
+
+/** "Spotted 2:14 PM MT · 3 min before this email" — absolute Mountain Time plus
+ *  the age at send. Exported for tests; nowMs injected for determinism. */
+export const formatSpottedLine = (firstSeenIso: string, nowMs: number): string => {
+    const seen = new Date(firstSeenIso);
+    const ageMin = Math.floor((nowMs - seen.getTime()) / 60_000);
+
+    let rel: string;
+    if (ageMin < 1) rel = "under a minute";
+    else if (ageMin < 60) rel = `${ageMin} min`;
+    else if (ageMin < 24 * 60) rel = `${Math.floor(ageMin / 60)} hr ${ageMin % 60} min`;
+    else {
+        const days = Math.floor(ageMin / (24 * 60));
+        const hrs = Math.floor((ageMin % (24 * 60)) / 60);
+        rel = `${days} ${days === 1 ? "day" : "days"} ${hrs} hr`;
+    }
+
+    // Include the date once it's no longer "today-ish" — a day or more old.
+    const abs =
+        ageMin >= 24 * 60
+            ? `${MT_DATE_TIME.format(seen).replace(/ | /g, " ")} MT`
+            : `${MT_TIME.format(seen).replace(/ | /g, " ")} MT`;
+    return `Spotted ${abs} · ${rel} before this email`;
+};
+
 const buildOpeningCard = (match: MatchResult): string => {
     const link = buildReservationLink(match.siteId, match.match.from, match.match.nights);
     const siteName = match.siteName.replace(/^Site\s+/i, "");
     const dateRange = `${formatDate(match.match.from)} &nbsp;&rarr;&nbsp; ${formatDate(match.match.to)}`;
     const nightsText = `${match.match.nights} ${match.match.nights === 1 ? "night" : "nights"}`;
+    const spottedHtml = match.firstSeenAt
+        ? `<div style="font-family:${F.mono};font-size:12px;color:${C.inkSubtle};letter-spacing:0.08em;margin-top:6px;">${formatSpottedLine(match.firstSeenAt, Date.now())}</div>`
+        : "";
 
     // Tier badge
     let badgeBg: string, badgeColor: string, badgeLabel: string;
@@ -224,6 +264,7 @@ const buildOpeningCard = (match: MatchResult): string => {
                                                 <div style="font-family:${F.body};font-weight:bold;font-size:16px;line-height:22px;color:${C.ink};margin-top:6px;">${dateRange}</div>
                                                 <!-- Nights -->
                                                 <div style="font-family:${F.mono};font-weight:700;font-size:13px;color:${C.inkSubtle};letter-spacing:0.12em;text-transform:uppercase;margin-top:4px;">${nightsText}</div>
+                                                ${spottedHtml}
                                             </td>
                                         </tr>
                                         <!-- Book button — full-width, stacked below -->
