@@ -33,7 +33,13 @@ async function getHandler(request: Request): Promise<Response> {
     });
 
     const origin = new URL(request.url).origin;
-    return Response.redirect(`${origin}/app/account?emailVerified=1`, 302);
+    return new Response(null, {
+        status: 302,
+        headers: {
+            Location: `${origin}/app/account?emailVerified=1`,
+            "Cache-Control": "no-store",
+        },
+    });
 }
 
 export const GET = withErrorLogging(getHandler, "GET /api/me/verify-notification-email");
