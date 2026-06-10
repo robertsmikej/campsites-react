@@ -3,6 +3,7 @@
 // deduplicates recreation.gov fetches, and emails each user about their own matches.
 // Designed to run as a GitHub Actions scheduled workflow.
 
+import { stayOverlapsBlackout } from "../next/src/lib/blackout";
 import { fetchMonth } from "../next/src/lib/recgov/fetch-month";
 import { processCampgroundResults, getAllDatesInRange } from "../next/src/lib/recgov/match-detection";
 import { RestKvAdapter } from "../next/src/lib/recgov/rest-kv";
@@ -374,9 +375,17 @@ async function computeMatchesForUser(
         return matchPassesScope(m.group, scope);
     });
 
+    // Blackout suppression: don't email stays whose nights overlap the user's
+    // blackout dates. Views still show everything (snapshot receives syntheticResults,
+    // not sendable), so only email delivery is gated here.
+    const blackouts = target.globalSettings?.blackoutDates;
+    const sendable = blackouts?.length
+        ? filtered.filter((m) => !stayOverlapsBlackout(m.match.from, m.match.to, blackouts))
+        : filtered;
+
     await writeUserSnapshot(target, syntheticResults, failedCampgroundIds);
 
-    return filtered;
+    return sendable;
 }
 
 // ── Diff per user ─────────────────────────────────────────────────────────────

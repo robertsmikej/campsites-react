@@ -299,6 +299,55 @@ describe("spotted time in sent emails", () => {
     });
 });
 
+describe("blackout alert suppression", () => {
+    beforeEach(() => vi.restoreAllMocks());
+
+    function targetWithBlackouts(blackoutDates: unknown) {
+        return {
+            ...tierTarget([tierCampground("232358", "Outlet")]),
+            notifierState: { sites: {} },
+            globalSettings: {
+                stayLengths: [2],
+                validStartDays: ["Saturday"],
+                ...(blackoutDates ? { blackoutDates } : {}),
+            },
+        };
+    }
+
+    async function resendCallsAt(targets: unknown[]): Promise<number> {
+        const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(mockFetch(targets) as never);
+        vi.spyOn(console, "log").mockImplementation(() => {});
+        await run({
+            subscriberApiUrl: "https://campwatch.dev",
+            subscriberApiSecret: "secret",
+            resendApiKey: "re_x",
+            siteUrl: "https://campwatch.dev",
+            forceEmail: false,
+            dryRun: false,
+            kvAdapter: stubKv(),
+            now: new Date("2026-07-06T00:00:00Z"),
+        });
+        return fetchSpy.mock.calls.filter((c) => String(c[0]).includes("api.resend.com")).length;
+    }
+
+    it("suppresses an alert whose stay night falls in a blackout", async () => {
+        // Stay nights Jul 4–5; blackout covers Jul 5.
+        const n = await resendCallsAt([targetWithBlackouts([{ from: "2026-07-05", to: "2026-07-05" }])]);
+        expect(n).toBe(0);
+    });
+
+    it("does not suppress when the blackout starts on checkout day", async () => {
+        // Stay to=2026-07-06 (checkout morning); blackout starts that day.
+        const n = await resendCallsAt([targetWithBlackouts([{ from: "2026-07-06", to: "2026-07-08" }])]);
+        expect(n).toBeGreaterThan(0);
+    });
+
+    it("does not suppress without blackouts", async () => {
+        const n = await resendCallsAt([targetWithBlackouts(undefined)]);
+        expect(n).toBeGreaterThan(0);
+    });
+});
+
 describe("past months are not fetched", () => {
     beforeEach(() => vi.restoreAllMocks());
 
