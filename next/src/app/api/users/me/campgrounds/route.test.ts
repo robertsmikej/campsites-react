@@ -353,6 +353,115 @@ describe("PUT /api/users/me/campgrounds", () => {
         expect(res.status).toBe(200);
     });
 
+    const ARCHIVE_KEY = "user:user@example.com:campground-archive";
+
+    function sessionFor(email = "user@example.com") {
+        vi.mocked(sessions.readSession).mockResolvedValue({
+            id: "x",
+            email,
+            createdAt: "x",
+            expiresAt: "x",
+        });
+    }
+
+    it("archives a removed campground with its full config", async () => {
+        sessionFor();
+        const prior = {
+            campgrounds: {
+                "recreation.gov": [
+                    {
+                        id: "1",
+                        name: "Keeper",
+                        sites: { favorites: [], worthwhile: [] },
+                    },
+                    {
+                        id: "2",
+                        name: "Dropped",
+                        notifyScope: "favorites",
+                        sites: { favorites: ["007"], worthwhile: ["010"] },
+                    },
+                ],
+            },
+            globalSettings: { stayLengths: [2], validStartDays: ["Friday"] },
+            updatedAt: "2026-06-01T00:00:00.000Z",
+        };
+        const kv = createMockKv({ "user:user@example.com:campgrounds": JSON.stringify(prior) });
+        vi.mocked(cloudflare.getKv).mockReturnValue(kv);
+
+        const res = await doPut({
+            campgrounds: {
+                "recreation.gov": [{ id: "1", name: "Keeper", sites: { favorites: [], worthwhile: [] } }],
+            },
+            globalSettings: { stayLengths: [2], validStartDays: ["Friday"] },
+        });
+        expect(res.status).toBe(200);
+
+        const archive = JSON.parse((await kv.get(ARCHIVE_KEY)) as string) as {
+            campgrounds: Array<{ id: string; removedAt?: string; sites?: { favorites: string[] } }>;
+        };
+        expect(archive.campgrounds).toHaveLength(1);
+        expect(archive.campgrounds[0]).toMatchObject({
+            id: "2",
+            name: "Dropped",
+            notifyScope: "favorites",
+            sites: { favorites: ["007"], worthwhile: ["010"] },
+        });
+        expect(typeof archive.campgrounds[0]?.removedAt).toBe("string");
+    });
+
+    it("does not write the archive when nothing was removed", async () => {
+        sessionFor();
+        const prior = {
+            campgrounds: {
+                "recreation.gov": [{ id: "1", name: "Keeper", sites: { favorites: [], worthwhile: [] } }],
+            },
+            globalSettings: { stayLengths: [2], validStartDays: ["Friday"] },
+            updatedAt: "2026-06-01T00:00:00.000Z",
+        };
+        const kv = createMockKv({ "user:user@example.com:campgrounds": JSON.stringify(prior) });
+        vi.mocked(cloudflare.getKv).mockReturnValue(kv);
+
+        const res = await doPut({
+            campgrounds: {
+                "recreation.gov": [
+                    { id: "1", name: "Keeper renamed", sites: { favorites: [], worthwhile: [] } },
+                    { id: "3", name: "Added", sites: { favorites: [], worthwhile: [] } },
+                ],
+            },
+            globalSettings: { stayLengths: [2], validStartDays: ["Friday"] },
+        });
+        expect(res.status).toBe(200);
+        expect(await kv.get(ARCHIVE_KEY)).toBeNull();
+    });
+
+    it("save succeeds even when the archive write fails", async () => {
+        sessionFor();
+        const prior = {
+            campgrounds: {
+                "recreation.gov": [{ id: "2", name: "Dropped", sites: { favorites: [], worthwhile: [] } }],
+            },
+            globalSettings: { stayLengths: [2], validStartDays: ["Friday"] },
+            updatedAt: "2026-06-01T00:00:00.000Z",
+        };
+        const kv = createMockKv({ "user:user@example.com:campgrounds": JSON.stringify(prior) });
+        const failingKv = {
+            ...kv,
+            put: vi.fn(async (k: string, v: string) => {
+                if (k.includes("campground-archive")) throw new Error("KV boom");
+                return kv.put(k, v);
+            }),
+        };
+        vi.mocked(cloudflare.getKv).mockReturnValue(failingKv as never);
+        const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+        const res = await doPut({
+            campgrounds: { "recreation.gov": [] },
+            globalSettings: { stayLengths: [2], validStartDays: ["Friday"] },
+        });
+        expect(res.status).toBe(200);
+        expect(errSpy).toHaveBeenCalled();
+    });
+
     it("curator PUT updates user record and does NOT write to default config", async () => {
         vi.mocked(sessions.readSession).mockResolvedValue({
             id: "x",

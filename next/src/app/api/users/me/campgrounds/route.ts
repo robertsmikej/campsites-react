@@ -6,6 +6,8 @@ import { getKv } from "@/lib/cloudflare";
 import { withErrorLogging } from "@/lib/route-helpers";
 import { WorkerKvAdapter } from "@/lib/recgov/worker-kv";
 import { HIGH_PRIORITY_CAP } from "@/types/campground";
+import { archiveRemovedCampgrounds } from "@/lib/campground-archive";
+import type { Campground } from "@/types/campground";
 
 const VALID_CHECK_PRIORITIES = new Set(["high", "normal", "low"]);
 
@@ -83,7 +85,25 @@ async function putHandler(request: Request): Promise<Response> {
         );
     }
 
+    // Read the prior record BEFORE overwriting so removals can be archived.
+    const prior = await getUserCampgrounds(session.email).catch(() => null);
+
     const stored = await putUserCampgrounds(session.email, body as never);
+
+    // Best-effort: archive campgrounds that were just removed (full prior config),
+    // so they can be one-click re-added next season. Never fails the save.
+    try {
+        const priorList = (prior?.campgrounds["recreation.gov"] ?? []) as Campground[];
+        const incomingIds = new Set(
+            (body.campgrounds["recreation.gov"] as Array<{ id?: string }>)
+                .map((c) => c?.id)
+                .filter((id): id is string => typeof id === "string"),
+        );
+        const removed = priorList.filter((c) => !incomingIds.has(c.id));
+        await archiveRemovedCampgrounds(session.email, removed, new Date().toISOString());
+    } catch (e) {
+        console.error("[archive] failed to archive removed campgrounds:", (e as Error).message);
+    }
 
     const adapter = new WorkerKvAdapter(getKv());
     await adapter.deleteSnapshot(session.email);
