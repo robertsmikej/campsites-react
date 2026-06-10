@@ -195,8 +195,10 @@ const MT_DATE_TIME = new Intl.DateTimeFormat("en-US", {
 });
 
 /** "Spotted 2:14 PM MT · 3 min before this email" — absolute Mountain Time plus
- *  the age at send. Exported for tests; nowMs injected for determinism. */
+ *  the age at send. Exported for tests; nowMs injected for determinism.
+ *  Returns "" for a malformed timestamp so callers can safely skip the line. */
 export const formatSpottedLine = (firstSeenIso: string, nowMs: number): string => {
+    if (isNaN(new Date(firstSeenIso).getTime())) return "";
     const seen = new Date(firstSeenIso);
     const ageMin = Math.floor((nowMs - seen.getTime()) / 60_000);
 
@@ -223,8 +225,9 @@ const buildOpeningCard = (match: MatchResult): string => {
     const siteName = match.siteName.replace(/^Site\s+/i, "");
     const dateRange = `${formatDate(match.match.from)} &nbsp;&rarr;&nbsp; ${formatDate(match.match.to)}`;
     const nightsText = `${match.match.nights} ${match.match.nights === 1 ? "night" : "nights"}`;
-    const spottedHtml = match.firstSeenAt
-        ? `<div style="font-family:${F.mono};font-size:12px;color:${C.inkSubtle};letter-spacing:0.08em;margin-top:6px;">${formatSpottedLine(match.firstSeenAt, Date.now())}</div>`
+    const spottedLine = match.firstSeenAt ? formatSpottedLine(match.firstSeenAt, Date.now()) : "";
+    const spottedHtml = spottedLine
+        ? `<div style="font-family:${F.mono};font-size:12px;color:${C.inkSubtle};letter-spacing:0.08em;margin-top:6px;">${spottedLine}</div>`
         : "";
 
     // Tier badge

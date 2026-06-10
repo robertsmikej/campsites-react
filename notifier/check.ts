@@ -699,6 +699,13 @@ export async function run(config: RunConfig): Promise<void> {
             continue;
         }
 
+        // Stamp each match with its global first-sighting so the email can say how
+        // long the opening has been visible (same lookup the latency stats use below).
+        for (const m of newMatches) {
+            const firstSeen = newFirstSeenMap[signatureForMatch(m)];
+            if (firstSeen) m.firstSeenAt = firstSeen;
+        }
+
         console.log(`[${target.email}] ${newMatches.length} new match(es) — sending email`);
         if (dryRun) {
             console.log(`[dry-run] would email ${newMatches.length} match(es) to ${target.email}`);

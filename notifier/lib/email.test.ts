@@ -99,3 +99,9 @@ describe("opening card spotted line", () => {
         expect(html).not.toContain("Spotted");
     });
 });
+
+describe("formatSpottedLine defensive guard", () => {
+    it("returns empty string for a malformed timestamp", () => {
+        expect(formatSpottedLine("garbage", Date.now())).toBe("");
+    });
+});

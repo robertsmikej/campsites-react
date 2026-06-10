@@ -269,6 +269,36 @@ describe("delivery address override", () => {
     });
 });
 
+describe("spotted time in sent emails", () => {
+    beforeEach(() => vi.restoreAllMocks());
+
+    it("annotates matches so the sent html contains the Spotted line", async () => {
+        const target = {
+            ...tierTarget([tierCampground("232358", "Outlet")]),
+            notifierState: { sites: {} }, // not first run → email branch reachable
+        };
+        const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(mockFetch([target]) as never);
+        vi.spyOn(console, "log").mockImplementation(() => {});
+
+        await run({
+            subscriberApiUrl: "https://campwatch.dev",
+            subscriberApiSecret: "secret",
+            resendApiKey: "re_x",
+            siteUrl: "https://campwatch.dev",
+            forceEmail: false,
+            dryRun: false,
+            kvAdapter: stubKv(),
+            now: new Date("2026-07-06T00:00:00Z"),
+        });
+
+        const resendCalls = fetchSpy.mock.calls.filter((c) => String(c[0]).includes("api.resend.com"));
+        expect(resendCalls.length).toBeGreaterThan(0);
+        const payload = JSON.parse(String(resendCalls[0]![1]?.body)) as { html: string };
+        expect(payload.html).toContain("Spotted");
+        expect(payload.html).toContain("MT ·");
+    });
+});
+
 describe("past months are not fetched", () => {
     beforeEach(() => vi.restoreAllMocks());
 
