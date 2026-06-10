@@ -12,6 +12,7 @@ import { fetchDedupedConcurrent } from "../next/src/lib/recgov/fetch-deduped";
 import { findNewMatches, generateSignature } from "./lib/diff";
 import { formatEmail, sendEmail } from "./lib/email";
 import { resolveNotifyScope, matchPassesScope } from "./lib/notify-scope";
+import { CHECK_PRIORITY_INTERVAL_MINUTES } from "../next/src/types/campground";
 import type { Campground, GlobalSettings, NotifyScope } from "../next/src/types/campground";
 import type { MatchResult, SiteConfigForDiff, CampgroundResult } from "./lib/diff";
 import type { SiteAvailabilityMap } from "../next/src/lib/recgov/types";
@@ -167,12 +168,19 @@ function monthsBetween(startIso: string, endIso: string): string[] {
     return [...months];
 }
 
-function buildDedupedFetchPlan(targets: NotificationTarget[]): FetchPlanItem[] {
+function tierIntervalMinutes(c: Campground): number {
+    return CHECK_PRIORITY_INTERVAL_MINUTES[c.checkPriority ?? "normal"];
+}
+
+function buildDedupedFetchPlan(targets: NotificationTarget[], minute: number): FetchPlanItem[] {
     // campgroundId → Set<"YYYY-MM">
     const ranges = new Map<string, Set<string>>();
     for (const target of targets) {
         for (const c of target.campgrounds["recreation.gov"] ?? []) {
             if (c.enabled === false) continue;
+            // Tier gate: high fires every minute, normal every 5th, low every 10th.
+            // The plan is a union across users, so the fastest watcher's tier wins.
+            if (minute % tierIntervalMinutes(c) !== 0) continue;
             const start = c.dates?.startDate;
             const end = c.dates?.endDate;
             if (!start || !end) continue;
@@ -574,9 +582,15 @@ export async function run(config: RunConfig): Promise<void> {
         return;
     }
 
-    // 3. Build dedup'd fetch plan.
-    const plan = buildDedupedFetchPlan(eligible);
-    console.log(`[Plan] ${plan.length} unique (campground, month) fetches`);
+    // 3. Build dedup'd fetch plan. The minute-of-hour drives which tiers fire
+    //    (high=1m, normal=5m, low=10m). forceEmail acts like minute 0: all due.
+    const minute = forceEmail ? 0 : now.getUTCMinutes();
+    const plan = buildDedupedFetchPlan(eligible, minute);
+    console.log(`[Plan] minute=${minute} → ${plan.length} unique (campground, month) fetches`);
+    if (plan.length === 0) {
+        console.log("[Done] No campgrounds due this minute");
+        return;
+    }
 
     // 4. Fetch each (campgroundId, month) from rec.gov ONCE; accumulate raw API results per campground.
     const rawByCampground = await fetchDeduped(plan);
