@@ -12,7 +12,7 @@ interface Env {
 }
 
 export default {
-    async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    async scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
         ctx.waitUntil(
             run({
                 subscriberApiUrl: env.SUBSCRIBER_API_URL,
@@ -22,7 +22,9 @@ export default {
                 forceEmail: false,
                 dryRun: env.DRY_RUN === "true",
                 kvAdapter: new WorkerKvAdapter(env.SUBSCRIBERS as never),
-                now: new Date(),
+                // Cron fires exactly on the minute; scheduledTime keeps the tier modulo
+                // in check.ts from drifting across a minute boundary under slow starts.
+                now: new Date(controller.scheduledTime),
             }),
         );
     },
