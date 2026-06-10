@@ -59,6 +59,32 @@ describe("buildVariantMap", () => {
         const map = buildVariantMap([]);
         expect(map.size).toBe(0);
     });
+
+    it("maps blacked-out days to the blackout variant over availability", () => {
+        const values = [
+            { from: "2026-07-10", to: "2026-07-12" },
+            { from: "2026-07-13", to: "2026-07-13" },
+        ];
+        const map = buildVariantMap(values, {
+            blackoutDates: [{ from: "2026-07-10", to: "2026-07-11" }],
+        });
+        expect(map.get("2026-07-10")).toBe("blackout");
+        expect(map.get("2026-07-11")).toBe("blackout");
+        // 2026-07-12 is the rangeEnd of the match — outside the blackout → unchanged
+        expect(map.get("2026-07-12")).toBe("rangeEnd");
+        // 2026-07-13 is not blacked out
+        expect(map.get("2026-07-13")).toBe("single");
+    });
+
+    it("no blackouts → map unchanged", () => {
+        const values = [{ from: "2026-07-10", to: "2026-07-12" }];
+        expect(buildVariantMap(values)).toEqual(buildVariantMap(values, { blackoutDates: [] }));
+    });
+
+    it("no blackouts option → map unchanged", () => {
+        const values = [{ from: "2026-07-10", to: "2026-07-12" }];
+        expect(buildVariantMap(values)).toEqual(buildVariantMap(values, {}));
+    });
 });
 
 // ---------------------------------------------------------------------------

@@ -18,6 +18,7 @@ import {
     buildVariantMap,
     getMonthsFromSiteData,
 } from "./campsites-calendar-helpers";
+import { useSiteSettings } from "@/context/site-settings";
 
 // ---------------------------------------------------------------------------
 // Variant → Tailwind class map
@@ -51,6 +52,9 @@ const VARIANT_CLASS: Record<DayVariant, string> = {
         "rounded-none bg-accent text-accent-foreground transition-colors duration-150 hover:opacity-90",
     excludedRangeEnd:
         "rounded-r-full bg-accent text-accent-foreground bg-gradient-to-br from-accent from-65% to-transparent to-65% transition-colors duration-150 hover:opacity-90",
+
+    // Blackout — muted grey, struck through
+    blackout: "rounded-none bg-muted/60 text-muted-foreground opacity-50 line-through",
 };
 
 // ---------------------------------------------------------------------------
@@ -81,8 +85,11 @@ export function CampsitesCalendar({ site, campground, showExcluded }: CampsitesC
         siteName: string;
     }>({ open: false, photos: [], siteName: "" });
 
+    const siteSettings = useSiteSettings();
+    const blackoutDates = siteSettings?.dates.blackoutDates;
+
     const values = useMemo(() => buildDateDisplayArray(site, showExcluded), [site, showExcluded]);
-    const variantMap = useMemo(() => buildVariantMap(values), [values]);
+    const variantMap = useMemo(() => buildVariantMap(values, { blackoutDates }), [values, blackoutDates]);
     const months = useMemo(() => getMonthsFromSiteData(site, showExcluded), [site, showExcluded]);
 
     const openPhotos = () => {
@@ -155,11 +162,14 @@ export function CampsitesCalendar({ site, campground, showExcluded }: CampsitesC
                                     );
                                     if (!variant) return button;
 
-                                    const label = variant.startsWith("excluded")
-                                        ? "Filtered out — site is open but doesn't fit your filters"
-                                        : variant.startsWith("soft")
-                                          ? "Single day available"
-                                          : "Available";
+                                    const label =
+                                        variant === "blackout"
+                                            ? "Blacked out"
+                                            : variant.startsWith("excluded")
+                                              ? "Filtered out — site is open but doesn't fit your filters"
+                                              : variant.startsWith("soft")
+                                                ? "Single day available"
+                                                : "Available";
 
                                     return (
                                         <Tooltip>

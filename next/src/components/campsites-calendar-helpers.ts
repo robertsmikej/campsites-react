@@ -1,4 +1,5 @@
-import type { SiteAvailability } from "@/types/campground";
+import type { SiteAvailability, BlackoutRange } from "@/types/campground";
+import { isDateBlackedOut } from "@/lib/blackout";
 
 export type DayVariant =
     | "single"
@@ -12,7 +13,8 @@ export type DayVariant =
     | "excludedSingle"
     | "excludedRangeStart"
     | "excludedRangeMiddle"
-    | "excludedRangeEnd";
+    | "excludedRangeEnd"
+    | "blackout";
 
 export interface DisplayRange {
     from: string;
@@ -109,11 +111,18 @@ function addRangeToMap(
     }
 }
 
+export interface BuildVariantMapOptions {
+    blackoutDates?: BlackoutRange[];
+}
+
 /**
  * Pre-compute a Map<YYYY-MM-DD, DayVariant> from the display ranges.
- * Priority order (highest wins): regular > soft > excluded.
+ * Priority order (highest wins): blackout > regular > soft > excluded.
  */
-export function buildVariantMap(values: DisplayRange[]): Map<string, DayVariant> {
+export function buildVariantMap(
+    values: DisplayRange[],
+    opts?: BuildVariantMapOptions,
+): Map<string, DayVariant> {
     const map = new Map<string, DayVariant>();
 
     // 1. Excluded — lowest priority
@@ -128,10 +137,19 @@ export function buildVariantMap(values: DisplayRange[]): Map<string, DayVariant>
         if (item.from && item.to) addRangeToMap(map, item.from, item.to, "soft");
     }
 
-    // 3. Regular matches — highest priority
+    // 3. Regular matches — highest availability priority
     for (const item of values) {
         if (item?.excluded || item?.soft) continue;
         if (item.from && item.to) addRangeToMap(map, item.from, item.to, "");
+    }
+
+    // 4. Blackout — overrides all availability variants
+    if (opts?.blackoutDates?.length) {
+        for (const [day] of map) {
+            if (isDateBlackedOut(day, opts.blackoutDates)) {
+                map.set(day, "blackout");
+            }
+        }
     }
 
     return map;

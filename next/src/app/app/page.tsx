@@ -100,6 +100,7 @@ export default function AppPage() {
             dates: {
                 stayLengths: globalSettings.stayLengths,
                 validStartDays: globalSettings.validStartDays,
+                blackoutDates: globalSettings.blackoutDates,
             },
             views: { type: "calendar" as const },
             dev: { useMockData },
