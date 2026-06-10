@@ -101,6 +101,9 @@ export function sanitizeCampground(campground: EditableCampground): Campground {
         ...(campground.stayLengths ? { stayLengths: campground.stayLengths } : {}),
         ...(campground.notifyScope ? { notifyScope: campground.notifyScope } : {}),
         ...(campground.notifyAll != null ? { notifyAll: campground.notifyAll } : {}),
+        ...(campground.checkPriority && campground.checkPriority !== "normal"
+            ? { checkPriority: campground.checkPriority }
+            : {}),
         ...(campground.enabled === false ? { enabled: false } : {}),
     };
 }

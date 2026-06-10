@@ -108,4 +108,13 @@ describe("sanitizeCampground", () => {
         const out = sanitizeCampground(editable);
         expect(out.notifyAll).toBe(true);
     });
+
+    it("persists checkPriority high/low and omits normal/unset", () => {
+        const base = { ...createEmptyCampground(), name: "X", id: "1" };
+
+        expect(sanitizeCampground({ ...base, checkPriority: "high" }).checkPriority).toBe("high");
+        expect(sanitizeCampground({ ...base, checkPriority: "low" }).checkPriority).toBe("low");
+        expect("checkPriority" in sanitizeCampground({ ...base, checkPriority: "normal" })).toBe(false);
+        expect("checkPriority" in sanitizeCampground(base)).toBe(false);
+    });
 });

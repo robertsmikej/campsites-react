@@ -41,6 +41,16 @@ export type CampgroundType = "campground" | "cabin" | "lookout";
 export type NotifyScope = "favorites" | "worthwhile" | "all";
 export const NOTIFY_SCOPES: readonly NotifyScope[] = ["favorites", "worthwhile", "all"] as const;
 
+export type CheckPriority = "high" | "normal" | "low";
+/** Minutes between notifier checks for each tier. */
+export const CHECK_PRIORITY_INTERVAL_MINUTES: Record<CheckPriority, number> = {
+    high: 1,
+    normal: 5,
+    low: 10,
+};
+/** Max campgrounds a user may set to "high" (every-minute) checking. */
+export const HIGH_PRIORITY_CAP = 3;
+
 export interface Campground {
     id: string;
     name: string;
@@ -58,6 +68,8 @@ export interface Campground {
     notifyScope?: NotifyScope;
     /** @deprecated use notifyScope. true == "all". */
     notifyAll?: boolean;
+    /** How often the notifier checks this campground. Absent = "normal" (every 5 min). */
+    checkPriority?: CheckPriority;
     enabled?: boolean;
     validStartDays?: string[];
     stayLengths?: number[];
