@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { summerWindow, monthWindow, pickSummerYear, buildCandidates, planSummer } from "./summer-planner";
-import type { ProcessedCampground, SiteAvailability } from "@/types/campground";
+import type { BlackoutRange, ProcessedCampground, SiteAvailability } from "@/types/campground";
 
 function site(siteName: string, matches: Array<[string, string]>): SiteAvailability {
     return {
@@ -172,5 +172,29 @@ describe("planSummer", () => {
         const firstId = first.trips[0]!.id;
         const second = planSummer(twoInJuly, { window: W, targetTrips: 1, excludeTripIds: [firstId] });
         expect(second.trips[0]!.id).not.toBe(firstId);
+    });
+
+    it("excludes candidate trips overlapping a blackout", () => {
+        // CG "11" has a trip 2026-07-10→2026-07-12; night of Jul 10 is blacked out.
+        // CG "10" has a trip 2026-07-07→2026-07-09; no overlap — should still appear.
+        const mixed = [
+            cg("10", "Weekday Other", [], [site("x", [["2026-07-07", "2026-07-09"]])]),
+            cg("11", "Weekend Fav", ["y"], [site("y", [["2026-07-10", "2026-07-12"]])]),
+        ];
+        const blackoutDates: BlackoutRange[] = [{ from: "2026-07-10", to: "2026-07-10" }];
+        const plan = planSummer(mixed, { window: W, targetTrips: 5, blackoutDates });
+        const keys = plan.trips.map((t) => `${t.from}|${t.to}`);
+        expect(keys).not.toContain("2026-07-10|2026-07-12");
+        expect(keys).toContain("2026-07-07|2026-07-09");
+    });
+
+    it("without blackoutDates the plan is unchanged", () => {
+        const mixed = [
+            cg("10", "Weekday Other", [], [site("x", [["2026-07-07", "2026-07-09"]])]),
+            cg("11", "Weekend Fav", ["y"], [site("y", [["2026-07-10", "2026-07-12"]])]),
+        ];
+        const base = planSummer(mixed, { window: W, targetTrips: 5 });
+        const withEmpty = planSummer(mixed, { window: W, targetTrips: 5, blackoutDates: [] });
+        expect(withEmpty.trips.map((t) => t.id)).toEqual(base.trips.map((t) => t.id));
     });
 });

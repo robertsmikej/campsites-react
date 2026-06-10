@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { CW } from "@/components/field-notes/cw-tokens";
 import { monthWindow, planSummer } from "@/lib/summer-planner";
-import type { ProcessedCampground } from "@/types/campground";
+import type { BlackoutRange, ProcessedCampground } from "@/types/campground";
 import { TripCard } from "./trip-card";
 import { SummerStrip } from "./summer-strip";
 
@@ -63,7 +63,15 @@ function savePlanPrefs(prefs: PlanPrefs): void {
     }
 }
 
-export function SummerPlan({ rows, seasonYear }: { rows: ProcessedCampground[]; seasonYear: number }) {
+export function SummerPlan({
+    rows,
+    seasonYear,
+    blackoutDates,
+}: {
+    rows: ProcessedCampground[];
+    seasonYear: number;
+    blackoutDates?: BlackoutRange[];
+}) {
     // Default first to avoid SSR/hydration mismatch; hydrate from storage on mount.
     const [prefs, setPrefs] = useState<PlanPrefs>(DEFAULT_PREFS);
     const [locked, setLocked] = useState<Set<string>>(new Set());
@@ -102,8 +110,18 @@ export function SummerPlan({ rows, seasonYear }: { rows: ProcessedCampground[]; 
                 excludeTripIds: [...exclude],
                 weekendOnly: prefs.weekendOnly,
                 favoritesOnly: prefs.favoritesOnly,
+                blackoutDates,
             }),
-        [rows, window, prefs.tripCount, prefs.weekendOnly, prefs.favoritesOnly, locked, exclude],
+        [
+            rows,
+            window,
+            prefs.tripCount,
+            prefs.weekendOnly,
+            prefs.favoritesOnly,
+            locked,
+            exclude,
+            blackoutDates,
+        ],
     );
 
     const setStartMonth = (m: number) =>

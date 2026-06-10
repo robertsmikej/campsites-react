@@ -12,7 +12,7 @@ import { SummerPlan } from "@/components/dashboard/summer-plan/summer-plan";
 
 export default function PlanPage() {
     const auth = useAuth();
-    const { siteConfig, isHydrating } = useUserCampgrounds();
+    const { siteConfig, globalSettings, isHydrating } = useUserCampgrounds();
     const { campgroundsByAreas, isFetching } = useCampgroundsData({ enabled: !isHydrating, siteConfig });
 
     const seasonYear = useMemo(() => pickSummerYear(campgroundsByAreas, new Date()), [campgroundsByAreas]);
@@ -64,7 +64,11 @@ export default function PlanPage() {
                             Reading your watchlist availability…
                         </div>
                     ) : (
-                        <SummerPlan rows={campgroundsByAreas} seasonYear={seasonYear} />
+                        <SummerPlan
+                            rows={campgroundsByAreas}
+                            seasonYear={seasonYear}
+                            blackoutDates={globalSettings.blackoutDates}
+                        />
                     )}
                 </div>
             </main>

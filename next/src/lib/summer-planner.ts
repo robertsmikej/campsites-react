@@ -1,6 +1,7 @@
 import { type Tier, isWeekendNight, siteTier } from "@/lib/timeline";
 import { toLocalIso } from "@/components/dashboard/helpers";
-import type { ProcessedCampground } from "@/types/campground";
+import type { BlackoutRange, ProcessedCampground } from "@/types/campground";
+import { stayOverlapsBlackout } from "@/lib/blackout";
 
 const DAY_MS = 86400000;
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -45,6 +46,8 @@ export interface PlanOptions {
     weekendOnly?: boolean;
     /** Only consider ★ favorite-tagged sites. */
     favoritesOnly?: boolean;
+    /** User blackout ranges — trips overlapping any blacked-out night are excluded. */
+    blackoutDates?: BlackoutRange[];
 }
 
 function parseLocalIso(iso: string): Date {
@@ -185,6 +188,8 @@ export function planSummer(campgrounds: ProcessedCampground[], opts: PlanOptions
     let candidates = buildCandidates(campgrounds, window);
     if (opts.favoritesOnly) candidates = candidates.filter((c) => c.tier === "fav");
     if (opts.weekendOnly) candidates = candidates.filter((c) => c.includesWeekend);
+    if (opts.blackoutDates?.length)
+        candidates = candidates.filter((c) => !stayOverlapsBlackout(c.from, c.to, opts.blackoutDates));
     const byId = new Map(candidates.map((c) => [tripId(c), c]));
 
     const chosen: CandidateTrip[] = [];
