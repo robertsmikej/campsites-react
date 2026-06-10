@@ -25,7 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion } from "@/components/ui/accordion";
 import { Separator } from "@/components/ui/separator";
-import type { Campground, SiteConfig } from "@/types/campground";
+import type { BlackoutRange, Campground, SiteConfig } from "@/types/campground";
 import { useCampgroundSites } from "@/hooks/use-campground-sites";
 
 import {
@@ -97,6 +97,9 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
             : DEFAULT_STAY_RANGE,
     );
     const [validStartDays, setValidStartDays] = useState<string[]>(() => globalSettings.validStartDays ?? []);
+    const [blackoutDates, setBlackoutDates] = useState<BlackoutRange[]>(
+        () => globalSettings.blackoutDates ?? [],
+    );
     const [expandedPanels, setExpandedPanels] = useState<Set<number>>(new Set([0]));
 
     const { sitesById, ensureLoaded } = useCampgroundSites();
@@ -130,6 +133,7 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
                 : DEFAULT_STAY_RANGE,
         );
         setValidStartDays(globalSettings.validStartDays ?? []);
+        setBlackoutDates(globalSettings.blackoutDates ?? []);
         setExpandedPanels(new Set([0]));
         setViewMode("cards");
     }, [open, initialData, globalSettings]);
@@ -255,9 +259,11 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
             .map(sanitizeCampground)
             .filter((c): c is Campground => !!c.id && !!c.name);
         const newConfig: SiteConfig = { "recreation.gov": sanitized };
+        const validBlackouts = blackoutDates.filter((b) => b.from && b.to && b.from <= b.to);
         onSave(newConfig, {
             stayLengths: buildStayLengths(stayRange),
             validStartDays,
+            ...(validBlackouts.length > 0 ? { blackoutDates: validBlackouts } : {}),
         });
     };
 
@@ -341,6 +347,8 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
                         onValidStartDaysChange={setValidStartDays}
                         useMockData={useMockData}
                         onToggleMockData={onToggleMockData}
+                        blackoutDates={blackoutDates}
+                        onBlackoutDatesChange={setBlackoutDates}
                     />
 
                     <Separator />

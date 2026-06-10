@@ -3,7 +3,10 @@
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Trash2 } from "lucide-react";
+import type { BlackoutRange } from "@/types/campground";
 import { ALL_DAYS, STAY_MAX, STAY_MIN } from "./types";
 
 interface GeneralSettingsProps {
@@ -13,6 +16,8 @@ interface GeneralSettingsProps {
     onValidStartDaysChange: (days: string[]) => void;
     useMockData: boolean;
     onToggleMockData: (event: React.ChangeEvent<HTMLInputElement>) => void;
+    blackoutDates: BlackoutRange[];
+    onBlackoutDatesChange: (next: BlackoutRange[]) => void;
 }
 
 export function GeneralSettings(props: GeneralSettingsProps) {
@@ -23,6 +28,8 @@ export function GeneralSettings(props: GeneralSettingsProps) {
         onValidStartDaysChange,
         useMockData,
         onToggleMockData,
+        blackoutDates,
+        onBlackoutDatesChange,
     } = props;
 
     const synthEvent = (checked: boolean) =>
@@ -78,6 +85,79 @@ export function GeneralSettings(props: GeneralSettingsProps) {
                         <p className="mt-1 text-xs text-muted-foreground">
                             Only show stays that start on these days
                         </p>
+                    </div>
+                    <div>
+                        <div className="mb-1 flex items-center gap-2">
+                            <p className="text-sm">Blackout Dates</p>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 text-xs"
+                                onClick={() =>
+                                    onBlackoutDatesChange([...blackoutDates, { from: "", to: "", label: "" }])
+                                }
+                            >
+                                Add blackout
+                            </Button>
+                        </div>
+                        <p className="mb-2 text-xs text-muted-foreground">
+                            Dates you&apos;re already booked or busy — greyed out on calendars, skipped by the
+                            planner, and no alert emails for stays that overlap them.
+                        </p>
+                        {blackoutDates.map((b, i) => (
+                            <div key={i} className="mb-2 flex items-center gap-2">
+                                <input
+                                    type="date"
+                                    value={b.from}
+                                    onChange={(e) =>
+                                        onBlackoutDatesChange(
+                                            blackoutDates.map((x, j) =>
+                                                j === i ? { ...x, from: e.target.value } : x,
+                                            ),
+                                        )
+                                    }
+                                    className="rounded border bg-cw-cream px-2 py-1 text-sm"
+                                />
+                                <span className="text-xs">→</span>
+                                <input
+                                    type="date"
+                                    value={b.to}
+                                    onChange={(e) =>
+                                        onBlackoutDatesChange(
+                                            blackoutDates.map((x, j) =>
+                                                j === i ? { ...x, to: e.target.value } : x,
+                                            ),
+                                        )
+                                    }
+                                    className="rounded border bg-cw-cream px-2 py-1 text-sm"
+                                />
+                                <input
+                                    type="text"
+                                    placeholder="label (optional)"
+                                    value={b.label ?? ""}
+                                    maxLength={80}
+                                    onChange={(e) =>
+                                        onBlackoutDatesChange(
+                                            blackoutDates.map((x, j) =>
+                                                j === i ? { ...x, label: e.target.value || undefined } : x,
+                                            ),
+                                        )
+                                    }
+                                    className="min-w-0 flex-1 rounded border bg-cw-cream px-2 py-1 text-sm"
+                                />
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="size-7"
+                                    aria-label="Remove blackout"
+                                    onClick={() =>
+                                        onBlackoutDatesChange(blackoutDates.filter((_, j) => j !== i))
+                                    }
+                                >
+                                    <Trash2 className="size-3.5" />
+                                </Button>
+                            </div>
+                        ))}
                     </div>
                     <div className="space-y-3">
                         <label className="flex items-start gap-3">
