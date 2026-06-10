@@ -10,7 +10,7 @@ import {
     siteFeature,
     siteOpenRuns,
 } from "@/lib/timeline";
-import type { ProcessedCampground } from "@/types/campground";
+import type { BlackoutRange, ProcessedCampground } from "@/types/campground";
 import { TimelineTrack } from "./timeline-track";
 import { SiteWindowsList } from "./site-windows";
 
@@ -25,6 +25,8 @@ interface CampgroundTimelineRowProps {
     onEditSettings?: (campgroundId: string) => void;
     /** full site roster (all site labels) so every site can show, not just open/tagged */
     roster?: string[];
+    /** user's blackout ranges — passed down to timeline blocks for per-night grey */
+    blackoutDates?: BlackoutRange[];
 }
 
 export function CampgroundTimelineRow({
@@ -34,6 +36,7 @@ export function CampgroundTimelineRow({
     onToggleExpand,
     onEditSettings,
     roster,
+    blackoutDates,
 }: CampgroundTimelineRowProps) {
     const [openSites, setOpenSites] = useState<Set<string>>(new Set());
     const toggleSite = (id: string) =>
@@ -175,7 +178,13 @@ export function CampgroundTimelineRow({
                         </div>
                     )}
                 </div>
-                <TimelineTrack horizon={horizon} open={runs.open} limited={runs.limited} pad={PAD} />
+                <TimelineTrack
+                    horizon={horizon}
+                    open={runs.open}
+                    limited={runs.limited}
+                    pad={PAD}
+                    blackoutDates={blackoutDates}
+                />
             </div>
 
             {expanded && (
@@ -286,6 +295,7 @@ export function CampgroundTimelineRow({
                                         site
                                         ring={tier === "fav"}
                                         pad={PAD}
+                                        blackoutDates={blackoutDates}
                                     />
                                 </div>
                                 {hasOpen && showWindows && (

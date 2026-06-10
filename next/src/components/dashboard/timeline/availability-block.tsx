@@ -1,5 +1,8 @@
 import { CW } from "@/components/field-notes/cw-tokens";
 import { type Horizon, dateAt, isWeekendNight, pct, rangeLabel } from "@/lib/timeline";
+import { isDateBlackedOut } from "@/lib/blackout";
+import type { BlackoutRange } from "@/types/campground";
+import { toLocalIso } from "@/components/dashboard/helpers";
 
 interface AvailabilityBlockProps {
     horizon: Horizon;
@@ -10,6 +13,8 @@ interface AvailabilityBlockProps {
     site?: boolean;
     /** favorite-site openings get a clay ring */
     ring?: boolean;
+    /** user's blackout ranges — blacked-out nights render grey */
+    blackoutDates?: BlackoutRange[];
 }
 
 const LIMITED_WEEKDAY = `repeating-linear-gradient(45deg, ${CW.mustard} 0 5px, color-mix(in srgb, ${CW.mustard} 40%, transparent) 5px 10px)`;
@@ -19,7 +24,7 @@ function segBackground(kind: "open" | "limited", weekend: boolean): string {
     return weekend ? CW.mustard : LIMITED_WEEKDAY;
 }
 
-export function AvailabilityBlock({ horizon, run, kind, site, ring }: AvailabilityBlockProps) {
+export function AvailabilityBlock({ horizon, run, kind, site, ring, blackoutDates }: AvailabilityBlockProps) {
     const [s, e] = run;
     const left = pct(horizon, s);
     const width = pct(horizon, e - s + 1);
@@ -67,8 +72,12 @@ export function AvailabilityBlock({ horizon, run, kind, site, ring }: Availabili
 
     const segs: React.ReactNode[] = [];
     for (let i = s; i <= e; i++) {
-        const weekend = isWeekendNight(dateAt(horizon, i));
-        segs.push(<div key={i} className="flex-1" style={{ background: segBackground(kind, weekend) }} />);
+        const nightDate = dateAt(horizon, i);
+        const weekend = isWeekendNight(nightDate);
+        const nightIso = toLocalIso(nightDate);
+        const blacked = isDateBlackedOut(nightIso, blackoutDates);
+        const bg = blacked ? CW.inkFaint : segBackground(kind, weekend);
+        segs.push(<div key={i} className="flex-1" style={{ background: bg }} />);
     }
 
     return (

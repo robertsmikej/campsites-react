@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { CW } from "@/components/field-notes/cw-tokens";
 import { buildHorizon } from "@/lib/timeline";
 import { useCampgroundSites } from "@/hooks/use-campground-sites";
+import { useSiteSettings } from "@/context/site-settings";
 import type { ProcessedCampground } from "@/types/campground";
 import { TimelineAxis } from "./timeline-axis";
 import { CampgroundTimelineRow } from "./campground-timeline-row";
@@ -26,6 +27,7 @@ export function AvailabilityTimeline({
 }: AvailabilityTimelineProps) {
     const horizon = buildHorizon(dateRange.start, dateRange.end);
     const { sitesById, ensureLoaded } = useCampgroundSites();
+    const blackoutDates = useSiteSettings()?.dates.blackoutDates;
     const [expandedIds, setExpandedIds] = useState<Set<string>>(() => {
         const first = defaultExpandFirst ? rows[0]?.id : undefined;
         return first ? new Set([first]) : new Set();
@@ -79,6 +81,7 @@ export function AvailabilityTimeline({
                         onToggleExpand={() => toggle(cg.id ?? cg.name)}
                         onEditSettings={onEditSettings}
                         roster={cg.id ? sitesById[cg.id] : undefined}
+                        blackoutDates={blackoutDates}
                     />
                 ))}
             </div>

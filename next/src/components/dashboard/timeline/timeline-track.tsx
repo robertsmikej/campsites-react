@@ -1,5 +1,6 @@
 import { CW } from "@/components/field-notes/cw-tokens";
 import { type Horizon, dateAt, monthTicks, nowIndex, pct } from "@/lib/timeline";
+import type { BlackoutRange } from "@/types/campground";
 import { AvailabilityBlock } from "./availability-block";
 
 interface TimelineTrackProps {
@@ -14,9 +15,20 @@ interface TimelineTrackProps {
     pad?: number;
     /** override height (defaults: 64 summary, 42 site) */
     height?: number;
+    /** user's blackout ranges — passed down to AvailabilityBlock for per-night grey */
+    blackoutDates?: BlackoutRange[];
 }
 
-export function TimelineTrack({ horizon, open, limited, site, ring, pad = 26, height }: TimelineTrackProps) {
+export function TimelineTrack({
+    horizon,
+    open,
+    limited,
+    site,
+    ring,
+    pad = 26,
+    height,
+    blackoutDates,
+}: TimelineTrackProps) {
     const h = height ?? (site ? 42 : 64);
     const ticks = monthTicks(horizon);
     const now = nowIndex(horizon);
@@ -74,6 +86,7 @@ export function TimelineTrack({ horizon, open, limited, site, ring, pad = 26, he
                         run={run}
                         kind="limited"
                         site={site}
+                        blackoutDates={blackoutDates}
                     />
                 ))}
                 {open.map((run, k) => (
@@ -84,6 +97,7 @@ export function TimelineTrack({ horizon, open, limited, site, ring, pad = 26, he
                         kind="open"
                         site={site}
                         ring={ring}
+                        blackoutDates={blackoutDates}
                     />
                 ))}
                 {/* booked-all-season for empty site rows */}

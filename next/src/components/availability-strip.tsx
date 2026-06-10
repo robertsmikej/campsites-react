@@ -2,7 +2,9 @@
 
 import { useMemo } from "react";
 import { cn } from "@/lib/utils";
-import type { ProcessedCampground, SiteAvailability } from "@/types/campground";
+import type { BlackoutRange, ProcessedCampground, SiteAvailability } from "@/types/campground";
+import { isDateBlackedOut } from "@/lib/blackout";
+import { useSiteSettings } from "@/context/site-settings";
 
 /** Keyed by siteName; missing entry means unrated. */
 export type SiteRatingsMap = Record<string, "favorite" | "worthwhile">;
@@ -202,6 +204,8 @@ export function AvailabilityStrip({
     siteRatings,
     className,
 }: AvailabilityStripProps) {
+    const blackoutDates: BlackoutRange[] | undefined = useSiteSettings()?.dates.blackoutDates;
+
     const cells = useMemo(() => {
         if (site) return buildStripForSite(site, days, windowStart, windowEnd);
         if (campground) return buildStripForCampground(campground, days, siteRatings, windowStart, windowEnd);
@@ -226,6 +230,36 @@ export function AvailabilityStrip({
 
                 // In campground mode with ratings, use tier color; otherwise fall back to primary
                 const barColor = siteRatings && cell.bestTier ? TIER_COLOR[cell.bestTier] : "var(--primary)";
+
+                // Check if this day is blacked out — if so, render a muted grey bar regardless of counts.
+                const blacked = isDateBlackedOut(cell.iso, blackoutDates);
+                const matchingRange = blacked
+                    ? blackoutDates?.find((r) => r.from <= cell.iso && cell.iso <= r.to)
+                    : undefined;
+                const blackoutTitle = matchingRange?.label
+                    ? `${cell.label} — ${matchingRange.label}`
+                    : cell.label;
+
+                if (blacked) {
+                    return (
+                        <div
+                            key={cell.iso}
+                            title={blackoutTitle}
+                            className={cn(
+                                "relative flex-1 self-stretch overflow-hidden rounded-sm transition-all",
+                                isWeekStart && "border-l border-border/50",
+                            )}
+                        >
+                            <div
+                                className="absolute inset-0 rounded-sm"
+                                style={{
+                                    backgroundColor: "var(--muted-foreground)",
+                                    opacity: 0.18,
+                                }}
+                            />
+                        </div>
+                    );
+                }
 
                 return (
                     <div

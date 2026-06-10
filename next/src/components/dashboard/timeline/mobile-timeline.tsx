@@ -15,7 +15,8 @@ import {
     siteFeature,
     siteOpenRuns,
 } from "@/lib/timeline";
-import type { ProcessedCampground } from "@/types/campground";
+import type { BlackoutRange, ProcessedCampground } from "@/types/campground";
+import { useSiteSettings } from "@/context/site-settings";
 import { TimelineAxis } from "./timeline-axis";
 import { TimelineTrack } from "./timeline-track";
 import { SiteWindowsList } from "./site-windows";
@@ -62,6 +63,7 @@ export function MobileTimeline({ rows, dateRange, onEditSettings }: MobileTimeli
     );
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const { sitesById, ensureLoaded } = useCampgroundSites();
+    const blackoutDates = useSiteSettings()?.dates.blackoutDates;
 
     const selected = selectedId ? rows.find((r) => (r.id ?? r.name) === selectedId) : undefined;
 
@@ -98,6 +100,7 @@ export function MobileTimeline({ rows, dateRange, onEditSettings }: MobileTimeli
                 onBack={closeDetail}
                 onEditSettings={onEditSettings}
                 roster={selected.id ? sitesById[selected.id] : undefined}
+                blackoutDates={blackoutDates}
             />
         );
     }
@@ -178,6 +181,7 @@ export function MobileTimeline({ rows, dateRange, onEditSettings }: MobileTimeli
                             limited={runs.limited}
                             pad={0}
                             height={40}
+                            blackoutDates={blackoutDates}
                         />
                     </button>
                 );
@@ -192,12 +196,14 @@ function DetailScreen({
     onBack,
     onEditSettings,
     roster,
+    blackoutDates,
 }: {
     campground: ProcessedCampground;
     horizon: Horizon;
     onBack: () => void;
     onEditSettings?: (campgroundId: string) => void;
     roster?: string[];
+    blackoutDates?: BlackoutRange[];
 }) {
     const { runs, openDays, limitedDays } = dayStatusSets(horizon, campground);
     const [openSites, setOpenSites] = useState<Set<string>>(new Set());
@@ -270,7 +276,13 @@ function DetailScreen({
             </div>
 
             <div style={{ padding: `8px ${PAD}px` }}>
-                <TimelineTrack horizon={horizon} open={runs.open} limited={runs.limited} pad={0} />
+                <TimelineTrack
+                    horizon={horizon}
+                    open={runs.open}
+                    limited={runs.limited}
+                    pad={0}
+                    blackoutDates={blackoutDates}
+                />
             </div>
 
             {/* Mini calendars */}
@@ -369,6 +381,7 @@ function DetailScreen({
                                 site
                                 ring={tier === "fav"}
                                 pad={PAD}
+                                blackoutDates={blackoutDates}
                             />
                             {hasOpen && showWindows && (
                                 <SiteWindowsList horizon={horizon} site={site} indent={PAD} />

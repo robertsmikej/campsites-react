@@ -1,7 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { render, screen, fireEvent, within } from "@testing-library/react";
 import { AvailabilityTimeline } from "./availability-timeline";
-import type { ProcessedCampground, SiteAvailability } from "@/types/campground";
+import SiteSettingsContext from "@/context/site-settings";
+import type { ProcessedCampground, SiteAvailability, BlackoutRange } from "@/types/campground";
+import type { SiteSettingsValue } from "@/context/site-settings";
 
 function site(name: string, matches: Array<[string, string]>): SiteAvailability {
     return {
@@ -102,5 +104,27 @@ describe("AvailabilityTimeline", () => {
         const outletRow = screen.getByText("Outlet").closest('[role="button"]') as HTMLElement;
         fireEvent.click(within(outletRow).getByLabelText(/Configure Outlet/));
         expect(calls).toEqual(["1"]);
+    });
+
+    it("renders blacked-out nights in a grey segment instead of green/mustard", () => {
+        const blackouts: BlackoutRange[] = [{ from: "2026-05-23", to: "2026-05-23" }];
+        const settings: SiteSettingsValue = {
+            dates: { stayLengths: [2], validStartDays: ["Saturday"], blackoutDates: blackouts },
+        };
+        render(
+            <SiteSettingsContext.Provider value={settings}>
+                <AvailabilityTimeline rows={ROWS} dateRange={DATE_RANGE} defaultExpandFirst />
+            </SiteSettingsContext.Provider>,
+        );
+        // A-07 has a match May 23–25; the May 23 block has a title containing "May 23".
+        const blocks = screen.getAllByTitle(/May 23/);
+        // Each block renders inner segment divs with inline background styles. With the
+        // blackout on May 23, the first segment (night May 23) uses CW.inkFaint
+        // instead of the forest-green open color.
+        const hasGreySeg = blocks.some((b) => {
+            const segs = b.querySelectorAll<HTMLElement>("div.flex-1");
+            return Array.from(segs).some((s) => s.style.background === "var(--cw-ink-faint)");
+        });
+        expect(hasGreySeg).toBe(true);
     });
 });
