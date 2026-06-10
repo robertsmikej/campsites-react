@@ -60,6 +60,7 @@ export function toEditableCampground(
         worthwhileText: (cg?.sites?.worthwhile ?? []).join(", "),
         favoritesArray: [...(cg?.sites?.favorites ?? [])],
         worthwhileArray: [...(cg?.sites?.worthwhile ?? [])],
+        checkPriority: cg?.checkPriority,
         validStartDays: cg?.validStartDays ?? undefined,
         stayLengths: cg?.stayLengths ?? undefined,
     };
@@ -101,6 +102,7 @@ export function sanitizeCampground(campground: EditableCampground): Campground {
         ...(campground.stayLengths ? { stayLengths: campground.stayLengths } : {}),
         ...(campground.notifyScope ? { notifyScope: campground.notifyScope } : {}),
         ...(campground.notifyAll != null ? { notifyAll: campground.notifyAll } : {}),
+        // Omit "normal" — absent means normal by convention, keeping stored data sparse.
         ...(campground.checkPriority && campground.checkPriority !== "normal"
             ? { checkPriority: campground.checkPriority }
             : {}),

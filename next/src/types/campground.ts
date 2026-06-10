@@ -43,7 +43,7 @@ export const NOTIFY_SCOPES: readonly NotifyScope[] = ["favorites", "worthwhile",
 
 export type CheckPriority = "high" | "normal" | "low";
 /** Minutes between notifier checks for each tier. */
-export const CHECK_PRIORITY_INTERVAL_MINUTES: Record<CheckPriority, number> = {
+export const CHECK_PRIORITY_INTERVAL_MINUTES: Readonly<Record<CheckPriority, number>> = {
     high: 1,
     normal: 5,
     low: 10,
