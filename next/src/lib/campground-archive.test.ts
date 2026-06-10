@@ -93,8 +93,8 @@ describe("archiveRemovedCampgrounds", () => {
         const prior = {
             campgrounds: Array.from({ length: ARCHIVE_CAP }, (_, i) => ({
                 ...cg(`old-${i}`),
-                // Use i as seconds so every removedAt is unique and sortable
-                removedAt: `2026-01-01T00:00:${String(i % 60).padStart(2, "0")}.000Z`,
+                // Use minute+second so every removedAt stays unique for any ARCHIVE_CAP value
+                removedAt: `2026-01-01T00:${String(Math.floor(i / 60)).padStart(2, "0")}:${String(i % 60).padStart(2, "0")}.000Z`,
             })),
         };
         const kv = createMockKv({ [KEY]: JSON.stringify(prior) });

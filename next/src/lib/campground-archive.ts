@@ -32,6 +32,9 @@ export async function archiveRemovedCampgrounds(
     removed: Campground[],
     removedAt: string,
 ): Promise<void> {
+    // Best-effort read-modify-write; KV has no transactions. A concurrent save
+    // could overwrite this and lose one archive entry — acceptable for a
+    // single-user key on a personal app.
     if (removed.length === 0) return;
     const existing = await getCampgroundArchive(email);
     const removedIds = new Set(removed.map((c) => c.id));
@@ -43,7 +46,9 @@ export async function archiveRemovedCampgrounds(
 
 /** Build a re-addable Campground from an archive entry: full prior config,
  *  fresh season-capped dates, Normal check tier (a stale "high" must not
- *  silently eat the 3-slot cap), enabled. */
+ *  silently eat the 3-slot cap), enabled. showOrHide and notifyAll are
+ *  intentionally kept — they're part of the user's prior config, unlike
+ *  checkPriority which competes for the capped high slots. */
 export function restoreCampground(entry: ArchivedCampground): Campground {
     const { removedAt: _removedAt, checkPriority: _checkPriority, ...rest } = entry;
     return {
