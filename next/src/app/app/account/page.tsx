@@ -454,6 +454,7 @@ export default function AccountPage() {
                                         <button
                                             type="button"
                                             className="underline cursor-pointer"
+                                            disabled={savingSendTo}
                                             onClick={() => void saveSendTo(pendingSendTo)}
                                         >
                                             Resend link
@@ -462,9 +463,23 @@ export default function AccountPage() {
                                         <button
                                             type="button"
                                             className="underline cursor-pointer"
+                                            disabled={savingSendTo}
                                             onClick={() => void saveSendTo("")}
                                         >
                                             Use login email
+                                        </button>
+                                    </div>
+                                )}
+                                {auth.user?.notificationEmail && !pendingSendTo && (
+                                    <div className="font-mono-field text-[12px] text-cw-clay">
+                                        Alerts go to {auth.user.notificationEmail}.{" "}
+                                        <button
+                                            type="button"
+                                            className="underline cursor-pointer"
+                                            disabled={savingSendTo}
+                                            onClick={() => void saveSendTo("")}
+                                        >
+                                            Use login email instead
                                         </button>
                                     </div>
                                 )}
