@@ -28,7 +28,12 @@ import { Separator } from "@/components/ui/separator";
 import type { Campground, SiteConfig } from "@/types/campground";
 import { useCampgroundSites } from "@/hooks/use-campground-sites";
 
-import { toEditableCampground, sanitizeCampground, createEmptyCampground, enableWithHighCapCheck } from "./serialize";
+import {
+    toEditableCampground,
+    sanitizeCampground,
+    createEmptyCampground,
+    enableWithHighCapCheck,
+} from "./serialize";
 import { DEFAULT_STAY_RANGE, type EditableCampground, type SiteConfigDialogProps } from "./types";
 import { createDragEndHandler } from "./drag-drop";
 import { GeneralSettings } from "./general-settings";
@@ -174,7 +179,9 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
             // Use the cap-aware helper: if this campground is "high" and other
             // enabled campgrounds already fill the HIGH_PRIORITY_CAP, it gets
             // demoted to normal rather than overflowing past the cap.
-            setCampgrounds((prev) => prev.map((c, idx) => (idx === index ? enableWithHighCapCheck(prev, index) : c)));
+            setCampgrounds((prev) =>
+                prev.map((c, idx) => (idx === index ? enableWithHighCapCheck(prev, index) : c)),
+            );
         } else {
             handleFieldChange(index, "enabled", false);
         }
@@ -256,9 +263,7 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
 
     const isSaveDisabled = campgrounds.some((c) => !c.name.trim() || !c.id.trim());
 
-    const highTierCount = campgrounds.filter(
-        (c) => c.checkPriority === "high" && c.enabled !== false,
-    ).length;
+    const highTierCount = campgrounds.filter((c) => c.checkPriority === "high" && c.enabled !== false).length;
 
     const sortableIds = campgrounds.map((c, idx) => c.id || `idx-${idx}`);
 
@@ -402,9 +407,7 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
                                             globalStayRange={stayRange}
                                             globalValidStartDays={validStartDays}
                                             highTierCount={highTierCount}
-                                            onToggleEnabled={(checked) =>
-                                                handleToggleEnabled(index, checked)
-                                            }
+                                            onToggleEnabled={(checked) => handleToggleEnabled(index, checked)}
                                             onFieldChange={(field, value) =>
                                                 handleFieldChange(index, field, value)
                                             }
@@ -437,9 +440,7 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
                                 <CampgroundsTable
                                     campgrounds={campgrounds}
                                     isOnlyCampground={campgrounds.length === 1}
-                                    onToggleEnabled={(index, checked) =>
-                                        handleToggleEnabled(index, checked)
-                                    }
+                                    onToggleEnabled={(index, checked) => handleToggleEnabled(index, checked)}
                                     onRemove={handleRemoveCampground}
                                     onEditClick={openCampgroundInCards}
                                 />

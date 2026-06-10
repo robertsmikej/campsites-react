@@ -337,8 +337,8 @@ export default function AccountPage() {
                                     </SelectContent>
                                 </Select>
                                 <p className="font-italic-serif text-[14px] italic text-cw-ink-soft">
-                                    Checks run every 1–10 minutes depending on each campground&apos;s check frequency.
-                                    This setting is the minimum gap between alert emails.
+                                    Checks run every 1–10 minutes depending on each campground&apos;s check
+                                    frequency. This setting is the minimum gap between alert emails.
                                 </p>
                             </div>
 

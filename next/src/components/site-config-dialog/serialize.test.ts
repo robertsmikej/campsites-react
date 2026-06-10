@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { toEditableCampground, sanitizeCampground, createEmptyCampground, enableWithHighCapCheck } from "./serialize";
+import {
+    toEditableCampground,
+    sanitizeCampground,
+    createEmptyCampground,
+    enableWithHighCapCheck,
+} from "./serialize";
 
 describe("toEditableCampground", () => {
     it("populates favoritesArray and worthwhileArray from the input sites", () => {

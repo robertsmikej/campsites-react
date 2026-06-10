@@ -32,8 +32,16 @@ import type { OpeningItem } from "@/components/dashboard/openings-feed";
 export default function AppPage() {
     const auth = useAuth();
     const userCampgrounds = useUserCampgrounds();
-    const { siteConfig, globalSettings, isHydrating, syncStatus, syncError, clearSyncStatus, save, cloneDefault } =
-        userCampgrounds;
+    const {
+        siteConfig,
+        globalSettings,
+        isHydrating,
+        syncStatus,
+        syncError,
+        clearSyncStatus,
+        save,
+        cloneDefault,
+    } = userCampgrounds;
 
     const isMobile = useIsMobile();
     const [useMockData] = useState(false);

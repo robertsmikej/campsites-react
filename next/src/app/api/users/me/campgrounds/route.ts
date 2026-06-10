@@ -66,9 +66,7 @@ async function putHandler(request: Request): Promise<Response> {
         return c.checkPriority !== undefined && !VALID_CHECK_PRIORITIES.has(c.checkPriority as string);
     });
     if (invalidPriority) {
-        return withCors(
-            jsonResponse({ error: 'checkPriority must be "high", "normal", or "low"' }, 400),
-        );
+        return withCors(jsonResponse({ error: 'checkPriority must be "high", "normal", or "low"' }, 400));
     }
 
     const highCount = body.campgrounds["recreation.gov"].filter((cg) => {
