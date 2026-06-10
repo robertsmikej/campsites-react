@@ -586,7 +586,30 @@ export async function run(config: RunConfig): Promise<void> {
     //    (high=1m, normal=5m, low=10m). forceEmail acts like minute 0: all due.
     const minute = forceEmail ? 0 : now.getUTCMinutes();
     const plan = buildDedupedFetchPlan(eligible, minute);
-    console.log(`[Plan] minute=${minute} → ${plan.length} unique (campground, month) fetches`);
+
+    // Count distinct campgrounds in the plan by tier. The plan is a union across users,
+    // so when multiple users watch the same campground, the fastest tier wins (same
+    // semantics as buildDedupedFetchPlan's tier gate). Build id → winning tier first.
+    const planIds = new Set(plan.map((p) => p.campgroundId));
+    const tierRank = { high: 2, normal: 1, low: 0 } as const;
+    const tierById = new Map<string, keyof typeof tierRank>();
+    for (const target of eligible) {
+        for (const c of target.campgrounds["recreation.gov"] ?? []) {
+            if (!planIds.has(c.id)) continue;
+            const tier = c.checkPriority ?? "normal";
+            const existing = tierById.get(c.id);
+            // Keep whichever tier has the higher rank (high > normal > low).
+            if (existing === undefined || tierRank[tier] > tierRank[existing]) {
+                tierById.set(c.id, tier);
+            }
+        }
+    }
+    const counts = { high: 0, normal: 0, low: 0 };
+    for (const tier of tierById.values()) counts[tier as keyof typeof counts]++;
+
+    console.log(
+        `[Plan] minute=${minute} high=${counts.high} normal=${counts.normal} low=${counts.low} → ${plan.length} unique (campground, month) fetches`,
+    );
     if (plan.length === 0) {
         console.log("[Done] No campgrounds due this minute");
         return;
