@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Campground, SiteConfig, GlobalSettings } from "@/types/campground";
+import { restoreCampground, type ArchivedCampground } from "@/lib/campground-archive";
 import { useAuth } from "@/hooks/use-auth";
 import { useUserCampgrounds } from "@/hooks/use-user-campgrounds";
 import type { SearchResult } from "@/app/api/campgrounds/search/route";
@@ -298,6 +299,49 @@ export function CampgroundLookup({ variant = "homepage" }: CampgroundLookupProps
     const [addedSuccess, setAddedSuccess] = useState(false);
     const [searchResults, setSearchResults] = useState<SearchResult[] | null>(null);
     const [isSearching, setIsSearching] = useState(false);
+    const [archive, setArchive] = useState<ArchivedCampground[]>([]);
+
+    // Previously-watched archive (dashboard variant only).
+    useEffect(() => {
+        if (!isDashboard) return;
+        let cancelled = false;
+        void (async () => {
+            try {
+                const r = await fetch("/api/users/me/campgrounds/archive", { credentials: "include" });
+                if (!r.ok) return;
+                const data = (await r.json()) as { campgrounds: ArchivedCampground[] };
+                if (!cancelled) setArchive(data.campgrounds ?? []);
+            } catch {
+                // Best-effort — the section just doesn't render.
+            }
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, [isDashboard]);
+
+    const activeIds = useMemo(
+        () => new Set((userCampgrounds.siteConfig["recreation.gov"] ?? []).map((c) => c.id)),
+        [userCampgrounds.siteConfig],
+    );
+    const previouslyWatched = archive.filter((a) => !activeIds.has(a.id));
+
+    const handleReadd = useCallback(
+        async (entry: ArchivedCampground) => {
+            const existing = userCampgrounds.siteConfig["recreation.gov"] ?? [];
+            const nextConfig: SiteConfig = {
+                ...userCampgrounds.siteConfig,
+                "recreation.gov": [...existing, restoreCampground(entry)],
+            };
+            setAdding(true);
+            try {
+                await userCampgrounds.save(nextConfig, userCampgrounds.globalSettings);
+            } finally {
+                setAdding(false);
+            }
+        },
+        [userCampgrounds],
+    );
 
     const signedIn = !auth.isLoading && auth.user != null;
 
@@ -497,6 +541,44 @@ export function CampgroundLookup({ variant = "homepage" }: CampgroundLookupProps
                         </svg>
                     </button>
                 </div>
+
+                {/* Previously watched */}
+                {previouslyWatched.length > 0 && (
+                    <div className="mt-[18px] bg-cw-cream border-[1.5px] border-cw-ink">
+                        <div className="font-mono-field text-[12px] leading-none tracking-[0.18em] uppercase text-cw-clay py-3 px-[18px] border-b border-cw-rule font-bold">
+                            Previously watched
+                        </div>
+                        <ul className="list-none m-0 p-0">
+                            {previouslyWatched.map((a) => (
+                                <li
+                                    key={a.id}
+                                    className="flex items-center justify-between gap-3 border-t border-dashed border-cw-rule py-[12px] px-[18px] first:border-t-0"
+                                >
+                                    <div className="min-w-0">
+                                        <div className="font-poster text-[16px] leading-[1.05] uppercase tracking-[0.005em] font-black truncate">
+                                            {a.name}
+                                        </div>
+                                        <div className="font-mono-field text-[11px] leading-none text-cw-ink-soft tracking-[0.14em] mt-[5px] uppercase font-medium">
+                                            ID {a.id} · removed {new Date(a.removedAt).toLocaleDateString()}
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => void handleReadd(a)}
+                                        disabled={adding}
+                                        className="font-poster text-[11px] leading-none tracking-[0.14em] uppercase text-cw-cream border-none rounded-[2px] cursor-pointer whitespace-nowrap font-extrabold"
+                                        style={{
+                                            background: adding ? C.inkSoft : C.forest,
+                                            padding: "10px 14px",
+                                            cursor: adding ? "not-allowed" : "pointer",
+                                        }}
+                                    >
+                                        Re-add
+                                    </button>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
 
                 {/* Search results (name search) */}
                 {(isSearching || (searchResults && searchResults.length > 0)) && (
