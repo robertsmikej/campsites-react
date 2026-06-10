@@ -91,9 +91,19 @@ export interface ProcessedCampground extends Campground {
     hasAvailability?: boolean;
 }
 
+/** A user-level "I'm busy/booked" range. Inclusive calendar days, ISO dates. */
+export interface BlackoutRange {
+    from: string; // YYYY-MM-DD
+    to: string; // YYYY-MM-DD, >= from
+    label?: string;
+}
+
 export interface GlobalSettings {
     stayLengths: number[];
     validStartDays: string[];
+    /** Dates the user can't camp: greyed in views, excluded from the planner,
+     *  and alert emails are suppressed for stays overlapping these nights. */
+    blackoutDates?: BlackoutRange[];
 }
 
 export interface SiteConfig {
