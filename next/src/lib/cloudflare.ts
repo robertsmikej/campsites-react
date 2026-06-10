@@ -4,6 +4,7 @@ import type { KVNamespace } from "@cloudflare/workers-types";
 export interface CampWatchEnv {
     SUBSCRIBERS: KVNamespace;
     API_SECRET?: string;
+    RESEND_API_KEY?: string;
     CONFIG_KEY?: string;
     GOOGLE_CLIENT_ID?: string;
     GOOGLE_CLIENT_SECRET?: string;
