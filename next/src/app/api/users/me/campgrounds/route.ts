@@ -11,6 +11,25 @@ import type { Campground } from "@/types/campground";
 
 const VALID_CHECK_PRIORITIES = new Set(["high", "normal", "low"]);
 
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
+const BLACKOUT_MAX_RANGES = 50;
+const BLACKOUT_MAX_LABEL = 80;
+
+function validBlackoutDates(v: unknown): boolean {
+    if (v === undefined) return true;
+    if (!Array.isArray(v) || v.length > BLACKOUT_MAX_RANGES) return false;
+    return v.every((r) => {
+        if (!r || typeof r !== "object") return false;
+        const b = r as { from?: unknown; to?: unknown; label?: unknown };
+        if (typeof b.from !== "string" || !ISO_DAY.test(b.from)) return false;
+        if (typeof b.to !== "string" || !ISO_DAY.test(b.to)) return false;
+        if (b.from > b.to) return false;
+        if (b.label !== undefined && (typeof b.label !== "string" || b.label.length > BLACKOUT_MAX_LABEL))
+            return false;
+        return true;
+    });
+}
+
 function emptyRecord() {
     const defaults = getSitewideDefaultSettings({});
     return {
@@ -69,6 +88,18 @@ async function putHandler(request: Request): Promise<Response> {
     });
     if (invalidPriority) {
         return withCors(jsonResponse({ error: 'checkPriority must be "high", "normal", or "low"' }, 400));
+    }
+
+    const gs = body.globalSettings as { blackoutDates?: unknown };
+    if (!validBlackoutDates(gs.blackoutDates)) {
+        return withCors(
+            jsonResponse(
+                {
+                    error: "blackoutDates must be valid YYYY-MM-DD ranges (from <= to, label <= 80 chars, max 50)",
+                },
+                400,
+            ),
+        );
     }
 
     const highCount = body.campgrounds["recreation.gov"].filter((cg) => {

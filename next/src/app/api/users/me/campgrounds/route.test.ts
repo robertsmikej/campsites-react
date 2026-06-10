@@ -462,6 +462,61 @@ describe("PUT /api/users/me/campgrounds", () => {
         expect(errSpy).toHaveBeenCalled();
     });
 
+    it("accepts valid blackoutDates and persists them", async () => {
+        sessionFor();
+        vi.mocked(cloudflare.getKv).mockReturnValue(createMockKv());
+        const res = await doPut({
+            campgrounds: { "recreation.gov": [] },
+            globalSettings: {
+                ...GLOBAL_SETTINGS,
+                blackoutDates: [
+                    { from: "2026-07-10", to: "2026-07-12", label: "Redfish booked" },
+                    { from: "2026-08-01", to: "2026-08-01" },
+                ],
+            },
+        });
+        expect(res.status).toBe(200);
+        const body = (await res.json()) as {
+            globalSettings: { blackoutDates?: Array<{ from: string }> };
+        };
+        expect(body.globalSettings.blackoutDates).toHaveLength(2);
+    });
+
+    it("rejects blackoutDates with from after to", async () => {
+        sessionFor();
+        vi.mocked(cloudflare.getKv).mockReturnValue(createMockKv());
+        const res = await doPut({
+            campgrounds: { "recreation.gov": [] },
+            globalSettings: {
+                ...GLOBAL_SETTINGS,
+                blackoutDates: [{ from: "2026-07-12", to: "2026-07-10" }],
+            },
+        });
+        expect(res.status).toBe(400);
+        expect(((await res.json()) as { error: string }).error.toLowerCase()).toContain("blackout");
+    });
+
+    it("rejects malformed dates, oversized labels, and oversized lists", async () => {
+        sessionFor();
+        vi.mocked(cloudflare.getKv).mockReturnValue(createMockKv());
+
+        const bad = async (blackoutDates: unknown) =>
+            (
+                await doPut({
+                    campgrounds: { "recreation.gov": [] },
+                    globalSettings: { ...GLOBAL_SETTINGS, blackoutDates },
+                })
+            ).status;
+
+        expect(await bad([{ from: "July 10", to: "2026-07-12" }])).toBe(400);
+        expect(await bad([{ from: "2026-07-10", to: "2026-07-12", label: "x".repeat(81) }])).toBe(400);
+        expect(await bad([{ from: "2026-07-10" }])).toBe(400); // missing to
+        expect(await bad(Array.from({ length: 51 }, () => ({ from: "2026-07-10", to: "2026-07-12" })))).toBe(
+            400,
+        );
+        expect(await bad("not-an-array")).toBe(400);
+    });
+
     it("curator PUT updates user record and does NOT write to default config", async () => {
         vi.mocked(sessions.readSession).mockResolvedValue({
             id: "x",
