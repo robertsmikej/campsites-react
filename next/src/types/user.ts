@@ -16,4 +16,8 @@ export interface UserProfile {
      *  If unset, treated as "worthwhile" — matches pre-feature behavior. */
     defaultNotifyScope?: NotifyScope;
     lastNotifiedAt?: string;
+    /** Verified alert-delivery address. Absent = deliver to the login email. */
+    notificationEmail?: string;
+    /** Address awaiting confirmation; alerts keep going to the effective address until verified. */
+    pendingNotificationEmail?: string;
 }

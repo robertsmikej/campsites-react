@@ -3,6 +3,8 @@ import { jsonResponse, withCors } from "@/lib/responses";
 import { deleteUser, getUserProfile, updateUserProfile } from "@/lib/users";
 import type { UserProfile } from "@/types/user";
 import { withErrorLogging } from "@/lib/route-helpers";
+import { sendVerificationEmail } from "@/lib/verification-email";
+import { getEnv } from "@/lib/cloudflare";
 
 async function getHandler(request: Request): Promise<Response> {
     const session = await readSession(request);
@@ -17,9 +19,12 @@ interface PatchBody {
     name?: string;
     notifications?: { enabled: boolean; frequencyMinutes: 1 | 5 | 15 | 60 | 240 };
     defaultNotifyScope?: "favorites" | "worthwhile" | "all";
+    notificationEmail?: string;
 }
 
-const ALLOWED_PATCH_KEYS = new Set(["name", "notifications", "defaultNotifyScope"]);
+const ALLOWED_PATCH_KEYS = new Set(["name", "notifications", "defaultNotifyScope", "notificationEmail"]);
+
+const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function isValidPatch(body: unknown): body is PatchBody {
     if (!body || typeof body !== "object") return false;
@@ -47,6 +52,11 @@ function isValidPatch(body: unknown): body is PatchBody {
     ) {
         return false;
     }
+    if (obj.notificationEmail !== undefined) {
+        if (typeof obj.notificationEmail !== "string") return false;
+        const v = obj.notificationEmail.trim();
+        if (v !== "" && (!EMAIL_SHAPE.test(v) || v.length > 254)) return false;
+    }
     return true;
 }
 
@@ -68,6 +78,38 @@ async function patchHandler(request: Request): Promise<Response> {
     if (body.name !== undefined) patch.name = body.name;
     if (body.notifications !== undefined) patch.notifications = body.notifications;
     if (body.defaultNotifyScope !== undefined) patch.defaultNotifyScope = body.defaultNotifyScope;
+
+    if (body.notificationEmail !== undefined) {
+        const addr = body.notificationEmail.trim().toLowerCase();
+        if (addr === "" || addr === session.email.toLowerCase()) {
+            // Back to default: deliver to the login email.
+            patch.notificationEmail = undefined;
+            patch.pendingNotificationEmail = undefined;
+        } else {
+            const env = getEnv();
+            if (!env.RESEND_API_KEY || !env.API_SECRET) {
+                return withCors(
+                    jsonResponse({ error: "Server misconfigured: email sending unavailable" }, 500),
+                );
+            }
+            try {
+                await sendVerificationEmail({
+                    accountEmail: session.email,
+                    newAddress: addr,
+                    origin: new URL(request.url).origin,
+                    resendApiKey: env.RESEND_API_KEY,
+                    apiSecret: env.API_SECRET,
+                });
+            } catch (e) {
+                console.error("[notification-email] verification send failed:", (e as Error).message);
+                return withCors(
+                    jsonResponse({ error: "Couldn't send the verification email — try again" }, 502),
+                );
+            }
+            // Pending only — alerts keep going to the current effective address until verified.
+            patch.pendingNotificationEmail = addr;
+        }
+    }
 
     const updated = await updateUserProfile(session.email, patch);
     if (!updated) return withCors(jsonResponse({ error: "Unauthorized" }, 401));

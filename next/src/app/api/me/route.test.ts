@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createMockKv } from "@/lib/__mocks__/cloudflare-test-helpers";
 import * as cloudflare from "@/lib/cloudflare";
 import { createSession, SESSION_COOKIE } from "@/lib/sessions";
@@ -32,8 +32,14 @@ function makeRequest(
     });
 }
 
-async function setupKvWithSession(kv: ReturnType<typeof createMockKv>) {
-    vi.mocked(cloudflare.getEnv).mockReturnValue({ SUBSCRIBERS: kv } as cloudflare.CampWatchEnv);
+async function setupKvWithSession(
+    kv: ReturnType<typeof createMockKv>,
+    extraEnv: Partial<cloudflare.CampWatchEnv> = {},
+) {
+    vi.mocked(cloudflare.getEnv).mockReturnValue({
+        SUBSCRIBERS: kv,
+        ...extraEnv,
+    } as cloudflare.CampWatchEnv);
     vi.mocked(cloudflare.getKv).mockReturnValue(kv);
 
     // Create a user profile
@@ -249,6 +255,127 @@ describe("PATCH /api/me", () => {
             }),
         );
         expect(res.status).toBe(400);
+    });
+
+    describe("notificationEmail", () => {
+        afterEach(() => {
+            vi.restoreAllMocks();
+        });
+
+        it("stores a custom send-to address as pending and emails a verification link", async () => {
+            const kv = createMockKv();
+            const session = await setupKvWithSession(kv, {
+                RESEND_API_KEY: "re_test",
+                API_SECRET: "test-secret",
+            });
+            vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("{}", { status: 200 }));
+
+            const { PATCH } = await import("./route");
+            const res = await PATCH(
+                makeRequest("PATCH", "https://example.com/api/me", {
+                    cookieHeader: `${SESSION_COOKIE}=${session.id}`,
+                    body: { notificationEmail: "Me@iCloud.com " },
+                }),
+            );
+            expect(res.status).toBe(200);
+            const body = (await res.json()) as {
+                pendingNotificationEmail?: string;
+                notificationEmail?: string;
+            };
+            expect(body.pendingNotificationEmail).toBe("me@icloud.com"); // trimmed + lowercased
+            expect(body.notificationEmail).toBeUndefined(); // NOT live yet
+
+            const resendCalls = vi
+                .mocked(globalThis.fetch)
+                .mock.calls.filter((c) => String(c[0]).includes("api.resend.com"));
+            expect(resendCalls).toHaveLength(1);
+            const sent = JSON.parse(String(resendCalls[0]![1]?.body)) as { to: string };
+            expect(sent.to).toBe("me@icloud.com");
+        });
+
+        it("clears both fields when the login email (or empty) is saved", async () => {
+            const kv = createMockKv();
+            const session = await setupKvWithSession(kv, {
+                RESEND_API_KEY: "re_test",
+                API_SECRET: "test-secret",
+            });
+            vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("{}", { status: 200 }));
+
+            const { PATCH } = await import("./route");
+
+            // First set both fields by direct KV write (simulate already-set state)
+            const profileKey = `user:user@example.com:profile`;
+            const existing = JSON.parse((await kv.get(profileKey)) as string) as Record<string, unknown>;
+            await kv.put(
+                profileKey,
+                JSON.stringify({
+                    ...existing,
+                    notificationEmail: "me@icloud.com",
+                    pendingNotificationEmail: "other@icloud.com",
+                }),
+            );
+
+            const res = await PATCH(
+                makeRequest("PATCH", "https://example.com/api/me", {
+                    cookieHeader: `${SESSION_COOKIE}=${session.id}`,
+                    body: { notificationEmail: "user@example.com" },
+                }),
+            );
+            expect(res.status).toBe(200);
+            const body = (await res.json()) as Record<string, unknown>;
+            expect(body.notificationEmail).toBeUndefined();
+            expect(body.pendingNotificationEmail).toBeUndefined();
+
+            // Also verify empty string clears
+            const res2 = await PATCH(
+                makeRequest("PATCH", "https://example.com/api/me", {
+                    cookieHeader: `${SESSION_COOKIE}=${session.id}`,
+                    body: { notificationEmail: "" },
+                }),
+            );
+            expect(res2.status).toBe(200);
+        });
+
+        it("rejects a malformed address", async () => {
+            const kv = createMockKv();
+            const session = await setupKvWithSession(kv, {
+                RESEND_API_KEY: "re_test",
+                API_SECRET: "test-secret",
+            });
+
+            const { PATCH } = await import("./route");
+            const res = await PATCH(
+                makeRequest("PATCH", "https://example.com/api/me", {
+                    cookieHeader: `${SESSION_COOKIE}=${session.id}`,
+                    body: { notificationEmail: "not-an-email" },
+                }),
+            );
+            expect(res.status).toBe(400);
+        });
+
+        it("returns 502 when the verification email fails to send", async () => {
+            const kv = createMockKv();
+            const session = await setupKvWithSession(kv, {
+                RESEND_API_KEY: "re_test",
+                API_SECRET: "test-secret",
+            });
+            // Make Resend return 500
+            vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("nope", { status: 500 }));
+
+            const { PATCH } = await import("./route");
+            const res = await PATCH(
+                makeRequest("PATCH", "https://example.com/api/me", {
+                    cookieHeader: `${SESSION_COOKIE}=${session.id}`,
+                    body: { notificationEmail: "me@icloud.com" },
+                }),
+            );
+            expect(res.status).toBe(502);
+
+            // pending must NOT have been persisted
+            const profileKey = `user:user@example.com:profile`;
+            const stored = JSON.parse((await kv.get(profileKey)) as string) as Record<string, unknown>;
+            expect(stored.pendingNotificationEmail).toBeUndefined();
+        });
     });
 });
 
