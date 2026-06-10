@@ -32,7 +32,7 @@ import type { OpeningItem } from "@/components/dashboard/openings-feed";
 export default function AppPage() {
     const auth = useAuth();
     const userCampgrounds = useUserCampgrounds();
-    const { siteConfig, globalSettings, isHydrating, syncStatus, clearSyncStatus, save, cloneDefault } =
+    const { siteConfig, globalSettings, isHydrating, syncStatus, syncError, clearSyncStatus, save, cloneDefault } =
         userCampgrounds;
 
     const isMobile = useIsMobile();
@@ -126,10 +126,10 @@ export default function AppPage() {
         if (syncStatus === "success") {
             toast.success("Settings synced to notifications");
         } else {
-            toast.warning("Settings saved locally but failed to sync");
+            toast.warning(syncError ?? "Settings saved locally but failed to sync");
         }
         clearSyncStatus();
-    }, [syncStatus, clearSyncStatus]);
+    }, [syncStatus, syncError, clearSyncStatus]);
 
     const isLoading = isFetching || isHydrating;
     const isEmpty = !userCampgrounds.isHydrating && userCampgrounds.isEmpty;

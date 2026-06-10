@@ -28,7 +28,7 @@ import { Separator } from "@/components/ui/separator";
 import type { Campground, SiteConfig } from "@/types/campground";
 import { useCampgroundSites } from "@/hooks/use-campground-sites";
 
-import { toEditableCampground, sanitizeCampground, createEmptyCampground } from "./serialize";
+import { toEditableCampground, sanitizeCampground, createEmptyCampground, enableWithHighCapCheck } from "./serialize";
 import { DEFAULT_STAY_RANGE, type EditableCampground, type SiteConfigDialogProps } from "./types";
 import { createDragEndHandler } from "./drag-drop";
 import { GeneralSettings } from "./general-settings";
@@ -167,6 +167,17 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
         value: EditableCampground[K],
     ) => {
         updateCampground(index, (c) => ({ ...c, [field]: value }));
+    };
+
+    const handleToggleEnabled = (index: number, checked: boolean) => {
+        if (checked) {
+            // Use the cap-aware helper: if this campground is "high" and other
+            // enabled campgrounds already fill the HIGH_PRIORITY_CAP, it gets
+            // demoted to normal rather than overflowing past the cap.
+            setCampgrounds((prev) => prev.map((c, idx) => (idx === index ? enableWithHighCapCheck(prev, index) : c)));
+        } else {
+            handleFieldChange(index, "enabled", false);
+        }
     };
 
     const handleDateChange = (index: number, key: "startDate" | "endDate", value: string) => {
@@ -392,7 +403,7 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
                                             globalValidStartDays={validStartDays}
                                             highTierCount={highTierCount}
                                             onToggleEnabled={(checked) =>
-                                                handleFieldChange(index, "enabled", checked)
+                                                handleToggleEnabled(index, checked)
                                             }
                                             onFieldChange={(field, value) =>
                                                 handleFieldChange(index, field, value)
@@ -427,7 +438,7 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
                                     campgrounds={campgrounds}
                                     isOnlyCampground={campgrounds.length === 1}
                                     onToggleEnabled={(index, checked) =>
-                                        handleFieldChange(index, "enabled", checked)
+                                        handleToggleEnabled(index, checked)
                                     }
                                     onRemove={handleRemoveCampground}
                                     onEditClick={openCampgroundInCards}

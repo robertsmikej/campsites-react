@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { toEditableCampground, sanitizeCampground, createEmptyCampground } from "./serialize";
+import { toEditableCampground, sanitizeCampground, createEmptyCampground, enableWithHighCapCheck } from "./serialize";
 
 describe("toEditableCampground", () => {
     it("populates favoritesArray and worthwhileArray from the input sites", () => {
@@ -116,5 +116,70 @@ describe("sanitizeCampground", () => {
         expect(sanitizeCampground({ ...base, checkPriority: "low" }).checkPriority).toBe("low");
         expect("checkPriority" in sanitizeCampground({ ...base, checkPriority: "normal" })).toBe(false);
         expect("checkPriority" in sanitizeCampground(base)).toBe(false);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// enableWithHighCapCheck
+// ---------------------------------------------------------------------------
+
+function makeHigh(id: string, enabled = true): EditableCampground {
+    return { ...createEmptyCampground(), id, name: id, checkPriority: "high", enabled };
+}
+
+function makeNormal(id: string, enabled = true): EditableCampground {
+    return { ...createEmptyCampground(), id, name: id, enabled };
+}
+
+// Re-import EditableCampground type (already resolved via serialize imports above)
+import type { EditableCampground } from "./types";
+
+describe("enableWithHighCapCheck", () => {
+    it("re-enabling a high campground with 3 other enabled highs demotes it to normal", () => {
+        const campgrounds: EditableCampground[] = [
+            makeHigh("A"),
+            makeHigh("B"),
+            makeHigh("C"),
+            { ...makeHigh("D"), enabled: false },
+        ];
+        const result = enableWithHighCapCheck(campgrounds, 3);
+        expect(result.enabled).toBe(true);
+        expect(result.checkPriority).toBeUndefined();
+    });
+
+    it("re-enabling a high campground with 2 other enabled highs keeps high priority", () => {
+        const campgrounds: EditableCampground[] = [
+            makeHigh("A"),
+            makeHigh("B"),
+            makeNormal("C"),
+            { ...makeHigh("D"), enabled: false },
+        ];
+        const result = enableWithHighCapCheck(campgrounds, 3);
+        expect(result.enabled).toBe(true);
+        expect(result.checkPriority).toBe("high");
+    });
+
+    it("re-enabling a normal campground at the cap is untouched besides enabled:true", () => {
+        const campgrounds: EditableCampground[] = [
+            makeHigh("A"),
+            makeHigh("B"),
+            makeHigh("C"),
+            { ...makeNormal("D"), enabled: false },
+        ];
+        const result = enableWithHighCapCheck(campgrounds, 3);
+        expect(result.enabled).toBe(true);
+        expect(result.checkPriority).toBeUndefined();
+    });
+
+    it("disabled other highs don't count toward the cap", () => {
+        const campgrounds: EditableCampground[] = [
+            { ...makeHigh("A"), enabled: false },
+            { ...makeHigh("B"), enabled: false },
+            { ...makeHigh("C"), enabled: false },
+            { ...makeHigh("D"), enabled: false },
+        ];
+        const result = enableWithHighCapCheck(campgrounds, 3);
+        expect(result.enabled).toBe(true);
+        expect(result.checkPriority).toBe("high");
     });
 });

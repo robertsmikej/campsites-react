@@ -1,5 +1,24 @@
 import type { Campground } from "@/types/campground";
+import { HIGH_PRIORITY_CAP } from "@/types/campground";
 import { DEFAULT_SHOW_HIDE, type EditableCampground } from "./types";
+
+/**
+ * Re-enabling a "high" campground when the cap is already filled by OTHER
+ * enabled campgrounds demotes it to normal (absent) instead of overflowing.
+ */
+export function enableWithHighCapCheck(
+    campgrounds: EditableCampground[],
+    index: number,
+): EditableCampground {
+    const target = campgrounds[index]!;
+    const otherEnabledHighs = campgrounds.filter(
+        (c, i) => i !== index && c.checkPriority === "high" && c.enabled !== false,
+    ).length;
+    if (target.checkPriority === "high" && otherEnabledHighs >= HIGH_PRIORITY_CAP) {
+        return { ...target, enabled: true, checkPriority: undefined };
+    }
+    return { ...target, enabled: true };
+}
 
 export const parseList = (value = ""): string[] =>
     value

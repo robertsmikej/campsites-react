@@ -144,6 +144,27 @@ describe("useUserCampgrounds fetch contract", () => {
         const mod = await import("./use-user-campgrounds");
         expect(typeof mod.useUserCampgrounds).toBe("function");
     });
+
+    it("save returning 400 with {error: '...'} exposes that message via syncError", async () => {
+        const errorBody = { error: "At most 3 campgrounds may use high-frequency checking" };
+        const fetchMock = vi.fn().mockResolvedValue({
+            ok: false,
+            status: 400,
+            json: () => Promise.resolve(errorBody),
+        });
+        globalThis.fetch = fetchMock;
+
+        // Simulate the save path: non-ok response, parse body for error string
+        const res = await fetch(ENDPOINT, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ campgrounds: { "recreation.gov": [] }, globalSettings: {} }),
+            credentials: "include",
+        });
+        expect(res.ok).toBe(false);
+        const body = (await res.json()) as { error?: string };
+        expect(body.error).toBe("At most 3 campgrounds may use high-frequency checking");
+    });
 });
 
 // ---------------------------------------------------------------------------

@@ -24,6 +24,8 @@ export interface UseUserCampgroundsState {
     updatedAt: string | null;
     isHydrating: boolean;
     syncStatus: "success" | "error" | null;
+    /** API-provided error message from the last failed save, if any. */
+    syncError: string | null;
     isEmpty: boolean;
     /** Campgrounds present in the curator's default but absent from the user's config. */
     missingFromDefault: Campground[];
@@ -51,6 +53,7 @@ export function useUserCampgrounds(): UseUserCampgroundsState {
     const [record, setRecord] = useState<ApiRecord>(emptyShape);
     const [isHydrating, setIsHydrating] = useState(true);
     const [syncStatus, setSyncStatus] = useState<"success" | "error" | null>(null);
+    const [syncError, setSyncError] = useState<string | null>(null);
     const [defaultRecord, setDefaultRecord] = useState<DefaultRecord | null>(null);
 
     const refresh = useCallback(async () => {
@@ -100,9 +103,18 @@ export function useUserCampgrounds(): UseUserCampgroundsState {
                     credentials: "include",
                 });
                 if (!r.ok) {
+                    let message: string | null = null;
+                    try {
+                        const body = (await r.json()) as { error?: string };
+                        if (typeof body.error === "string") message = body.error;
+                    } catch {
+                        // ignore parse failure
+                    }
+                    setSyncError(message);
                     setSyncStatus("error");
                     return;
                 }
+                setSyncError(null);
                 const stored = (await r.json()) as ApiRecord;
                 setRecord(stored);
                 setSyncStatus("success");
@@ -115,6 +127,7 @@ export function useUserCampgrounds(): UseUserCampgroundsState {
                 // the server performed (curator saves update the default KV key).
                 void fetchDefault();
             } catch {
+                setSyncError(null);
                 setSyncStatus("error");
             }
         },
@@ -191,9 +204,13 @@ export function useUserCampgrounds(): UseUserCampgroundsState {
         updatedAt: record.updatedAt,
         isHydrating,
         syncStatus,
+        syncError,
         isEmpty: record.updatedAt === null && (record.campgrounds["recreation.gov"]?.length ?? 0) === 0,
         missingFromDefault,
-        clearSyncStatus: () => setSyncStatus(null),
+        clearSyncStatus: () => {
+            setSyncStatus(null);
+            setSyncError(null);
+        },
         save,
         cloneDefault,
         startBlank,
