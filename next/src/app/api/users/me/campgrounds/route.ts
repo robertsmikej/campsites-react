@@ -5,6 +5,7 @@ import { getSitewideDefaultSettings } from "@/lib/settings";
 import { getKv } from "@/lib/cloudflare";
 import { withErrorLogging } from "@/lib/route-helpers";
 import { WorkerKvAdapter } from "@/lib/recgov/worker-kv";
+import { HIGH_PRIORITY_CAP } from "@/types/campground";
 
 function emptyRecord() {
     const defaults = getSitewideDefaultSettings({});
@@ -55,6 +56,20 @@ async function putHandler(request: Request): Promise<Response> {
     }
     if (!isValidBody(body)) {
         return withCors(jsonResponse({ error: "Body must include campgrounds and globalSettings" }, 400));
+    }
+
+    const highCount = body.campgrounds["recreation.gov"].filter((cg) => {
+        if (!cg || typeof cg !== "object") return false;
+        const c = cg as { checkPriority?: string; enabled?: boolean };
+        return c.checkPriority === "high" && c.enabled !== false;
+    }).length;
+    if (highCount > HIGH_PRIORITY_CAP) {
+        return withCors(
+            jsonResponse(
+                { error: `At most ${HIGH_PRIORITY_CAP} campgrounds can be set to every-minute checking` },
+                400,
+            ),
+        );
     }
 
     const stored = await putUserCampgrounds(session.email, body as never);

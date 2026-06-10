@@ -99,7 +99,90 @@ describe("GET /api/users/me/campgrounds", () => {
     });
 });
 
+function cgWithPriority(id: string, checkPriority?: string, enabled = true) {
+    return {
+        id,
+        name: `Camp ${id}`,
+        sites: { favorites: [], worthwhile: [] },
+        ...(checkPriority ? { checkPriority } : {}),
+        ...(enabled ? {} : { enabled: false }),
+    };
+}
+
+const GLOBAL_SETTINGS = { stayLengths: [2], validStartDays: ["Friday"] };
+
 describe("PUT /api/users/me/campgrounds", () => {
+    it("returns 400 when more than 3 campgrounds are high priority", async () => {
+        vi.mocked(sessions.readSession).mockResolvedValue({
+            id: "x",
+            email: "user@example.com",
+            createdAt: "x",
+            expiresAt: "x",
+        });
+        vi.mocked(cloudflare.getKv).mockReturnValue(createMockKv());
+
+        const res = await doPut({
+            campgrounds: {
+                "recreation.gov": [
+                    cgWithPriority("1", "high"),
+                    cgWithPriority("2", "high"),
+                    cgWithPriority("3", "high"),
+                    cgWithPriority("4", "high"),
+                ],
+            },
+            globalSettings: GLOBAL_SETTINGS,
+        });
+        expect(res.status).toBe(400);
+        const body = (await res.json()) as { error: string };
+        expect(body.error).toContain("3");
+    });
+
+    it("accepts exactly 3 high-priority campgrounds", async () => {
+        vi.mocked(sessions.readSession).mockResolvedValue({
+            id: "x",
+            email: "user@example.com",
+            createdAt: "x",
+            expiresAt: "x",
+        });
+        vi.mocked(cloudflare.getKv).mockReturnValue(createMockKv());
+
+        const res = await doPut({
+            campgrounds: {
+                "recreation.gov": [
+                    cgWithPriority("1", "high"),
+                    cgWithPriority("2", "high"),
+                    cgWithPriority("3", "high"),
+                    cgWithPriority("4", "low"),
+                ],
+            },
+            globalSettings: GLOBAL_SETTINGS,
+        });
+        expect(res.status).toBe(200);
+    });
+
+    it("does not count disabled campgrounds against the high cap", async () => {
+        vi.mocked(sessions.readSession).mockResolvedValue({
+            id: "x",
+            email: "user@example.com",
+            createdAt: "x",
+            expiresAt: "x",
+        });
+        vi.mocked(cloudflare.getKv).mockReturnValue(createMockKv());
+
+        const res = await doPut({
+            campgrounds: {
+                "recreation.gov": [
+                    cgWithPriority("1", "high"),
+                    cgWithPriority("2", "high"),
+                    cgWithPriority("3", "high"),
+                    cgWithPriority("4", "high", false), // disabled — not fetched, doesn't count
+                ],
+            },
+            globalSettings: GLOBAL_SETTINGS,
+        });
+        expect(res.status).toBe(200);
+    });
+
     it("returns 401 when not signed in", async () => {
         vi.mocked(sessions.readSession).mockResolvedValue(null);
         const res = await doPut({
