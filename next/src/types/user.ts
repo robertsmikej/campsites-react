@@ -10,7 +10,7 @@ export interface UserProfile {
     createdAt: string;
     notifications?: {
         enabled: boolean;
-        frequencyMinutes: 5 | 15 | 60 | 240;
+        frequencyMinutes: 1 | 5 | 15 | 60 | 240;
     };
     /** Default notification scope for any campground that doesn't override it.
      *  If unset, treated as "worthwhile" — matches pre-feature behavior. */

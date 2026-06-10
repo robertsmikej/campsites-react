@@ -15,7 +15,7 @@ export const GET = withErrorLogging(getHandler, "GET /api/me");
 
 interface PatchBody {
     name?: string;
-    notifications?: { enabled: boolean; frequencyMinutes: 5 | 15 | 60 | 240 };
+    notifications?: { enabled: boolean; frequencyMinutes: 1 | 5 | 15 | 60 | 240 };
     defaultNotifyScope?: "favorites" | "worthwhile" | "all";
 }
 
@@ -31,6 +31,7 @@ function isValidPatch(body: unknown): body is PatchBody {
         if (typeof n !== "object" || n === null) return false;
         if (typeof n.enabled !== "boolean") return false;
         if (
+            n.frequencyMinutes !== 1 &&
             n.frequencyMinutes !== 5 &&
             n.frequencyMinutes !== 15 &&
             n.frequencyMinutes !== 60 &&

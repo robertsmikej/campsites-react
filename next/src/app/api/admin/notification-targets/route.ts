@@ -9,7 +9,7 @@ interface NotificationTarget {
     email: string;
     name: string;
     roles: UserRole[];
-    notifications: { enabled: boolean; frequencyMinutes: 5 | 15 | 60 | 240 };
+    notifications: { enabled: boolean; frequencyMinutes: 1 | 5 | 15 | 60 | 240 };
     defaultNotifyScope?: NotifyScope;
     lastNotifiedAt?: string;
     campgrounds: SiteConfig;

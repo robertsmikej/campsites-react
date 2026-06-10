@@ -22,7 +22,7 @@ import { DashboardTopBar } from "@/components/dashboard/dashboard-top-bar";
 
 import type { NotifyScope } from "@/types/campground";
 
-type Frequency = 5 | 15 | 60 | 240;
+type Frequency = 1 | 5 | 15 | 60 | 240;
 
 const DEFAULT_NOTIFICATIONS = { enabled: true, frequencyMinutes: 15 satisfies Frequency };
 const DEFAULT_NOTIFY_SCOPE: NotifyScope = "favorites";
@@ -329,6 +329,7 @@ export default function AccountPage() {
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
+                                        <SelectItem value="1">Every minute</SelectItem>
                                         <SelectItem value="5">Every 5 minutes</SelectItem>
                                         <SelectItem value="15">Every 15 minutes</SelectItem>
                                         <SelectItem value="60">Every hour</SelectItem>
@@ -336,7 +337,8 @@ export default function AccountPage() {
                                     </SelectContent>
                                 </Select>
                                 <p className="font-italic-serif text-[14px] italic text-cw-ink-soft">
-                                    The notifier runs every 5 minutes. Faster cadence = faster alerts.
+                                    Checks run every 1–10 minutes depending on each campground&apos;s check frequency.
+                                    This setting is the minimum gap between alert emails.
                                 </p>
                             </div>
 

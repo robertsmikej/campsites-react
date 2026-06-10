@@ -189,6 +189,23 @@ describe("PATCH /api/me", () => {
         expect(body.notifications).toEqual({ enabled: true, frequencyMinutes: 5 });
     });
 
+    it("accepts frequencyMinutes: 1", async () => {
+        const kv = createMockKv();
+        const session = await setupKvWithSession(kv);
+
+        const { PATCH } = await import("./route");
+        const res = await PATCH(
+            makeRequest("PATCH", "https://example.com/api/me", {
+                cookieHeader: `${SESSION_COOKIE}=${session.id}`,
+                body: { notifications: { enabled: true, frequencyMinutes: 1 } },
+            }),
+        );
+
+        expect(res.status).toBe(200);
+        const body = (await res.json()) as { notifications: { enabled: boolean; frequencyMinutes: number } };
+        expect(body.notifications).toEqual({ enabled: true, frequencyMinutes: 1 });
+    });
+
     it("returns 400 when frequencyMinutes is an invalid value", async () => {
         const kv = createMockKv();
         const session = await setupKvWithSession(kv);
