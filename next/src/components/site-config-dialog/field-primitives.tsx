@@ -55,7 +55,7 @@ export function TierChip({ tier, count }: { tier: "fav" | "worth"; count: number
 }
 
 interface SegmentedControlProps<T extends string> {
-    options: Array<{ value: T; label: string }>;
+    options: Array<{ value: T; label: string; disabled?: boolean }>;
     value: T | undefined;
     onChange: (value: T) => void;
 }
@@ -73,6 +73,7 @@ export function SegmentedControl<T extends string>({ options, value, onChange }:
                         key={opt.value}
                         type="button"
                         aria-pressed={active}
+                        disabled={opt.disabled}
                         onClick={() => onChange(opt.value)}
                         className="cursor-pointer whitespace-nowrap font-mono-field font-bold uppercase transition-colors"
                         style={{
@@ -82,6 +83,8 @@ export function SegmentedControl<T extends string>({ options, value, onChange }:
                             borderRight: i < options.length - 1 ? `1.5px solid ${CW.ink}` : undefined,
                             background: active ? CW.forest : CW.cream,
                             color: active ? CW.cream : CW.inkSoft,
+                            opacity: opt.disabled ? 0.45 : undefined,
+                            cursor: opt.disabled ? "not-allowed" : undefined,
                         }}
                     >
                         {opt.label}

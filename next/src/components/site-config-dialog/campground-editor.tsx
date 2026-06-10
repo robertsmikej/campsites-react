@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/command";
 
 import { ALL_DAYS, STAY_MAX, STAY_MIN, type EditableCampground } from "./types";
-import type { NotifyScope } from "@/types/campground";
+import { HIGH_PRIORITY_CAP, type CheckPriority, type NotifyScope } from "@/types/campground";
 import { CW } from "@/components/field-notes/cw-tokens";
 import { FieldLabel, Hint, SectionDivider, SegmentedControl, TierChip } from "./field-primitives";
 
@@ -37,6 +37,8 @@ interface CampgroundEditorProps {
     globalStayRange: [number, number];
     globalValidStartDays: string[];
     dragHandleProps?: Record<string, unknown>;
+    /** Count of enabled high-tier campgrounds across the whole list (for the 3-max gate). */
+    highTierCount: number;
     onToggleEnabled: (checked: boolean) => void;
     onFieldChange: <K extends keyof EditableCampground>(field: K, value: EditableCampground[K]) => void;
     onDateChange: (key: "startDate" | "endDate", value: string) => void;
@@ -254,12 +256,14 @@ export function CampgroundEditor({
     globalStayRange,
     globalValidStartDays,
     dragHandleProps,
+    highTierCount,
     onToggleEnabled,
     onFieldChange,
     onDateChange,
     onRemove,
 }: CampgroundEditorProps) {
     const isEnabled = campground.enabled !== false;
+    const highTierFull = highTierCount >= HIGH_PRIORITY_CAP && campground.checkPriority !== "high";
 
     const hasCampgroundDays = !!campground.validStartDays;
     const hasCampgroundStay = !!campground.stayLengths;
@@ -583,6 +587,29 @@ export function CampgroundEditor({
                         }}
                     />
                     <Hint>Favorites means only the sites you&apos;ve starred above.</Hint>
+                </div>
+
+                {/* Check frequency tier */}
+                <div>
+                    <FieldLabel>Check frequency</FieldLabel>
+                    <div className="mt-2">
+                        <SegmentedControl<CheckPriority>
+                            options={[
+                                { value: "high", label: "Every minute", disabled: highTierFull },
+                                { value: "normal", label: "Every 5 min" },
+                                { value: "low", label: "Every 10 min" },
+                            ]}
+                            value={campground.checkPriority ?? "normal"}
+                            onChange={(value) =>
+                                onFieldChange("checkPriority", value === "normal" ? undefined : value)
+                            }
+                        />
+                    </div>
+                    <Hint>
+                        {highTierFull
+                            ? `High tier is full — at most ${HIGH_PRIORITY_CAP} campgrounds can be checked every minute.`
+                            : "How often the notifier polls rec.gov for this campground."}
+                    </Hint>
                 </div>
 
                 {/* Per-campground start days */}

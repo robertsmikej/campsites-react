@@ -45,6 +45,7 @@ function SortableCampgroundEditor(props: {
     availableSites: string[];
     globalStayRange: [number, number];
     globalValidStartDays: string[];
+    highTierCount: number;
     onToggleEnabled: (checked: boolean) => void;
     onFieldChange: <K extends keyof EditableCampground>(field: K, value: EditableCampground[K]) => void;
     onDateChange: (key: "startDate" | "endDate", value: string) => void;
@@ -244,6 +245,10 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
 
     const isSaveDisabled = campgrounds.some((c) => !c.name.trim() || !c.id.trim());
 
+    const highTierCount = campgrounds.filter(
+        (c) => c.checkPriority === "high" && c.enabled !== false,
+    ).length;
+
     const sortableIds = campgrounds.map((c, idx) => c.id || `idx-${idx}`);
 
     return (
@@ -385,6 +390,7 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
                                             }
                                             globalStayRange={stayRange}
                                             globalValidStartDays={validStartDays}
+                                            highTierCount={highTierCount}
                                             onToggleEnabled={(checked) =>
                                                 handleFieldChange(index, "enabled", checked)
                                             }

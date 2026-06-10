@@ -24,6 +24,24 @@ describe("SegmentedControl", () => {
         fireEvent.click(screen.getByRole("button", { name: "Any site opens" }));
         expect(onChange).toHaveBeenCalledWith("all");
     });
+
+    it("renders a disabled option that does not fire onChange", () => {
+        const onChange = vi.fn();
+        render(
+            <SegmentedControl
+                options={[
+                    { value: "high", label: "Every minute", disabled: true },
+                    { value: "normal", label: "Every 5 min" },
+                ]}
+                value="normal"
+                onChange={onChange}
+            />,
+        );
+        const disabledBtn = screen.getByRole("button", { name: "Every minute" });
+        expect((disabledBtn as HTMLButtonElement).disabled).toBe(true);
+        fireEvent.click(disabledBtn);
+        expect(onChange).not.toHaveBeenCalled();
+    });
 });
 
 describe("TierChip", () => {
