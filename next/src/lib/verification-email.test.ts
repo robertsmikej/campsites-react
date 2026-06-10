@@ -49,6 +49,21 @@ describe("sendVerificationEmail", () => {
         expect(await verifySignedValue(token, SECRET)).toBe("me@gmail.com|me@icloud.com");
     });
 
+    it("escapes HTML-meaningful characters in the account email", async () => {
+        await sendVerificationEmail({
+            accountEmail: '"<b>x</b>"@gmail.com',
+            newAddress: "me@icloud.com",
+            origin: "https://campwatch.dev",
+            resendApiKey: "re_test",
+            apiSecret: SECRET,
+        });
+        const body = JSON.parse(String(vi.mocked(globalThis.fetch).mock.calls[0]![1]?.body)) as {
+            html: string;
+        };
+        expect(body.html).not.toContain("<b>x</b>");
+        expect(body.html).toContain("&lt;b&gt;x&lt;/b&gt;");
+    });
+
     it("throws when Resend responds non-2xx", async () => {
         vi.mocked(globalThis.fetch).mockResolvedValue(new Response("nope", { status: 500 }));
         await expect(

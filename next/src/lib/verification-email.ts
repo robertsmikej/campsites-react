@@ -1,5 +1,10 @@
 import { signValue } from "./crypto-helpers";
 
+// Minimal HTML escape for values interpolated into the email body.
+function escapeHtml(s: string): string {
+    return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
 /** Token payload is "accountEmail|newAddress" — emails cannot contain "|". */
 export async function buildVerificationToken(
     accountEmail: string,
@@ -26,12 +31,12 @@ export async function sendVerificationEmail(opts: SendVerificationOptions): Prom
 <div style="font-family: Georgia, serif; max-width: 520px; margin: 0 auto; padding: 24px;">
     <h2 style="margin: 0 0 12px;">Confirm where CampWatch sends your alerts</h2>
     <p style="line-height: 1.5;">
-        The CampWatch account <strong>${opts.accountEmail}</strong> asked to deliver its
+        The CampWatch account <strong>${escapeHtml(opts.accountEmail)}</strong> asked to deliver its
         campsite alerts to this address. Click below to confirm — until then, alerts keep
         going to the login email.
     </p>
     <p style="margin: 24px 0;">
-        <a href="${verifyUrl}"
+        <a href="${escapeHtml(verifyUrl)}"
            style="background:#1F3D2A;color:#F7F1E3;padding:12px 20px;text-decoration:none;border-radius:3px;font-weight:bold;">
             Send my alerts here
         </a>
@@ -49,6 +54,7 @@ export async function sendVerificationEmail(opts: SendVerificationOptions): Prom
         },
         body: JSON.stringify({
             from: "CampWatch <alerts@campwatch.dev>",
+            reply_to: "hello@campwatch.dev",
             to: opts.newAddress,
             subject: "Confirm your CampWatch alert address",
             html,
