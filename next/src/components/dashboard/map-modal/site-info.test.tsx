@@ -1,6 +1,7 @@
 import { describe, it, expect, afterEach } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
-import { StarRating, CellSignal, TypeBadge, ListMarker } from "./site-info";
+import type { MapSite } from "@/lib/map-sites";
+import { StarRating, CellSignal, TypeBadge, ListMarker, SiteInfoChips } from "./site-info";
 
 afterEach(cleanup);
 
@@ -25,6 +26,10 @@ describe("CellSignal", () => {
         render(<CellSignal level={0} />);
         expect(screen.getByText(/None/i)).toBeTruthy();
     });
+    it("labels None for null", () => {
+        render(<CellSignal level={null} />);
+        expect(screen.getByText(/None/i)).toBeTruthy();
+    });
 });
 
 describe("TypeBadge", () => {
@@ -38,6 +43,44 @@ describe("TypeBadge", () => {
         expect(screen.getByText(/Walk-in/i)).toBeTruthy();
         rerender(<TypeBadge type="tent" />);
         expect(screen.getByText(/Tent/i)).toBeTruthy();
+    });
+});
+
+describe("SiteInfoChips", () => {
+    const bareSite: MapSite = {
+        id: "X-1",
+        campsiteId: "1",
+        lat: null,
+        lng: null,
+        type: "tent",
+        rating: null,
+        reviews: 0,
+        cell: null,
+        amenities: {},
+        open: false,
+        openCount: 0,
+        tier: "other",
+    };
+
+    it("renders without throwing on a bare site with no rating/shade/amenities", () => {
+        const { container } = render(<SiteInfoChips site={bareSite} />);
+        expect(container).toBeTruthy();
+        expect(container.textContent).not.toContain("undefined");
+        expect(container.textContent).not.toContain("NaN");
+    });
+
+    it("shows rating and shade when present", () => {
+        const richSite: MapSite = {
+            ...bareSite,
+            rating: 4,
+            reviews: 3,
+            shade: "full",
+            cell: 3,
+            amenities: { firePit: true },
+        };
+        render(<SiteInfoChips site={richSite} />);
+        expect(screen.getByText(/4/)).toBeTruthy();
+        expect(screen.getByText("Full shade")).toBeTruthy();
     });
 });
 
