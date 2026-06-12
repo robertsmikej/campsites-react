@@ -93,7 +93,7 @@ export function CampgroundMapModal({
             >
                 {/* Header */}
                 <div
-                    className="flex items-start justify-between"
+                    className="map-modal-header flex items-start justify-between"
                     style={{
                         background: CW.cream,
                         borderBottom: `2px solid ${CW.ink}`,
@@ -108,7 +108,7 @@ export function CampgroundMapModal({
                             § Watchlist · Site map &amp; details
                         </div>
                         <DialogTitle
-                            className="font-poster font-black uppercase"
+                            className="map-modal-title font-poster font-black uppercase"
                             style={{ fontSize: 34, lineHeight: 0.92, letterSpacing: "-0.01em", marginTop: 9 }}
                         >
                             {campground?.name ?? ""}
@@ -154,7 +154,7 @@ export function CampgroundMapModal({
                 </div>
 
                 {/* Body */}
-                <div className="flex-1 overflow-y-auto" style={{ padding: "24px 30px" }}>
+                <div className="map-modal-body-wrap flex-1 overflow-y-auto" style={{ padding: "24px 30px" }}>
                     {loading ? (
                         <div
                             className="font-mono-field uppercase"
@@ -167,21 +167,15 @@ export function CampgroundMapModal({
                             Site details unavailable.
                         </div>
                     ) : (
-                        /* 2-col layout: left = map + legend + summary; right = site list */
-                        <div
-                            style={{
-                                display: "grid",
-                                gridTemplateColumns: "minmax(320px, 520px) 1fr",
-                                gap: 24,
-                                height: "100%",
-                                minHeight: 500,
-                            }}
-                            className="map-modal-body"
-                        >
+                        <div className="map-modal-body">
                             {/* Left column: map + legend + summary */}
-                            <div style={{ display: "flex", flexDirection: "column", gap: 12, minWidth: 0 }}>
+                            <div
+                                className="map-modal-map-col"
+                                style={{ display: "flex", flexDirection: "column", gap: 12, minWidth: 0 }}
+                            >
                                 {/* Map */}
                                 <div
+                                    className="map-modal-map-container"
                                     style={{
                                         flex: "1 1 430px",
                                         borderRadius: 3,
@@ -249,7 +243,7 @@ export function CampgroundMapModal({
 
                 {/* Footer */}
                 <DialogFooter
-                    className="flex-row items-center justify-end gap-3 sm:justify-end"
+                    className="map-modal-footer flex-row items-center justify-end gap-3 sm:justify-end"
                     style={{
                         background: CW.cream,
                         borderTop: `2px solid ${CW.ink}`,

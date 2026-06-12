@@ -53,6 +53,7 @@ function SiteRow({
                 borderLeft: `3px solid ${selected ? accentColor : "transparent"}`,
                 transition: "background 0.12s ease",
             }}
+            className="site-row-inner"
         >
             {/* Left: marker */}
             <ListMarker id={site.id} open={site.open} favorite={isFav} selected={selected} />
@@ -67,6 +68,7 @@ function SiteRow({
 
             {/* Right: open count + action */}
             <div
+                className="site-row-action"
                 style={{
                     display: "flex",
                     flexDirection: "column",
