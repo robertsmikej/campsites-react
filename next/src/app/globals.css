@@ -238,6 +238,90 @@
     }
 }
 
+/* map pins — CampWatch satellite map (Leaflet divIcon) */
+
+/* Reset Leaflet's default icon wrapper */
+.cw-pin-wrap {
+    background: none !important;
+    border: none !important;
+}
+
+.cw-pin {
+    position: relative;
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50% 50% 50% 0;
+    transform: rotate(-45deg);
+    transition:
+        transform 0.12s ease,
+        box-shadow 0.12s ease;
+    cursor: pointer;
+    box-sizing: border-box;
+    border: 1.5px solid rgba(26, 22, 20, 0.55);
+}
+
+.cw-pin .cw-pin-label,
+.cw-pin .cw-pin-star {
+    transform: rotate(45deg);
+    font-family: var(--font-mono-field, monospace);
+    font-size: 8px;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+    letter-spacing: -0.01em;
+}
+
+/* Open — forest fill */
+.cw-pin.open {
+    background: var(--cw-forest);
+    border-color: var(--cw-forest);
+    box-shadow: 2px 2px 0 var(--cw-forest-deep);
+}
+
+.cw-pin.open .cw-pin-label {
+    color: var(--cw-cream);
+}
+
+/* Booked — cream fill with ink outline */
+.cw-pin.booked {
+    background: var(--cw-cream);
+    border-color: var(--cw-ink);
+    box-shadow: 2px 2px 0 var(--cw-ink-faint);
+}
+
+.cw-pin.booked .cw-pin-label {
+    color: var(--cw-ink);
+}
+
+/* Favorite — clay star badge (overrides open/booked color) */
+.cw-pin.fav {
+    background: var(--cw-clay);
+    border-color: var(--cw-clay);
+    box-shadow: 2px 2px 0 rgba(156, 74, 49, 0.45);
+}
+
+.cw-pin.fav .cw-pin-label,
+.cw-pin.fav .cw-pin-star {
+    color: var(--cw-cream);
+}
+
+/* Selected — clay ring highlight */
+.cw-pin.sel {
+    outline: 2px solid var(--cw-clay);
+    outline-offset: 2px;
+    z-index: 1000 !important;
+}
+
+/* Hovered — scale up slightly */
+.cw-pin.hov,
+.cw-pin:hover {
+    transform: rotate(-45deg) scale(1.12);
+    z-index: 900 !important;
+}
+
 /* View Transitions — smooth page-to-page fades */
 @view-transition {
     navigation: auto;

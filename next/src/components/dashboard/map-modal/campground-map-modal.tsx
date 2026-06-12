@@ -1,13 +1,31 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { Dialog, DialogContent, DialogFooter, DialogTitle } from "@/components/ui/dialog";
 import { CW } from "@/components/field-notes/cw-tokens";
 import { mergeMapSites, type MapSite } from "@/lib/map-sites";
-import { SiteList } from "./site-list";
+import { SiteList, SitePopover } from "./site-list";
+import { MapSummary } from "./map-summary";
 import type { SiteDetail } from "@/lib/site-details";
 import type { ProcessedCampground } from "@/types/campground";
 import type { JSX } from "react";
+
+// Leaflet touches `window` — must never evaluate server-side
+const SiteMap = dynamic(() => import("./site-map").then((m) => m.SiteMap), {
+    ssr: false,
+    loading: () => (
+        <div
+            aria-label="Loading map"
+            style={{
+                width: "100%",
+                minHeight: 430,
+                background: "var(--cw-ink-faint)",
+                borderRadius: 3,
+            }}
+        />
+    ),
+});
 
 export function CampgroundMapModal({
     campground,
@@ -60,12 +78,13 @@ export function CampgroundMapModal({
 
     const totalSites = campground?.totalSitesCount ?? Object.keys(campground?.siteAvailability ?? {}).length;
     const bookableCount = sites.filter((s) => s.open).length;
+    const selectedSite = selectedSiteId ? (sites.find((s) => s.id === selectedSiteId) ?? null) : null;
 
     return (
         <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
             <DialogContent
                 showCloseButton={false}
-                className="flex max-h-[90vh] w-[95vw] max-w-[95vw] flex-col overflow-hidden rounded-none p-0 sm:max-w-4xl"
+                className="flex max-h-[90vh] w-[95vw] max-w-[95vw] flex-col overflow-hidden rounded-none p-0 sm:max-w-5xl"
                 style={{
                     background: CW.paper,
                     border: `1.5px solid ${CW.ink}`,
@@ -148,9 +167,74 @@ export function CampgroundMapModal({
                             Site details unavailable.
                         </div>
                     ) : (
-                        /* Right column for now — Task 7 adds the left map column */
-                        <div style={{ display: "flex", gap: 24, height: "100%" }}>
-                            <div style={{ flex: 1, minWidth: 0 }}>
+                        /* 2-col layout: left = map + legend + summary; right = site list */
+                        <div
+                            style={{
+                                display: "grid",
+                                gridTemplateColumns: "minmax(320px, 520px) 1fr",
+                                gap: 24,
+                                height: "100%",
+                                minHeight: 500,
+                            }}
+                            className="map-modal-body"
+                        >
+                            {/* Left column: map + legend + summary */}
+                            <div style={{ display: "flex", flexDirection: "column", gap: 12, minWidth: 0 }}>
+                                {/* Map */}
+                                <div
+                                    style={{
+                                        flex: "1 1 430px",
+                                        borderRadius: 3,
+                                        overflow: "hidden",
+                                        border: `1px solid var(--cw-rule)`,
+                                        position: "relative",
+                                    }}
+                                >
+                                    <SiteMap
+                                        sites={sites}
+                                        selectedId={selectedSiteId}
+                                        hoveredId={hoveredSiteId}
+                                        onSelect={setSelectedSiteId}
+                                        onHover={setHoveredSiteId}
+                                    />
+                                    {/* SitePopover — rendered inside the map column when a site is selected */}
+                                    {selectedSite && (
+                                        <div
+                                            style={{
+                                                position: "absolute",
+                                                bottom: 12,
+                                                left: 12,
+                                                zIndex: 1000,
+                                            }}
+                                        >
+                                            <SitePopover
+                                                site={selectedSite}
+                                                onClose={() => setSelectedSiteId(null)}
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Legend */}
+                                <div
+                                    style={{
+                                        display: "flex",
+                                        gap: 16,
+                                        flexWrap: "wrap",
+                                        alignItems: "center",
+                                    }}
+                                >
+                                    <LegendItem glyph="●" color={CW.forest} label="Open" />
+                                    <LegendItem glyph="○" color={CW.inkSoft} label="Booked" />
+                                    <LegendItem glyph="★" color={CW.clay} label="Favorite" />
+                                </div>
+
+                                {/* At-a-glance summary */}
+                                <MapSummary sites={sites} />
+                            </div>
+
+                            {/* Right column: site list */}
+                            <div style={{ minWidth: 0, overflow: "hidden" }}>
                                 <SiteList
                                     sites={sites}
                                     selectedId={selectedSiteId}
@@ -210,5 +294,19 @@ export function CampgroundMapModal({
                 </DialogFooter>
             </DialogContent>
         </Dialog>
+    );
+}
+
+function LegendItem({ glyph, color, label }: { glyph: string; color: string; label: string }): JSX.Element {
+    return (
+        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+            <span style={{ fontSize: 12, color, lineHeight: 1 }}>{glyph}</span>
+            <span
+                className="font-mono-field font-medium uppercase"
+                style={{ fontSize: 9, letterSpacing: "0.15em", color: CW.inkSoft }}
+            >
+                {label}
+            </span>
+        </div>
     );
 }
