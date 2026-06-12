@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogFooter, DialogTitle } from "@/components/ui/dialog";
 import { CW } from "@/components/field-notes/cw-tokens";
 import { mergeMapSites, type MapSite } from "@/lib/map-sites";
+import { SiteList } from "./site-list";
 import type { SiteDetail } from "@/lib/site-details";
 import type { ProcessedCampground } from "@/types/campground";
 import type { JSX } from "react";
@@ -19,6 +20,8 @@ export function CampgroundMapModal({
 }): JSX.Element | null {
     const [sites, setSites] = useState<MapSite[]>([]);
     const [loading, setLoading] = useState(false);
+    const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
+    const [hoveredSiteId, setHoveredSiteId] = useState<string | null>(null);
 
     useEffect(() => {
         if (!open || !campground?.id) {
@@ -145,9 +148,17 @@ export function CampgroundMapModal({
                             Site details unavailable.
                         </div>
                     ) : (
-                        <div className="font-mono-field" style={{ fontSize: 11, color: CW.inkSoft }}>
-                            {/* Map and site list will be wired in Tasks 6–7 */}
-                            {sites.length} sites loaded.
+                        /* Right column for now — Task 7 adds the left map column */
+                        <div style={{ display: "flex", gap: 24, height: "100%" }}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <SiteList
+                                    sites={sites}
+                                    selectedId={selectedSiteId}
+                                    hoveredId={hoveredSiteId}
+                                    onSelect={setSelectedSiteId}
+                                    onHover={setHoveredSiteId}
+                                />
+                            </div>
                         </div>
                     )}
                 </div>
