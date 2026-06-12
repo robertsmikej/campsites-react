@@ -8,6 +8,7 @@ import { useSiteSettings } from "@/context/site-settings";
 import type { ProcessedCampground } from "@/types/campground";
 import { TimelineAxis } from "./timeline-axis";
 import { CampgroundTimelineRow } from "./campground-timeline-row";
+import { CampgroundMapModal } from "@/components/dashboard/map-modal/campground-map-modal";
 
 const META = 264;
 const PAD = 26;
@@ -28,6 +29,7 @@ export function AvailabilityTimeline({
     const horizon = buildHorizon(dateRange.start, dateRange.end);
     const { sitesById, ensureLoaded } = useCampgroundSites();
     const blackoutDates = useSiteSettings()?.dates.blackoutDates;
+    const [mapCgId, setMapCgId] = useState<string | null>(null);
     const [expandedIds, setExpandedIds] = useState<Set<string>>(() => {
         const first = defaultExpandFirst ? rows[0]?.id : undefined;
         return first ? new Set([first]) : new Set();
@@ -50,56 +52,68 @@ export function AvailabilityTimeline({
         });
 
     return (
-        <div
-            className="overflow-hidden bg-cw-cream"
-            style={{ border: `1.5px solid ${CW.ink}`, boxShadow: `8px 8px 0 ${CW.forest}` }}
-        >
+        <>
             <div
-                className="grid items-end"
-                style={{
-                    gridTemplateColumns: `${META}px 1fr`,
-                    borderBottom: `2px solid ${CW.ink}`,
-                    padding: `18px ${PAD}px 0`,
-                }}
+                className="overflow-hidden bg-cw-cream"
+                style={{ border: `1.5px solid ${CW.ink}`, boxShadow: `8px 8px 0 ${CW.forest}` }}
             >
                 <div
-                    className="font-mono-field font-bold uppercase"
-                    style={{ fontSize: 10, letterSpacing: "0.16em", color: CW.clay, paddingBottom: 12 }}
+                    className="grid items-end"
+                    style={{
+                        gridTemplateColumns: `${META}px 1fr`,
+                        borderBottom: `2px solid ${CW.ink}`,
+                        padding: `18px ${PAD}px 0`,
+                    }}
                 >
-                    Watchlist · click a row to expand its sites
+                    <div
+                        className="font-mono-field font-bold uppercase"
+                        style={{ fontSize: 10, letterSpacing: "0.16em", color: CW.clay, paddingBottom: 12 }}
+                    >
+                        Watchlist · click a row to expand its sites
+                    </div>
+                    <TimelineAxis horizon={horizon} />
                 </div>
-                <TimelineAxis horizon={horizon} />
-            </div>
 
-            <div>
-                {rows.map((cg) => (
-                    <CampgroundTimelineRow
-                        key={cg.id ?? cg.name}
-                        campground={cg}
-                        horizon={horizon}
-                        expanded={expandedIds.has(cg.id ?? cg.name)}
-                        onToggleExpand={() => toggle(cg.id ?? cg.name)}
-                        onEditSettings={onEditSettings}
-                        roster={cg.id ? sitesById[cg.id] : undefined}
-                        blackoutDates={blackoutDates}
-                    />
-                ))}
-            </div>
-
-            <div
-                className="flex items-center justify-between"
-                style={{ borderTop: `2px solid ${CW.ink}`, background: CW.paper, padding: `14px ${PAD}px` }}
-            >
-                <div className="font-italic-serif italic" style={{ fontSize: 16, color: CW.inkSoft }}>
-                    One axis, every campground on it.
+                <div>
+                    {rows.map((cg) => (
+                        <CampgroundTimelineRow
+                            key={cg.id ?? cg.name}
+                            campground={cg}
+                            horizon={horizon}
+                            expanded={expandedIds.has(cg.id ?? cg.name)}
+                            onToggleExpand={() => toggle(cg.id ?? cg.name)}
+                            onEditSettings={onEditSettings}
+                            onOpenMap={setMapCgId}
+                            roster={cg.id ? sitesById[cg.id] : undefined}
+                            blackoutDates={blackoutDates}
+                        />
+                    ))}
                 </div>
+
                 <div
-                    className="font-mono-field uppercase"
-                    style={{ fontSize: 11, letterSpacing: "0.12em", color: CW.clay }}
+                    className="flex items-center justify-between"
+                    style={{
+                        borderTop: `2px solid ${CW.ink}`,
+                        background: CW.paper,
+                        padding: `14px ${PAD}px`,
+                    }}
                 >
-                    Updated every 5 min
+                    <div className="font-italic-serif italic" style={{ fontSize: 16, color: CW.inkSoft }}>
+                        One axis, every campground on it.
+                    </div>
+                    <div
+                        className="font-mono-field uppercase"
+                        style={{ fontSize: 11, letterSpacing: "0.12em", color: CW.clay }}
+                    >
+                        Updated every 5 min
+                    </div>
                 </div>
             </div>
-        </div>
+            <CampgroundMapModal
+                campground={rows.find((c) => c.id === mapCgId) ?? null}
+                open={mapCgId !== null}
+                onClose={() => setMapCgId(null)}
+            />
+        </>
     );
 }

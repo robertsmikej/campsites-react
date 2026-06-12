@@ -23,6 +23,7 @@ interface CampgroundTimelineRowProps {
     expanded: boolean;
     onToggleExpand: () => void;
     onEditSettings?: (campgroundId: string) => void;
+    onOpenMap?: (campgroundId: string) => void;
     /** full site roster (all site labels) so every site can show, not just open/tagged */
     roster?: string[];
     /** user's blackout ranges — passed down to timeline blocks for per-night grey */
@@ -35,6 +36,7 @@ export function CampgroundTimelineRow({
     expanded,
     onToggleExpand,
     onEditSettings,
+    onOpenMap,
     roster,
     blackoutDates,
 }: CampgroundTimelineRowProps) {
@@ -87,30 +89,47 @@ export function CampgroundTimelineRow({
                     className="relative flex flex-col justify-center"
                     style={{ padding: `16px ${PAD}px`, borderRight: `1px solid ${CW.rule}` }}
                 >
-                    {onEditSettings && campground.id && (
-                        <button
-                            type="button"
-                            aria-label={`Configure ${campground.name}`}
-                            title="Configure"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onEditSettings(campground.id);
-                            }}
-                            className="absolute right-3 top-3 opacity-50 transition-opacity hover:opacity-100"
-                            style={{ color: CW.inkSoft }}
-                        >
-                            <svg
-                                width="14"
-                                height="14"
-                                viewBox="0 0 16 16"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="1.4"
+                    <div className="absolute right-3 top-3 flex items-center gap-1">
+                        {onOpenMap && campground.id && (
+                            <button
+                                type="button"
+                                aria-label={`Map & sites for ${campground.name}`}
+                                title="Map & sites"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onOpenMap(campground.id);
+                                }}
+                                className="font-mono-field font-semibold uppercase opacity-50 transition-opacity hover:opacity-100"
+                                style={{ fontSize: 9, letterSpacing: "0.1em", color: CW.inkSoft }}
                             >
-                                <path d="M11.5 2.5 L13.5 4.5 L5 13 L2.5 13.5 L3 11 Z" />
-                            </svg>
-                        </button>
-                    )}
+                                Map
+                            </button>
+                        )}
+                        {onEditSettings && campground.id && (
+                            <button
+                                type="button"
+                                aria-label={`Configure ${campground.name}`}
+                                title="Configure"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onEditSettings(campground.id);
+                                }}
+                                className="opacity-50 transition-opacity hover:opacity-100"
+                                style={{ color: CW.inkSoft }}
+                            >
+                                <svg
+                                    width="14"
+                                    height="14"
+                                    viewBox="0 0 16 16"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="1.4"
+                                >
+                                    <path d="M11.5 2.5 L13.5 4.5 L5 13 L2.5 13.5 L3 11 Z" />
+                                </svg>
+                            </button>
+                        )}
+                    </div>
                     <div
                         className="font-italic-serif italic leading-[1.08]"
                         style={{ fontSize: 22, color: CW.ink }}
