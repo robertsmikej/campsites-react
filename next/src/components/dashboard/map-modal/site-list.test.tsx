@@ -43,7 +43,7 @@ it("renders a row per site with the header count", () => {
     );
     expect(screen.getByText("A-07")).toBeTruthy();
     expect(screen.getByText("B-23")).toBeTruthy();
-    expect(screen.getByText(/2 .*sites/i)).toBeTruthy();
+    expect(screen.getByText("2 sites · 1 open")).toBeTruthy();
 });
 
 it("shows Book only for open sites", () => {

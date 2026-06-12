@@ -153,7 +153,7 @@ export function SiteList({
                     marginBottom: 6,
                 }}
             >
-                {total} of {total} sites · {openCount} open
+                {total} sites · {openCount} open
             </div>
 
             {/* Rows */}
@@ -181,14 +181,7 @@ const SHADE_LABEL: Record<string, string> = {
     sun: "Full sun",
 };
 
-export function SitePopover({
-    site,
-    onClose,
-}: {
-    site: MapSite;
-    campgroundId: string;
-    onClose: () => void;
-}): JSX.Element {
+export function SitePopover({ site, onClose }: { site: MapSite; onClose: () => void }): JSX.Element {
     const isFav = site.tier === "fav";
 
     return (
