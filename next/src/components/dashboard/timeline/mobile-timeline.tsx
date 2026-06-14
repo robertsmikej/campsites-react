@@ -20,6 +20,7 @@ import { useSiteSettings } from "@/context/site-settings";
 import { TimelineAxis } from "./timeline-axis";
 import { TimelineTrack } from "./timeline-track";
 import { SiteWindowsList } from "./site-windows";
+import { CampgroundMapModal } from "@/components/dashboard/map-modal/campground-map-modal";
 
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const DOW = ["S", "M", "T", "W", "T", "F", "S"];
@@ -62,6 +63,7 @@ export function MobileTimeline({ rows, dateRange, onEditSettings }: MobileTimeli
         [dateRange.start, dateRange.end],
     );
     const [selectedId, setSelectedId] = useState<string | null>(null);
+    const [mapOpen, setMapOpen] = useState(false);
     const { sitesById, ensureLoaded } = useCampgroundSites();
     const blackoutDates = useSiteSettings()?.dates.blackoutDates;
 
@@ -72,36 +74,53 @@ export function MobileTimeline({ rows, dateRange, onEditSettings }: MobileTimeli
         if (selected?.id) ensureLoaded(selected.id);
     }, [selected?.id, ensureLoaded]);
 
-    // Opening a campground pushes a history entry so the phone's back-swipe (and
-    // the back button) returns to the watchlist instead of leaving the app.
+    // The detail screen and the map modal each push a history entry, so the
+    // phone's back-swipe (and back button) unwinds one layer at a time:
+    // map → detail → watchlist, instead of jumping straight out of the app.
     const openDetail = (id: string) => {
         setSelectedId(id);
         if (typeof window !== "undefined") window.history.pushState({ cwCampgroundDetail: true }, "");
     };
-    const closeDetail = () => {
-        const state = typeof window !== "undefined" ? window.history.state : null;
-        if ((state as { cwCampgroundDetail?: boolean } | null)?.cwCampgroundDetail) {
-            window.history.back(); // pops our entry -> popstate closes the detail
-        } else {
-            setSelectedId(null);
-        }
+    const openMap = () => {
+        setMapOpen(true);
+        if (typeof window !== "undefined")
+            window.history.pushState({ cwCampgroundDetail: true, cwMapModal: true }, "");
     };
+    // When we own the top history entry, unwind it via back() so the stack stays
+    // consistent; popstate then syncs open/closed state. Otherwise close directly.
+    const goBackOr = (flag: "cwCampgroundDetail" | "cwMapModal", fallback: () => void) => {
+        const state = typeof window !== "undefined" ? window.history.state : null;
+        if ((state as Record<string, boolean> | null)?.[flag]) window.history.back();
+        else fallback();
+    };
+    const closeDetail = () => goBackOr("cwCampgroundDetail", () => setSelectedId(null));
+    const closeMap = () => goBackOr("cwMapModal", () => setMapOpen(false));
+
     useEffect(() => {
-        const onPop = () => setSelectedId(null);
+        const onPop = () => {
+            const state = typeof window !== "undefined" ? window.history.state : null;
+            const s = state as { cwCampgroundDetail?: boolean; cwMapModal?: boolean } | null;
+            setMapOpen(Boolean(s?.cwMapModal));
+            setSelectedId((prev) => (s?.cwCampgroundDetail ? prev : null));
+        };
         window.addEventListener("popstate", onPop);
         return () => window.removeEventListener("popstate", onPop);
     }, []);
 
     if (selected) {
         return (
-            <DetailScreen
-                campground={selected}
-                horizon={horizon}
-                onBack={closeDetail}
-                onEditSettings={onEditSettings}
-                roster={selected.id ? sitesById[selected.id] : undefined}
-                blackoutDates={blackoutDates}
-            />
+            <>
+                <DetailScreen
+                    campground={selected}
+                    horizon={horizon}
+                    onBack={closeDetail}
+                    onOpenMap={openMap}
+                    onEditSettings={onEditSettings}
+                    roster={selected.id ? sitesById[selected.id] : undefined}
+                    blackoutDates={blackoutDates}
+                />
+                <CampgroundMapModal campground={selected} open={mapOpen} onClose={closeMap} />
+            </>
         );
     }
 
@@ -194,6 +213,7 @@ function DetailScreen({
     campground,
     horizon,
     onBack,
+    onOpenMap,
     onEditSettings,
     roster,
     blackoutDates,
@@ -201,6 +221,7 @@ function DetailScreen({
     campground: ProcessedCampground;
     horizon: Horizon;
     onBack: () => void;
+    onOpenMap?: () => void;
     onEditSettings?: (campgroundId: string) => void;
     roster?: string[];
     blackoutDates?: BlackoutRange[];
@@ -252,16 +273,28 @@ function DetailScreen({
                     >
                         ← Watchlist
                     </button>
-                    {onEditSettings && campground.id && (
-                        <button
-                            type="button"
-                            onClick={() => onEditSettings(campground.id)}
-                            className="font-mono-field uppercase"
-                            style={{ fontSize: 11, letterSpacing: "0.12em", color: CW.inkSoft }}
-                        >
-                            Configure
-                        </button>
-                    )}
+                    <div className="flex items-center gap-4">
+                        {onOpenMap && campground.id && (
+                            <button
+                                type="button"
+                                onClick={onOpenMap}
+                                className="font-mono-field font-semibold uppercase"
+                                style={{ fontSize: 11, letterSpacing: "0.12em", color: CW.forest }}
+                            >
+                                Map &amp; sites
+                            </button>
+                        )}
+                        {onEditSettings && campground.id && (
+                            <button
+                                type="button"
+                                onClick={() => onEditSettings(campground.id)}
+                                className="font-mono-field uppercase"
+                                style={{ fontSize: 11, letterSpacing: "0.12em", color: CW.inkSoft }}
+                            >
+                                Configure
+                            </button>
+                        )}
+                    </div>
                 </div>
                 <h3
                     className="mt-2 mb-1 font-poster font-black uppercase leading-none"
