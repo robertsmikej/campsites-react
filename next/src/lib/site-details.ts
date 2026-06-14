@@ -31,8 +31,8 @@ interface RawCampsite {
     campsite_id?: string;
     name?: string;
     campsite_type?: string;
-    latitude?: number;
-    longitude?: number;
+    latitude?: number | string;
+    longitude?: number | string;
     average_rating?: number;
     number_of_ratings?: number;
     aggregate_cell_coverage?: number;
@@ -42,6 +42,17 @@ interface RawCampsite {
 
 const YES = new Set(["y", "yes", "true", "1"]);
 const isYes = (v: unknown) => typeof v === "string" && YES.has(v.trim().toLowerCase());
+
+/**
+ * rec.gov returns campsite latitude/longitude as numeric strings
+ * (e.g. "37.73799345000000"). Coerce to a finite number; treat 0 / blank /
+ * non-numeric as "no coordinate" so the map skips those sites rather than
+ * dropping a pin at (0, 0).
+ */
+function toCoord(v: unknown): number | null {
+    const n = typeof v === "number" ? v : typeof v === "string" ? Number.parseFloat(v) : NaN;
+    return Number.isFinite(n) && n !== 0 ? n : null;
+}
 
 function deriveType(
     equip: RawEquip[],
@@ -84,8 +95,8 @@ export function parseCampsite(raw: unknown): SiteDetail | null {
     return {
         id: name,
         campsiteId: String(c.campsite_id ?? ""),
-        lat: typeof c.latitude === "number" ? c.latitude : null,
-        lng: typeof c.longitude === "number" ? c.longitude : null,
+        lat: toCoord(c.latitude),
+        lng: toCoord(c.longitude),
         type,
         ...(maxRvLength ? { maxRvLength } : {}),
         rating: typeof c.average_rating === "number" ? c.average_rating : null,

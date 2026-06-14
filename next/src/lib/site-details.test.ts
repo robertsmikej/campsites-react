@@ -37,6 +37,25 @@ describe("parseCampsite", () => {
         expect(s.shade).toBe("full");
     });
 
+    it("parses string coordinates (real rec.gov shape) into numbers", () => {
+        const s = parseCampsite({
+            ...RAW,
+            latitude: "37.73799345000000",
+            longitude: "-119.56430680000000",
+        }) as SiteDetail;
+        expect(s.lat).toBeCloseTo(37.73799345);
+        expect(s.lng).toBeCloseTo(-119.5643068);
+    });
+
+    it("treats unparseable or zero coordinates as null", () => {
+        const s = parseCampsite({ ...RAW, latitude: "0", longitude: "0" }) as SiteDetail;
+        expect(s.lat).toBeNull();
+        expect(s.lng).toBeNull();
+        const t = parseCampsite({ ...RAW, latitude: "N/A", longitude: "" }) as SiteDetail;
+        expect(t.lat).toBeNull();
+        expect(t.lng).toBeNull();
+    });
+
     it("derives type rv with max length when RV equipment present", () => {
         const s = parseCampsite(RAW)!;
         expect(s.type).toBe("rv");
