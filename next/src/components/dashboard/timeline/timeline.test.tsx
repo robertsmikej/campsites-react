@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 import { render, screen, fireEvent, within } from "@testing-library/react";
 import { AvailabilityTimeline } from "./availability-timeline";
 import SiteSettingsContext from "@/context/site-settings";
@@ -19,7 +19,17 @@ function site(name: string, matches: Array<[string, string]>): SiteAvailability 
     };
 }
 
-const DATE_RANGE = { start: new Date(2026, 4, 1), end: new Date(2026, 8, 30) };
+const DATE_RANGE = { start: new Date(2026, 5, 1), end: new Date(2026, 8, 30) };
+
+// The timeline trims its left edge to "now", so freeze the clock to an
+// in-season date before every fixture opening (so nothing is trimmed away).
+beforeAll(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date(2026, 5, 1)); // Jun 1 2026
+});
+afterAll(() => {
+    vi.useRealTimers();
+});
 
 const ROWS: ProcessedCampground[] = [
     {
@@ -29,7 +39,7 @@ const ROWS: ProcessedCampground[] = [
         sites: { favorites: ["A-07", "Z-99"], worthwhile: ["B-23"] },
         totalSitesCount: 4,
         siteAvailability: {
-            "A-07": site("A-07", [["2026-05-23", "2026-05-25"]]),
+            "A-07": site("A-07", [["2026-06-23", "2026-06-25"]]),
             "B-23": site("B-23", [["2026-06-11", "2026-06-14"]]),
         },
     } as unknown as ProcessedCampground,
@@ -67,8 +77,8 @@ describe("AvailabilityTimeline", () => {
 
     it("rings a favorite site's open block and marks tagged-but-booked sites", () => {
         render(<AvailabilityTimeline rows={ROWS} dateRange={DATE_RANGE} defaultExpandFirst />);
-        // A-07 is a favorite with an opening (May 23–24): its open block carries a clay ring.
-        const blocks = screen.getAllByTitle(/May 23/);
+        // A-07 is a favorite with an opening (Jun 23–24): its open block carries a clay ring.
+        const blocks = screen.getAllByTitle(/Jun 23/);
         expect(blocks.some((b) => b.getAttribute("style")?.includes("--cw-clay"))).toBe(true);
         // Z-99 is a favorite with no availability -> synthesized "booked all season".
         expect(screen.getByText("Site Z-99")).toBeTruthy();
@@ -82,7 +92,7 @@ describe("AvailabilityTimeline", () => {
         fireEvent.click(screen.getByText("Site A-07"));
         const link = screen.getByRole("link", { name: /book/i });
         expect(link.getAttribute("href")).toContain("recreation.gov/camping/campsites/");
-        expect(link.getAttribute("href")).toContain("arrivalDate=2026-05-23");
+        expect(link.getAttribute("href")).toContain("arrivalDate=2026-06-23");
     });
 
     it("shows a count of open favorites on the campground row", () => {
@@ -107,7 +117,7 @@ describe("AvailabilityTimeline", () => {
     });
 
     it("renders blacked-out nights in a grey segment instead of green/mustard", () => {
-        const blackouts: BlackoutRange[] = [{ from: "2026-05-23", to: "2026-05-23" }];
+        const blackouts: BlackoutRange[] = [{ from: "2026-06-23", to: "2026-06-23" }];
         const settings: SiteSettingsValue = {
             dates: { stayLengths: [2], validStartDays: ["Saturday"], blackoutDates: blackouts },
         };
@@ -116,10 +126,10 @@ describe("AvailabilityTimeline", () => {
                 <AvailabilityTimeline rows={ROWS} dateRange={DATE_RANGE} defaultExpandFirst />
             </SiteSettingsContext.Provider>,
         );
-        // A-07 has a match May 23–25; the May 23 block has a title containing "May 23".
-        const blocks = screen.getAllByTitle(/May 23/);
+        // A-07 has a match Jun 23–25; the Jun 23 block has a title containing "Jun 23".
+        const blocks = screen.getAllByTitle(/Jun 23/);
         // Each block renders inner segment divs with inline background styles. With the
-        // blackout on May 23, the first segment (night May 23) uses CW.inkFaint
+        // blackout on Jun 23, the first segment (night Jun 23) uses CW.inkFaint
         // instead of the forest-green open color.
         const hasGreySeg = blocks.some((b) => {
             const segs = b.querySelectorAll<HTMLElement>("div.flex-1");

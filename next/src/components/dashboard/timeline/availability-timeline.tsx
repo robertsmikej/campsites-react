@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { CW } from "@/components/field-notes/cw-tokens";
-import { buildHorizon } from "@/lib/timeline";
+import { buildHorizon, clampWindowStart } from "@/lib/timeline";
 import { useCampgroundSites } from "@/hooks/use-campground-sites";
 import { useSiteSettings } from "@/context/site-settings";
 import type { ProcessedCampground } from "@/types/campground";
@@ -26,7 +26,8 @@ export function AvailabilityTimeline({
     defaultExpandFirst,
     onEditSettings,
 }: AvailabilityTimelineProps) {
-    const horizon = buildHorizon(dateRange.start, dateRange.end);
+    const view = clampWindowStart(dateRange);
+    const horizon = buildHorizon(view.start, view.end);
     const { sitesById, ensureLoaded } = useCampgroundSites();
     const blackoutDates = useSiteSettings()?.dates.blackoutDates;
     const [mapCgId, setMapCgId] = useState<string | null>(null);

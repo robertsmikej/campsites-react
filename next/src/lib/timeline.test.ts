@@ -12,6 +12,8 @@ import {
     nowIndex,
     buildDisplaySites,
     siteRangeUrl,
+    timelineStart,
+    clampWindowStart,
 } from "./timeline";
 import type { ProcessedCampground, SiteAvailability } from "@/types/campground";
 
@@ -155,5 +157,46 @@ describe("monthTicks / nowIndex", () => {
     it("nowIndex is null outside the horizon, an index inside", () => {
         expect(nowIndex(HORIZON, new Date(2025, 0, 1))).toBeNull();
         expect(nowIndex(HORIZON, new Date(2026, 4, 11))).toBe(10);
+    });
+});
+
+describe("timelineStart", () => {
+    it("is today during the season (May 1 – Sep 30)", () => {
+        expect(timelineStart(new Date(2026, 6, 15, 9, 30))).toEqual(new Date(2026, 6, 15));
+        expect(timelineStart(new Date(2026, 4, 1))).toEqual(new Date(2026, 4, 1)); // opening day
+        expect(timelineStart(new Date(2026, 8, 30))).toEqual(new Date(2026, 8, 30)); // closing day
+    });
+    it("snaps to this year's season start before the season opens", () => {
+        expect(timelineStart(new Date(2026, 2, 14))).toEqual(new Date(2026, 4, 1)); // March
+        expect(timelineStart(new Date(2026, 3, 30))).toEqual(new Date(2026, 4, 1)); // Apr 30
+    });
+    it("rolls to next year's season start once the season has closed", () => {
+        expect(timelineStart(new Date(2026, 9, 1))).toEqual(new Date(2027, 4, 1)); // Oct 1
+        expect(timelineStart(new Date(2026, 11, 25))).toEqual(new Date(2027, 4, 1)); // December
+    });
+});
+
+describe("clampWindowStart", () => {
+    const end = new Date(2026, 8, 30);
+    it("trims a window whose start is before now (in season)", () => {
+        const now = new Date(2026, 6, 15);
+        const { start } = clampWindowStart({ start: new Date(2026, 4, 1), end }, now);
+        expect(start).toEqual(new Date(2026, 6, 15));
+    });
+    it("leaves a future-picked start untouched", () => {
+        const now = new Date(2026, 6, 15);
+        const win = { start: new Date(2026, 7, 1), end };
+        expect(clampWindowStart(win, now)).toBe(win);
+    });
+    it("uses the season opener when out of season", () => {
+        const now = new Date(2026, 2, 1); // March, pre-season
+        const { start } = clampWindowStart({ start: new Date(2026, 2, 1), end }, now);
+        expect(start).toEqual(new Date(2026, 4, 1));
+    });
+    it("never pushes start past the end", () => {
+        const now = new Date(2026, 6, 15);
+        const earlyEnd = new Date(2026, 5, 1);
+        const { start } = clampWindowStart({ start: new Date(2026, 4, 1), end: earlyEnd }, now);
+        expect(start).toEqual(earlyEnd);
     });
 });

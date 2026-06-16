@@ -168,6 +168,38 @@ export function nowIndex(h: Horizon, now: Date = new Date()): number | null {
     return i >= 0 && i < h.totalDays ? i : null;
 }
 
+// Camping season runs May 1 – Sep 30 for timeline-display purposes (a touch
+// earlier than summerWindow's Jun 1 so shoulder-season openings aren't trimmed).
+const SEASON_START_MONTH = 4; // May, 0-indexed
+const SEASON_END_MONTH = 8; // September
+
+/** The left edge of the availability timeline. In season it's today; out of
+ *  season it's the start of the relevant camping season (this year's before it
+ *  opens, next year's once it's closed). Dates before this point are dead space
+ *  on the bars, so the timeline never renders earlier than this. */
+export function timelineStart(now: Date = new Date()): Date {
+    const today = new Date(now);
+    today.setHours(0, 0, 0, 0);
+    const y = today.getFullYear();
+    const seasonStart = new Date(y, SEASON_START_MONTH, 1);
+    const seasonEnd = new Date(y, SEASON_END_MONTH + 1, 0); // day 0 of Oct = Sep 30
+    if (today < seasonStart) return seasonStart; // pre-season -> season opener
+    if (today > seasonEnd) return new Date(y + 1, SEASON_START_MONTH, 1); // post-season -> next year
+    return today; // in season -> today
+}
+
+/** Trim a [start, end] window's left edge to `timelineStart` so the bars skip
+ *  past dates. Never pulls the start earlier than it already is (a future-picked
+ *  range is left alone) and never past the end. */
+export function clampWindowStart(
+    window: { start: Date; end: Date },
+    now: Date = new Date(),
+): { start: Date; end: Date } {
+    const floor = timelineStart(now);
+    if (floor <= window.start) return window;
+    return { start: floor > window.end ? window.end : floor, end: window.end };
+}
+
 /** Cleaned, human-readable campsite type (no favorite suffix). */
 export function siteFeature(site: SiteAvailability): string {
     const raw = site.campsite_type?.toLowerCase().replace(/_/g, " ").trim() ?? "";

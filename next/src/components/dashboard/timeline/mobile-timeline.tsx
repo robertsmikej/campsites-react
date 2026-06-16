@@ -9,6 +9,7 @@ import {
     buildDisplaySites,
     buildHorizon,
     campgroundRuns,
+    clampWindowStart,
     dateAt,
     dayIndexOf,
     reservationUrl,
@@ -58,10 +59,10 @@ function horizonMonths(h: Horizon): Array<{ year: number; month: number }> {
 }
 
 export function MobileTimeline({ rows, dateRange, onEditSettings }: MobileTimelineProps) {
-    const horizon = useMemo(
-        () => buildHorizon(dateRange.start, dateRange.end),
-        [dateRange.start, dateRange.end],
-    );
+    const horizon = useMemo(() => {
+        const view = clampWindowStart({ start: dateRange.start, end: dateRange.end });
+        return buildHorizon(view.start, view.end);
+    }, [dateRange.start, dateRange.end]);
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [mapOpen, setMapOpen] = useState(false);
     const { sitesById, ensureLoaded } = useCampgroundSites();
