@@ -84,27 +84,36 @@ const F = {
 
 // ── Composable helpers ────────────────────────────────────────────────────────
 
-const buildPreheader = (matches: MatchResult[]): string => {
+/** The notification/inbox preview text. Leads with the lead opening's site,
+ *  arrival day, and length of stay so the dates show up in the phone alert.
+ *  The campground is omitted for single-campground digests (the subject already
+ *  names it) and included when several campgrounds are mixed. Exported for tests. */
+export const buildPreheaderText = (matches: MatchResult[]): string => {
     const count = matches.length;
+    if (count === 0) return "New openings on your watchlist";
+
     const shortName = (n: string) => n.replace(/\s+campground$/i, "");
     const siteLabel = (m: MatchResult) => m.siteName.replace(/^Site\s+/i, "");
 
     const fav = matches.find((m) => m.group === "favorites");
-    const head = fav ?? matches[0];
-    const lead = head
-        ? `${fav ? "★ " : ""}${shortName(head.campgroundName)} site ${siteLabel(head)}`
-        : "New openings on your watchlist";
+    const head = fav ?? matches[0]!;
+    const multiCampground = new Set(matches.map((m) => m.campgroundName)).size > 1;
+
+    const star = head.group === "favorites" ? "★ " : "";
+    const siteRef = multiCampground ? `${shortName(head.campgroundName)} ${siteLabel(head)}` : `Site ${siteLabel(head)}`;
+    const arrival = formatDate(head.match.from); // e.g. "Fri Jul 4"
+    const nights = `${head.match.nights} ${head.match.nights === 1 ? "night" : "nights"}`;
+    const lead = `${star}${siteRef} · ${arrival} · ${nights}`;
 
     const remaining = count - 1;
-    const text =
-        remaining > 0
-            ? `${lead} + ${remaining} more opening${remaining === 1 ? "" : "s"}`
-            : count === 1
-              ? `${lead} just opened`
-              : lead;
+    return remaining > 0 ? `${lead} +${remaining} more opening${remaining === 1 ? "" : "s"}` : lead;
+};
+
+const buildPreheader = (matches: MatchResult[]): string => {
+    const text = buildPreheaderText(matches);
 
     // Padding (zero-width joiner + nbsp) so clients don't pull body boilerplate
-    // (the "Polling every 5 min" meta bar) into the preview snippet.
+    // (the masthead / "Polling every 5 min" meta bar) into the preview snippet.
     const pad = "&zwnj;&nbsp;".repeat(80);
 
     return `
@@ -123,10 +132,6 @@ const buildHeader = (count: number, uniqueCampgroundNames: string[], logoUrl: st
         headlineNames = shortNames.slice(0, 2).join(" &middot; ") + ` + ${shortNames.length - 2} MORE.`;
     }
     const headlineCount = `${count} NEW OPENING${count === 1 ? "" : "S"}`;
-    const subhead =
-        count === 1
-            ? `One new site came open. It matches your window.`
-            : `${count} new sites came open. ${count === 2 ? "Both match" : "All match"} your window.`;
 
     return `
                     <!-- HEADER — forest-deep banner -->
@@ -153,15 +158,11 @@ const buildHeader = (count: number, uniqueCampgroundNames: string[], logoUrl: st
                                                     </tr>
                                                 </tbody>
                                             </table>
-                                            <!-- Field Bulletin label — stacked below wordmark on mobile -->
-                                            <div style="font-family:${F.mono};font-weight:700;font-size:12px;color:${C.creampale};letter-spacing:0.18em;text-transform:uppercase;margin-bottom:14px;">Field Bulletin &middot; No. 0142</div>
                                             <!-- Poster headline -->
-                                            <div style="font-family:${F.poster};font-weight:900;font-size:26px;line-height:28px;color:${C.cream};letter-spacing:-0.005em;text-transform:uppercase;margin-bottom:4px;">
+                                            <div style="font-family:${F.poster};font-weight:900;font-size:26px;line-height:28px;color:${C.cream};letter-spacing:-0.005em;text-transform:uppercase;">
                                                 <span style="color:${C.sand};">${headlineCount}</span><br/>
                                                 ${headlineNames}
                                             </div>
-                                            <!-- Italic subhead -->
-                                            <div style="font-family:${F.ital};font-style:italic;font-size:16px;line-height:24px;color:${C.creamwarm};margin-top:6px;">${subhead}</div>
                                         </td>
                                     </tr>
                                 </tbody>

@@ -16,22 +16,32 @@ function match(over: Partial<MatchResult>): MatchResult {
     } as MatchResult;
 }
 
-// The preheader uses lowercase "site"; the visible opening card uses "Site" — so
-// "Outlet site 011" uniquely targets the preview text.
+// The preheader (notification preview) leads with the favorite, site, arrival
+// day, and nights, then "+N more". The full string only appears in the hidden
+// preheader, so it uniquely targets the preview text.
 describe("formatEmail preheader", () => {
-    it("leads with a favorite + site number when a favorite opened", () => {
+    it("leads with a favorite, its dates, and a count of the rest", () => {
         const { html } = formatEmail([
             match({ group: "all-others", siteName: "003" }),
             match({ group: "favorites", siteName: "011" }),
             match({ group: "all-others", siteName: "008" }),
         ]);
-        expect(html).toContain("★ Outlet site 011");
-        expect(html).toContain("more opening");
+        // from 2026-07-10 = Fri Jul 10, 2 nights; two other openings.
+        expect(html).toContain("★ Site 011 · Fri Jul 10 · 2 nights +2 more openings");
     });
 
-    it("names a site even when nothing is a favorite", () => {
+    it("names a site and its dates even when nothing is a favorite", () => {
         const { html } = formatEmail([match({ group: "all-others", siteName: "003" })]);
-        expect(html).toContain("Outlet site 003");
+        expect(html).toContain("Site 003 · Fri Jul 10 · 2 nights");
+        expect(html).not.toContain("more opening"); // single opening
+    });
+
+    it("includes the campground when several campgrounds are mixed", () => {
+        const { html } = formatEmail([
+            match({ campgroundName: "Outlet Campground", siteName: "011", group: "favorites" }),
+            match({ campgroundName: "Glacier Campground", siteName: "022", group: "all-others" }),
+        ]);
+        expect(html).toContain("★ Outlet 011 · Fri Jul 10 · 2 nights +1 more opening");
     });
 
     it("still renders the favorite badge on the opening card", () => {
