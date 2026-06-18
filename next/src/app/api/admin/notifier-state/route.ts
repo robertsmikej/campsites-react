@@ -1,8 +1,9 @@
 import { getEnv, getKv } from "@/lib/cloudflare";
 import { jsonResponse, withCors } from "@/lib/responses";
-import { updateUserProfile } from "@/lib/users";
+import { getUserProfile, updateUserProfile } from "@/lib/users";
 import { withErrorLogging } from "@/lib/route-helpers";
 import { putIfChanged } from "@/lib/kv-utils";
+import { mergeNotifierSites, type NotifierSites } from "@/lib/notifier-state-merge";
 
 interface UpdateEntry {
     email: string;
@@ -43,17 +44,30 @@ async function putHandler(request: Request): Promise<Response> {
     }
 
     const kv = getKv();
+    const nowMs = Date.now();
     let updated = 0;
     let written = 0;
     for (const entry of body.updates) {
-        const result = await putIfChanged(
-            kv,
-            `user:${entry.email}:notifier-state`,
-            JSON.stringify(entry.state),
-        );
+        const key = `user:${entry.email}:notifier-state`;
+        // Merge incoming ranges into whatever is currently stored rather than
+        // overwriting. Cron runs overlap (each takes longer than the 1-min
+        // cadence), so a run that didn't re-fetch a campground this cycle must
+        // not erase that campground's alerted ranges — clobbering them dropped
+        // the dedup record and re-sent duplicate emails. Ranges only leave by
+        // aging past the cooldown. See lib/notifier-state-merge.ts.
+        const existing = (await kv.get(key, "json")) as { sites?: NotifierSites } | null;
+        const incoming = (entry.state ?? {}) as { sites?: NotifierSites };
+        const sites = mergeNotifierSites(existing?.sites, incoming.sites, nowMs);
+        const result = await putIfChanged(kv, key, JSON.stringify({ sites }));
         if (result.written) written++;
-        if (entry.lastNotifiedAt) {
-            await updateUserProfile(entry.email, { lastNotifiedAt: entry.lastNotifiedAt });
+        // lastNotifiedAt is the same clobber class: only ever advance it, so a
+        // stale concurrent write can't move it backward and re-open eligibility.
+        if (entry.lastNotifiedAt && !Number.isNaN(Date.parse(entry.lastNotifiedAt))) {
+            const profile = await getUserProfile(entry.email);
+            const prior = profile?.lastNotifiedAt ? Date.parse(profile.lastNotifiedAt) : 0;
+            if (Date.parse(entry.lastNotifiedAt) > prior) {
+                await updateUserProfile(entry.email, { lastNotifiedAt: entry.lastNotifiedAt });
+            }
         }
         updated++;
     }
