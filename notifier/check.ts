@@ -4,16 +4,14 @@
 // Designed to run as a GitHub Actions scheduled workflow.
 
 import { stayOverlapsBlackout } from "../next/src/lib/blackout";
-import { fetchMonth } from "../next/src/lib/recgov/fetch-month";
 import { processCampgroundResults, getAllDatesInRange } from "../next/src/lib/recgov/match-detection";
 import { RestKvAdapter } from "../next/src/lib/recgov/rest-kv";
-import { fetchMonthWithCache } from "../next/src/lib/recgov/fetch-with-cache";
 import { fetchProducedNoData } from "../next/src/lib/recgov/raw-results";
-import { fetchDedupedConcurrent } from "../next/src/lib/recgov/fetch-deduped";
 import { findNewMatches, generateSignature } from "./lib/diff";
 import { formatEmail, sendEmail } from "./lib/email";
 import { resolveNotifyScope, matchPassesScope } from "./lib/notify-scope";
-import { CHECK_PRIORITY_INTERVAL_MINUTES } from "../next/src/types/campground";
+import { buildFastLanePlan, buildSweepPlan, buildNotifyPlan, readCachedMonths, fetchToCache } from "./fetch-jobs";
+import { acquireSweepLock, type LockKv } from "./sweep-lock";
 import type { Campground, GlobalSettings, NotifyScope } from "../next/src/types/campground";
 import type { MatchResult, SiteConfigForDiff, CampgroundResult } from "./lib/diff";
 import type { SiteAvailabilityMap } from "../next/src/lib/recgov/types";
@@ -140,11 +138,6 @@ interface PriorStats {
     _dailyHistory?: DailyHistoryEntry[];
 }
 
-interface FetchPlanItem {
-    campgroundId: string;
-    month: string;
-}
-
 // ── Eligibility ───────────────────────────────────────────────────────────────
 
 function isEligible(target: NotificationTarget, now: Date, forceEmail: boolean): boolean {
@@ -154,81 +147,6 @@ function isEligible(target: NotificationTarget, now: Date, forceEmail: boolean):
     if (!last) return true;
     const elapsedMin = (now.getTime() - last.getTime()) / 60000;
     return elapsedMin >= target.notifications.frequencyMinutes;
-}
-
-// ── Dedup fetch plan ──────────────────────────────────────────────────────────
-
-function monthsBetween(startIso: string, endIso: string): string[] {
-    const start = new Date(startIso + "T00:00:00Z");
-    const end = new Date(endIso + "T00:00:00Z");
-    const months = new Set<string>();
-    const cur = new Date(start);
-    while (cur <= end) {
-        const m = `${cur.getUTCFullYear()}-${String(cur.getUTCMonth() + 1).padStart(2, "0")}`;
-        months.add(m);
-        cur.setUTCMonth(cur.getUTCMonth() + 1);
-    }
-    return [...months];
-}
-
-function tierIntervalMinutes(c: Campground): number {
-    return CHECK_PRIORITY_INTERVAL_MINUTES[c.checkPriority ?? "normal"];
-}
-
-function buildDedupedFetchPlan(
-    targets: NotificationTarget[],
-    minute: number,
-    nowMonth: string,
-): FetchPlanItem[] {
-    // campgroundId → Set<"YYYY-MM">
-    const ranges = new Map<string, Set<string>>();
-    for (const target of targets) {
-        for (const c of target.campgrounds["recreation.gov"] ?? []) {
-            if (c.enabled === false) continue;
-            // Tier gate: high fires every minute, normal every 5th, low every 10th.
-            // The plan is a union across users, so the fastest watcher's tier wins.
-            if (minute % tierIntervalMinutes(c) !== 0) continue;
-            const start = c.dates?.startDate;
-            const end = c.dates?.endDate;
-            if (!start || !end) continue;
-            // Fully past months can't produce bookable openings — don't burn
-            // rec.gov requests on them. The month containing "now" always stays.
-            const months = monthsBetween(start, end).filter((m) => m >= nowMonth);
-            if (months.length === 0) continue;
-            if (!ranges.has(c.id)) ranges.set(c.id, new Set());
-            for (const m of months) ranges.get(c.id)!.add(m);
-        }
-    }
-    const plan: FetchPlanItem[] = [];
-    for (const [campgroundId, monthSet] of ranges) {
-        for (const month of monthSet) plan.push({ campgroundId, month });
-    }
-    return plan;
-}
-
-// ── Fetch deduped: returns { [campgroundId]: [apiResult, ...] } across all months ──
-
-async function fetchDeduped(plan: FetchPlanItem[]): Promise<Record<string, unknown[]>> {
-    const byCampground = new Map<string, string[]>();
-    for (const { campgroundId, month } of plan) {
-        if (!byCampground.has(campgroundId)) byCampground.set(campgroundId, []);
-        byCampground.get(campgroundId)!.push(month);
-    }
-    for (const [id, months] of byCampground) {
-        console.log(`[Fetch] Campground ${id}: ${months.length} month(s) to fetch`);
-    }
-    return fetchDedupedConcurrent(
-        plan,
-        (campgroundId, month) =>
-            kvAdapter
-                ? fetchMonthWithCache(campgroundId, month, kvAdapter, { forceFresh: true })
-                : fetchMonth(campgroundId, month),
-        // Gentle on rec.gov: one request at a time, ~500ms apart, no retries
-        // (a 429 just carries forward last-good and retries next cycle). This
-        // mirrors the old notifier's tolerated footprint. Burst fetching at a
-        // 1-min cadence got us rate-limited (429s).
-        { concurrency: 1, maxRetries: 0, delayMs: 500 },
-    );
 }
 
 // ── Snapshot write ────────────────────────────────────────────────────────────
@@ -575,26 +493,29 @@ async function putFirstSeenMap(
     }
 }
 
+// ── Targets fetch ─────────────────────────────────────────────────────────────
+
+async function fetchTargets(config: RunConfig): Promise<NotificationTarget[]> {
+    const res = await fetch(`${config.subscriberApiUrl}/api/admin/notification-targets`, {
+        headers: { Authorization: `Bearer ${config.subscriberApiSecret}` },
+    });
+    if (!res.ok) throw new Error(`notification-targets returned ${res.status}`);
+    const { targets } = (await res.json()) as NotificationTargetsResponse;
+    return targets;
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 
-export async function run(config: RunConfig): Promise<void> {
+export async function run(config: RunConfig, prefetchedTargets?: NotificationTarget[]): Promise<void> {
     const { subscriberApiUrl, subscriberApiSecret, resendApiKey, siteUrl, forceEmail, dryRun, now } = config;
     kvAdapter = config.kvAdapter;
 
     if (!subscriberApiUrl || !subscriberApiSecret) throw new Error("Missing subscriberApiUrl/Secret");
     if (!resendApiKey) throw new Error("Missing resendApiKey");
 
-    // 1. Fetch targets from the new endpoint.
-    const targetsResponse = await fetch(`${subscriberApiUrl}/api/admin/notification-targets`, {
-        headers: { Authorization: `Bearer ${subscriberApiSecret}` },
-    });
-    if (!targetsResponse.ok) {
-        throw new Error(`notification-targets returned ${targetsResponse.status}`);
-    }
-    const { targets } = (await targetsResponse.json()) as NotificationTargetsResponse;
+    const targets = prefetchedTargets ?? (await fetchTargets(config));
     console.log(`[Targets] ${targets.length} users with non-empty campground lists`);
 
-    // 2. Filter by enabled + frequency.
     const eligible = targets.filter((t) => isEligible(t, now, forceEmail));
     console.log(`[Eligible] ${eligible.length} users due for a check this cycle`);
     if (eligible.length === 0) {
@@ -602,43 +523,12 @@ export async function run(config: RunConfig): Promise<void> {
         return;
     }
 
-    // 3. Build dedup'd fetch plan. The minute-of-hour drives which tiers fire
-    //    (high=1m, normal=5m, low=10m). forceEmail acts like minute 0: all due.
-    //    Months before the current one are dropped — the past isn't bookable.
-    const minute = forceEmail ? 0 : now.getUTCMinutes();
+    // Notify reads the KV cache only — no rec.gov calls. The cache is kept warm
+    // by runTick (fast lane) and runSweep. A cache miss = carry-forward no-data.
     const nowMonth = now.toISOString().slice(0, 7);
-    const plan = buildDedupedFetchPlan(eligible, minute, nowMonth);
-
-    // Count distinct campgrounds in the plan by tier. The plan is a union across users,
-    // so when multiple users watch the same campground, the fastest tier wins (same
-    // semantics as buildDedupedFetchPlan's tier gate). Build id → winning tier first.
-    const planIds = new Set(plan.map((p) => p.campgroundId));
-    const tierRank = { high: 2, normal: 1, low: 0 } as const;
-    const tierById = new Map<string, keyof typeof tierRank>();
-    for (const target of eligible) {
-        for (const c of target.campgrounds["recreation.gov"] ?? []) {
-            if (!planIds.has(c.id)) continue;
-            const tier = c.checkPriority ?? "normal";
-            const existing = tierById.get(c.id);
-            // Keep whichever tier has the higher rank (high > normal > low).
-            if (existing === undefined || tierRank[tier] > tierRank[existing]) {
-                tierById.set(c.id, tier);
-            }
-        }
-    }
-    const counts = { high: 0, normal: 0, low: 0 };
-    for (const tier of tierById.values()) counts[tier as keyof typeof counts]++;
-
-    console.log(
-        `[Plan] minute=${minute} high=${counts.high} normal=${counts.normal} low=${counts.low} → ${plan.length} unique (campground, month) fetches`,
-    );
-    if (plan.length === 0) {
-        console.log("[Done] No campgrounds due this minute");
-        return;
-    }
-
-    // 4. Fetch each (campgroundId, month) from rec.gov ONCE; accumulate raw API results per campground.
-    const rawByCampground = await fetchDeduped(plan);
+    const plan = buildNotifyPlan(eligible, nowMonth);
+    const rawByCampground = kvAdapter ? await readCachedMonths(plan, kvAdapter) : {};
+    console.log(`[Notify] reading cache for ${plan.length} (campground, month) pairs`);
 
     // 5. Fetch the existing global first-seen map.
     const existingFirstSeenMap = await fetchFirstSeenMap(subscriberApiUrl, subscriberApiSecret);
@@ -905,6 +795,41 @@ export async function run(config: RunConfig): Promise<void> {
     }
 
     if (dryRun) console.log("[dry-run] complete — no writes performed");
+}
+
+// TICK (cron "* * * * *"): refresh hot campgrounds, then notify from cache.
+export async function runTick(config: RunConfig): Promise<void> {
+    const targets = await fetchTargets(config);
+    const nowMonth = config.now.toISOString().slice(0, 7);
+    if (config.kvAdapter && !config.dryRun) {
+        const fastLane = buildFastLanePlan(targets, nowMonth);
+        if (fastLane.length) {
+            console.log(`[FastLane] fetching ${fastLane.length} high-tier (campground, month) pairs`);
+            await fetchToCache(fastLane, config.kvAdapter, { concurrency: 1, delayMs: 250 });
+        }
+    }
+    await run(config, targets);
+}
+
+// SWEEP (cron "*/5 * * * *"): refresh normal/low campgrounds into cache. Fetch
+// only — no notify. Best-effort single-flight so overlapping sweeps don't double
+// the rec.gov load.
+export async function runSweep(config: RunConfig, lockKv: LockKv): Promise<void> {
+    if (!config.kvAdapter || config.dryRun) return;
+    if (!(await acquireSweepLock(lockKv, config.now.getTime()))) {
+        console.log("[Sweep] prior sweep still holds the lock — skipping");
+        return;
+    }
+    const targets = await fetchTargets(config);
+    const nowMonth = config.now.toISOString().slice(0, 7);
+    const minute = config.now.getUTCMinutes();
+    const plan = buildSweepPlan(targets, minute, nowMonth);
+    if (plan.length === 0) {
+        console.log(`[Sweep] minute=${minute} — no normal/low campgrounds due`);
+        return;
+    }
+    console.log(`[Sweep] minute=${minute} fetching ${plan.length} (campground, month) pairs`);
+    await fetchToCache(plan, config.kvAdapter, { concurrency: 1, delayMs: 500 });
 }
 
 // Returns a new daily-history array with today's entry updated/inserted and

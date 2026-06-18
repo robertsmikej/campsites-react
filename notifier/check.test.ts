@@ -76,6 +76,10 @@ describe("run() dry-run", () => {
         const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(mockFetch() as never); // uses default [target]
         const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
         const kv = stubKv();
+        // Notify now reads the cache, not rec.gov: serve the match fixture via getRaw.
+        kv.getRaw = vi.fn(async (id: string, month: string) =>
+            id === "232358" && month === "2026-07" ? (RECGOV_WITH_MATCH as never) : null,
+        );
 
         await run({
             subscriberApiUrl: "https://campwatch.dev",
@@ -143,92 +147,39 @@ function tierTarget(campgrounds: unknown[]) {
     };
 }
 
-const HIGH = tierCampground("111", "High Camp", "high");
-const NORMAL = tierCampground("222", "Normal Camp"); // no field = normal
-const LOW = tierCampground("333", "Low Camp", "low");
-
-async function runAt(
-    isoNow: string,
-    opts: { targets?: unknown[]; kv?: KvAdapter; forceEmail?: boolean } = {},
-): Promise<string[]> {
-    const fetchSpy = vi
-        .spyOn(globalThis, "fetch")
-        .mockImplementation(mockFetch(opts.targets ?? [tierTarget([HIGH, NORMAL, LOW])]) as never);
-    vi.spyOn(console, "log").mockImplementation(() => {});
-    await run({
-        subscriberApiUrl: "https://campwatch.dev",
-        subscriberApiSecret: "secret",
-        resendApiKey: "re_x",
-        siteUrl: "https://campwatch.dev",
-        forceEmail: opts.forceEmail ?? false,
-        dryRun: true,
-        kvAdapter: opts.kv ?? stubKv(),
-        now: new Date(isoNow),
-    });
-    return fetchSpy.mock.calls.map((c) => String(c[0]));
-}
-
 describe("per-campground check tiers", () => {
     beforeEach(() => vi.restoreAllMocks());
 
-    it("fetches only high-tier campgrounds on an off minute", async () => {
-        const urls = await runAt("2026-07-06T00:03:00Z");
-        expect(urls.some((u) => u.includes("/campground/111/"))).toBe(true);
-        expect(urls.some((u) => u.includes("/campground/222/"))).toBe(false);
-        expect(urls.some((u) => u.includes("/campground/333/"))).toBe(false);
-    });
-
-    it("fetches high+normal on a %5 minute, but not low", async () => {
-        const urls = await runAt("2026-07-06T00:05:00Z");
-        expect(urls.some((u) => u.includes("/campground/111/"))).toBe(true);
-        expect(urls.some((u) => u.includes("/campground/222/"))).toBe(true);
-        expect(urls.some((u) => u.includes("/campground/333/"))).toBe(false);
-    });
-
-    it("fetches all tiers on a %10 minute", async () => {
-        const urls = await runAt("2026-07-06T00:10:00Z");
-        for (const id of ["111", "222", "333"]) {
-            expect(urls.some((u) => u.includes(`/campground/${id}/`))).toBe(true);
-        }
-    });
-
-    it("short-circuits with no rec.gov calls or snapshot writes when nothing is due", async () => {
+    it("carries forward last-good snapshot for a campground missing from cache", async () => {
+        const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(mockFetch([tierTarget([
+            tierCampground("232358", "Outlet", "high"),
+            tierCampground("999999", "Cold", "low"),
+        ])]) as never);
+        vi.spyOn(console, "log").mockImplementation(() => {});
         const kv = stubKv();
-        const urls = await runAt("2026-07-06T00:03:00Z", {
-            targets: [tierTarget([NORMAL, LOW])],
-            kv,
+        // Only 232358 is warm in cache; 999999 is a miss.
+        kv.getRaw = vi.fn(async (id: string) => (id === "232358" ? (RECGOV_WITH_MATCH as never) : null));
+        // Prior snapshot has a last-good entry for the cold campground.
+        kv.getSnapshot = vi.fn(async () => ({
+            updatedAt: "2026-07-05T00:00:00Z",
+            campgrounds: [{ id: "999999", name: "Cold", siteAvailability: {}, totalSitesCount: 7 } as never],
+        }));
+        await run({
+            subscriberApiUrl: "https://campwatch.dev",
+            subscriberApiSecret: "secret",
+            resendApiKey: "re_x",
+            siteUrl: "https://campwatch.dev",
+            forceEmail: false,
+            dryRun: true,
+            kvAdapter: kv,
+            now: new Date("2026-07-06T00:00:00Z"),
         });
-        expect(urls.some((u) => u.includes("recreation.gov"))).toBe(false);
-        expect(kv.putSnapshot).not.toHaveBeenCalled();
-    });
-
-    it("forceEmail bypasses the tier filter (manual runs check everything)", async () => {
-        const urls = await runAt("2026-07-06T00:03:00Z", { forceEmail: true });
-        expect(urls.some((u) => u.includes("/campground/333/"))).toBe(true);
-    });
-
-    it("carries forward last-good snapshot data for campgrounds skipped this minute", async () => {
-        const kv = stubKv();
-        const priorNormal = {
-            id: "222",
-            name: "Normal Camp",
-            sites: { favorites: [], worthwhile: [] },
-            siteAvailability: {},
-            totalSitesCount: 7,
+        const snap = (kv.putSnapshot as ReturnType<typeof vi.fn>).mock.calls.at(-1)?.[1] as {
+            campgrounds: { id: string; totalSitesCount: number }[];
         };
-        (kv.getSnapshot as ReturnType<typeof vi.fn>).mockResolvedValue({
-            updatedAt: "2026-07-06T00:00:00.000Z",
-            campgrounds: [priorNormal],
-        });
-        await runAt("2026-07-06T00:03:00Z", { kv });
-
-        const calls = (kv.putSnapshot as ReturnType<typeof vi.fn>).mock.calls;
-        expect(calls.length).toBeGreaterThan(0);
-        const written = calls[calls.length - 1]![1] as {
-            campgrounds: Array<{ id: string; totalSitesCount?: number }>;
-        };
-        const carried = written.campgrounds.find((c) => c.id === "222");
-        expect(carried?.totalSitesCount).toBe(7);
+        const cold = snap.campgrounds.find((c) => c.id === "999999");
+        expect(cold?.totalSitesCount).toBe(7); // carried forward, not zeroed
+        void fetchSpy;
     });
 });
 
@@ -243,6 +194,10 @@ describe("delivery address override", () => {
         };
         const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(mockFetch([target]) as never);
         vi.spyOn(console, "log").mockImplementation(() => {});
+        const kv = stubKv();
+        kv.getRaw = vi.fn(async (id: string, month: string) =>
+            id === "232358" && month === "2026-07" ? (RECGOV_WITH_MATCH as never) : null,
+        );
 
         await run({
             subscriberApiUrl: "https://campwatch.dev",
@@ -251,7 +206,7 @@ describe("delivery address override", () => {
             siteUrl: "https://campwatch.dev",
             forceEmail: false,
             dryRun: false, // real send path — Resend is mocked by mockFetch's fallback
-            kvAdapter: stubKv(),
+            kvAdapter: kv,
             now: new Date("2026-07-06T00:00:00Z"),
         });
 
@@ -279,6 +234,10 @@ describe("spotted time in sent emails", () => {
         };
         const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(mockFetch([target]) as never);
         vi.spyOn(console, "log").mockImplementation(() => {});
+        const kv = stubKv();
+        kv.getRaw = vi.fn(async (id: string, month: string) =>
+            id === "232358" && month === "2026-07" ? (RECGOV_WITH_MATCH as never) : null,
+        );
 
         await run({
             subscriberApiUrl: "https://campwatch.dev",
@@ -287,7 +246,7 @@ describe("spotted time in sent emails", () => {
             siteUrl: "https://campwatch.dev",
             forceEmail: false,
             dryRun: false,
-            kvAdapter: stubKv(),
+            kvAdapter: kv,
             now: new Date("2026-07-06T00:00:00Z"),
         });
 
@@ -317,6 +276,10 @@ describe("blackout alert suppression", () => {
     async function resendCallsAt(targets: unknown[]): Promise<number> {
         const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(mockFetch(targets) as never);
         vi.spyOn(console, "log").mockImplementation(() => {});
+        const kv = stubKv();
+        kv.getRaw = vi.fn(async (id: string, month: string) =>
+            id === "232358" && month === "2026-07" ? (RECGOV_WITH_MATCH as never) : null,
+        );
         await run({
             subscriberApiUrl: "https://campwatch.dev",
             subscriberApiSecret: "secret",
@@ -324,7 +287,7 @@ describe("blackout alert suppression", () => {
             siteUrl: "https://campwatch.dev",
             forceEmail: false,
             dryRun: false,
-            kvAdapter: stubKv(),
+            kvAdapter: kv,
             now: new Date("2026-07-06T00:00:00Z"),
         });
         return fetchSpy.mock.calls.filter((c) => String(c[0]).includes("api.resend.com")).length;
@@ -348,38 +311,3 @@ describe("blackout alert suppression", () => {
     });
 });
 
-describe("past months are not fetched", () => {
-    beforeEach(() => vi.restoreAllMocks());
-
-    it("starts the fetch window at the current month when startDate is in the past", async () => {
-        // Window May–July, "now" July 6 (minute 0, all tiers due) → only 2026-07 fetched.
-        const stale = {
-            ...tierCampground("444", "Stale Start"),
-            dates: { startDate: "2026-05-01", endDate: "2026-07-10" },
-        };
-        const urls = await runAt("2026-07-06T00:00:00Z", { targets: [tierTarget([stale])] });
-        expect(urls.some((u) => u.includes("/campground/444/month?start_date=2026-07-01"))).toBe(true);
-        expect(urls.some((u) => u.includes("/campground/444/month?start_date=2026-05-01"))).toBe(false);
-        expect(urls.some((u) => u.includes("/campground/444/month?start_date=2026-06-01"))).toBe(false);
-    });
-
-    it("skips a campground whose whole window is in the past", async () => {
-        const past = {
-            ...tierCampground("555", "Long Gone"),
-            dates: { startDate: "2026-01-01", endDate: "2026-02-15" },
-        };
-        const urls = await runAt("2026-07-06T00:00:00Z", { targets: [tierTarget([past])] });
-        expect(urls.some((u) => u.includes("/campground/555/"))).toBe(false);
-    });
-
-    it("still fetches the current month even when today is mid-month", async () => {
-        // The month containing "now" is always relevant — only fully past months drop.
-        const current = {
-            ...tierCampground("666", "Current"),
-            dates: { startDate: "2026-07-01", endDate: "2026-08-10" },
-        };
-        const urls = await runAt("2026-07-06T00:00:00Z", { targets: [tierTarget([current])] });
-        expect(urls.some((u) => u.includes("/campground/666/month?start_date=2026-07-01"))).toBe(true);
-        expect(urls.some((u) => u.includes("/campground/666/month?start_date=2026-08-01"))).toBe(true);
-    });
-});
