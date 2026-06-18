@@ -1,5 +1,7 @@
 import { CHECK_PRIORITY_INTERVAL_MINUTES } from "../next/src/types/campground";
 import type { Campground, CheckPriority } from "../next/src/types/campground";
+import type { KvAdapter } from "../next/src/lib/recgov/cache";
+import type { RawMonthResult } from "../next/src/lib/recgov/types";
 
 export interface FetchPlanItem {
     campgroundId: string;
@@ -70,4 +72,19 @@ export function buildSweepPlan(targets: PlannableTarget[], minute: number, nowMo
 // Every enabled campground, all due months, no gate — notify reads cache cheaply.
 export function buildNotifyPlan(targets: PlannableTarget[], nowMonth: string): FetchPlanItem[] {
     return buildPlan(targets, ["high", "normal", "low"], nowMonth);
+}
+
+// Assemble the per-campground raw-results map from the KV cache, preserving the
+// plan's per-campground month order. A cache miss is a null slot — callers treat
+// all-null as "no data" (carry-forward), never as a reason to fetch.
+export async function readCachedMonths(
+    plan: FetchPlanItem[],
+    kv: KvAdapter,
+): Promise<Record<string, (RawMonthResult | null)[]>> {
+    const out: Record<string, (RawMonthResult | null)[]> = {};
+    for (const { campgroundId, month } of plan) {
+        const value = await kv.getRaw(campgroundId, month);
+        (out[campgroundId] ??= []).push(value);
+    }
+    return out;
 }

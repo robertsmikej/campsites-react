@@ -56,3 +56,38 @@ describe("buildNotifyPlan", () => {
         expect(months).toEqual(["2026-07"]);
     });
 });
+
+import { readCachedMonths } from "./fetch-jobs";
+import type { KvAdapter } from "../next/src/lib/recgov/cache";
+
+function kvWith(raw: Record<string, unknown>): KvAdapter {
+    return {
+        getRaw: async (id: string, month: string) => (raw[`${id}:${month}`] ?? null) as never,
+        putRaw: async () => {},
+        getSnapshot: async () => null,
+        putSnapshot: async () => {},
+        deleteSnapshot: async () => {},
+    };
+}
+
+describe("readCachedMonths", () => {
+    it("returns cached values per campground in plan order, null on miss", async () => {
+        const kv = kvWith({
+            "A:2026-07": { campsites: { "1": {} } },
+            // A:2026-08 is a miss
+            "B:2026-07": { campsites: {} },
+        });
+        const plan = [
+            { campgroundId: "A", month: "2026-07" },
+            { campgroundId: "A", month: "2026-08" },
+            { campgroundId: "B", month: "2026-07" },
+        ];
+        const out = await readCachedMonths(plan, kv);
+        expect(out.A).toEqual([{ campsites: { "1": {} } }, null]);
+        expect(out.B).toEqual([{ campsites: {} }]);
+    });
+
+    it("returns an empty object for an empty plan", async () => {
+        expect(await readCachedMonths([], kvWith({}))).toEqual({});
+    });
+});
