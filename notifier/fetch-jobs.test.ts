@@ -1,0 +1,58 @@
+import { describe, it, expect } from "vitest";
+import { buildFastLanePlan, buildSweepPlan, buildNotifyPlan } from "./fetch-jobs";
+
+function cg(id: string, checkPriority?: "high" | "normal" | "low", enabled = true) {
+    return {
+        id,
+        name: id,
+        enabled,
+        ...(checkPriority ? { checkPriority } : {}),
+        dates: { startDate: "2026-07-01", endDate: "2026-07-10" },
+        sites: { favorites: [], worthwhile: [] },
+    };
+}
+function target(cgs: ReturnType<typeof cg>[]) {
+    return { campgrounds: { "recreation.gov": cgs } };
+}
+const NOW_MONTH = "2026-07";
+const ids = (plan: { campgroundId: string }[]) => [...new Set(plan.map((p) => p.campgroundId))].sort();
+
+describe("buildFastLanePlan", () => {
+    it("includes only high-tier campgrounds", () => {
+        const t = [target([cg("H", "high"), cg("N", "normal"), cg("L", "low"), cg("D", "normal")])];
+        expect(ids(buildFastLanePlan(t, NOW_MONTH))).toEqual(["H"]);
+    });
+    it("excludes disabled campgrounds", () => {
+        const t = [target([cg("H", "high", false)])];
+        expect(buildFastLanePlan(t, NOW_MONTH)).toEqual([]);
+    });
+});
+
+describe("buildSweepPlan", () => {
+    const t = [target([cg("H", "high"), cg("N", "normal"), cg("L", "low")])];
+    it("includes normal but not low on a %5 (not %10) minute", () => {
+        expect(ids(buildSweepPlan(t, 5, NOW_MONTH))).toEqual(["N"]);
+    });
+    it("includes both normal and low on a %10 minute", () => {
+        expect(ids(buildSweepPlan(t, 10, NOW_MONTH))).toEqual(["L", "N"]);
+    });
+    it("never includes high-tier", () => {
+        expect(ids(buildSweepPlan(t, 0, NOW_MONTH))).toEqual(["L", "N"]);
+    });
+    it("treats a missing checkPriority as normal", () => {
+        const t2 = [target([cg("X")])];
+        expect(ids(buildSweepPlan(t2, 5, NOW_MONTH))).toEqual(["X"]);
+    });
+});
+
+describe("buildNotifyPlan", () => {
+    it("includes every enabled campground regardless of tier or minute", () => {
+        const t = [target([cg("H", "high"), cg("N", "normal"), cg("L", "low")])];
+        expect(ids(buildNotifyPlan(t, NOW_MONTH))).toEqual(["H", "L", "N"]);
+    });
+    it("drops fully-past months but keeps the now-month", () => {
+        const t = [target([{ ...cg("A", "low"), dates: { startDate: "2026-05-01", endDate: "2026-07-31" } }])];
+        const months = buildNotifyPlan(t, "2026-07").map((p) => p.month);
+        expect(months).toEqual(["2026-07"]);
+    });
+});
