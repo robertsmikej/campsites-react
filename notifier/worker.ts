@@ -1,4 +1,4 @@
-import { run } from "./check";
+import { runTick, runSweep } from "./check";
 import { WorkerKvAdapter } from "../next/src/lib/recgov/worker-kv";
 import type { KVNamespace, ScheduledController, ExecutionContext } from "@cloudflare/workers-types";
 
@@ -13,19 +13,24 @@ interface Env {
 
 export default {
     async scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
-        ctx.waitUntil(
-            run({
-                subscriberApiUrl: env.SUBSCRIBER_API_URL,
-                subscriberApiSecret: env.SUBSCRIBER_API_SECRET,
-                resendApiKey: env.RESEND_API_KEY,
-                siteUrl: env.SITE_URL ?? "",
-                forceEmail: false,
-                dryRun: env.DRY_RUN === "true",
-                kvAdapter: new WorkerKvAdapter(env.SUBSCRIBERS as never),
-                // Cron fires exactly on the minute; scheduledTime keeps the tier modulo
-                // in check.ts from drifting across a minute boundary under slow starts.
-                now: new Date(controller.scheduledTime),
-            }),
-        );
+        const config = {
+            subscriberApiUrl: env.SUBSCRIBER_API_URL,
+            subscriberApiSecret: env.SUBSCRIBER_API_SECRET,
+            resendApiKey: env.RESEND_API_KEY,
+            siteUrl: env.SITE_URL ?? "",
+            forceEmail: false,
+            dryRun: env.DRY_RUN === "true",
+            kvAdapter: new WorkerKvAdapter(env.SUBSCRIBERS as never),
+            // scheduledTime keeps the minute stable across slow starts.
+            now: new Date(controller.scheduledTime),
+        };
+        // Two cron patterns, distinguished by controller.cron:
+        //   "* * * * *"   -> tick: fast-lane fetch (high-tier) + notify from cache
+        //   "*/5 * * * *" -> sweep: fetch normal/low-tier into cache
+        if (controller.cron === "*/5 * * * *") {
+            ctx.waitUntil(runSweep(config, env.SUBSCRIBERS as never));
+        } else {
+            ctx.waitUntil(runTick(config));
+        }
     },
 };

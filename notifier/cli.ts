@@ -1,4 +1,4 @@
-import { run, buildKvAdapter, type RunConfig } from "./check";
+import { runTick, buildKvAdapter, type RunConfig } from "./check";
 
 async function main(): Promise<void> {
     const config: RunConfig = {
@@ -11,7 +11,7 @@ async function main(): Promise<void> {
         kvAdapter: buildKvAdapter(),
         now: new Date(),
     };
-    await run(config);
+    await runTick(config);
 }
 
 main().catch((err) => {
