@@ -19,7 +19,7 @@ export async function acquireSweepLock(
     const raw = await kv.get(LOCK_KEY);
     const heldAt = raw === null ? NaN : Number(raw);
     if (!Number.isNaN(heldAt) && heldAt + leaseMs > nowMs) return false;
-    // TTL is a backstop so a crashed sweep can't wedge the lock forever.
-    await kv.put(LOCK_KEY, String(nowMs), { expirationTtl: 300 });
+    // TTL is a backstop so a crashed sweep can't wedge the lock forever (scales with leaseMs + 60s buffer).
+    await kv.put(LOCK_KEY, String(nowMs), { expirationTtl: Math.ceil(leaseMs / 1000) + 60 });
     return true;
 }

@@ -31,8 +31,8 @@ function tierOf(c: Campground): CheckPriority {
 }
 
 // Shared core: union of (campgroundId, month) across targets for campgrounds
-// whose tier is in `tiers`. When `minute` is provided, a campground is included
-// only when minute % its-tier-interval === 0 (matches the legacy gate).
+// whose tier is in `tiers`. When `minute` is provided, include a campground only
+// when minute % its-tier-interval === 0.
 function buildPlan(
     targets: PlannableTarget[],
     tiers: CheckPriority[],
@@ -56,7 +56,8 @@ function buildPlan(
         }
     }
     const plan: FetchPlanItem[] = [];
-    for (const [campgroundId, monthSet] of ranges) for (const month of monthSet) plan.push({ campgroundId, month });
+    for (const [campgroundId, monthSet] of ranges)
+        for (const month of monthSet) plan.push({ campgroundId, month });
     return plan;
 }
 
@@ -67,7 +68,11 @@ export function buildFastLanePlan(targets: PlannableTarget[], nowMonth: string):
 
 // Normal/low only, minute-gated. Runs under a */5 cron, so normal (5) fires every
 // sweep and low (10) fires every other sweep.
-export function buildSweepPlan(targets: PlannableTarget[], minute: number, nowMonth: string): FetchPlanItem[] {
+export function buildSweepPlan(
+    targets: PlannableTarget[],
+    minute: number,
+    nowMonth: string,
+): FetchPlanItem[] {
     return buildPlan(targets, ["normal", "low"], nowMonth, minute);
 }
 

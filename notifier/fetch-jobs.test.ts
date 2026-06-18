@@ -1,5 +1,12 @@
 import { describe, it, expect, vi } from "vitest";
-import { buildFastLanePlan, buildSweepPlan, buildNotifyPlan } from "./fetch-jobs";
+import {
+    buildFastLanePlan,
+    buildSweepPlan,
+    buildNotifyPlan,
+    readCachedMonths,
+    fetchToCache,
+} from "./fetch-jobs";
+import type { KvAdapter } from "../next/src/lib/recgov/cache";
 
 vi.mock("../next/src/lib/recgov/fetch-month", () => ({
     fetchMonth: vi.fn(async (id: string, month: string) =>
@@ -57,14 +64,13 @@ describe("buildNotifyPlan", () => {
         expect(ids(buildNotifyPlan(t, NOW_MONTH))).toEqual(["H", "L", "N"]);
     });
     it("drops fully-past months but keeps the now-month", () => {
-        const t = [target([{ ...cg("A", "low"), dates: { startDate: "2026-05-01", endDate: "2026-07-31" } }])];
+        const t = [
+            target([{ ...cg("A", "low"), dates: { startDate: "2026-05-01", endDate: "2026-07-31" } }]),
+        ];
         const months = buildNotifyPlan(t, "2026-07").map((p) => p.month);
         expect(months).toEqual(["2026-07"]);
     });
 });
-
-import { readCachedMonths } from "./fetch-jobs";
-import type { KvAdapter } from "../next/src/lib/recgov/cache";
 
 function kvWith(raw: Record<string, unknown>): KvAdapter {
     return {
@@ -97,8 +103,6 @@ describe("readCachedMonths", () => {
         expect(await readCachedMonths([], kvWith({}))).toEqual({});
     });
 });
-
-import { fetchToCache } from "./fetch-jobs";
 
 describe("fetchToCache", () => {
     it("writes fetched months to the cache and skips writes for failed fetches", async () => {

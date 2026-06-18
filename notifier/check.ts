@@ -10,7 +10,13 @@ import { fetchProducedNoData } from "../next/src/lib/recgov/raw-results";
 import { findNewMatches, generateSignature } from "./lib/diff";
 import { formatEmail, sendEmail } from "./lib/email";
 import { resolveNotifyScope, matchPassesScope } from "./lib/notify-scope";
-import { buildFastLanePlan, buildSweepPlan, buildNotifyPlan, readCachedMonths, fetchToCache } from "./fetch-jobs";
+import {
+    buildFastLanePlan,
+    buildSweepPlan,
+    buildNotifyPlan,
+    readCachedMonths,
+    fetchToCache,
+} from "./fetch-jobs";
 import { acquireSweepLock, type LockKv } from "./sweep-lock";
 import type { Campground, GlobalSettings, NotifyScope } from "../next/src/types/campground";
 import type { MatchResult, SiteConfigForDiff, CampgroundResult } from "./lib/diff";
@@ -530,10 +536,10 @@ export async function run(config: RunConfig, prefetchedTargets?: NotificationTar
     const rawByCampground = kvAdapter ? await readCachedMonths(plan, kvAdapter) : {};
     console.log(`[Notify] reading cache for ${plan.length} (campground, month) pairs`);
 
-    // 5. Fetch the existing global first-seen map.
+    // 1. Fetch the existing global first-seen map.
     const existingFirstSeenMap = await fetchFirstSeenMap(subscriberApiUrl, subscriberApiSecret);
 
-    // 6. Compute all currently-visible match signatures across all eligible users.
+    // 2. Compute all currently-visible match signatures across all eligible users.
     //    For each signature: record first-seen timestamp if not already present; keep existing if so.
     //    Only retain signatures still visible this cycle (stale ones drop naturally).
     //
@@ -562,7 +568,7 @@ export async function run(config: RunConfig, prefetchedTargets?: NotificationTar
         }
     }
 
-    // 7. Per user: apply lead-time filter (non-curators only), diff against their state.
+    // 3. Per user: apply lead-time filter (non-curators only), diff against their state.
     const updates: StateUpdate[] = [];
     // Tracks latency (ms from first-seen to email-sent) for each match emailed this cycle.
     const sentLatenciesMs: number[] = [];
@@ -634,7 +640,7 @@ export async function run(config: RunConfig, prefetchedTargets?: NotificationTar
         }
     }
 
-    // 8. Push state back to the API.
+    // 4. Push state back to the API.
     if (!dryRun) {
         const stateResponse = await fetch(`${subscriberApiUrl}/api/admin/notifier-state`, {
             method: "PUT",
@@ -652,10 +658,10 @@ export async function run(config: RunConfig, prefetchedTargets?: NotificationTar
         }
     }
 
-    // 9. Persist the updated first-seen map (pruned to only currently-visible signatures).
+    // 5. Persist the updated first-seen map (pruned to only currently-visible signatures).
     if (!dryRun) await putFirstSeenMap(subscriberApiUrl, subscriberApiSecret, newFirstSeenMap);
 
-    // 9.5: Maintain recent-openings log.
+    // 5.5: Maintain recent-openings log.
     // Fetch the prior log from the public endpoint (no auth needed, falls back to []).
     const RECENT_WINDOW_MS = 24 * 60 * 60 * 1000;
     const recentResp = await fetch(`${subscriberApiUrl}/api/openings/recent`).catch(() => null);
@@ -706,7 +712,7 @@ export async function run(config: RunConfig, prefetchedTargets?: NotificationTar
         }
     }
 
-    // 10. Compute and PUT stats.
+    // 6. Compute and PUT stats.
     const todayKeyUtc = now.toISOString().slice(0, 10); // "YYYY-MM-DD" UTC
 
     // Campgrounds tracked: unique campground IDs across ALL targets (not just eligible),
