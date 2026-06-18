@@ -2,6 +2,8 @@ import { CHECK_PRIORITY_INTERVAL_MINUTES } from "../next/src/types/campground";
 import type { Campground, CheckPriority } from "../next/src/types/campground";
 import type { KvAdapter } from "../next/src/lib/recgov/cache";
 import type { RawMonthResult } from "../next/src/lib/recgov/types";
+import { fetchMonthWithCache } from "../next/src/lib/recgov/fetch-with-cache";
+import { fetchDedupedConcurrent } from "../next/src/lib/recgov/fetch-deduped";
 
 export interface FetchPlanItem {
     campgroundId: string;
@@ -87,4 +89,20 @@ export async function readCachedMonths(
         (out[campgroundId] ??= []).push(value);
     }
     return out;
+}
+
+// Fetch each (campground, month) fresh from rec.gov and write it through to the
+// cache. Gentle footprint: serial with a throttle, no retries (a 429 just leaves
+// last-good in cache for this cycle). Returns nothing — the cache is the output.
+export async function fetchToCache(
+    plan: FetchPlanItem[],
+    kv: KvAdapter,
+    opts?: { concurrency?: number; delayMs?: number },
+): Promise<void> {
+    if (plan.length === 0) return;
+    await fetchDedupedConcurrent(
+        plan,
+        (campgroundId, month) => fetchMonthWithCache(campgroundId, month, kv, { forceFresh: true }),
+        { concurrency: opts?.concurrency ?? 1, maxRetries: 0, delayMs: opts?.delayMs ?? 500 },
+    );
 }

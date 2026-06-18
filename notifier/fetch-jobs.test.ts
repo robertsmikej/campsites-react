@@ -1,5 +1,11 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { buildFastLanePlan, buildSweepPlan, buildNotifyPlan } from "./fetch-jobs";
+
+vi.mock("../next/src/lib/recgov/fetch-month", () => ({
+    fetchMonth: vi.fn(async (id: string, month: string) =>
+        id === "FAIL" ? null : { campsites: { [`${id}-${month}`]: {} } },
+    ),
+}));
 
 function cg(id: string, checkPriority?: "high" | "normal" | "low", enabled = true) {
     return {
@@ -89,5 +95,30 @@ describe("readCachedMonths", () => {
 
     it("returns an empty object for an empty plan", async () => {
         expect(await readCachedMonths([], kvWith({}))).toEqual({});
+    });
+});
+
+import { fetchToCache } from "./fetch-jobs";
+
+describe("fetchToCache", () => {
+    it("writes fetched months to the cache and skips writes for failed fetches", async () => {
+        const putRaw = vi.fn(async () => {});
+        const kv: KvAdapter = {
+            getRaw: async () => null,
+            putRaw,
+            getSnapshot: async () => null,
+            putSnapshot: async () => {},
+            deleteSnapshot: async () => {},
+        };
+        await fetchToCache(
+            [
+                { campgroundId: "A", month: "2026-07" },
+                { campgroundId: "FAIL", month: "2026-07" },
+            ],
+            kv,
+            { concurrency: 1, delayMs: 0 },
+        );
+        expect(putRaw).toHaveBeenCalledWith("A", "2026-07", { campsites: { "A-2026-07": {} } });
+        expect(putRaw).not.toHaveBeenCalledWith("FAIL", "2026-07", expect.anything());
     });
 });
