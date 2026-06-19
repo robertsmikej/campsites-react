@@ -286,6 +286,73 @@ describe("GET /api/availability", () => {
         expect(cg.siteAvailability["2"]).toBeUndefined();
     });
 
+    it("attaches adjacentGroups when adjacencyAnchor is set", async () => {
+        vi.mocked(sessions.readSession).mockResolvedValue({ email: "alice@example.com" } as never);
+
+        // Two sites (012 and 013) both open Fri 2026-07-03 + Sat 2026-07-04
+        // (a 2-night stay starting Friday). No lat/lng → number-fallback adjacency.
+        const siteDetails = [
+            { id: "012", campsiteId: "c012", lat: null, lng: null, type: "standard", rating: null, reviews: 0, cell: null, amenities: {} },
+            { id: "013", campsiteId: "c013", lat: null, lng: null, type: "standard", rating: null, reviews: 0, cell: null, amenities: {} },
+        ];
+
+        const adjKv = createMockKv({
+            "site-details:232358": JSON.stringify(siteDetails),
+        });
+        vi.mocked(cloudflare.getKv).mockReturnValue(adjKv as never);
+
+        vi.mocked(userCampgrounds.getUserCampgrounds).mockResolvedValue({
+            campgrounds: {
+                "recreation.gov": [
+                    {
+                        id: "232358",
+                        name: "Adjacent CG",
+                        enabled: true,
+                        adjacencyAnchor: "all",
+                        dates: { startDate: "2026-07-01", endDate: "2026-07-10" },
+                        sites: { favorites: [], worthwhile: [] },
+                    },
+                ],
+            },
+            globalSettings: { stayLengths: [2], validStartDays: ["Friday"] },
+            updatedAt: "2026-05-01T00:00:00Z",
+        } as never);
+
+        // Both sites available on the Fri+Sat nights
+        fetchSpy.mockResolvedValue(
+            new Response(
+                JSON.stringify({
+                    campsites: {
+                        "1": {
+                            site: "012",
+                            campsite_type: "STANDARD",
+                            availabilities: {
+                                "2026-07-03T00:00:00Z": "Available",
+                                "2026-07-04T00:00:00Z": "Available",
+                            },
+                        },
+                        "2": {
+                            site: "013",
+                            campsite_type: "STANDARD",
+                            availabilities: {
+                                "2026-07-03T00:00:00Z": "Available",
+                                "2026-07-04T00:00:00Z": "Available",
+                            },
+                        },
+                    },
+                }),
+                { status: 200 },
+            ),
+        );
+
+        const response = await GET(new Request("http://x/api/availability"));
+        expect(response.status).toBe(200);
+        const snap = await response.json() as { campgrounds: Array<{ adjacentGroups?: Array<{ siteIds: string[] }> }> };
+        const cg = snap.campgrounds[0]!;
+        expect(cg.adjacentGroups).toHaveLength(1);
+        expect(cg.adjacentGroups![0]!.siteIds).toEqual(["012", "013"]);
+    });
+
     it("omits a campground whose rec.gov fetch failed rather than emitting totalSitesCount 0", async () => {
         vi.mocked(sessions.readSession).mockResolvedValue(null);
         const cfg = {

@@ -14,6 +14,8 @@ import {
     type SnapshotCampground,
 } from "@/lib/recgov";
 import type { Campground, GlobalSettings } from "@/types/campground";
+import { findAdjacentGroups, type AdjacencySite } from "@/lib/adjacent-groups";
+import { getSiteDetailsCached, kvNamespaceLike } from "@/lib/site-details-cache";
 
 interface SourceConfig {
     campgrounds: { "recreation.gov"?: Campground[] };
@@ -78,10 +80,51 @@ async function buildSnapshot(config: SourceConfig, adapter: WorkerKvAdapter): Pr
                 sitesWithMatches[siteId] = site;
             }
         }
+        let adjacentGroups;
+        if (cg.adjacencyAnchor) {
+            const details = await getSiteDetailsCached(cg.id, kvNamespaceLike(getKv()));
+            const sitesForGraph: AdjacencySite[] = details.map((d) => ({
+                id: d.id,
+                lat: d.lat,
+                lng: d.lng,
+                ...(d.loop ? { loop: d.loop } : {}),
+            }));
+            // Build availableNightsByName from rawResults (keyed by siteName/site number).
+            // Cannot use the processed `sites` map because processCampgroundResults deletes
+            // the `dates` field after computing matches.
+            const availableNightsByName: Record<string, string[]> = {};
+            for (const raw of rawResults) {
+                if (!raw?.campsites) continue;
+                for (const siteData of Object.values(raw.campsites)) {
+                    const name = siteData.site;
+                    if (!availableNightsByName[name]) availableNightsByName[name] = [];
+                    const validDates = Object.entries(siteData.availabilities)
+                        .filter(([, status]) => status === "Available")
+                        .map(([date]) => date.split("T")[0] ?? "")
+                        .filter((date) => allDates.includes(date));
+                    (availableNightsByName[name] as string[]).push(...validDates);
+                }
+            }
+            const groups = findAdjacentGroups({
+                campgroundId: cg.id,
+                sites: sitesForGraph,
+                availableNightsByName,
+                tiers: { favorites: cg.sites?.favorites ?? [], worthwhile: cg.sites?.worthwhile ?? [] },
+                settings: {
+                    stayLengths: effectiveSettings.stayLengths,
+                    validStartDays: effectiveSettings.validStartDays,
+                    blackoutDates: config.globalSettings.blackoutDates,
+                },
+                anchorScope: cg.adjacencyAnchor,
+            });
+            if (groups.length > 0) adjacentGroups = groups;
+        }
+
         results.push({
             ...cg,
             siteAvailability: sitesWithMatches,
             totalSitesCount,
+            ...(adjacentGroups ? { adjacentGroups } : {}),
         });
     }
 
