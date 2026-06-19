@@ -92,4 +92,29 @@ describe("WorkerKvAdapter", () => {
         await adapter.deleteSnapshot("alice@example.com");
         expect(kv.delete).toHaveBeenCalledWith("snapshot:alice@example.com");
     });
+
+    // KvLike methods — required so the scheduled-worker path passes kvAsKvLike
+    it("getJson returns parsed JSON from the underlying namespace", async () => {
+        const kv = createMockKv();
+        const adapter = new WorkerKvAdapter(kv as never);
+        const payload = [{ id: "site-1", lat: 45.1, lng: -121.5 }];
+        kv._store.set("site-details:12345", JSON.stringify(payload));
+        const result = await adapter.getJson("site-details:12345");
+        expect(result).toEqual(payload);
+    });
+
+    it("getJson returns null on a cache miss", async () => {
+        const kv = createMockKv();
+        const adapter = new WorkerKvAdapter(kv as never);
+        const result = await adapter.getJson("site-details:missing");
+        expect(result).toBeNull();
+    });
+
+    it("put calls the underlying namespace with stringified value and expirationTtl", async () => {
+        const kv = createMockKv();
+        const adapter = new WorkerKvAdapter(kv as never);
+        const payload = { foo: "bar" };
+        await adapter.put("some-key", payload, 3600);
+        expect(kv.put).toHaveBeenCalledWith("some-key", JSON.stringify(payload), { expirationTtl: 3600 });
+    });
 });

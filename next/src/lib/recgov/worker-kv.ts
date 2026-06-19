@@ -44,4 +44,14 @@ export class WorkerKvAdapter implements KvAdapter {
     async deleteSnapshot(email: string): Promise<void> {
         await this.kv.delete(snapshotCacheKey(email));
     }
+
+    // KvLike — required so the scheduled-worker path passes kvAsKvLike in check.ts
+    // and geo-adjacency is enabled (not silently disabled) at runtime.
+    async getJson<T>(key: string): Promise<T | null> {
+        return (await this.kv.get(key, "json")) as T | null;
+    }
+
+    async put(key: string, value: unknown, ttlSeconds: number): Promise<void> {
+        await this.kv.put(key, JSON.stringify(value), { expirationTtl: ttlSeconds });
+    }
 }
