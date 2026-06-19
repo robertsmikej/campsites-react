@@ -4,6 +4,7 @@
 import { writeFileSync } from "node:fs";
 import { formatEmail } from "./lib/email";
 import type { MatchResult } from "./lib/diff";
+import type { AdjacentGroup } from "../next/src/lib/adjacent-groups";
 
 const SAMPLE_MATCHES: MatchResult[] = [
     // Outlet Campground — two sites
@@ -40,9 +41,24 @@ const SAMPLE_MATCHES: MatchResult[] = [
     },
 ];
 
+const SAMPLE_GROUPS: AdjacentGroup[] = [
+    // Two side-by-side sites at Outlet open for the same Memorial-weekend window.
+    {
+        campgroundId: "cg-outlet",
+        siteIds: ["014", "015"],
+        siteNames: ["014", "015"],
+        from: "2026-05-23",
+        to: "2026-05-25",
+        nights: 2,
+        anchorTier: "favorites",
+    },
+];
+
 const { html } = formatEmail(SAMPLE_MATCHES, {
     email: "you@trail.example",
     siteUrl: "https://campwatch.dev",
+    adjacentGroups: SAMPLE_GROUPS,
+    campgroundNamesById: { "cg-outlet": "Outlet Campground" },
     // No unsubscribeUrl / apiSecret — omit footer unsubscribe link in preview
 });
 

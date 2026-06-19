@@ -3,6 +3,7 @@
 
 import { createHmac } from "node:crypto";
 import type { MatchResult } from "./diff";
+import type { AdjacentGroup } from "../../next/src/lib/adjacent-groups";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -11,6 +12,10 @@ export interface FormatEmailOptions {
     email?: string;
     apiSecret?: string;
     siteUrl?: string;
+    /** Adjacent-site groups to feature above the per-site openings. */
+    adjacentGroups?: AdjacentGroup[];
+    /** campgroundId -> display name, used to label the adjacent-group block. */
+    campgroundNamesById?: Record<string, string>;
 }
 
 export interface FormattedEmail {
@@ -100,7 +105,9 @@ export const buildPreheaderText = (matches: MatchResult[]): string => {
     const multiCampground = new Set(matches.map((m) => m.campgroundName)).size > 1;
 
     const star = head.group === "favorites" ? "★ " : "";
-    const siteRef = multiCampground ? `${shortName(head.campgroundName)} ${siteLabel(head)}` : `Site ${siteLabel(head)}`;
+    const siteRef = multiCampground
+        ? `${shortName(head.campgroundName)} ${siteLabel(head)}`
+        : `Site ${siteLabel(head)}`;
     const arrival = formatDate(head.match.from); // e.g. "Fri Jul 4"
     const nights = `${head.match.nights} ${head.match.nights === 1 ? "night" : "nights"}`;
     const lead = `${star}${siteRef} · ${arrival} · ${nights}`;
@@ -291,6 +298,113 @@ const buildOpeningCard = (match: MatchResult): string => {
                         </tr>`;
 };
 
+// Featured block for adjacent-site groups. Mirrors the per-match card markup/styles
+// (cream card, ink border, forest book buttons), but lists every site in the group
+// with its own rec.gov booking link, since rec.gov has no single multi-site link.
+const buildAdjacentGroupCard = (group: AdjacentGroup, campgroundName: string): string => {
+    const siteNames = group.siteNames.map((s) => s.replace(/^Site\s+/i, ""));
+    const dateRange = `${formatDate(group.from)} &nbsp;&rarr;&nbsp; ${formatDate(group.to)}`;
+    const nightsText = `${group.nights} ${group.nights === 1 ? "night" : "nights"}`;
+
+    // Tier badge: a fav/worthwhile anchor in the cluster gets a stronger badge.
+    let badgeBg: string, badgeColor: string, badgeLabel: string;
+    if (group.anchorTier === "favorites") {
+        badgeBg = C.forest;
+        badgeColor = C.cream;
+        badgeLabel = `&#9733; ${siteNames.length} adjacent sites`;
+    } else if (group.anchorTier === "worthwhile") {
+        badgeBg = C.mustard;
+        badgeColor = C.ink;
+        badgeLabel = `${siteNames.length} adjacent sites`;
+    } else {
+        badgeBg = C.clay;
+        badgeColor = C.cream;
+        badgeLabel = `${siteNames.length} adjacent sites`;
+    }
+
+    const bookButtons = group.siteIds
+        .map((id, i) => {
+            const link = buildReservationLink(id, group.from, group.nights);
+            const label = siteNames[i] ?? id;
+            return `
+                                                        <tr>
+                                                            <td bgcolor="${C.forest}" align="center" style="background-color:${C.forest};padding-bottom:1px;">
+                                                                <a href="${link}" style="display:block;padding:11px 12px;font-family:${F.poster};font-weight:800;font-size:13px;color:${C.cream};text-decoration:none;letter-spacing:0.10em;text-transform:uppercase;text-align:center;">Book Site ${label} on recreation.gov &rarr;</a>
+                                                            </td>
+                                                        </tr>`;
+        })
+        .join("");
+
+    return `
+                        <tr>
+                            <td style="padding-bottom:10px;">
+                                <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:${C.cream};border:1.5px solid ${C.ink};border-collapse:separate;">
+                                    <tbody>
+                                        <tr>
+                                            <td style="padding:14px 16px 4px 16px;vertical-align:middle;">
+                                                <!-- Tier badge -->
+                                                <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom:8px;">
+                                                    <tbody>
+                                                        <tr>
+                                                            <td bgcolor="${badgeBg}" style="background-color:${badgeBg};font-family:${F.mono};font-size:12px;color:${badgeColor};letter-spacing:0.18em;text-transform:uppercase;font-weight:700;padding:4px 8px;">${badgeLabel}</td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                                <!-- Campground -->
+                                                <div style="font-family:${F.poster};font-weight:900;font-size:18px;line-height:22px;color:${C.ink};text-transform:uppercase;letter-spacing:0.005em;">${campgroundName}</div>
+                                                <!-- Site numbers -->
+                                                <div style="font-family:${F.ital};font-style:italic;font-size:22px;line-height:26px;color:${C.ink};margin-top:4px;">Sites ${siteNames.join(", ")}</div>
+                                                <!-- Dates -->
+                                                <div style="font-family:${F.body};font-weight:bold;font-size:16px;line-height:22px;color:${C.ink};margin-top:6px;">${dateRange}</div>
+                                                <!-- Nights -->
+                                                <div style="font-family:${F.mono};font-weight:700;font-size:13px;color:${C.inkSubtle};letter-spacing:0.12em;text-transform:uppercase;margin-top:4px;">${nightsText} &middot; side by side</div>
+                                            </td>
+                                        </tr>
+                                        <!-- One book button per site, stacked -->
+                                        <tr>
+                                            <td style="padding:8px 16px 16px 16px;">
+                                                <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                                                    <tbody>${bookButtons}
+                                                    </tbody>
+                                                </table>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </td>
+                        </tr>`;
+};
+
+const buildAdjacentSection = (
+    groups: AdjacentGroup[],
+    campgroundNamesById: Record<string, string>,
+): string => {
+    const cards = groups
+        .map((g) => buildAdjacentGroupCard(g, campgroundNamesById[g.campgroundId] ?? "A campground"))
+        .join("");
+
+    return `
+        <tr>
+            <td bgcolor="${C.paper}" style="background-color:${C.paper};padding:28px 18px 6px 18px;">
+                <table cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;">
+                    <tbody>
+                        <tr>
+                            <td style="padding-bottom:8px;">
+                                <div style="font-family:${F.mono};font-weight:700;font-size:13px;color:${C.clay};letter-spacing:0.18em;text-transform:uppercase;">&sect; Adjacent openings</div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding-bottom:14px;">
+                                <div style="font-family:${F.ital};font-style:italic;font-size:16px;line-height:22px;color:${C.inkSoft};">Neighboring sites open for the same nights &mdash; grab the cluster before they split up.</div>
+                            </td>
+                        </tr>
+                        ${cards}
+                    </tbody>
+                </table>
+            </td>
+        </tr>`;
+};
+
 const buildCampgroundSection = (
     group: CampgroundGroup & { name: string },
     indexOfFirstOpening: number,
@@ -417,11 +531,28 @@ export const formatEmail = (newMatches: MatchResult[], options: FormatEmailOptio
     const { unsubscribeUrl, email, apiSecret, siteUrl } = options;
     const unsubscribeOptions = { unsubscribeUrl, email, apiSecret };
     const count = newMatches.length;
+    const adjacentGroups = options.adjacentGroups ?? [];
+    const campgroundNamesById = options.campgroundNamesById ?? {};
 
-    // Subject line
-    const uniqueCampgroundNames = [...new Set(newMatches.map((m) => m.campgroundName))];
+    // Campground names: union of per-site matches and any adjacent-group campgrounds,
+    // so a groups-only email still names the right campground in the banner/header.
+    const groupCampgroundNames = adjacentGroups.map(
+        (g) => campgroundNamesById[g.campgroundId] ?? "A campground",
+    );
+    const uniqueCampgroundNames = [
+        ...new Set([...newMatches.map((m) => m.campgroundName), ...groupCampgroundNames]),
+    ];
+
+    // Subject line. Adjacent groups lead when present (the headline feature), then
+    // fall back to the per-site opening count.
     let subject: string;
-    if (count === 1) {
+    if (adjacentGroups.length > 0) {
+        const g = adjacentGroups[0]!;
+        const name = campgroundNamesById[g.campgroundId] ?? "a campground";
+        subject =
+            `${g.siteIds.length} adjacent sites open at ${name}` +
+            (adjacentGroups.length > 1 ? ` (+${adjacentGroups.length - 1} more)` : "");
+    } else if (count === 1) {
         subject = `1 new opening · ${uniqueCampgroundNames[0]}`;
     } else {
         subject = `${count} new openings · ${uniqueCampgroundNames.join(", ")}`;
@@ -464,6 +595,10 @@ export const formatEmail = (newMatches: MatchResult[], options: FormatEmailOptio
     // ── Logo URL ─────────────────────────────────────────────────────────────
     const logoUrl = siteUrl ? `${siteUrl}/images/logos/CampWatch_Logo_trimmed_small.png` : "";
 
+    // ── Adjacent-group section (featured, above per-site openings) ────────────
+    const adjacentSection =
+        adjacentGroups.length > 0 ? buildAdjacentSection(adjacentGroups, campgroundNamesById) : "";
+
     // ── Per-campground sections ───────────────────────────────────────────────
     let openingCounter = 0;
     const campgroundSections = Object.entries(byCampground)
@@ -473,6 +608,10 @@ export const formatEmail = (newMatches: MatchResult[], options: FormatEmailOptio
             return buildCampgroundSection({ name, area, description, matches }, indexOfFirstOpening, count);
         })
         .join("\n");
+
+    // Banner count includes adjacent groups so a groups-only email doesn't read
+    // "0 NEW OPENINGS"; each group counts as one featured opening.
+    const headerCount = count + adjacentGroups.length;
 
     // ── Unsubscribe footer HTML ───────────────────────────────────────────────
     const unsubscribeFooterHtml = unsubscribeLink
@@ -498,8 +637,11 @@ export const formatEmail = (newMatches: MatchResult[], options: FormatEmailOptio
             <table cellpadding="0" cellspacing="0" border="0" width="600" style="max-width:600px;width:100%;border-collapse:collapse;">
                 <tbody>
 ${buildPreheader(newMatches)}
-${buildHeader(count, uniqueCampgroundNames, logoUrl)}
+${buildHeader(headerCount, uniqueCampgroundNames, logoUrl)}
 ${buildMetaBar(timestamp)}
+
+                    <!-- ADJACENT OPENINGS — featured group block -->
+                    ${adjacentSection}
 
                     <!-- OPENINGS — one section per campground -->
                     ${campgroundSections}

@@ -151,10 +151,16 @@ describe("per-campground check tiers", () => {
     beforeEach(() => vi.restoreAllMocks());
 
     it("carries forward last-good snapshot for a campground missing from cache", async () => {
-        const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(mockFetch([tierTarget([
-            tierCampground("232358", "Outlet", "high"),
-            tierCampground("999999", "Cold", "low"),
-        ])]) as never);
+        const fetchSpy = vi
+            .spyOn(globalThis, "fetch")
+            .mockImplementation(
+                mockFetch([
+                    tierTarget([
+                        tierCampground("232358", "Outlet", "high"),
+                        tierCampground("999999", "Cold", "low"),
+                    ]),
+                ]) as never,
+            );
         vi.spyOn(console, "log").mockImplementation(() => {});
         const kv = stubKv();
         // Only 232358 is warm in cache; 999999 is a miss.
@@ -258,6 +264,132 @@ describe("spotted time in sent emails", () => {
     });
 });
 
+describe("adjacent-group alerts", () => {
+    beforeEach(() => vi.restoreAllMocks());
+
+    // Two consecutively-numbered sites (001, 002) open for the same Saturday
+    // 2-night window. With no coords from KV, the number-fallback adjacency links
+    // them into a group; adjacencyAnchor "all" accepts a group with no fav/worthwhile.
+    const RECGOV_ADJACENT = {
+        campsites: {
+            "1": {
+                site: "001",
+                campsite_type: "STANDARD",
+                availabilities: {
+                    "2026-07-04T00:00:00Z": "Available",
+                    "2026-07-05T00:00:00Z": "Available",
+                },
+            },
+            "2": {
+                site: "002",
+                campsite_type: "STANDARD",
+                availabilities: {
+                    "2026-07-04T00:00:00Z": "Available",
+                    "2026-07-05T00:00:00Z": "Available",
+                },
+            },
+        },
+    };
+
+    function adjacentTarget(notifierState: unknown) {
+        return {
+            email: "boss@example.com",
+            roles: ["curator"],
+            notifications: { enabled: true, frequencyMinutes: 0 },
+            defaultNotifyScope: "all",
+            campgrounds: {
+                "recreation.gov": [
+                    {
+                        id: "232358",
+                        name: "Outlet",
+                        enabled: true,
+                        notifyScope: "all",
+                        adjacencyAnchor: "all",
+                        dates: { startDate: "2026-07-01", endDate: "2026-07-10" },
+                        sites: { favorites: [], worthwhile: [] },
+                    },
+                ],
+            },
+            globalSettings: { stayLengths: [2], validStartDays: ["Saturday"] },
+            notifierState,
+        };
+    }
+
+    it("emails an Adjacent openings block, then suppresses a re-send within cooldown", async () => {
+        // ── First run: state seeded with empty sites bucket so the email branch is
+        //    reachable. Capture the sent HTML and the state written back.
+        const fetchSpy = vi
+            .spyOn(globalThis, "fetch")
+            .mockImplementation(mockFetch([adjacentTarget({ sites: {} })]) as never);
+        vi.spyOn(console, "log").mockImplementation(() => {});
+        const kv = stubKv();
+        kv.getRaw = vi.fn(async (id: string, month: string) =>
+            id === "232358" && month === "2026-07" ? (RECGOV_ADJACENT as never) : null,
+        );
+
+        await run({
+            subscriberApiUrl: "https://campwatch.dev",
+            subscriberApiSecret: "secret",
+            resendApiKey: "re_x",
+            siteUrl: "https://campwatch.dev",
+            forceEmail: false,
+            dryRun: false,
+            kvAdapter: kv,
+            now: new Date("2026-07-06T00:00:00Z"),
+        });
+
+        const resendCalls = fetchSpy.mock.calls.filter((c) => String(c[0]).includes("api.resend.com"));
+        expect(resendCalls.length).toBeGreaterThan(0);
+        const payload = JSON.parse(String(resendCalls[0]![1]?.body)) as { html: string };
+        expect(payload.html).toContain("Adjacent openings");
+        expect(payload.html).toContain("001");
+        expect(payload.html).toContain("002");
+
+        // Grab the persisted state to feed the second run.
+        const stateCall = fetchSpy.mock.calls.find(
+            (c) =>
+                String(c[0]).includes("/api/admin/notifier-state") && (c[1] as RequestInit)?.method === "PUT",
+        );
+        const persisted = JSON.parse(String((stateCall![1] as RequestInit).body)) as {
+            updates: Array<{ email: string; state: { sites?: unknown; groups?: unknown } }>;
+        };
+        const userState = persisted.updates.find((u) => u.email === "boss@example.com")!.state;
+        expect(userState.groups).toBeTruthy(); // group bucket persisted alongside sites
+        expect(userState.sites).toBeDefined(); // sites bucket not overwritten
+
+        // ── Second run within cooldown: feed back the persisted state. The group
+        //    overlaps the alerted window → no Adjacent-openings re-send. Restore the
+        //    fetch spy first so the second run's calls are captured cleanly.
+        vi.restoreAllMocks();
+        const fetchSpy2 = vi
+            .spyOn(globalThis, "fetch")
+            .mockImplementation(mockFetch([adjacentTarget(userState)]) as never);
+        vi.spyOn(console, "log").mockImplementation(() => {});
+        const kv2 = stubKv();
+        kv2.getRaw = vi.fn(async (id: string, month: string) =>
+            id === "232358" && month === "2026-07" ? (RECGOV_ADJACENT as never) : null,
+        );
+
+        await run({
+            subscriberApiUrl: "https://campwatch.dev",
+            subscriberApiSecret: "secret",
+            resendApiKey: "re_x",
+            siteUrl: "https://campwatch.dev",
+            forceEmail: false,
+            dryRun: false,
+            kvAdapter: kv2,
+            now: new Date("2026-07-06T00:05:00Z"), // 5 min later, well within 24h cooldown
+        });
+
+        const resend2 = fetchSpy2.mock.calls.filter((c) => String(c[0]).includes("api.resend.com"));
+        const reSentAdjacent = resend2.some((c) => {
+            const body = JSON.parse(String((c[1] as RequestInit)?.body)) as { html: string };
+            return body.html.includes("Adjacent openings");
+        });
+        expect(reSentAdjacent).toBe(false);
+    });
+});
+
 describe("blackout alert suppression", () => {
     beforeEach(() => vi.restoreAllMocks());
 
@@ -310,4 +442,3 @@ describe("blackout alert suppression", () => {
         expect(n).toBeGreaterThan(0);
     });
 });
-

@@ -64,7 +64,7 @@ function deriveType(
     const ct = (campsiteType ?? "").toLowerCase();
     if (ct.includes("walk") || ct.includes("hike")) return { type: "walkin" };
     const rv = equip.find((e) => /rv|trailer/i.test(e.equipment_name ?? ""));
-    if (rv) return { type: "rv", maxRvLength: rv.max_length || undefined };
+    if (rv) return rv.max_length ? { type: "rv", maxRvLength: rv.max_length } : { type: "rv" };
     if (names.some((n) => n.includes("tent"))) return { type: "tent" };
     return { type: "other" };
 }

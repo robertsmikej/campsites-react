@@ -5,8 +5,11 @@
 
 import { stayOverlapsBlackout } from "../next/src/lib/blackout";
 import { processCampgroundResults, getAllDatesInRange } from "../next/src/lib/recgov/match-detection";
+import { IGNORE_CAMPSITE_TYPES } from "../next/src/lib/recgov/types";
 import { RestKvAdapter } from "../next/src/lib/recgov/rest-kv";
 import { fetchProducedNoData } from "../next/src/lib/recgov/raw-results";
+import { findAdjacentGroups, type AdjacentGroup, type AdjacencySite } from "../next/src/lib/adjacent-groups";
+import { getSiteDetailsCached, type KvLike } from "../next/src/lib/site-details-cache";
 import { findNewMatches, generateSignature } from "./lib/diff";
 import { formatEmail, sendEmail } from "./lib/email";
 import { resolveNotifyScope, matchPassesScope } from "./lib/notify-scope";
@@ -48,6 +51,21 @@ export function buildKvAdapter(): RestKvAdapter | null {
 
 let kvAdapter: KvAdapter | null = null;
 
+// getSiteDetailsCached needs the raw getJson/put KvLike surface, which RestKvAdapter
+// exposes but the cache-only KvAdapter interface (and the test stub) does not. Return
+// the adapter typed as KvLike only when it actually implements those methods, so geo
+// enrichment degrades to number-fallback adjacency instead of crashing.
+function kvAsKvLike(kv: KvAdapter | null): KvLike | null {
+    if (
+        kv &&
+        typeof (kv as Partial<KvLike>).getJson === "function" &&
+        typeof (kv as Partial<KvLike>).put === "function"
+    ) {
+        return kv as unknown as KvLike;
+    }
+    return null;
+}
+
 // Non-curator users don't receive an email about a new match until this many
 // milliseconds after the global first-sighting. Curators are notified immediately.
 const LEAD_TIME_MS = 15 * 60 * 1000;
@@ -67,6 +85,9 @@ interface NotifierState {
      *  counts as the same opening and isn't re-alerted. Retained until the range
      *  ages past the cooldown, then pruned. */
     sites?: Record<string, Array<{ from: string; to: string; seen: string }>>;
+    /** group key ("campgroundId:sortedSiteIds") -> alerted windows with last-seen ISO.
+     *  Separate bucket from `sites` so adjacent-group dedup is independent of per-site dedup. */
+    groups?: Record<string, Array<{ from: string; to: string; seen: string }>>;
     /** @deprecated v1 cooldown shape (signature -> last-seen ISO); migrated on read. */
     notified?: Record<string, string>;
     /** @deprecated original shape (currently-visible signatures); migrated on read. */
@@ -217,13 +238,52 @@ async function writeUserSnapshot(
     }
 }
 
+// Reconstruct open nights per site name from the RAW month results. The processed
+// SiteAvailabilityMap can't be used because processCampgroundResults deletes each
+// site's `dates` after computing matches. Keyed by campsite.site (the site NAME),
+// which equals AdjacencySite.id / SiteDetail.id. Mirrors Task 6's availability route.
+function availableNightsByNameFromRaw(
+    rawApiResults: unknown[] | undefined,
+    allDates: string[],
+): Record<string, string[]> {
+    if (!rawApiResults) return {};
+    const out: Record<string, string[]> = {};
+    for (const raw of rawApiResults as Array<{
+        campsites?: Record<
+            string,
+            { site: string; campsite_type: string; availabilities: Record<string, string> }
+        >;
+    }>) {
+        if (!raw?.campsites) continue;
+        for (const siteData of Object.values(raw.campsites)) {
+            if (IGNORE_CAMPSITE_TYPES.includes(siteData.campsite_type)) continue;
+            const name = siteData.site;
+            if (!out[name]) out[name] = [];
+            const validDates = Object.entries(siteData.availabilities)
+                .filter(([, status]) => status === "Available")
+                .map(([date]) => date.split("T")[0] ?? "")
+                .filter((date) => allDates.includes(date));
+            (out[name] as string[]).push(...validDates);
+        }
+    }
+    return out;
+}
+
 // ── Compute matches for a single user from pre-fetched raw API data ───────────
-// Returns matches in the same shape as findNewMatches (without diff).
+// Returns matches in the same shape as findNewMatches (without diff), plus the
+// adjacent-site groups detected across the user's campgrounds and a campgroundId ->
+// name map for labeling the email's group section.
+
+interface ComputedUserResults {
+    matches: MatchResult[];
+    groups: AdjacentGroup[];
+    campgroundNamesById: Record<string, string>;
+}
 
 async function computeMatchesForUser(
     target: NotificationTarget,
     rawByCampground: Record<string, unknown[]>,
-): Promise<MatchResult[]> {
+): Promise<ComputedUserResults> {
     const globalSettings = target.globalSettings ?? ({} as Partial<GlobalSettings>);
     const defaultSettings = {
         stayLengths: [2, 3, 4, 5],
@@ -239,6 +299,9 @@ async function computeMatchesForUser(
     // Campgrounds whose rec.gov fetch produced no data this cycle. Their snapshot
     // entry is carried forward from last-good instead of zeroed out.
     const failedCampgroundIds = new Set<string>();
+    // Adjacent-site groups across all of this user's campgrounds, plus the name map.
+    const groups: AdjacentGroup[] = [];
+    const campgroundNamesById: Record<string, string> = {};
 
     for (const c of target.campgrounds["recreation.gov"] ?? []) {
         if (c.enabled === false) continue;
@@ -272,6 +335,49 @@ async function computeMatchesForUser(
             campgroundDescription: c.description ?? "",
             sites: siteAvailability,
         });
+
+        // Adjacent-group detection (only when the campground opts in). Coordinates
+        // come from the cached site-details; if KV is unavailable or returns nothing,
+        // synthesize coordless AdjacencySites from the availability site names so the
+        // number-fallback adjacency still works.
+        if (c.adjacencyAnchor) {
+            const availableNightsByName = availableNightsByNameFromRaw(rawApiResults, allDates);
+            let sitesForGraph: AdjacencySite[] = [];
+            const kvLike = kvAsKvLike(kvAdapter);
+            if (kvLike) {
+                const details = await getSiteDetailsCached(c.id, kvLike).catch(() => []);
+                sitesForGraph = details.map((d) => ({
+                    id: d.id,
+                    lat: d.lat,
+                    lng: d.lng,
+                    ...(d.loop ? { loop: d.loop } : {}),
+                }));
+            }
+            if (sitesForGraph.length === 0) {
+                sitesForGraph = Object.keys(availableNightsByName).map((id) => ({
+                    id,
+                    lat: null,
+                    lng: null,
+                }));
+            }
+            const blackoutDates = target.globalSettings?.blackoutDates;
+            const cgGroups = findAdjacentGroups({
+                campgroundId: c.id,
+                sites: sitesForGraph,
+                availableNightsByName,
+                tiers: { favorites: c.sites?.favorites ?? [], worthwhile: c.sites?.worthwhile ?? [] },
+                settings: {
+                    stayLengths: effectiveSettings.stayLengths,
+                    validStartDays: effectiveSettings.validStartDays,
+                    ...(blackoutDates ? { blackoutDates } : {}),
+                },
+                anchorScope: c.adjacencyAnchor,
+            });
+            if (cgGroups.length > 0) {
+                groups.push(...cgGroups);
+                campgroundNamesById[c.id] = c.name;
+            }
+        }
     }
 
     // Build a "siteConfigurations" list in the shape findNewMatches expects.
@@ -309,7 +415,7 @@ async function computeMatchesForUser(
 
     await writeUserSnapshot(target, syntheticResults, failedCampgroundIds);
 
-    return sendable;
+    return { matches: sendable, groups, campgroundNamesById };
 }
 
 // ── Diff per user ─────────────────────────────────────────────────────────────
@@ -436,11 +542,65 @@ export function diffPerUser(
     return { newMatches, nextState: { sites } };
 }
 
+// ── Adjacent-group dedup ───────────────────────────────────────────────────────
+
+// A group is keyed by its campground plus its sorted site ids, so the same set of
+// adjacent sites is one opening regardless of detection order. Mirrors diffPerUser's
+// window-overlap-within-cooldown semantics, keyed by group instead of site.
+const groupKey = (g: AdjacentGroup): string => `${g.campgroundId}:${[...g.siteIds].sort().join(",")}`;
+
+export function diffGroupsWithCooldown(
+    currentGroups: AdjacentGroup[],
+    priorState: { groups?: NotifierState["groups"] } | null | undefined,
+    nowMs: number,
+    cooldownMs: number = COOLDOWN_MS,
+): { newGroups: AdjacentGroup[]; nextGroupState: NonNullable<NotifierState["groups"]> } {
+    const cutoff = nowMs - cooldownMs;
+    const prior = priorState?.groups ?? {};
+    const seenIso = new Date(nowMs).toISOString();
+
+    // Prior alerted windows per key still within cooldown.
+    const priorByKey = new Map<string, Array<{ from: string; to: string }>>();
+    for (const [key, ranges] of Object.entries(prior)) {
+        const fresh = ranges.filter((r) => new Date(r.seen).getTime() >= cutoff);
+        if (fresh.length)
+            priorByKey.set(
+                key,
+                fresh.map((r) => ({ from: r.from, to: r.to })),
+            );
+    }
+
+    const overlaps = (a: { from: string; to: string }, b: { from: string; to: string }) =>
+        a.from < b.to && b.from < a.to;
+
+    const newGroups: AdjacentGroup[] = [];
+    const next: NonNullable<NotifierState["groups"]> = {};
+    for (const g of currentGroups) {
+        const key = groupKey(g);
+        const priorRanges = priorByKey.get(key) ?? [];
+        const isNew = !priorRanges.some((r) => overlaps(r, g));
+        if (isNew) newGroups.push(g);
+        (next[key] ??= []).push({ from: g.from, to: g.to, seen: seenIso });
+    }
+    // Retain prior fresh windows not re-seen this cycle.
+    for (const [key, ranges] of priorByKey.entries()) {
+        const merged = next[key] ?? (next[key] = []);
+        for (const r of ranges) {
+            if (!merged.some((m) => m.from === r.from && m.to === r.to)) {
+                merged.push({ ...r, seen: seenIso });
+            }
+        }
+    }
+    return { newGroups, nextGroupState: next };
+}
+
 // ── Send email to a single user ───────────────────────────────────────────────
 
 async function sendEmailToUser({
     user,
     matches,
+    groups = [],
+    campgroundNamesById = {},
     resendApiKey,
     siteUrl,
     apiSecret,
@@ -448,6 +608,8 @@ async function sendEmailToUser({
 }: {
     user: NotificationTarget;
     matches: MatchResult[];
+    groups?: AdjacentGroup[];
+    campgroundNamesById?: Record<string, string>;
     resendApiKey: string;
     siteUrl: string;
     apiSecret: string;
@@ -458,6 +620,7 @@ async function sendEmailToUser({
         email: user.email,
         apiSecret,
         siteUrl,
+        ...(groups.length > 0 ? { adjacentGroups: groups, campgroundNamesById } : {}),
     });
     // Deliver to the verified override when set; unsubscribe identity stays the account email.
     const deliverTo = user.notificationEmail ?? user.email;
@@ -548,7 +711,7 @@ export async function run(config: RunConfig, prefetchedTargets?: NotificationTar
     const newFirstSeenMap: FirstSeenMap = {};
     const globalMatchesBySig: Record<string, Omit<RecentOpening, "signature" | "detectedAt">> = {};
     for (const target of eligible) {
-        const userMatches = await computeMatchesForUser(target, rawByCampground);
+        const { matches: userMatches } = await computeMatchesForUser(target, rawByCampground);
         for (const m of userMatches) {
             const sig = signatureForMatch(m);
             if (!newFirstSeenMap[sig]) {
@@ -573,7 +736,11 @@ export async function run(config: RunConfig, prefetchedTargets?: NotificationTar
     // Tracks latency (ms from first-seen to email-sent) for each match emailed this cycle.
     const sentLatenciesMs: number[] = [];
     for (const target of eligible) {
-        const userMatches = await computeMatchesForUser(target, rawByCampground);
+        const {
+            matches: userMatches,
+            groups: userGroups,
+            campgroundNamesById,
+        } = await computeMatchesForUser(target, rawByCampground);
         const isCurator = (target.roles ?? []).includes("curator");
 
         // Apply curator lead-time: non-curators only see matches whose global first-sighting
@@ -588,19 +755,50 @@ export async function run(config: RunConfig, prefetchedTargets?: NotificationTar
                   return now.getTime() - new Date(firstSeen).getTime() >= LEAD_TIME_MS;
               });
 
+        // Same lead-time gate for adjacent groups: a group's age is the MAX (latest)
+        // first-seen across its constituent sites' exact-window signatures, so a group
+        // isn't emailed to non-curators until every member site has cleared lead-time.
+        // A site whose window isn't in the first-seen map is treated as just-appeared
+        // (now), conservatively delaying the group.
+        const groupClearedLeadTime = (g: AdjacentGroup): boolean => {
+            if (isCurator) return true;
+            let maxFirstSeenMs = 0;
+            for (const siteId of g.siteIds) {
+                const sig = generateSignature(g.campgroundId, siteId, {
+                    from: g.from,
+                    to: g.to,
+                    nights: g.nights,
+                });
+                const firstSeen = newFirstSeenMap[sig];
+                const ms = firstSeen ? new Date(firstSeen).getTime() : now.getTime();
+                if (ms > maxFirstSeenMs) maxFirstSeenMs = ms;
+            }
+            return now.getTime() - maxFirstSeenMs >= LEAD_TIME_MS;
+        };
+        const visibleGroups = userGroups.filter(groupClearedLeadTime);
+
         const priorState = target.notifierState ?? null;
         const isFirstRun = priorState === null;
         const { newMatches, nextState } = diffPerUser(visible, priorState, now.getTime());
+        const { newGroups, nextGroupState } = diffGroupsWithCooldown(
+            visibleGroups,
+            priorState,
+            now.getTime(),
+        );
+        // Merge the group bucket into the per-user state alongside `sites` — never
+        // overwrite the sites bucket diffPerUser produced.
+        const mergedState: NotifierState = { ...nextState };
+        if (Object.keys(nextGroupState).length > 0) mergedState.groups = nextGroupState;
 
         if (isFirstRun && !forceEmail) {
             console.log(`[${target.email}] first run — seeding state, no email`);
-            updates.push({ email: target.email, state: nextState, lastNotifiedAt: now.toISOString() });
+            updates.push({ email: target.email, state: mergedState, lastNotifiedAt: now.toISOString() });
             continue;
         }
 
-        if (newMatches.length === 0) {
+        if (newMatches.length === 0 && newGroups.length === 0) {
             console.log(`[${target.email}] 0 new matches`);
-            updates.push({ email: target.email, state: nextState });
+            updates.push({ email: target.email, state: mergedState });
             continue;
         }
 
@@ -611,16 +809,22 @@ export async function run(config: RunConfig, prefetchedTargets?: NotificationTar
             if (firstSeen) m.firstSeenAt = firstSeen;
         }
 
-        console.log(`[${target.email}] ${newMatches.length} new match(es) — sending email`);
+        console.log(
+            `[${target.email}] ${newMatches.length} new match(es), ${newGroups.length} new group(s) — sending email`,
+        );
         if (dryRun) {
-            console.log(`[dry-run] would email ${newMatches.length} match(es) to ${target.email}`);
-            updates.push({ email: target.email, state: nextState });
+            console.log(
+                `[dry-run] would email ${newMatches.length} match(es) + ${newGroups.length} group(s) to ${target.email}`,
+            );
+            updates.push({ email: target.email, state: mergedState });
         } else {
             try {
                 const sentAtMs = Date.now();
                 await sendEmailToUser({
                     user: target,
                     matches: newMatches,
+                    groups: newGroups,
+                    campgroundNamesById,
                     resendApiKey,
                     siteUrl,
                     apiSecret: subscriberApiSecret,
@@ -632,10 +836,10 @@ export async function run(config: RunConfig, prefetchedTargets?: NotificationTar
                     const firstSeenIso = newFirstSeenMap[sig];
                     if (firstSeenIso) sentLatenciesMs.push(sentAtMs - new Date(firstSeenIso).getTime());
                 }
-                updates.push({ email: target.email, state: nextState, lastNotifiedAt: now.toISOString() });
+                updates.push({ email: target.email, state: mergedState, lastNotifiedAt: now.toISOString() });
             } catch (err) {
                 console.error(`[${target.email}] email send failed: ${(err as Error).message}`);
-                updates.push({ email: target.email, state: nextState });
+                updates.push({ email: target.email, state: mergedState });
             }
         }
     }

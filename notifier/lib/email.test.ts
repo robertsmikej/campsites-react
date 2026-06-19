@@ -115,3 +115,47 @@ describe("formatSpottedLine defensive guard", () => {
         expect(formatSpottedLine("garbage", Date.now())).toBe("");
     });
 });
+
+describe("adjacent openings section", () => {
+    it("renders an Adjacent openings section and leads the subject", () => {
+        const groups = [
+            {
+                campgroundId: "cg1",
+                siteIds: ["012", "013"],
+                siteNames: ["012", "013"],
+                from: "2026-06-19",
+                to: "2026-06-21",
+                nights: 2,
+                anchorTier: "none" as const,
+            },
+        ];
+        const { subject, html } = formatEmail([], {
+            adjacentGroups: groups,
+            campgroundNamesById: { cg1: "Glacier View" },
+        });
+        expect(subject).toMatch(/adjacent/i);
+        expect(html).toMatch(/Adjacent openings/i);
+        expect(html).toMatch(/012/);
+        expect(html).toContain("Glacier View");
+    });
+
+    it("renders both group and per-site sections when both are present", () => {
+        const groups = [
+            {
+                campgroundId: "234007",
+                siteIds: ["011", "012"],
+                siteNames: ["011", "012"],
+                from: "2026-07-10",
+                to: "2026-07-12",
+                nights: 2,
+                anchorTier: "favorites" as const,
+            },
+        ];
+        const { html } = formatEmail([match({ siteName: "003" })], {
+            adjacentGroups: groups,
+            campgroundNamesById: { "234007": "Outlet Campground" },
+        });
+        expect(html).toMatch(/Adjacent openings/i);
+        expect(html).toContain("Site 003"); // per-site block still renders below
+    });
+});
