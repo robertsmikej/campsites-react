@@ -23,7 +23,7 @@ export class RestKvAdapter implements KvAdapter {
         return `${CF_API_BASE}/accounts/${this.opts.accountId}/storage/kv/namespaces/${this.opts.namespaceId}/values/${encodeURIComponent(key)}`;
     }
 
-    private async getJson<T>(key: string): Promise<T | null> {
+    async getJson<T>(key: string): Promise<T | null> {
         const response = await fetch(this.endpoint(key), {
             method: "GET",
             headers: { Authorization: `Bearer ${this.opts.apiToken}` },
@@ -35,7 +35,7 @@ export class RestKvAdapter implements KvAdapter {
         return (await response.json()) as T;
     }
 
-    private async put(key: string, value: unknown, ttlSeconds: number): Promise<void> {
+    async put(key: string, value: unknown, ttlSeconds: number): Promise<void> {
         const url = `${this.endpoint(key)}?expiration_ttl=${ttlSeconds}`;
         const response = await fetch(url, {
             method: "PUT",
