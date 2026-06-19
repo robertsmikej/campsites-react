@@ -10,6 +10,7 @@ import {
     fetchProducedNoData,
     processCampgroundResults,
     getAllDatesInRange,
+    IGNORE_CAMPSITE_TYPES,
     type AvailabilitySnapshot,
     type SnapshotCampground,
 } from "@/lib/recgov";
@@ -96,6 +97,7 @@ async function buildSnapshot(config: SourceConfig, adapter: WorkerKvAdapter): Pr
             for (const raw of rawResults) {
                 if (!raw?.campsites) continue;
                 for (const siteData of Object.values(raw.campsites)) {
+                    if (IGNORE_CAMPSITE_TYPES.includes(siteData.campsite_type)) continue;
                     const name = siteData.site;
                     if (!availableNightsByName[name]) availableNightsByName[name] = [];
                     const validDates = Object.entries(siteData.availabilities)
