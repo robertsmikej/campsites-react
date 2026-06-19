@@ -216,4 +216,46 @@ describe("PUT /api/admin/notifier-state", () => {
         const body = (await res.json()) as { updated: number };
         expect(body.updated).toBe(0);
     });
+
+    it("persists and merges the adjacent-group dedup bucket", async () => {
+        vi.mocked(cloudflare.getEnv).mockReturnValue({ API_SECRET: SECRET } as never);
+        const staleIso = new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString(); // past 24h cooldown
+        const kv = createMockKv({
+            "user:mike@x.com:notifier-state": JSON.stringify({
+                sites: {},
+                groups: {
+                    "232085:012,013": [{ from: "2026-06-22", to: "2026-06-24", seen: recentIso }], // fresh, keep
+                    "232085:099,100": [{ from: "2026-06-01", to: "2026-06-03", seen: staleIso }], // aged out
+                },
+            }),
+        });
+        vi.mocked(cloudflare.getKv).mockReturnValue(kv);
+
+        const res = await put(
+            {
+                updates: [
+                    {
+                        email: "mike@x.com",
+                        state: {
+                            sites: {},
+                            groups: {
+                                "232085:020,021": [{ from: "2026-07-04", to: "2026-07-06", seen: recentIso }], // new incoming
+                            },
+                        },
+                    },
+                ],
+            },
+            `Bearer ${SECRET}`,
+        );
+
+        expect(res.status).toBe(200);
+        const state = (await kv.get("user:mike@x.com:notifier-state", "json")) as {
+            groups?: Record<string, unknown[]>;
+        };
+        // Existing fresh group retained (so it won't re-alert next cycle), new
+        // incoming group recorded, aged-out group pruned.
+        expect(state.groups?.["232085:012,013"]).toBeDefined();
+        expect(state.groups?.["232085:020,021"]).toBeDefined();
+        expect(state.groups?.["232085:099,100"]).toBeUndefined();
+    });
 });

@@ -55,10 +55,19 @@ async function putHandler(request: Request): Promise<Response> {
         // not erase that campground's alerted ranges — clobbering them dropped
         // the dedup record and re-sent duplicate emails. Ranges only leave by
         // aging past the cooldown. See lib/notifier-state-merge.ts.
-        const existing = (await kv.get(key, "json")) as { sites?: NotifierSites } | null;
-        const incoming = (entry.state ?? {}) as { sites?: NotifierSites };
+        const existing = (await kv.get(key, "json")) as {
+            sites?: NotifierSites;
+            groups?: NotifierSites;
+        } | null;
+        const incoming = (entry.state ?? {}) as { sites?: NotifierSites; groups?: NotifierSites };
         const sites = mergeNotifierSites(existing?.sites, incoming.sites, nowMs);
-        const result = await putIfChanged(kv, key, JSON.stringify({ sites }));
+        // The adjacent-group dedup bucket has the same shape as `sites`
+        // (key -> SeenRange[]) and the same overlapping-cron clobber risk, so it
+        // gets the identical merge. Dropping it here meant group cooldown state
+        // never persisted, so the same adjacent-site email re-sent every cycle.
+        const groups = mergeNotifierSites(existing?.groups, incoming.groups, nowMs);
+        const nextBlob = Object.keys(groups).length > 0 ? { sites, groups } : { sites };
+        const result = await putIfChanged(kv, key, JSON.stringify(nextBlob));
         if (result.written) written++;
         // lastNotifiedAt is the same clobber class: only ever advance it, so a
         // stale concurrent write can't move it backward and re-open eligibility.
