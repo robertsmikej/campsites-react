@@ -20,6 +20,17 @@ import { CSS } from "@dnd-kit/utilities";
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 
 import { Dialog, DialogContent, DialogFooter, DialogTitle } from "@/components/ui/dialog";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { CW } from "@/components/field-notes/cw-tokens";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -81,6 +92,7 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
         onClose,
         onSave,
         onAddDefaults,
+        onStartFresh,
         initialData,
         globalSettings,
         availableSites,
@@ -466,20 +478,52 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
                         margin: 0,
                     }}
                 >
-                    <button
-                        type="button"
-                        onClick={onAddDefaults}
-                        className="cursor-pointer whitespace-nowrap rounded-[2px] font-poster font-extrabold uppercase transition-colors hover:bg-[color-mix(in_srgb,var(--cw-clay)_8%,transparent)]"
-                        style={{
-                            fontSize: 12,
-                            letterSpacing: "0.12em",
-                            padding: "14px 22px",
-                            color: CW.clay,
-                            border: "1.5px solid transparent",
-                        }}
-                    >
-                        Add the curator&apos;s picks
-                    </button>
+                    <div className="flex items-center gap-1 sm:gap-3">
+                        <button
+                            type="button"
+                            onClick={onAddDefaults}
+                            className="cursor-pointer whitespace-nowrap rounded-[2px] font-poster font-extrabold uppercase transition-colors hover:bg-[color-mix(in_srgb,var(--cw-clay)_8%,transparent)]"
+                            style={{
+                                fontSize: 12,
+                                letterSpacing: "0.12em",
+                                padding: "14px 22px",
+                                color: CW.clay,
+                                border: "1.5px solid transparent",
+                            }}
+                        >
+                            Add the curator&apos;s picks
+                        </button>
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <button
+                                    type="button"
+                                    className="cursor-pointer whitespace-nowrap rounded-[2px] font-poster font-extrabold uppercase transition-colors hover:bg-[color-mix(in_srgb,var(--cw-ink-soft)_8%,transparent)]"
+                                    style={{
+                                        fontSize: 12,
+                                        letterSpacing: "0.12em",
+                                        padding: "14px 22px",
+                                        color: CW.inkSoft,
+                                        border: "1.5px solid transparent",
+                                    }}
+                                >
+                                    Start fresh
+                                </button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Erase your whole watchlist?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        This removes every campground from your list. Your notification
+                                        settings stay, and you can add any campground back afterward.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Keep them</AlertDialogCancel>
+                                    <AlertDialogAction onClick={onStartFresh}>Erase all</AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    </div>
                     <div className="flex items-center gap-3">
                         <button
                             type="button"

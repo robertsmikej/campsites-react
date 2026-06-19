@@ -43,6 +43,7 @@ export default function AppPage() {
         clearSyncStatus,
         save,
         cloneDefault,
+        startBlank,
     } = userCampgrounds;
 
     const isMobile = useIsMobile();
@@ -190,6 +191,11 @@ export default function AppPage() {
                 : "You already have all the curator's picks",
         );
     }, [userCampgrounds, auth]);
+
+    const handleStartFresh = useCallback(async () => {
+        await startBlank();
+        toast.success("Cleared your watchlist — add any campground to start again");
+    }, [startBlank]);
 
     // Compute open counts within date range
     const openCounts = useMemo(() => {
@@ -427,6 +433,7 @@ export default function AppPage() {
                             setFocusedCampgroundId(null);
                         }}
                         onAddDefaults={() => void handleAddDefaults()}
+                        onStartFresh={() => void handleStartFresh()}
                         initialData={siteConfig}
                         globalSettings={globalSettings}
                         availableSites={{}}

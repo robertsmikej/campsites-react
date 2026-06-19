@@ -14,6 +14,8 @@ export interface SiteConfigDialogProps {
     onSave: (config: SiteConfig, globalSettings: GlobalSettings) => void;
     /** Adds the curator's picks the user doesn't already have (non-destructive). */
     onAddDefaults: () => void;
+    /** Erases the user's whole watchlist (keeps notification settings). */
+    onStartFresh: () => void;
     initialData: SiteConfig;
     globalSettings: GlobalSettings;
     availableSites: Record<string, string[]>;
