@@ -315,6 +315,12 @@
     z-index: 1000 !important;
 }
 
+/* Adjacent-group cluster highlight — emerald ring */
+.cw-pin.adjacent-highlight {
+    outline: 2px solid #6ee7b7;
+    outline-offset: 3px;
+}
+
 /* Hovered — scale up slightly */
 .cw-pin.hov,
 .cw-pin:hover {
