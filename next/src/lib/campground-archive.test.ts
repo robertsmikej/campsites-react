@@ -136,4 +136,15 @@ describe("restoreCampground", () => {
         expect("checkPriority" in restored).toBe(false);
         expect("removedAt" in restored).toBe(false);
     });
+
+    it("stamps a fresh addedAt so a re-add counts as a new addition", () => {
+        const archived: ArchivedCampground = {
+            ...cg("7"),
+            addedAt: "2020-01-01T00:00:00.000Z",
+            removedAt: "2025-10-01T00:00:00.000Z",
+        };
+        const restored = restoreCampground(archived);
+        expect(typeof restored.addedAt).toBe("string");
+        expect(restored.addedAt! > "2020-01-01T00:00:00.000Z").toBe(true);
+    });
 });

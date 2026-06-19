@@ -27,15 +27,22 @@ export interface UseUserCampgroundsState {
     /** API-provided error message from the last failed save, if any. */
     syncError: string | null;
     isEmpty: boolean;
-    /** Campgrounds present in the curator's default but absent from the user's config. */
-    missingFromDefault: Campground[];
+    /** The curator's default list, as fetched. Drives the "recently added"
+     *  nudge and the lookup's "on our watch" detection. */
+    defaultCampgrounds: Campground[];
     clearSyncStatus: () => void;
     save: (config: SiteConfig, globalSettings: GlobalSettings) => Promise<void>;
     cloneDefault: () => Promise<void>;
     startBlank: () => Promise<void>;
     refresh: () => Promise<void>;
-    /** Merges missing default campgrounds into the user's config and saves. */
-    syncMissing: () => Promise<{ added: number }>;
+    /** Appends a single campground to the user's list and saves. No-op if the
+     *  id is already present. */
+    addCampground: (campground: Campground) => Promise<void>;
+    /** Adds every default campground the user doesn't already have, then marks
+     *  the default as seen. Returns how many were added. */
+    addAllFromDefault: () => Promise<{ added: number }>;
+    /** Marks the curator's default as seen as of now (dismisses the nudge). */
+    dismissRecentlyAdded: () => Promise<void>;
 }
 
 function emptyShape(): ApiRecord {
@@ -123,7 +130,7 @@ export function useUserCampgrounds(): UseUserCampgroundsState {
                 if (typeof window !== "undefined") {
                     window.dispatchEvent(new Event(WATCHLIST_CHANGED_EVENT));
                 }
-                // Re-fetch the default so missingFromDefault reflects any write-through
+                // Re-fetch the default so defaultCampgrounds reflects any write-through
                 // the server performed (curator saves update the default KV key).
                 void fetchDefault();
             } catch {
@@ -175,28 +182,51 @@ export function useUserCampgrounds(): UseUserCampgroundsState {
         }
     }, [record.globalSettings]);
 
-    const missingFromDefault = useMemo<Campground[]>(() => {
-        const defaultCampgrounds = defaultRecord?.campgrounds?.["recreation.gov"];
-        const userCampgrounds = record.campgrounds["recreation.gov"];
-        if (!defaultCampgrounds || !userCampgrounds) return [];
-        const userIds = new Set(userCampgrounds.map((c) => c.id).filter(Boolean));
-        return defaultCampgrounds.filter((c) => c.id && !userIds.has(c.id));
-    }, [defaultRecord, record.campgrounds]);
+    const defaultCampgrounds = useMemo<Campground[]>(
+        () => defaultRecord?.campgrounds?.["recreation.gov"] ?? [],
+        [defaultRecord],
+    );
 
-    const syncMissing = useCallback(async (): Promise<{ added: number }> => {
-        const defaultCampgrounds = defaultRecord?.campgrounds?.["recreation.gov"];
-        const userCampgrounds = record.campgrounds["recreation.gov"];
-        if (!defaultCampgrounds || !userCampgrounds) return { added: 0 };
-        const userIds = new Set(userCampgrounds.map((c) => c.id).filter(Boolean));
-        const missing = defaultCampgrounds.filter((c) => c.id && !userIds.has(c.id));
-        if (missing.length === 0) return { added: 0 };
-        const next: SiteConfig = {
-            ...record.campgrounds,
-            "recreation.gov": [...userCampgrounds, ...missing],
-        };
-        await save(next, record.globalSettings);
-        return { added: missing.length };
-    }, [defaultRecord, record, save]);
+    // POST that marks the curator's default as seen (server stamps the time).
+    const markDefaultSeen = useCallback(async () => {
+        try {
+            await fetch("/api/users/me/seen-default", { method: "POST", credentials: "include" });
+        } catch (e) {
+            console.warn("[useUserCampgrounds] seen-default failed:", e);
+        }
+    }, []);
+
+    const addCampground = useCallback(
+        async (campground: Campground) => {
+            const existing = record.campgrounds["recreation.gov"] ?? [];
+            if (existing.some((c) => c.id === campground.id)) return;
+            const next: SiteConfig = {
+                ...record.campgrounds,
+                "recreation.gov": [...existing, campground],
+            };
+            await save(next, record.globalSettings);
+        },
+        [record, save],
+    );
+
+    const addAllFromDefault = useCallback(async (): Promise<{ added: number }> => {
+        const existing = record.campgrounds["recreation.gov"] ?? [];
+        const existingIds = new Set(existing.map((c) => c.id).filter(Boolean));
+        const toAdd = defaultCampgrounds.filter((c) => c.id && !existingIds.has(c.id));
+        if (toAdd.length > 0) {
+            const next: SiteConfig = {
+                ...record.campgrounds,
+                "recreation.gov": [...existing, ...toAdd],
+            };
+            await save(next, record.globalSettings);
+        }
+        await markDefaultSeen();
+        return { added: toAdd.length };
+    }, [defaultCampgrounds, record, save, markDefaultSeen]);
+
+    const dismissRecentlyAdded = useCallback(async () => {
+        await markDefaultSeen();
+    }, [markDefaultSeen]);
 
     return {
         siteConfig: record.campgrounds,
@@ -206,7 +236,7 @@ export function useUserCampgrounds(): UseUserCampgroundsState {
         syncStatus,
         syncError,
         isEmpty: record.updatedAt === null && (record.campgrounds["recreation.gov"]?.length ?? 0) === 0,
-        missingFromDefault,
+        defaultCampgrounds,
         clearSyncStatus: () => {
             setSyncStatus(null);
             setSyncError(null);
@@ -215,6 +245,8 @@ export function useUserCampgrounds(): UseUserCampgroundsState {
         cloneDefault,
         startBlank,
         refresh,
-        syncMissing,
+        addCampground,
+        addAllFromDefault,
+        dismissRecentlyAdded,
     };
 }

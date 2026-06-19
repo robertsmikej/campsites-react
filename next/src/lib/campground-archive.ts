@@ -55,5 +55,8 @@ export function restoreCampground(entry: ArchivedCampground): Campground {
         ...rest,
         dates: defaultDates(),
         enabled: true,
+        // Re-adding is a fresh addition: on the curator's record this re-dates it
+        // so users get nudged about it again.
+        addedAt: new Date().toISOString(),
     };
 }

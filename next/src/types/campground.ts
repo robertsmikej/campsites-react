@@ -73,6 +73,11 @@ export interface Campground {
     enabled?: boolean;
     validStartDays?: string[];
     stayLengths?: number[];
+    /** ISO timestamp of when this campground was added to the list. On the
+     *  curator's record this dates curator additions to the default, which is
+     *  how the "recently added" nudge decides what's new to a user. Absent on
+     *  pre-existing entries — those are treated as old (never flagged new). */
+    addedAt?: string;
 }
 
 export interface ProcessedCampground extends Campground {

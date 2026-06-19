@@ -80,7 +80,7 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
         open,
         onClose,
         onSave,
-        onResetToDefaults,
+        onAddDefaults,
         initialData,
         globalSettings,
         availableSites,
@@ -468,7 +468,7 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
                 >
                     <button
                         type="button"
-                        onClick={onResetToDefaults}
+                        onClick={onAddDefaults}
                         className="cursor-pointer whitespace-nowrap rounded-[2px] font-poster font-extrabold uppercase transition-colors hover:bg-[color-mix(in_srgb,var(--cw-clay)_8%,transparent)]"
                         style={{
                             fontSize: 12,
@@ -478,7 +478,7 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
                             border: "1.5px solid transparent",
                         }}
                     >
-                        Reset to defaults
+                        Add the curator&apos;s picks
                     </button>
                     <div className="flex items-center gap-3">
                         <button

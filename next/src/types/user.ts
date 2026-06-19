@@ -20,4 +20,8 @@ export interface UserProfile {
     notificationEmail?: string;
     /** Address awaiting confirmation; alerts keep going to the effective address until verified. */
     pendingNotificationEmail?: string;
+    /** ISO timestamp of when the user last saw the curator's default list. The
+     *  "recently added" nudge only surfaces defaults added after this. Seeded at
+     *  signup, and bumped on borrow / add-all / dismiss. */
+    defaultSeenAt?: string;
 }

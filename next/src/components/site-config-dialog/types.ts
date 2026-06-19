@@ -12,7 +12,8 @@ export interface SiteConfigDialogProps {
     open: boolean;
     onClose: () => void;
     onSave: (config: SiteConfig, globalSettings: GlobalSettings) => void;
-    onResetToDefaults: () => void;
+    /** Adds the curator's picks the user doesn't already have (non-destructive). */
+    onAddDefaults: () => void;
     initialData: SiteConfig;
     globalSettings: GlobalSettings;
     availableSites: Record<string, string[]>;

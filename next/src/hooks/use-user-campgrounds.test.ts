@@ -185,121 +185,149 @@ describe("useUserCampgrounds fetch contract", () => {
 });
 
 // ---------------------------------------------------------------------------
-// missingFromDefault / syncMissing logic
+// default-additions actions: defaultCampgrounds / addCampground /
+// addAllFromDefault / dismissRecentlyAdded
 // ---------------------------------------------------------------------------
 
-const DEFAULT_ENDPOINT = "/api/default";
+const SEEN_ENDPOINT = "/api/users/me/seen-default";
 
-function makeDefaultRecord(campgrounds: unknown[] = []) {
-    return {
-        campgrounds: { "recreation.gov": campgrounds },
-        globalSettings: {
-            stayLengths: [2, 3, 4, 5],
-            validStartDays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
-        },
-    };
+interface RouteState {
+    userRecord: ReturnType<typeof makeFakeRecord>;
+    defaultRecord: { campgrounds: { "recreation.gov": unknown[] }; globalSettings: unknown };
+    calls: Array<{ url: string; method: string; body?: string }>;
 }
 
-describe("missingFromDefault logic", () => {
-    it("returns campgrounds in default but not in user config", () => {
-        const userCampgrounds = [
-            { id: "111", name: "Existing Camp", sites: { favorites: [], worthwhile: [] } },
-        ];
-        const defaultCampgrounds = [
-            { id: "111", name: "Existing Camp", sites: { favorites: [], worthwhile: [] } },
-            { id: "233881", name: "Deadwood Lookout", sites: { favorites: [], worthwhile: [] } },
-            { id: "233128", name: "Lookout Butte", sites: { favorites: [], worthwhile: [] } },
-        ];
-        const userIds = new Set(userCampgrounds.map((c) => c.id).filter(Boolean));
-        const missing = defaultCampgrounds.filter((c) => c.id && !userIds.has(c.id));
-        expect(missing).toHaveLength(2);
-        expect(missing.map((c) => c.id)).toEqual(["233881", "233128"]);
+/** A fetch mock that routes by URL + method and records every call. */
+function routedFetch(state: RouteState) {
+    return vi.fn((url: string, opts?: RequestInit) => {
+        const u = String(url);
+        const method = (opts?.method ?? "GET").toUpperCase();
+        state.calls.push({ url: u, method, body: opts?.body as string | undefined });
+
+        if (u.includes("/api/default")) {
+            return Promise.resolve(new Response(JSON.stringify(state.defaultRecord), { status: 200 }));
+        }
+        if (u.includes(SEEN_ENDPOINT)) {
+            return Promise.resolve(new Response(JSON.stringify({ defaultSeenAt: "now" }), { status: 200 }));
+        }
+        // /api/users/me/campgrounds (GET hydration or PUT save)
+        if (method === "PUT") {
+            const parsed = JSON.parse(opts!.body as string) as { campgrounds: unknown };
+            const stored = makeFakeRecord({
+                updatedAt: "2024-02-01T00:00:00.000Z",
+                campgrounds: parsed.campgrounds as never,
+            });
+            return Promise.resolve(new Response(JSON.stringify(stored), { status: 200 }));
+        }
+        return Promise.resolve(new Response(JSON.stringify(state.userRecord), { status: 200 }));
+    });
+}
+
+function cg(id: string) {
+    return { id, name: `CG ${id}`, sites: { favorites: [], worthwhile: [] } };
+}
+
+describe("default-additions actions", () => {
+    afterEach(() => vi.restoreAllMocks());
+
+    function mount(state: RouteState) {
+        globalThis.fetch = routedFetch(state) as never;
+        return renderHook(() => useUserCampgrounds());
+    }
+
+    it("exposes the curator default list via defaultCampgrounds", async () => {
+        const state: RouteState = {
+            userRecord: makeFakeRecord({ updatedAt: "2024-01-01T00:00:00.000Z" }),
+            defaultRecord: { campgrounds: { "recreation.gov": [cg("233881")] }, globalSettings: {} },
+            calls: [],
+        };
+        const { result } = mount(state);
+        await waitFor(() => expect(result.current.defaultCampgrounds).toHaveLength(1));
+        expect(result.current.defaultCampgrounds[0]?.id).toBe("233881");
     });
 
-    it("returns empty array when user has all default campgrounds", () => {
-        const campgrounds = [{ id: "111", name: "Camp A", sites: { favorites: [], worthwhile: [] } }];
-        const userIds = new Set(campgrounds.map((c) => c.id).filter(Boolean));
-        const missing = campgrounds.filter((c) => c.id && !userIds.has(c.id));
-        expect(missing).toHaveLength(0);
-    });
-
-    it("skips campgrounds without an id", () => {
-        const userCampgrounds: { id?: string; name: string; sites: object }[] = [];
-        const defaultCampgrounds = [
-            { name: "No ID Camp", sites: { favorites: [], worthwhile: [] } },
-            { id: "222", name: "Has ID Camp", sites: { favorites: [], worthwhile: [] } },
-        ];
-        const userIds = new Set(userCampgrounds.map((c) => c.id).filter(Boolean) as string[]);
-        const missing = defaultCampgrounds.filter((c) => c.id && !userIds.has(c.id));
-        // Only the camp with an id should appear
-        expect(missing).toHaveLength(1);
-        expect(missing[0]?.id).toBe("222");
-    });
-
-    it("returns all defaults when user has zero campgrounds", () => {
-        const userCampgrounds: { id: string; name: string; sites: object }[] = [];
-        const defaultCampgrounds = [
-            { id: "111", name: "Camp A", sites: { favorites: [], worthwhile: [] } },
-            { id: "222", name: "Camp B", sites: { favorites: [], worthwhile: [] } },
-        ];
-        const userIds = new Set(userCampgrounds.map((c) => c.id).filter(Boolean));
-        const missing = defaultCampgrounds.filter((c) => c.id && !userIds.has(c.id));
-        expect(missing).toHaveLength(2);
-    });
-});
-
-describe("syncMissing fetch contract", () => {
-    beforeEach(() => {
-        // @ts-expect-error patching globalThis.fetch for tests
-        globalThis.fetch = undefined;
-    });
-
-    afterEach(() => {
-        vi.restoreAllMocks();
-    });
-
-    it("GET /api/default fetches the curator default config", async () => {
-        const defaultRecord = makeDefaultRecord([
-            { id: "233881", name: "Deadwood Lookout", sites: { favorites: [], worthwhile: [] } },
-        ]);
-        const fetchMock = mockFetch(defaultRecord);
-        globalThis.fetch = fetchMock;
-
-        const result = await fetch(DEFAULT_ENDPOINT, { credentials: "include" });
-        const data = (await result.json()) as typeof defaultRecord;
-
-        expect(fetchMock).toHaveBeenCalledWith(DEFAULT_ENDPOINT, { credentials: "include" });
-        expect(data.campgrounds["recreation.gov"]).toHaveLength(1);
-    });
-
-    it("syncMissing PUTs merged list via the existing campgrounds endpoint", async () => {
-        const existing = [{ id: "111", name: "Existing", sites: { favorites: [], worthwhile: [] } }];
-        const missing = [
-            { id: "233881", name: "Deadwood Lookout", sites: { favorites: [], worthwhile: [] } },
-        ];
-        const merged = [...existing, ...missing];
-        const globalSettings = { stayLengths: [2, 3, 4, 5], validStartDays: ["Monday"] };
-        const stored = makeFakeRecord({
-            updatedAt: "2024-01-03T00:00:00.000Z",
-            campgrounds: { "recreation.gov": merged },
-        });
-        const fetchMock = mockFetch(stored);
-        globalThis.fetch = fetchMock;
-
-        // Simulate what syncMissing does: PUT merged config
-        await fetch(ENDPOINT, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ campgrounds: { "recreation.gov": merged }, globalSettings }),
-            credentials: "include",
-        });
-
-        expect(fetchMock).toHaveBeenCalledWith(
-            ENDPOINT,
-            expect.objectContaining({
-                method: "PUT",
-                body: expect.stringContaining("233881"),
+    it("addCampground PUTs the user's list with the new campground appended", async () => {
+        const state: RouteState = {
+            userRecord: makeFakeRecord({
+                updatedAt: "2024-01-01T00:00:00.000Z",
+                campgrounds: { "recreation.gov": [cg("111")] },
             }),
-        );
+            defaultRecord: { campgrounds: { "recreation.gov": [] }, globalSettings: {} },
+            calls: [],
+        };
+        const { result } = mount(state);
+        await waitFor(() => expect(result.current.isHydrating).toBe(false));
+
+        await act(async () => {
+            await result.current.addCampground(cg("999") as never);
+        });
+
+        const put = state.calls.find((c) => c.method === "PUT");
+        expect(put).toBeDefined();
+        expect(put!.body).toContain("999");
+        expect(put!.body).toContain("111");
+        expect(result.current.siteConfig["recreation.gov"].map((c) => c.id)).toEqual(["111", "999"]);
+    });
+
+    it("addCampground is a no-op when the campground is already on the list", async () => {
+        const state: RouteState = {
+            userRecord: makeFakeRecord({
+                updatedAt: "2024-01-01T00:00:00.000Z",
+                campgrounds: { "recreation.gov": [cg("111")] },
+            }),
+            defaultRecord: { campgrounds: { "recreation.gov": [] }, globalSettings: {} },
+            calls: [],
+        };
+        const { result } = mount(state);
+        await waitFor(() => expect(result.current.isHydrating).toBe(false));
+
+        await act(async () => {
+            await result.current.addCampground(cg("111") as never);
+        });
+
+        expect(state.calls.some((c) => c.method === "PUT")).toBe(false);
+    });
+
+    it("addAllFromDefault merges missing defaults, acks seen-default, and reports the count", async () => {
+        const state: RouteState = {
+            userRecord: makeFakeRecord({
+                updatedAt: "2024-01-01T00:00:00.000Z",
+                campgrounds: { "recreation.gov": [cg("111")] },
+            }),
+            defaultRecord: {
+                campgrounds: { "recreation.gov": [cg("111"), cg("222"), cg("333")] },
+                globalSettings: {},
+            },
+            calls: [],
+        };
+        const { result } = mount(state);
+        await waitFor(() => expect(result.current.defaultCampgrounds).toHaveLength(3));
+
+        let added = -1;
+        await act(async () => {
+            added = (await result.current.addAllFromDefault()).added;
+        });
+
+        expect(added).toBe(2);
+        const put = state.calls.find((c) => c.method === "PUT");
+        expect(put!.body).toContain("222");
+        expect(put!.body).toContain("333");
+        expect(state.calls.some((c) => c.url.includes(SEEN_ENDPOINT) && c.method === "POST")).toBe(true);
+    });
+
+    it("dismissRecentlyAdded POSTs to the seen-default endpoint", async () => {
+        const state: RouteState = {
+            userRecord: makeFakeRecord({ updatedAt: "2024-01-01T00:00:00.000Z" }),
+            defaultRecord: { campgrounds: { "recreation.gov": [] }, globalSettings: {} },
+            calls: [],
+        };
+        const { result } = mount(state);
+        await waitFor(() => expect(result.current.isHydrating).toBe(false));
+
+        await act(async () => {
+            await result.current.dismissRecentlyAdded();
+        });
+
+        expect(state.calls.some((c) => c.url.includes(SEEN_ENDPOINT) && c.method === "POST")).toBe(true);
     });
 });

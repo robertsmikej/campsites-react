@@ -23,12 +23,16 @@ export async function createUserProfile(
     seed: Pick<UserProfile, "name"> & Partial<Pick<UserProfile, "picture">>,
 ): Promise<UserProfile> {
     const kv = getKv();
+    const now = new Date().toISOString();
     const profile: UserProfile = {
         email,
         name: seed.name,
         picture: seed.picture,
         roles: [],
-        createdAt: new Date().toISOString(),
+        createdAt: now,
+        // New users start blank and have, by definition, seen the current
+        // default — so the "recently added" nudge only fires for later additions.
+        defaultSeenAt: now,
     };
     await kv.put(profileKey(email), JSON.stringify(profile));
     return profile;

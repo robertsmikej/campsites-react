@@ -81,6 +81,38 @@ describe("POST /api/users/me/campgrounds/clone-default", () => {
         expect(stored.globalSettings).toEqual(curatedDefault.globalSettings);
     });
 
+    it("bumps the user's defaultSeenAt so the nudge won't re-offer what was just borrowed", async () => {
+        vi.mocked(sessions.readSession).mockResolvedValue({
+            id: "x",
+            email: "user@example.com",
+            createdAt: "x",
+            expiresAt: "x",
+        });
+
+        const kv = createMockKv({
+            "user:user@example.com:profile": JSON.stringify({
+                email: "user@example.com",
+                name: "User",
+                roles: [],
+                createdAt: "2026-01-01T00:00:00.000Z",
+                defaultSeenAt: "2026-01-01T00:00:00.000Z",
+            }),
+        });
+        vi.mocked(cloudflare.getKv).mockReturnValue(kv);
+        vi.mocked(cloudflare.getEnv).mockReturnValue({
+            BOOTSTRAP_ADMIN_EMAIL: "boss@example.com",
+            SUBSCRIBERS: kv,
+        } as never);
+
+        const res = await doPost();
+        expect(res.status).toBe(200);
+
+        const profile = (await kv.get("user:user@example.com:profile", "json")) as {
+            defaultSeenAt: string;
+        };
+        expect(profile.defaultSeenAt > "2026-01-01T00:00:00.000Z").toBe(true);
+    });
+
     it("falls back to static defaults when KV config is empty", async () => {
         vi.mocked(sessions.readSession).mockResolvedValue({
             id: "x",

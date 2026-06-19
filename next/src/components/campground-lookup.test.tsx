@@ -13,7 +13,7 @@ vi.mock("@/hooks/use-user-campgrounds", () => ({
         isHydrating: false,
         siteConfig: { "recreation.gov": [] },
         globalSettings: { stayLengths: [2, 3], validStartDays: ["Friday"] },
-        missingFromDefault: [],
+        defaultCampgrounds: [],
         save: vi.fn(async () => {}),
     })),
 }));
@@ -94,7 +94,7 @@ describe("CampgroundLookup variants", () => {
             isHydrating: false,
             siteConfig: { "recreation.gov": [] },
             globalSettings: { stayLengths: [2, 3], validStartDays: ["Friday"] },
-            missingFromDefault: [],
+            defaultCampgrounds: [],
             save,
         } as never);
 
@@ -110,6 +110,30 @@ describe("CampgroundLookup variants", () => {
         };
         const added = savedConfig["recreation.gov"].find((c) => c.id === "234567");
         expect(added?.dates).toEqual(defaultDates());
+    });
+
+    it("stamps addedAt on a newly added campground", async () => {
+        const save = vi.fn(async (_config: unknown, _gs: unknown) => {});
+        vi.mocked(useUserCampgrounds).mockReturnValue({
+            isHydrating: false,
+            siteConfig: { "recreation.gov": [] },
+            globalSettings: { stayLengths: [2, 3], validStartDays: ["Friday"] },
+            defaultCampgrounds: [],
+            save,
+        } as never);
+
+        render(<CampgroundLookup variant="dashboard" />);
+        fireEvent.change(screen.getByRole("textbox"), { target: { value: "234567" } });
+        fireEvent.click(screen.getByRole("button", { name: /check/i }));
+        await waitFor(() => expect(screen.getByText("Bench Lakes")).toBeTruthy());
+        fireEvent.click(screen.getByRole("button", { name: /add to my watchlist/i }));
+
+        await waitFor(() => expect(save).toHaveBeenCalled());
+        const savedConfig = save.mock.calls[0]?.[0] as {
+            "recreation.gov": Array<{ id: string; addedAt?: string }>;
+        };
+        const added = savedConfig["recreation.gov"].find((c) => c.id === "234567");
+        expect(typeof added?.addedAt).toBe("string");
     });
 
     it("homepage variant keeps the original status copy for a new campground", async () => {
@@ -134,7 +158,7 @@ describe("CampgroundLookup variants", () => {
             isHydrating: false,
             siteConfig: { "recreation.gov": [] },
             globalSettings: { stayLengths: [2, 3], validStartDays: ["Friday"] },
-            missingFromDefault: [],
+            defaultCampgrounds: [],
             save,
         } as never);
 
@@ -167,7 +191,7 @@ describe("CampgroundLookup variants", () => {
                 ],
             },
             globalSettings: { stayLengths: [2, 3], validStartDays: ["Friday"] },
-            missingFromDefault: [],
+            defaultCampgrounds: [],
             save: vi.fn(async () => {}),
         } as never);
 

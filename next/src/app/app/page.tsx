@@ -25,8 +25,10 @@ import { OpeningsFeed } from "@/components/dashboard/openings-feed";
 import { WatchlistSection } from "@/components/dashboard/watchlist-section";
 import { EmptyState } from "@/components/dashboard/empty-state";
 import { siteData } from "@/data/site-data";
+import { recentlyAddedFromDefault } from "@/lib/default-additions";
 import type { SiteSettingsValue } from "@/context/site-settings";
 import type { OpeningItem } from "@/components/dashboard/openings-feed";
+import type { Campground } from "@/types/campground";
 // import type { GroupBy } from "@/hooks/use-dashboard-prefs"; // kept for future grouping UI
 
 export default function AppPage() {
@@ -49,6 +51,7 @@ export default function AppPage() {
     const [focusedCampgroundId, setFocusedCampgroundId] = useState<string | null>(null);
     const [dismissedSync, setDismissedSync] = useState(false);
     const [addModalOpen, setAddModalOpen] = useState(false);
+    const [addingIds, setAddingIds] = useState<Set<string>>(new Set());
 
     // Latest season-end across the user's watched campgrounds. The default
     // date range clamps to this so the strip doesn't show dead ticks past the
@@ -143,6 +146,51 @@ export default function AppPage() {
     const isLoading = isFetching || isHydrating;
     const isEmpty = !userCampgrounds.isHydrating && userCampgrounds.isEmpty;
 
+    // Campgrounds the curator has added to the default since this user last saw
+    // it, that the user doesn't already have — the "recently added" nudge.
+    const recentlyAdded = useMemo(
+        () =>
+            recentlyAddedFromDefault(
+                userCampgrounds.defaultCampgrounds,
+                siteConfig["recreation.gov"] ?? [],
+                auth.user?.defaultSeenAt,
+            ),
+        [userCampgrounds.defaultCampgrounds, siteConfig, auth.user?.defaultSeenAt],
+    );
+
+    const handleAddRecent = useCallback(
+        async (c: Campground) => {
+            setAddingIds((prev) => new Set(prev).add(c.id));
+            try {
+                await userCampgrounds.addCampground(c);
+                toast.success(`Added ${c.name}`);
+            } finally {
+                setAddingIds((prev) => {
+                    const next = new Set(prev);
+                    next.delete(c.id);
+                    return next;
+                });
+            }
+        },
+        [userCampgrounds],
+    );
+
+    const handleDismissRecent = useCallback(async () => {
+        setDismissedSync(true);
+        await userCampgrounds.dismissRecentlyAdded();
+        await auth.refresh();
+    }, [userCampgrounds, auth]);
+
+    const handleAddDefaults = useCallback(async () => {
+        const { added } = await userCampgrounds.addAllFromDefault();
+        await auth.refresh();
+        toast.success(
+            added > 0
+                ? `Added ${added} campground${added === 1 ? "" : "s"}`
+                : "You already have all the curator's picks",
+        );
+    }, [userCampgrounds, auth]);
+
     // Compute open counts within date range
     const openCounts = useMemo(() => {
         const m = new Map<string, number>();
@@ -235,47 +283,43 @@ export default function AppPage() {
 
                     <main className="bg-cw-paper text-cw-ink font-body-serif min-h-screen">
                         <div className="mx-auto w-full max-w-screen-2xl">
-                            {/* Missing-from-default sync banner */}
-                            {userCampgrounds.missingFromDefault.length > 0 && !dismissedSync && (
+                            {/* Recently-added-by-the-curator nudge: add each individually */}
+                            {recentlyAdded.length > 0 && !dismissedSync && (
                                 <div className="px-[22px] py-3 md:px-9">
-                                    <div className="flex flex-wrap items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm">
-                                        <Sparkles className="size-4 shrink-0 text-primary" aria-hidden />
-                                        <div className="min-w-0 flex-1">
-                                            <p className="font-medium">
-                                                {userCampgrounds.missingFromDefault.length} new campground
-                                                {userCampgrounds.missingFromDefault.length === 1
-                                                    ? ""
-                                                    : "s"}{" "}
-                                                in the default config
+                                    <div className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm">
+                                        <div className="flex items-center gap-3">
+                                            <Sparkles className="size-4 shrink-0 text-primary" aria-hidden />
+                                            <p className="min-w-0 flex-1 font-medium">
+                                                The curator added {recentlyAdded.length} new campground
+                                                {recentlyAdded.length === 1 ? "" : "s"}
                                             </p>
-                                            <p className="truncate text-xs text-muted-foreground">
-                                                {userCampgrounds.missingFromDefault
-                                                    .map((c) => c.name)
-                                                    .join(", ")}
-                                            </p>
-                                        </div>
-                                        <div className="flex shrink-0 items-center gap-2">
-                                            <Button
-                                                size="sm"
-                                                onClick={async () => {
-                                                    const result = await userCampgrounds.syncMissing();
-                                                    setDismissedSync(true);
-                                                    toast.success(
-                                                        `Added ${result.added} campground${result.added === 1 ? "" : "s"}`,
-                                                    );
-                                                }}
-                                            >
-                                                Add to my list
-                                            </Button>
                                             <Button
                                                 size="icon"
                                                 variant="ghost"
-                                                onClick={() => setDismissedSync(true)}
+                                                onClick={() => void handleDismissRecent()}
                                                 aria-label="Dismiss"
                                             >
                                                 <X className="size-4" />
                                             </Button>
                                         </div>
+                                        <ul className="mt-2 flex flex-col gap-1.5">
+                                            {recentlyAdded.map((c) => (
+                                                <li
+                                                    key={c.id}
+                                                    className="flex items-center justify-between gap-3"
+                                                >
+                                                    <span className="min-w-0 truncate">{c.name}</span>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        disabled={addingIds.has(c.id)}
+                                                        onClick={() => void handleAddRecent(c)}
+                                                    >
+                                                        {addingIds.has(c.id) ? "Adding…" : "Add"}
+                                                    </Button>
+                                                </li>
+                                            ))}
+                                        </ul>
                                     </div>
                                 </div>
                             )}
@@ -382,7 +426,7 @@ export default function AppPage() {
                             setIsConfigDialogOpen(false);
                             setFocusedCampgroundId(null);
                         }}
-                        onResetToDefaults={() => void cloneDefault()}
+                        onAddDefaults={() => void handleAddDefaults()}
                         initialData={siteConfig}
                         globalSettings={globalSettings}
                         availableSites={{}}

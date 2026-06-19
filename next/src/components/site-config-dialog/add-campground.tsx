@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { parseFacilityId, type FacilitySummary } from "@/lib/recgov-facility";
 import { defaultDates } from "@/lib/default-dates";
+import { buildCampgroundFromFacility } from "@/lib/build-campground";
 import type { Campground, CampgroundType } from "@/types/campground";
 
 interface AddCampgroundProps {
@@ -57,20 +58,7 @@ export function AddCampground({ existingIds, onAdd }: AddCampgroundProps) {
 
     function handleAdd() {
         if (!preview) return;
-        const campground: Campground = {
-            id: preview.id,
-            name: preview.name.trim(),
-            site: "recreation.gov",
-            type: preview.type,
-            sites: { favorites: [], worthwhile: [] },
-            showOrHide: { Favorites: true, Worthwhile: true, "All Others": true },
-            enabled: true,
-            dates: { startDate: dates.startDate, endDate: dates.endDate },
-        };
-        if (preview.area?.trim()) campground.area = preview.area.trim();
-        if (preview.description?.trim()) campground.description = preview.description.trim();
-        if (preview.imageUrl?.trim()) campground.image = preview.imageUrl.trim();
-        onAdd(campground);
+        onAdd(buildCampgroundFromFacility(preview, dates));
         setInput("");
         setPreview(null);
         setDates(defaultDates());

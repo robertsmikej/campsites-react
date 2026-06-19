@@ -34,6 +34,16 @@ describe("user profile CRUD", () => {
         expect(typeof profile?.createdAt).toBe("string");
     });
 
+    it("seeds defaultSeenAt on creation so new users only see future curator additions", async () => {
+        const kv = createMockKv();
+        vi.spyOn(cloudflare, "getKv").mockReturnValue(kv);
+
+        await createUserProfile("user@example.com", { name: "User" });
+
+        const profile = await getUserProfile("user@example.com");
+        expect(typeof profile?.defaultSeenAt).toBe("string");
+    });
+
     it("returns null for unknown email", async () => {
         vi.spyOn(cloudflare, "getKv").mockReturnValue(createMockKv());
         expect(await getUserProfile("nope@example.com")).toBeNull();

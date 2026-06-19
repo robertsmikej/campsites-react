@@ -58,6 +58,7 @@ function buildNewCampground(id: string, name: string, previewImageUrl?: string |
         dates: defaultDates(),
         sites: { favorites: [], worthwhile: [] },
         notifyAll: false,
+        addedAt: new Date().toISOString(),
     };
 }
 
@@ -356,8 +357,8 @@ export function CampgroundLookup({ variant = "homepage" }: CampgroundLookupProps
                 return { state: "on-list", parsedId: id, cg: { id, name: userMatch.name } };
             }
 
-            // Check default (missingFromDefault reflects what's in default but not user)
-            const inDefault = userCampgrounds.missingFromDefault.find((c) => c.id === id);
+            // On the curator's default list but not the user's own → "on our watch".
+            const inDefault = userCampgrounds.defaultCampgrounds.find((c) => c.id === id);
             if (inDefault) {
                 return { state: "watched", parsedId: id, cg: { id, name: inDefault.name } };
             }
