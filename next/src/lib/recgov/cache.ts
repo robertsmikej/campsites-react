@@ -20,6 +20,7 @@ export const snapshotCacheKey = (email: string): string => `snapshot:${email}`;
 export interface SnapshotCampground extends Campground {
     siteAvailability: SiteAvailabilityMap;
     totalSitesCount: number;
+    adjacentGroups?: import("../adjacent-groups").AdjacentGroup[];
 }
 
 export interface AvailabilitySnapshot {

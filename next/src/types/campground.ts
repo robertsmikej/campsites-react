@@ -1,4 +1,8 @@
+import type { AdjacentGroup } from "../lib/adjacent-groups";
+
 export type CampgroundSystem = "recreation.gov";
+
+export type { AdjacentGroup };
 
 export interface SiteAvailability {
     siteId: string;
@@ -66,6 +70,10 @@ export interface Campground {
     /** Which sites at this campground should trigger an email. Falls back
      *  through `notifyAll` (legacy) and the user's defaultNotifyScope. */
     notifyScope?: NotifyScope;
+    /** Adjacent-site group alerts. Absent = off. Anchor scope mirrors NotifyScope:
+     *  "favorites" requires a favorite in the group, "worthwhile" a fav-or-worthwhile,
+     *  "all" no anchor requirement. */
+    adjacencyAnchor?: NotifyScope;
     /** @deprecated use notifyScope. true == "all". */
     notifyAll?: boolean;
     /** How often the notifier checks this campground. Absent = "normal" (every 5 min). */
@@ -94,6 +102,7 @@ export interface ProcessedCampground extends Campground {
         sites: Record<string, { siteId: string; byStayLength: number; byStartDay: number }>;
     };
     hasAvailability?: boolean;
+    adjacentGroups?: AdjacentGroup[];
 }
 
 /** A user-level "I'm busy/booked" range. Inclusive calendar days, ISO dates. */
