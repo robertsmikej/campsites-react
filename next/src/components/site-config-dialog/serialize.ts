@@ -117,6 +117,7 @@ export function sanitizeCampground(campground: EditableCampground): Campground {
         ...(campground.validStartDays ? { validStartDays: campground.validStartDays } : {}),
         ...(campground.stayLengths ? { stayLengths: campground.stayLengths } : {}),
         ...(campground.notifyScope ? { notifyScope: campground.notifyScope } : {}),
+        ...(campground.adjacencyAnchor ? { adjacencyAnchor: campground.adjacencyAnchor } : {}),
         ...(campground.notifyAll != null ? { notifyAll: campground.notifyAll } : {}),
         // Omit "normal" — absent means normal by convention, keeping stored data sparse.
         ...(campground.checkPriority && campground.checkPriority !== "normal"

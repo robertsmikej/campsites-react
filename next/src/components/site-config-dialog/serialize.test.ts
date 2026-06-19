@@ -122,6 +122,16 @@ describe("sanitizeCampground", () => {
         expect("checkPriority" in sanitizeCampground({ ...base, checkPriority: "normal" })).toBe(false);
         expect("checkPriority" in sanitizeCampground(base)).toBe(false);
     });
+
+    it("persists adjacencyAnchor when set", () => {
+        const out = sanitizeCampground({ ...createEmptyCampground(), adjacencyAnchor: "worthwhile" });
+        expect(out.adjacencyAnchor).toBe("worthwhile");
+    });
+
+    it("omits adjacencyAnchor when unset", () => {
+        const out = sanitizeCampground(createEmptyCampground());
+        expect(out.adjacencyAnchor).toBeUndefined();
+    });
 });
 
 // ---------------------------------------------------------------------------
