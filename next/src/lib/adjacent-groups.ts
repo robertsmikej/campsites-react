@@ -1,3 +1,7 @@
+import { findConsecutiveAvailableRanges, getAllDatesInRange } from "./recgov/match-detection";
+import { stayOverlapsBlackout } from "./blackout";
+import type { NotifyScope, BlackoutRange } from "../types/campground";
+
 export interface AdjacencySite {
     id: string;
     lat: number | null;
@@ -79,10 +83,6 @@ export function buildAdjacencyEdges(sites: AdjacencySite[]): Map<string, Set<str
     return edges;
 }
 
-import { findConsecutiveAvailableRanges, getAllDatesInRange } from "./recgov/match-detection";
-import { stayOverlapsBlackout } from "./blackout";
-import type { NotifyScope, BlackoutRange } from "../types/campground";
-
 export interface AdjacentGroup {
     campgroundId: string;
     siteIds: string[];
@@ -128,12 +128,6 @@ function components(edges: Map<string, Set<string>>, allowed: Set<string>): stri
         out.push(comp.sort());
     }
     return out;
-}
-
-function tierOf(id: string, fav: Set<string>, worth: Set<string>): AdjacentGroup["anchorTier"] {
-    if (fav.has(id)) return "favorites";
-    if (worth.has(id)) return "worthwhile";
-    return "none";
 }
 
 function passesAnchor(scope: NotifyScope, hasFav: boolean, hasWorth: boolean): boolean {

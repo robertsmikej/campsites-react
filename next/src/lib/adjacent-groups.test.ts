@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { buildAdjacencyEdges, type AdjacencySite } from "./adjacent-groups";
+import { findAdjacentGroups, type AdjacentGroupInput } from "./adjacent-groups";
 
 // ~10m of latitude ≈ 0.00009 deg; ~50m ≈ 0.00045 deg; ~80m ≈ 0.00072 deg.
 const at = (id: string, latOffset: number, loop?: string): AdjacencySite => ({
@@ -79,8 +80,6 @@ describe("buildAdjacencyEdges — number fallback", () => {
         expect(edges.get("012")?.has("013")).toBe(true);
     });
 });
-
-import { findAdjacentGroups, type AdjacentGroupInput } from "./adjacent-groups";
 
 const baseSettings = { stayLengths: [2], validStartDays: ["Friday", "Saturday"], blackoutDates: [] };
 
