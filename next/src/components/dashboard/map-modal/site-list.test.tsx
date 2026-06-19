@@ -2,6 +2,7 @@ import { it, expect, vi, afterEach } from "vitest";
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import { SiteList } from "./site-list";
 import type { MapSite } from "@/lib/map-sites";
+import type { AdjacentGroup } from "@/types/campground";
 
 afterEach(cleanup);
 
@@ -61,4 +62,59 @@ it("fires onSelect when a row is clicked", () => {
     );
     fireEvent.click(screen.getByText("A-07"));
     expect(onSelect).toHaveBeenCalledWith("A-07");
+});
+
+it("labels an adjacent group with its sites and dates", () => {
+    const adjacentSites: MapSite[] = [
+        {
+            id: "012",
+            campsiteId: "10",
+            lat: 44.1,
+            lng: -114.9,
+            type: "tent",
+            rating: null,
+            reviews: 0,
+            cell: 2,
+            amenities: {},
+            open: true,
+            openCount: 3,
+            tier: "fav",
+        },
+        {
+            id: "013",
+            campsiteId: "11",
+            lat: 44.11,
+            lng: -114.91,
+            type: "tent",
+            rating: null,
+            reviews: 0,
+            cell: 2,
+            amenities: {},
+            open: true,
+            openCount: 3,
+            tier: "worth",
+        },
+    ];
+    const group: AdjacentGroup = {
+        campgroundId: "cg1",
+        siteIds: ["012", "013"],
+        siteNames: ["012", "013"],
+        from: "2026-06-10",
+        to: "2026-06-14",
+        nights: 4,
+        anchorTier: "favorites",
+    };
+    render(
+        <SiteList
+            sites={adjacentSites}
+            selectedId={null}
+            hoveredId={null}
+            onSelect={() => {}}
+            onHover={() => {}}
+            adjacentGroups={[group]}
+        />,
+    );
+    expect(screen.getByText(/Adjacent group/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/012/).length).toBeGreaterThan(0);
+    expect(screen.getByText(/Jun 1\d/)).toBeInTheDocument();
 });

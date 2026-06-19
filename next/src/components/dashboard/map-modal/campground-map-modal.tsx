@@ -80,6 +80,9 @@ export function CampgroundMapModal({
     const bookableCount = sites.filter((s) => s.open).length;
     const selectedSite = selectedSiteId ? (sites.find((s) => s.id === selectedSiteId) ?? null) : null;
 
+    const adjacentGroups = campground?.adjacentGroups ?? [];
+    const groupedSiteIds = new Set(adjacentGroups.flatMap((g) => g.siteIds));
+
     return (
         <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
             <DialogContent
@@ -190,6 +193,7 @@ export function CampgroundMapModal({
                                         hoveredId={hoveredSiteId}
                                         onSelect={setSelectedSiteId}
                                         onHover={setHoveredSiteId}
+                                        groupedSiteIds={groupedSiteIds}
                                     />
                                     {/* SitePopover — rendered inside the map column when a site is selected */}
                                     {selectedSite && (
@@ -235,6 +239,7 @@ export function CampgroundMapModal({
                                     hoveredId={hoveredSiteId}
                                     onSelect={setSelectedSiteId}
                                     onHover={setHoveredSiteId}
+                                    adjacentGroups={adjacentGroups}
                                 />
                             </div>
                         </div>

@@ -16,12 +16,14 @@ export function SiteMap({
     hoveredId,
     onSelect,
     onHover,
+    groupedSiteIds,
 }: {
     sites: MapSite[];
     selectedId: string | null;
     hoveredId: string | null;
     onSelect: (id: string | null) => void;
     onHover: (id: string | null) => void;
+    groupedSiteIds?: Set<string>;
 }): JSX.Element {
     const elRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<L.Map | null>(null);
@@ -76,12 +78,14 @@ export function SiteMap({
             const isSel = s.id === selectedId;
             const isHov = s.id === hoveredId;
             const isFav = s.tier === "fav";
+            const isGrouped = groupedSiteIds?.has(s.id) ?? false;
             const cls = [
                 "cw-pin",
                 s.open ? "open" : "booked",
                 isFav ? "fav" : "",
                 isSel ? "sel" : "",
                 isHov ? "hov" : "",
+                isGrouped ? "adjacent-highlight" : "",
             ]
                 .filter(Boolean)
                 .join(" ");
@@ -103,7 +107,7 @@ export function SiteMap({
             marker.on("mouseout", () => onHover(null));
             markersRef.current.set(s.id, marker);
         }
-    }, [sites, selectedId, hoveredId, onSelect, onHover]);
+    }, [sites, selectedId, hoveredId, onSelect, onHover, groupedSiteIds]);
 
     return (
         <div style={{ position: "relative", width: "100%", height: "100%", minHeight: 430 }}>

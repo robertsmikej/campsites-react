@@ -4,6 +4,22 @@ import type { JSX } from "react";
 import { CW } from "@/components/field-notes/cw-tokens";
 import { ListMarker, TypeBadge, SiteInfoChips, StarRating } from "./site-info";
 import type { MapSite } from "@/lib/map-sites";
+import type { AdjacentGroup } from "@/types/campground";
+
+// ─── formatWindowDates ────────────────────────────────────────────────────────
+// Mirrors the pattern used in opening-card.tsx (same Intl formatters).
+// `to` is the exclusive checkout day — display through the day before.
+function formatWindowDates(from: string, to: string): string {
+    const f = new Date(from + "T00:00:00");
+    const tDate = new Date(to + "T00:00:00");
+    const last = new Date(tDate);
+    last.setDate(tDate.getDate() - 1);
+    const date = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" });
+    if (f.toDateString() === last.toDateString()) {
+        return date.format(f);
+    }
+    return `${date.format(f)} – ${date.format(last)}`;
+}
 
 // ─── SiteRow ──────────────────────────────────────────────────────────────────
 
@@ -124,12 +140,14 @@ export function SiteList({
     hoveredId,
     onSelect,
     onHover,
+    adjacentGroups,
 }: {
     sites: MapSite[];
     selectedId: string | null;
     hoveredId: string | null;
     onSelect: (id: string) => void;
     onHover: (id: string | null) => void;
+    adjacentGroups?: AdjacentGroup[];
 }): JSX.Element {
     const total = sites.length;
     const openCount = sites.filter((s) => s.open).length;
@@ -157,6 +175,16 @@ export function SiteList({
             >
                 {total} sites · {openCount} open
             </div>
+
+            {/* Adjacent group blocks */}
+            {(adjacentGroups ?? []).map((g) => (
+                <div key={g.siteIds.join(",")} className="mb-2 rounded-md border border-emerald-300 p-2">
+                    <div className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+                        ⛓ Adjacent group · sites {g.siteNames.join(", ")} · open{" "}
+                        {formatWindowDates(g.from, g.to)}
+                    </div>
+                </div>
+            ))}
 
             {/* Rows */}
             <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 2 }}>
