@@ -93,4 +93,14 @@ describe("parseCampsite", () => {
     it("returns null for an entry with no name", () => {
         expect(parseCampsite({ campsite_id: "1" })).toBeNull();
     });
+
+    it("captures the trimmed loop name", () => {
+        const site = parseCampsite({ name: "012", loop: "OUTLET CAMPGROUND ", latitude: "44.1", longitude: "-114.9" });
+        expect(site?.loop).toBe("OUTLET CAMPGROUND");
+    });
+
+    it("omits loop when blank", () => {
+        const site = parseCampsite({ name: "012", loop: "  " });
+        expect(site?.loop).toBeUndefined();
+    });
 });

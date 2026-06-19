@@ -8,6 +8,7 @@ export interface SiteDetail {
     rating: number | null;
     reviews: number;
     cell: number | null; // aggregate 0–4 (NOT per-carrier — API only gives aggregate)
+    loop?: string;
     shade?: "full" | "partial" | "sun";
     amenities: {
         firePit?: boolean;
@@ -36,6 +37,7 @@ interface RawCampsite {
     average_rating?: number;
     number_of_ratings?: number;
     aggregate_cell_coverage?: number;
+    loop?: string;
     permitted_equipment?: RawEquip[];
     attributes?: RawAttr[];
 }
@@ -92,8 +94,11 @@ export function parseCampsite(raw: unknown): SiteDetail | null {
             ? "sun"
             : undefined;
 
+    const loop = (c.loop ?? "").trim();
+
     return {
         id: name,
+        ...(loop ? { loop } : {}),
         campsiteId: String(c.campsite_id ?? ""),
         lat: toCoord(c.latitude),
         lng: toCoord(c.longitude),
