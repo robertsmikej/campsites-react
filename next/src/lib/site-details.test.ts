@@ -95,7 +95,12 @@ describe("parseCampsite", () => {
     });
 
     it("captures the trimmed loop name", () => {
-        const site = parseCampsite({ name: "012", loop: "OUTLET CAMPGROUND ", latitude: "44.1", longitude: "-114.9" });
+        const site = parseCampsite({
+            name: "012",
+            loop: "OUTLET CAMPGROUND ",
+            latitude: "44.1",
+            longitude: "-114.9",
+        });
         expect(site?.loop).toBe("OUTLET CAMPGROUND");
     });
 

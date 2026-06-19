@@ -619,7 +619,10 @@ export function CampgroundEditor({
                         value={campground.adjacencyAnchor}
                         onChange={(value) => onFieldChange("adjacencyAnchor", value)}
                     />
-                    <Hint>Alerts when 2+ sites right next to each other open for the same dates. Off = no adjacency alerts.</Hint>
+                    <Hint>
+                        Alerts when 2+ sites right next to each other open for the same dates. Off = no
+                        adjacency alerts.
+                    </Hint>
                 </div>
 
                 {/* Check frequency tier */}

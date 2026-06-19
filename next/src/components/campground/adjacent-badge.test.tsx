@@ -3,8 +3,13 @@ import { render, screen } from "@testing-library/react";
 import { AdjacentBadge } from "./adjacent-badge";
 
 const group = (siteIds: string[]) => ({
-    campgroundId: "cg1", siteIds, siteNames: siteIds,
-    from: "2026-06-19", to: "2026-06-21", nights: 2, anchorTier: "none" as const,
+    campgroundId: "cg1",
+    siteIds,
+    siteNames: siteIds,
+    from: "2026-06-19",
+    to: "2026-06-21",
+    nights: 2,
+    anchorTier: "none" as const,
 });
 
 describe("AdjacentBadge", () => {

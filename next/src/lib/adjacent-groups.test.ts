@@ -24,12 +24,7 @@ describe("buildAdjacencyEdges — geo", () => {
 
     it("links only the 2 nearest neighbors, not a farther in-cap site", () => {
         // A at 0; B,C,D at ~20,~40,~55m — all within cap, but only the 2 nearest are kept.
-        const edges = buildAdjacencyEdges([
-            at("A", 0),
-            at("B", 0.00018),
-            at("C", 0.00036),
-            at("D", 0.0005),
-        ]);
+        const edges = buildAdjacencyEdges([at("A", 0), at("B", 0.00018), at("C", 0.00036), at("D", 0.0005)]);
         expect(edges.get("A")?.has("B")).toBe(true);
         expect(edges.get("A")?.has("C")).toBe(true);
         // D is A's 3rd-nearest, so A does not originate an edge to D; but D may still
@@ -105,93 +100,134 @@ describe("findAdjacentGroups", () => {
     const checkout = "2026-06-21";
 
     it("emits a group when two adjacent sites share a bookable window", () => {
-        const groups = findAdjacentGroups(input({
-            sites: [{ id: "012", lat: null, lng: null }, { id: "013", lat: null, lng: null }],
-            availableNightsByName: { "012": nights(fri, sat), "013": nights(fri, sat) },
-        }));
+        const groups = findAdjacentGroups(
+            input({
+                sites: [
+                    { id: "012", lat: null, lng: null },
+                    { id: "013", lat: null, lng: null },
+                ],
+                availableNightsByName: { "012": nights(fri, sat), "013": nights(fri, sat) },
+            }),
+        );
         expect(groups).toHaveLength(1);
         expect(groups[0]).toMatchObject({ siteIds: ["012", "013"], from: fri, to: checkout, nights: 2 });
     });
 
     it("does not emit when the shared window is too short for the stay length", () => {
-        const groups = findAdjacentGroups(input({
-            sites: [{ id: "012", lat: null, lng: null }, { id: "013", lat: null, lng: null }],
-            availableNightsByName: { "012": nights(fri, sat), "013": nights(sat) }, // only Sat overlaps
-        }));
+        const groups = findAdjacentGroups(
+            input({
+                sites: [
+                    { id: "012", lat: null, lng: null },
+                    { id: "013", lat: null, lng: null },
+                ],
+                availableNightsByName: { "012": nights(fri, sat), "013": nights(sat) }, // only Sat overlaps
+            }),
+        );
         expect(groups).toHaveLength(0);
     });
 
     it("does not emit for non-adjacent sites even if both open", () => {
-        const groups = findAdjacentGroups(input({
-            sites: [{ id: "012", lat: null, lng: null }, { id: "020", lat: null, lng: null }],
-            availableNightsByName: { "012": nights(fri, sat), "020": nights(fri, sat) },
-        }));
+        const groups = findAdjacentGroups(
+            input({
+                sites: [
+                    { id: "012", lat: null, lng: null },
+                    { id: "020", lat: null, lng: null },
+                ],
+                availableNightsByName: { "012": nights(fri, sat), "020": nights(fri, sat) },
+            }),
+        );
         expect(groups).toHaveLength(0);
     });
 
     it("does not bridge a closed middle site (A-B-C chain, B closed)", () => {
-        const groups = findAdjacentGroups(input({
-            sites: [
-                { id: "012", lat: null, lng: null },
-                { id: "013", lat: null, lng: null },
-                { id: "014", lat: null, lng: null },
-            ],
-            availableNightsByName: { "012": nights(fri, sat), "014": nights(fri, sat) }, // 013 closed
-        }));
+        const groups = findAdjacentGroups(
+            input({
+                sites: [
+                    { id: "012", lat: null, lng: null },
+                    { id: "013", lat: null, lng: null },
+                    { id: "014", lat: null, lng: null },
+                ],
+                availableNightsByName: { "012": nights(fri, sat), "014": nights(fri, sat) }, // 013 closed
+            }),
+        );
         expect(groups).toHaveLength(0);
     });
 
     it("emits a 3-site group when the whole chain is open", () => {
-        const groups = findAdjacentGroups(input({
-            sites: [
-                { id: "012", lat: null, lng: null },
-                { id: "013", lat: null, lng: null },
-                { id: "014", lat: null, lng: null },
-            ],
-            availableNightsByName: {
-                "012": nights(fri, sat), "013": nights(fri, sat), "014": nights(fri, sat),
-            },
-        }));
+        const groups = findAdjacentGroups(
+            input({
+                sites: [
+                    { id: "012", lat: null, lng: null },
+                    { id: "013", lat: null, lng: null },
+                    { id: "014", lat: null, lng: null },
+                ],
+                availableNightsByName: {
+                    "012": nights(fri, sat),
+                    "013": nights(fri, sat),
+                    "014": nights(fri, sat),
+                },
+            }),
+        );
         expect(groups).toHaveLength(1);
         expect(groups[0]?.siteIds).toEqual(["012", "013", "014"]);
     });
 
     it("rejects a group with no favorite when anchorScope is favorites", () => {
-        const groups = findAdjacentGroups(input({
-            sites: [{ id: "012", lat: null, lng: null }, { id: "013", lat: null, lng: null }],
-            availableNightsByName: { "012": nights(fri, sat), "013": nights(fri, sat) },
-            anchorScope: "favorites",
-        }));
+        const groups = findAdjacentGroups(
+            input({
+                sites: [
+                    { id: "012", lat: null, lng: null },
+                    { id: "013", lat: null, lng: null },
+                ],
+                availableNightsByName: { "012": nights(fri, sat), "013": nights(fri, sat) },
+                anchorScope: "favorites",
+            }),
+        );
         expect(groups).toHaveLength(0);
     });
 
     it("accepts and tags a group containing a favorite when anchorScope is favorites", () => {
-        const groups = findAdjacentGroups(input({
-            sites: [{ id: "012", lat: null, lng: null }, { id: "013", lat: null, lng: null }],
-            availableNightsByName: { "012": nights(fri, sat), "013": nights(fri, sat) },
-            tiers: { favorites: ["013"], worthwhile: [] },
-            anchorScope: "favorites",
-        }));
+        const groups = findAdjacentGroups(
+            input({
+                sites: [
+                    { id: "012", lat: null, lng: null },
+                    { id: "013", lat: null, lng: null },
+                ],
+                availableNightsByName: { "012": nights(fri, sat), "013": nights(fri, sat) },
+                tiers: { favorites: ["013"], worthwhile: [] },
+                anchorScope: "favorites",
+            }),
+        );
         expect(groups).toHaveLength(1);
         expect(groups[0]?.anchorTier).toBe("favorites");
     });
 
     it("excludes windows overlapping a blackout range", () => {
-        const groups = findAdjacentGroups(input({
-            sites: [{ id: "012", lat: null, lng: null }, { id: "013", lat: null, lng: null }],
-            availableNightsByName: { "012": nights(fri, sat), "013": nights(fri, sat) },
-            settings: { ...baseSettings, blackoutDates: [{ from: fri, to: sat }] },
-        }));
+        const groups = findAdjacentGroups(
+            input({
+                sites: [
+                    { id: "012", lat: null, lng: null },
+                    { id: "013", lat: null, lng: null },
+                ],
+                availableNightsByName: { "012": nights(fri, sat), "013": nights(fri, sat) },
+                settings: { ...baseSettings, blackoutDates: [{ from: fri, to: sat }] },
+            }),
+        );
         expect(groups).toHaveLength(0);
     });
 
     it("does not emit for a window starting on a disallowed day", () => {
         const sun = "2026-06-21";
         const mon = "2026-06-22";
-        const groups = findAdjacentGroups(input({
-            sites: [{ id: "012", lat: null, lng: null }, { id: "013", lat: null, lng: null }],
-            availableNightsByName: { "012": nights(sun, mon), "013": nights(sun, mon) },
-        }));
+        const groups = findAdjacentGroups(
+            input({
+                sites: [
+                    { id: "012", lat: null, lng: null },
+                    { id: "013", lat: null, lng: null },
+                ],
+                availableNightsByName: { "012": nights(sun, mon), "013": nights(sun, mon) },
+            }),
+        );
         expect(groups).toHaveLength(0); // Sunday start not in validStartDays
     });
 });

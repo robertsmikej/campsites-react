@@ -292,8 +292,28 @@ describe("GET /api/availability", () => {
         // Two sites (012 and 013) both open Fri 2026-07-03 + Sat 2026-07-04
         // (a 2-night stay starting Friday). No lat/lng → number-fallback adjacency.
         const siteDetails = [
-            { id: "012", campsiteId: "c012", lat: null, lng: null, type: "standard", rating: null, reviews: 0, cell: null, amenities: {} },
-            { id: "013", campsiteId: "c013", lat: null, lng: null, type: "standard", rating: null, reviews: 0, cell: null, amenities: {} },
+            {
+                id: "012",
+                campsiteId: "c012",
+                lat: null,
+                lng: null,
+                type: "standard",
+                rating: null,
+                reviews: 0,
+                cell: null,
+                amenities: {},
+            },
+            {
+                id: "013",
+                campsiteId: "c013",
+                lat: null,
+                lng: null,
+                type: "standard",
+                rating: null,
+                reviews: 0,
+                cell: null,
+                amenities: {},
+            },
         ];
 
         const adjKv = createMockKv({
@@ -347,7 +367,9 @@ describe("GET /api/availability", () => {
 
         const response = await GET(new Request("http://x/api/availability"));
         expect(response.status).toBe(200);
-        const snap = await response.json() as { campgrounds: Array<{ adjacentGroups?: Array<{ siteIds: string[] }> }> };
+        const snap = (await response.json()) as {
+            campgrounds: Array<{ adjacentGroups?: Array<{ siteIds: string[] }> }>;
+        };
         const cg = snap.campgrounds[0]!;
         expect(cg.adjacentGroups).toHaveLength(1);
         expect(cg.adjacentGroups![0]!.siteIds).toEqual(["012", "013"]);

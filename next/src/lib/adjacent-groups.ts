@@ -19,8 +19,7 @@ function haversineMeters(a: AdjacencySite, b: AdjacencySite): number {
     const dLng = toRad((b.lng as number) - (a.lng as number));
     const lat1 = toRad(a.lat as number);
     const lat2 = toRad(b.lat as number);
-    const h =
-        Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+    const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
     return 2 * R * Math.asin(Math.sqrt(h));
 }
 
