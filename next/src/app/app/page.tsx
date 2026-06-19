@@ -407,6 +407,10 @@ export default function AppPage() {
                                                 setFocusedCampgroundId(id);
                                                 setIsConfigDialogOpen(true);
                                             }}
+                                            onEditAll={() => {
+                                                setFocusedCampgroundId(null);
+                                                setIsConfigDialogOpen(true);
+                                            }}
                                             PAD={PAD}
                                         />
                                     </DashboardErrorBoundary>

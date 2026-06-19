@@ -593,31 +593,18 @@ export function CampgroundEditor({
                 <div>
                     <div className="mb-2 flex flex-wrap items-baseline gap-3">
                         <FieldLabel>Adjacent-site alerts</FieldLabel>
-                        {campground.adjacencyAnchor && (
-                            <button
-                                type="button"
-                                onClick={() => onFieldChange("adjacencyAnchor", undefined)}
-                                className="ml-auto cursor-pointer rounded-full font-mono-field font-semibold uppercase transition-colors"
-                                style={{
-                                    fontSize: 11,
-                                    letterSpacing: "0.08em",
-                                    padding: "6px 12px",
-                                    color: CW.forest,
-                                    border: `1px solid ${CW.rule}`,
-                                }}
-                            >
-                                Off
-                            </button>
-                        )}
                     </div>
-                    <SegmentedControl<NotifyScope>
+                    <SegmentedControl<NotifyScope | "off">
                         options={[
+                            { value: "off", label: "Off" },
                             { value: "favorites", label: "Favorite anchor" },
                             { value: "worthwhile", label: "Fav/Worthwhile" },
                             { value: "all", label: "Any pair" },
                         ]}
-                        value={campground.adjacencyAnchor}
-                        onChange={(value) => onFieldChange("adjacencyAnchor", value)}
+                        value={campground.adjacencyAnchor ?? "off"}
+                        onChange={(value) =>
+                            onFieldChange("adjacencyAnchor", value === "off" ? undefined : value)
+                        }
                     />
                     <Hint>
                         Alerts when 2+ sites right next to each other open for the same dates. Off = no

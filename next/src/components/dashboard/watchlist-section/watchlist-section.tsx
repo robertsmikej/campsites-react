@@ -34,6 +34,7 @@ interface WatchlistSectionProps {
         rating: "favorite" | "worthwhile" | "unrated",
     ) => void;
     onEditSettings?: (campgroundId: string) => void;
+    onEditAll?: () => void;
     PAD: number;
 }
 
@@ -65,6 +66,7 @@ export function WatchlistSection({
     readOnly,
     showControls = true,
     onEditSettings,
+    onEditAll,
     PAD,
 }: WatchlistSectionProps) {
     // Campgrounds render in the saved Configure (drag) order — campgroundsByAreas
@@ -76,26 +78,44 @@ export function WatchlistSection({
             // rest of the dashboard (every pixel helps on the shared axis).
             style={{ padding: `24px ${Math.max(10, PAD - 12)}px 60px` }}
         >
-            <div className="pt-7 mb-[18px]">
-                <div className="font-mono-field text-[13px] font-medium leading-none tracking-[0.18em] text-cw-clay mb-[10px] uppercase">
-                    {readOnly
-                        ? `The list · ${campgroundsByAreas.length} campground${campgroundsByAreas.length !== 1 ? "s" : ""}`
-                        : `§ II — THE WATCHLIST · ${campgroundsByAreas.length} CAMPGROUND${campgroundsByAreas.length !== 1 ? "S" : ""}`}
+            <div className="pt-7 mb-[18px] flex items-start justify-between gap-4">
+                <div>
+                    <div className="font-mono-field text-[13px] font-medium leading-none tracking-[0.18em] text-cw-clay mb-[10px] uppercase">
+                        {readOnly
+                            ? `The list · ${campgroundsByAreas.length} campground${campgroundsByAreas.length !== 1 ? "s" : ""}`
+                            : `§ II — THE WATCHLIST · ${campgroundsByAreas.length} CAMPGROUND${campgroundsByAreas.length !== 1 ? "S" : ""}`}
+                    </div>
+                    <h2 className="m-0 tracking-[-0.005em]">
+                        <span
+                            className="font-poster font-black leading-none uppercase inline"
+                            style={{ fontSize: isMobile ? 24 : 32 }}
+                        >
+                            {readOnly ? "ALL" : "EVERY PLACE"}
+                        </span>
+                        <span
+                            className="font-italic-serif font-medium italic leading-none text-cw-forest tracking-[-0.01em]"
+                            style={{ fontSize: isMobile ? 24 : 32, marginLeft: 10 }}
+                        >
+                            {readOnly ? "the picks." : "you're watching."}
+                        </span>
+                    </h2>
                 </div>
-                <h2 className="m-0 tracking-[-0.005em]">
-                    <span
-                        className="font-poster font-black leading-none uppercase inline"
-                        style={{ fontSize: isMobile ? 24 : 32 }}
+                {!readOnly && onEditAll && (
+                    <button
+                        type="button"
+                        onClick={onEditAll}
+                        className="shrink-0 cursor-pointer whitespace-nowrap rounded-full font-mono-field font-semibold uppercase transition-colors hover:bg-[color-mix(in_srgb,var(--cw-forest)_8%,transparent)]"
+                        style={{
+                            fontSize: 11,
+                            letterSpacing: "0.08em",
+                            padding: "8px 14px",
+                            color: CW.forest,
+                            border: `1px solid ${CW.rule}`,
+                        }}
                     >
-                        {readOnly ? "ALL" : "EVERY PLACE"}
-                    </span>
-                    <span
-                        className="font-italic-serif font-medium italic leading-none text-cw-forest tracking-[-0.01em]"
-                        style={{ fontSize: isMobile ? 24 : 32, marginLeft: 10 }}
-                    >
-                        {readOnly ? "the picks." : "you're watching."}
-                    </span>
-                </h2>
+                        Edit Campgrounds
+                    </button>
+                )}
             </div>
 
             {/* Timeline legend */}
