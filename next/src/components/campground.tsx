@@ -15,6 +15,7 @@ import type { ProcessedCampground } from "@/types/campground";
 
 import { CampsitesTable } from "./campsites-table";
 import { CampsitesCalendarParent } from "./campsites-calendar-parent";
+import { AdjacentBadge } from "./campground/adjacent-badge";
 
 // ---------------------------------------------------------------------------
 // localStorage helpers (match CRA keys exactly)
@@ -191,6 +192,7 @@ export function Campground({ campground: campgroundProp, viewMode, showExcluded 
                                     <Badge variant="outline" className="border-primary text-primary">
                                         {matchCount} stays available
                                     </Badge>
+                                    <AdjacentBadge groups={campgroundProp.adjacentGroups} />
                                     {isHiddenBySetting && (
                                         <Badge variant="outline" className="opacity-70 text-xs">
                                             Hidden by settings
