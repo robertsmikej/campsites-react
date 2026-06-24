@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useAuth } from "@/hooks/use-auth";
 import { DashboardTopBar } from "@/components/dashboard/dashboard-top-bar";
+import { PushToggle } from "@/components/account/push-toggle";
 
 import type { NotifyScope } from "@/types/campground";
 
@@ -352,6 +353,11 @@ export default function AccountPage() {
                                         One email per cycle with any new matches for your watchlist.
                                     </p>
                                 </div>
+                            </div>
+
+                            {/* Push notifications — in addition to email */}
+                            <div className="mb-6 border-t border-cw-rule pt-5">
+                                <PushToggle />
                             </div>
 
                             {/* Frequency select */}
