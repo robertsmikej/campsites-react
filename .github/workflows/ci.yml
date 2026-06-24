@@ -41,3 +41,19 @@ jobs:
 
             - name: Cloudflare build
               run: pnpm run cf:build
+
+            # The notifier imports from next/src/*, so its checks need next's
+            # deps (installed above) to resolve cross-package external imports
+            # like @cloudflare/workers-types. Run them in the same job rather
+            # than re-installing next's deps in a separate one.
+            - name: Notifier install
+              working-directory: notifier
+              run: npm install
+
+            - name: Notifier type-check
+              working-directory: notifier
+              run: npm run typecheck
+
+            - name: Notifier test
+              working-directory: notifier
+              run: npm test
