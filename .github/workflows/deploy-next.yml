@@ -36,6 +36,11 @@ jobs:
 
             - name: Build for Cloudflare Workers
               run: pnpm run cf:build
+              env:
+                  # Inlined into the client bundle at build time for Web Push
+                  # subscribe. Until this repo secret is set, the value is empty
+                  # and the account push toggle stays inert (email-only).
+                  NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${{ secrets.NEXT_PUBLIC_VAPID_PUBLIC_KEY }}
 
             - name: Deploy Worker
               uses: cloudflare/wrangler-action@v4
