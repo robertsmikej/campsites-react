@@ -1,4 +1,4 @@
-import type { RawMonthResult } from "./types";
+import { REC_GOV_USER_AGENT, type RawMonthResult } from "./types";
 
 export const REC_GOV_MONTH_URL = "https://www.recreation.gov/api/camps/availability/campground";
 
@@ -8,7 +8,7 @@ export async function fetchMonth(facilityId: string, month: string): Promise<Raw
     const url = `${REC_GOV_MONTH_URL}/${facilityId}/month?start_date=${month}-01T00%3A00%3A00.000Z`;
     try {
         const response = await fetch(url, {
-            headers: { Accept: "application/json" },
+            headers: { Accept: "application/json", "User-Agent": REC_GOV_USER_AGENT },
         });
         if (!response.ok) {
             console.error(`[recgov] ${facilityId} ${month}: HTTP ${response.status}`);

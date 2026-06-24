@@ -1,6 +1,7 @@
 import { getKv } from "@/lib/cloudflare";
 import { jsonResponse, withCors } from "@/lib/responses";
 import { withErrorLogging } from "@/lib/route-helpers";
+import { REC_GOV_USER_AGENT } from "@/lib/recgov/types";
 
 const CACHE_TTL_SECONDS = 60 * 60 * 24 * 7; // 7 days; rosters rarely change
 const cacheKey = (id: string) => `sites:${id}`;
@@ -23,7 +24,7 @@ async function getHandler(_req: Request, context: { params: Promise<{ id: string
     let labels: string[] = [];
     try {
         const r = await fetch(url, {
-            headers: { Accept: "application/json", "User-Agent": "Mozilla/5.0 (CampWatch)" },
+            headers: { Accept: "application/json", "User-Agent": REC_GOV_USER_AGENT },
         });
         if (r.ok) {
             const data = (await r.json()) as { campsites?: RecCampsite[] };

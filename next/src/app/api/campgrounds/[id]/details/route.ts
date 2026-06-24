@@ -1,6 +1,7 @@
 import { getKv } from "@/lib/cloudflare";
 import { jsonResponse, withCors } from "@/lib/responses";
 import { withErrorLogging } from "@/lib/route-helpers";
+import { REC_GOV_USER_AGENT } from "@/lib/recgov/types";
 
 export interface CampgroundDetails {
     facilityId: string;
@@ -18,7 +19,7 @@ async function fetchSearchPreview(facilityId: string, facilityName: string | nul
     if (!facilityName) return null;
     const url = `https://www.recreation.gov/api/search?q=${encodeURIComponent(facilityName)}&entity_type=campground&size=10`;
     try {
-        const resp = await fetch(url, { headers: { "User-Agent": "campwatch/1.0" } });
+        const resp = await fetch(url, { headers: { "User-Agent": REC_GOV_USER_AGENT } });
         if (!resp.ok) return null;
         const data = (await resp.json()) as {
             results?: Array<{ entity_id?: string; preview_image_url?: string | null }>;
@@ -35,7 +36,7 @@ async function fetchCampgroundLatLng(
 ): Promise<{ name: string | null; latitude: number | null; longitude: number | null }> {
     try {
         const resp = await fetch(`https://www.recreation.gov/api/camps/campgrounds/${facilityId}`, {
-            headers: { "User-Agent": "campwatch/1.0" },
+            headers: { "User-Agent": REC_GOV_USER_AGENT },
         });
         if (!resp.ok) return { name: null, latitude: null, longitude: null };
         const data = (await resp.json()) as {

@@ -1,5 +1,6 @@
 import { withCors } from "@/lib/responses";
 import { withErrorLogging } from "@/lib/route-helpers";
+import { REC_GOV_USER_AGENT } from "@/lib/recgov/types";
 
 export interface SearchResult {
     id: string;
@@ -38,7 +39,7 @@ async function getHandler(request: Request): Promise<Response> {
     const recGovUrl = `https://www.recreation.gov/api/search?q=${encodeURIComponent(q)}&entity_type=campground&size=10`;
     try {
         const resp = await fetch(recGovUrl, {
-            headers: { "User-Agent": "campwatch/1.0" },
+            headers: { "User-Agent": REC_GOV_USER_AGENT },
             cf: { cacheTtl: 300, cacheEverything: true },
         } as RequestInit);
         if (!resp.ok) {

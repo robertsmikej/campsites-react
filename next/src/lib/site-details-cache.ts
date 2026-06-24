@@ -1,4 +1,5 @@
 import { parseCampsite, type SiteDetail } from "./site-details";
+import { REC_GOV_USER_AGENT } from "./recgov/types";
 
 export const SITE_DETAILS_TTL_SECONDS = 60 * 60 * 24 * 7; // 7 days
 const cacheKey = (id: string) => `site-details:${id}`;
@@ -37,7 +38,7 @@ export async function getSiteDetailsCached(
     let sites: SiteDetail[] = [];
     try {
         const r = await fetchImpl(url, {
-            headers: { Accept: "application/json", "User-Agent": "Mozilla/5.0 (CampWatch)" },
+            headers: { Accept: "application/json", "User-Agent": REC_GOV_USER_AGENT },
         });
         if (r.ok) {
             const data = (await r.json()) as { campsites?: unknown[] };
