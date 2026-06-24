@@ -45,7 +45,10 @@ describe("POST /api/users/me/push", () => {
 
 describe("DELETE /api/users/me/push", () => {
     it("removes by endpoint", async () => {
-        const req = new Request("https://x", { method: "DELETE", body: JSON.stringify({ endpoint: "https://push/1" }) });
+        const req = new Request("https://x", {
+            method: "DELETE",
+            body: JSON.stringify({ endpoint: "https://push/1" }),
+        });
         expect((await DELETE(req)).status).toBe(200);
         expect(calls.remove).toHaveLength(1);
     });
