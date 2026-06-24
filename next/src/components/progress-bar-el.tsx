@@ -1,6 +1,6 @@
 "use client";
 
-import { useProgressBar } from "@/context/progress-bar";
+import { useProgressBar } from "@/contexts/progress-bar";
 
 export function ProgressBarEl() {
     const progress = useProgressBar();

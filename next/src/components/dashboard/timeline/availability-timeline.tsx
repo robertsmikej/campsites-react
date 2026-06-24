@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { CW } from "@/components/field-notes/cw-tokens";
 import { buildHorizon, clampWindowStart } from "@/lib/timeline";
 import { useCampgroundSites } from "@/hooks/use-campground-sites";
-import { useSiteSettings } from "@/context/site-settings";
+import { useSiteSettings } from "@/contexts/site-settings";
 import type { ProcessedCampground } from "@/types/campground";
 import { TimelineAxis } from "./timeline-axis";
 import { CampgroundTimelineRow } from "./campground-timeline-row";

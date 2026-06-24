@@ -18,7 +18,7 @@ import {
     buildVariantMap,
     getMonthsFromSiteData,
 } from "./campsites-calendar-helpers";
-import { useSiteSettings } from "@/context/site-settings";
+import { useSiteSettings } from "@/contexts/site-settings";
 
 // ---------------------------------------------------------------------------
 // Variant → Tailwind class map

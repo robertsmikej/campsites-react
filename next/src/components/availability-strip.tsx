@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { cn } from "@/lib/utils";
 import type { BlackoutRange, ProcessedCampground, SiteAvailability } from "@/types/campground";
 import { isDateBlackedOut } from "@/lib/blackout";
-import { useSiteSettings } from "@/context/site-settings";
+import { useSiteSettings } from "@/contexts/site-settings";
 
 /** Keyed by siteName; missing entry means unrated. */
 export type SiteRatingsMap = Record<string, "favorite" | "worthwhile">;

@@ -17,7 +17,7 @@ import {
     siteOpenRuns,
 } from "@/lib/timeline";
 import type { BlackoutRange, ProcessedCampground } from "@/types/campground";
-import { useSiteSettings } from "@/context/site-settings";
+import { useSiteSettings } from "@/contexts/site-settings";
 import { TimelineAxis } from "./timeline-axis";
 import { TimelineTrack } from "./timeline-track";
 import { SiteWindowsList } from "./site-windows";

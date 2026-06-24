@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 import { render, screen, fireEvent, within } from "@testing-library/react";
 import { AvailabilityTimeline } from "./availability-timeline";
-import SiteSettingsContext from "@/context/site-settings";
+import SiteSettingsContext from "@/contexts/site-settings";
 import type { ProcessedCampground, SiteAvailability, BlackoutRange } from "@/types/campground";
-import type { SiteSettingsValue } from "@/context/site-settings";
+import type { SiteSettingsValue } from "@/contexts/site-settings";
 
 function site(name: string, matches: Array<[string, string]>): SiteAvailability {
     return {
