@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { GeistSans } from "geist/font/sans";
 import { Inter, Big_Shoulders, Cormorant_Garamond, Source_Serif_4, DM_Mono, Caveat } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -60,8 +60,11 @@ export const metadata: Metadata = {
     keywords: ["recreation.gov", "campsite alerts", "campground availability", "outdoors", "camping"],
     authors: [{ name: "Mike Roberts" }],
     creator: "Mike Roberts",
+    manifest: "/manifest.webmanifest",
+    appleWebApp: { capable: true, title: "CampWatch", statusBarStyle: "default" },
     icons: {
         icon: "/icon.svg",
+        apple: "/apple-touch-icon.png",
     },
     openGraph: {
         type: "website",
@@ -88,6 +91,10 @@ export const metadata: Metadata = {
         index: true,
         follow: true,
     },
+};
+
+export const viewport: Viewport = {
+    themeColor: "#1F3D2A",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
