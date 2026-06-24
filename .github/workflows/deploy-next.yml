@@ -2,8 +2,15 @@ name: Deploy Next.js Worker
 
 on:
     push:
-        branches: ["**"]
+        branches: [main]
     workflow_dispatch: {}
+
+# Serialize deploys so two pushes to main can't race the single prod Worker
+# (last-writer-wins). cancel-in-progress stays false: never abort a deploy
+# that's mid-flight, just queue the next one behind it.
+concurrency:
+    group: deploy-next
+    cancel-in-progress: false
 
 jobs:
     deploy:
