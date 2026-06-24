@@ -1,7 +1,7 @@
 # Notifier cron reliability — decision record
 
 **Date:** 2026-06-05
-**Status:** Writeup only — no implementation yet (Mike weighing a Workers Paid upgrade)
+**Status:** RESOLVED — implemented on Workers Paid. The notifier was migrated off the GitHub Actions `schedule:` cron to the `campwatch-notifier` Cloudflare Worker on Cron Triggers (1-min tick + 5-min sweep; see `notifier/worker.ts`). `check-campsites.yml` is now manual-only. The problem writeup below is retained as the decision record.
 
 ## Problem
 

@@ -19,13 +19,13 @@ A few things worth pointing at:
 - **Per-user notifier with global dedup** — `notifier/check.ts` builds one `(campgroundId, month)` set across every user's watchlist, fetches each unique combination from recreation.gov exactly once, then runs per-user diffs from the shared raw data. Scales linearly with unique campgrounds, not users × campgrounds.
 - **Curator lead-time** — non-curator users don't get notified until 15 minutes after a match's first global sighting. Lets the curator hold first-priority booking. Implemented via a global `notifier:first-seen` map in KV.
 - **Field Notes design system** — full visual language across the homepage, dashboard, drawer, account, discover, admin, and email template. Cream/ink/forest/clay/mustard palette with five fonts (Big Shoulders Display / Cormorant Garamond / Source Serif 4 / DM Mono / Caveat). Implemented as Tailwind utilities backed by CSS variables so dark mode flips with one class.
-- **Atomic component split** — `next/src/components/{homepage,dashboard,campground,field-notes}/` — every section that has a name has a file. The two page shells are under 80 lines each; everything composes from named primitives.
+- **Atomic component split** — `next/src/components/{homepage,dashboard,campground,field-notes}/` — every section that has a name has a file. The marketing homepage shell is ~30 lines; the dashboard composes from a dozen named section components, each in its own file.
 - **Email template that survives Gmail + Outlook** — table-based layout, inline styles only, no web fonts (web-safe font cascade approximates Big Shoulders → Impact, Cormorant → Georgia italic, DM Mono → Courier). Mobile-first sizing as the default.
 - **Deploy via Git Data API** — when iCloud broke `git push` mid-sync, I had a Bash one-liner using `gh api /repos/.../git/{blobs,trees,commits,refs}` to land a tree on `main` without local git cooperating. Mentioned because debugging it taught me how GitHub's path-filter evaluator handles non-branch-push commits.
 
 ## Tech stack
 
-Next.js 16 (App Router) + Tailwind v4 + shadcn/ui · TypeScript end-to-end · Cloudflare Workers via `@opennextjs/cloudflare` · KV for state · GitHub Actions for the notifier cron + CI · Resend for transactional email · Google OAuth for sign-in · Cloudflare Email Routing for inbound mail · Vitest.
+Next.js 16 (App Router) + Tailwind v4 + shadcn/ui · TypeScript end-to-end · Cloudflare Workers via `@opennextjs/cloudflare` · KV for state · Cloudflare Cron Triggers for the notifier · GitHub Actions for CI · Resend for transactional email · Google OAuth for sign-in · Cloudflare Email Routing for inbound mail · Vitest.
 
 ## Architecture
 
@@ -36,9 +36,9 @@ graph LR
     User -->|signs in| Google[Google OAuth]
     Google -->|callback| Worker
 
-    Cron[GitHub Actions<br/>every 5 min] -->|admin API| Worker
-    Cron -->|polls| RecGov[recreation.gov]
-    Cron -->|sends mail| Resend[Resend]
+    Notifier[campwatch-notifier<br/>Cloudflare Worker<br/>cron: 1-min tick + 5-min sweep] -->|admin API| Worker
+    Notifier -->|polls| RecGov[recreation.gov]
+    Notifier -->|sends mail| Resend[Resend]
     Resend -->|delivers| Email[User Inbox]
     Email -->|reply-to| EmailRoute[Cloudflare Email Routing]
     EmailRoute -->|forwards| Inbox[hello@campwatch.dev]
@@ -96,8 +96,8 @@ types/                    Campground, SiteAvailability, GlobalSettings, …
 
 ## Deployment
 
-- **`next/`** deploys to Cloudflare Workers on every push to any branch via `.github/workflows/deploy-next.yml`. CI (`ci.yml`) gates tsc + tests + cf:build on every push and PR.
-- **`notifier/`** runs every 5 minutes (GitHub Actions floor) via `.github/workflows/check-campsites.yml`.
+- **`next/`** deploys to Cloudflare Workers on push to `main` via `.github/workflows/deploy-next.yml` (serialized by a `concurrency` group so two pushes can't race the prod Worker). CI (`ci.yml`) gates lint + format + tsc + tests + cf:build on every push and PR.
+- **`notifier/`** is a separate Cloudflare Worker (`campwatch-notifier`) on Cron Triggers — a 1-minute *tick* (fast-lane fetch + notify from cache) and a 5-minute *sweep* (refill the cache). It deploys alongside `next/` on push to `main`; `.github/workflows/check-campsites.yml` is retained for manual one-off runs only.
 
 ## Observability
 
@@ -109,9 +109,10 @@ types/                    Campground, SiteAvailability, GlobalSettings, …
 
 If you're skimming the codebase to evaluate the engineering, start with:
 
-- `notifier/check.ts` — the dedup + diff loop
-- `next/src/app/app/page.tsx` — dashboard shell (~330 lines)
-- `next/src/components/dashboard/watchlist-section/watchlist-row.tsx` — desktop/mobile responsive row with shared atoms
+- `notifier/worker.ts` — the tick/sweep cron entrypoint
+- `notifier/check.ts` — the dedup + diff loop (`runTick` / `runSweep`)
+- `next/src/app/app/page.tsx` — dashboard shell (~450 lines) composing the named dashboard sections
+- `next/src/components/dashboard/watchlist-section/watchlist-section.tsx` — desktop/mobile responsive rows built from the shared `components/campground/` atoms (Thumbnail, NameLine, OpenCountBadge)
 - `next/src/lib/sessions.ts` — opaque KV-backed sessions with a dev bypass
 - `notifier/lib/email.ts` — table-based email template
 - `next/src/app/api/admin/migrate/route.ts` — idempotent KV bootstrap from the in-repo catalog
