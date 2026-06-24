@@ -24,7 +24,15 @@ export function StepColumn({ rn, num, t, d, ic }: StepColumnProps) {
                         {rn}
                     </span>
                 </div>
-                <svg width="32" height="32" viewBox="0 0 32 32" stroke={C.ink} strokeWidth="1.6" fill="none">
+                <svg
+                    aria-hidden="true"
+                    width="32"
+                    height="32"
+                    viewBox="0 0 32 32"
+                    stroke={C.ink}
+                    strokeWidth="1.6"
+                    fill="none"
+                >
                     {ic === "pin" && (
                         <>
                             <path d="M16 5 C11 5 7 9 7 14 C7 21 16 28 16 28 C16 28 25 21 25 14 C25 9 21 5 16 5 Z" />

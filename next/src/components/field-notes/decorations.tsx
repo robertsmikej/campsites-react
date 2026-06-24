@@ -41,6 +41,7 @@ export function DTopo({ opacity = 0.08, stroke = C.forest }: { opacity?: number;
     });
     return (
         <svg
+            aria-hidden="true"
             viewBox="0 0 1200 600"
             preserveAspectRatio="xMidYMid slice"
             className="absolute inset-0 w-full h-full pointer-events-none"
@@ -55,6 +56,7 @@ export function DTopo({ opacity = 0.08, stroke = C.forest }: { opacity?: number;
 export function DScene() {
     return (
         <svg
+            aria-hidden="true"
             viewBox="0 0 1600 900"
             preserveAspectRatio="xMidYMid slice"
             className="absolute inset-0 w-full h-full block"
@@ -159,7 +161,7 @@ export function DScene() {
 // ─── Compass rose ─────────────────────────────────────────────────────────────
 export function DCompass({ size = 56, color = C.cream }: { size?: number; color?: string }) {
     return (
-        <svg viewBox="0 0 64 64" width={size} height={size} className="block">
+        <svg aria-hidden="true" viewBox="0 0 64 64" width={size} height={size} className="block">
             <circle cx="32" cy="32" r="29" fill="none" stroke={color} strokeWidth="1.2" opacity="0.9" />
             <circle cx="32" cy="32" r="22" fill="none" stroke={color} strokeWidth="0.6" opacity="0.5" />
             <path d="M32 6 L36 32 L32 30 L28 32 Z" fill={color} />
@@ -181,7 +183,7 @@ export function DPostmark({
     date?: string;
 }) {
     return (
-        <svg viewBox="0 0 120 120" width={size} height={size} className="block">
+        <svg aria-hidden="true" viewBox="0 0 120 120" width={size} height={size} className="block">
             <circle cx="60" cy="60" r="54" fill="none" stroke={C.clay} strokeWidth="1.2" opacity="0.7" />
             <circle cx="60" cy="60" r="44" fill="none" stroke={C.clay} strokeWidth="0.8" opacity="0.6" />
             <circle cx="60" cy="60" r="34" fill="none" stroke={C.clay} strokeWidth="0.6" opacity="0.5" />
@@ -222,7 +224,7 @@ export function DStamp() {
                     background: `linear-gradient(180deg, ${C.skyMid} 0%, ${C.skyLow} 50%, ${C.water} 51%, ${C.waterDeep} 100%)`,
                 }}
             >
-                <svg viewBox="0 0 80 100" className="w-full h-full block">
+                <svg aria-hidden="true" viewBox="0 0 80 100" className="w-full h-full block">
                     <path
                         d="M 0 55 L 20 35 L 40 50 L 60 32 L 80 48 L 80 60 L 0 60 Z"
                         fill={C.mountainShadow}
