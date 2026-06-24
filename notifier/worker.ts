@@ -30,7 +30,7 @@ export default {
         if (controller.cron === "*/5 * * * *") {
             ctx.waitUntil(runSweep(config, env.SUBSCRIBERS as never));
         } else {
-            ctx.waitUntil(runTick(config));
+            ctx.waitUntil(runTick(config, env.SUBSCRIBERS as never));
         }
     },
 };

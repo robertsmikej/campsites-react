@@ -21,6 +21,7 @@ import {
     fetchToCache,
 } from "./fetch-jobs";
 import { acquireSweepLock, type LockKv } from "./sweep-lock";
+import { acquireNotifyLock, releaseNotifyLock } from "./notify-lock";
 import type { Campground, GlobalSettings, NotifyScope } from "../next/src/types/campground";
 import type { MatchResult, SiteConfigForDiff, CampgroundResult } from "./lib/diff";
 import type { SiteAvailabilityMap } from "../next/src/lib/recgov/types";
@@ -675,6 +676,11 @@ async function fetchTargets(config: RunConfig): Promise<NotificationTarget[]> {
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 
+// SINGLE-FLIGHT INVARIANT: run() does read-modify-write on singleton KV keys
+// (notifier:first-seen / :recent / :stats) and per-user state, none of which is
+// merged server-side. It is therefore only safe with one in-flight notify pass.
+// The scheduled path enforces this via runTick's notify lock; the manual CLI
+// path is operator-driven. Don't call run() concurrently for the same data.
 export async function run(config: RunConfig, prefetchedTargets?: NotificationTarget[]): Promise<void> {
     const { subscriberApiUrl, subscriberApiSecret, resendApiKey, siteUrl, forceEmail, dryRun, now } = config;
     kvAdapter = config.kvAdapter;
@@ -962,17 +968,30 @@ export async function run(config: RunConfig, prefetchedTargets?: NotificationTar
 }
 
 // TICK (cron "* * * * *"): refresh hot campgrounds, then notify from cache.
-export async function runTick(config: RunConfig): Promise<void> {
-    const targets = await fetchTargets(config);
-    const nowMonth = config.now.toISOString().slice(0, 7);
-    if (config.kvAdapter && !config.dryRun) {
-        const fastLane = buildFastLanePlan(targets, nowMonth);
-        if (fastLane.length) {
-            console.log(`[FastLane] fetching ${fastLane.length} high-tier (campground, month) pairs`);
-            await fetchToCache(fastLane, config.kvAdapter, { concurrency: 1, delayMs: 250 });
-        }
+// `lockKv` (the raw KV namespace) gates the notify pass to one in-flight run at a
+// time — run() does read-modify-write on singleton state with no server-side
+// merge, so overlapping ticks would clobber each other. Omitted by the manual
+// CLI path (operator-driven, not the every-minute overlap source).
+export async function runTick(config: RunConfig, lockKv?: LockKv): Promise<void> {
+    const lock = config.dryRun ? undefined : lockKv;
+    if (lock && !(await acquireNotifyLock(lock, config.now.getTime()))) {
+        console.log("[Tick] prior notify still in flight — skipping this cycle");
+        return;
     }
-    await run(config, targets);
+    try {
+        const targets = await fetchTargets(config);
+        const nowMonth = config.now.toISOString().slice(0, 7);
+        if (config.kvAdapter && !config.dryRun) {
+            const fastLane = buildFastLanePlan(targets, nowMonth);
+            if (fastLane.length) {
+                console.log(`[FastLane] fetching ${fastLane.length} high-tier (campground, month) pairs`);
+                await fetchToCache(fastLane, config.kvAdapter, { concurrency: 1, delayMs: 250 });
+            }
+        }
+        await run(config, targets);
+    } finally {
+        if (lock) await releaseNotifyLock(lock);
+    }
 }
 
 // SWEEP (cron "*/5 * * * *"): refresh normal/low campgrounds into cache. Fetch
