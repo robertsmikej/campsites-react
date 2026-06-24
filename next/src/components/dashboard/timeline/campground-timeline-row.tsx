@@ -24,6 +24,9 @@ interface CampgroundTimelineRowProps {
     onToggleExpand: () => void;
     onEditSettings?: (campgroundId: string) => void;
     onOpenMap?: (campgroundId: string) => void;
+    /** Discover/read-only: link to add this campground (signed-in → dashboard add
+     *  dialog; logged-out → sign-in preserving the id). Renders an "Add" affordance. */
+    addHref?: (campgroundId: string) => string;
     /** full site roster (all site labels) so every site can show, not just open/tagged */
     roster?: string[];
     /** user's blackout ranges — passed down to timeline blocks for per-night grey */
@@ -37,6 +40,7 @@ export function CampgroundTimelineRow({
     onToggleExpand,
     onEditSettings,
     onOpenMap,
+    addHref,
     roster,
     blackoutDates,
 }: CampgroundTimelineRowProps) {
@@ -89,7 +93,18 @@ export function CampgroundTimelineRow({
                     className="relative flex flex-col justify-center"
                     style={{ padding: `16px ${PAD}px`, borderRight: `1px solid ${CW.rule}` }}
                 >
-                    <div className="absolute right-3 top-3 flex items-center gap-1">
+                    <div className="absolute right-3 top-3 flex items-center gap-2">
+                        {addHref && campground.id && (
+                            <a
+                                href={addHref(campground.id)}
+                                onClick={(e) => e.stopPropagation()}
+                                aria-label={`Add ${campground.name} to your watchlist`}
+                                className="font-mono-field font-bold uppercase transition-opacity hover:opacity-80"
+                                style={{ fontSize: 9, letterSpacing: "0.1em", color: CW.forest }}
+                            >
+                                + Add
+                            </a>
+                        )}
                         {onOpenMap && campground.id && (
                             <button
                                 type="button"

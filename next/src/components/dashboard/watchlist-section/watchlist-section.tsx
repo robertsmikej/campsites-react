@@ -35,6 +35,9 @@ interface WatchlistSectionProps {
     ) => void;
     onEditSettings?: (campgroundId: string) => void;
     onEditAll?: () => void;
+    /** Discover/read-only: per-row "Add" link (signed-in → dashboard add dialog;
+     *  logged-out → sign-in preserving the id). */
+    addHref?: (campgroundId: string) => string;
     PAD: number;
 }
 
@@ -67,6 +70,7 @@ export function WatchlistSection({
     showControls = true,
     onEditSettings,
     onEditAll,
+    addHref,
     PAD,
 }: WatchlistSectionProps) {
     // Campgrounds render in the saved Configure (drag) order — campgroundsByAreas
@@ -168,6 +172,7 @@ export function WatchlistSection({
                     rows={campgroundsByAreas}
                     dateRange={dateRange}
                     onEditSettings={onEditSettings}
+                    addHref={addHref}
                 />
             ) : (
                 <AvailabilityTimeline
@@ -175,6 +180,7 @@ export function WatchlistSection({
                     dateRange={dateRange}
                     defaultExpandFirst
                     onEditSettings={onEditSettings}
+                    addHref={addHref}
                 />
             )}
         </section>

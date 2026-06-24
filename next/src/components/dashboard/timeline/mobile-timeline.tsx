@@ -31,6 +31,7 @@ interface MobileTimelineProps {
     rows: ProcessedCampground[];
     dateRange: { start: Date; end: Date };
     onEditSettings?: (campgroundId: string) => void;
+    addHref?: (campgroundId: string) => string;
 }
 
 function dayStatusSets(h: Horizon, cg: ProcessedCampground) {
@@ -58,7 +59,7 @@ function horizonMonths(h: Horizon): Array<{ year: number; month: number }> {
     return out;
 }
 
-export function MobileTimeline({ rows, dateRange, onEditSettings }: MobileTimelineProps) {
+export function MobileTimeline({ rows, dateRange, onEditSettings, addHref }: MobileTimelineProps) {
     const horizon = useMemo(() => {
         const view = clampWindowStart({ start: dateRange.start, end: dateRange.end });
         return buildHorizon(view.start, view.end);
@@ -117,6 +118,7 @@ export function MobileTimeline({ rows, dateRange, onEditSettings }: MobileTimeli
                     onBack={closeDetail}
                     onOpenMap={openMap}
                     onEditSettings={onEditSettings}
+                    addHref={addHref}
                     roster={selected.id ? sitesById[selected.id] : undefined}
                     blackoutDates={blackoutDates}
                 />
@@ -216,6 +218,7 @@ function DetailScreen({
     onBack,
     onOpenMap,
     onEditSettings,
+    addHref,
     roster,
     blackoutDates,
 }: {
@@ -224,6 +227,7 @@ function DetailScreen({
     onBack: () => void;
     onOpenMap?: () => void;
     onEditSettings?: (campgroundId: string) => void;
+    addHref?: (campgroundId: string) => string;
     roster?: string[];
     blackoutDates?: BlackoutRange[];
 }) {
@@ -275,6 +279,16 @@ function DetailScreen({
                         ← Watchlist
                     </button>
                     <div className="flex items-center gap-4">
+                        {addHref && campground.id && (
+                            <a
+                                href={addHref(campground.id)}
+                                aria-label={`Add ${campground.name} to your watchlist`}
+                                className="font-mono-field font-bold uppercase"
+                                style={{ fontSize: 11, letterSpacing: "0.12em", color: CW.forest }}
+                            >
+                                + Add
+                            </a>
+                        )}
                         {onOpenMap && campground.id && (
                             <button
                                 type="button"

@@ -94,6 +94,17 @@ export function DiscoverClient() {
 
     const PAD = isMobile ? 22 : 36;
 
+    // Per-card "Add": signed-in users land on the dashboard with the add dialog
+    // pre-filled; logged-out users sign in first, preserving the campground id
+    // through OAuth so they don't lose their pick. Both reuse the `/app?add=<id>`
+    // flow the homepage lookup already uses.
+    const addHref = useMemo(() => {
+        return (id: string) =>
+            auth.user
+                ? `/app?add=${id}`
+                : `/auth/google/start?returnTo=${encodeURIComponent(`/app?add=${id}`)}`;
+    }, [auth.user]);
+
     return (
         <SiteSettingsContext.Provider value={settings}>
             <ProgressBarContext.Provider value={progressBarData}>
@@ -151,6 +162,7 @@ export function DiscoverClient() {
                             isMobile={isMobile}
                             readOnly
                             showControls={false}
+                            addHref={addHref}
                             PAD={PAD}
                         />
 

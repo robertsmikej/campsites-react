@@ -18,6 +18,7 @@ interface AvailabilityTimelineProps {
     dateRange: { start: Date; end: Date };
     defaultExpandFirst?: boolean;
     onEditSettings?: (campgroundId: string) => void;
+    addHref?: (campgroundId: string) => string;
 }
 
 export function AvailabilityTimeline({
@@ -25,6 +26,7 @@ export function AvailabilityTimeline({
     dateRange,
     defaultExpandFirst,
     onEditSettings,
+    addHref,
 }: AvailabilityTimelineProps) {
     const view = clampWindowStart(dateRange);
     const horizon = buildHorizon(view.start, view.end);
@@ -85,6 +87,7 @@ export function AvailabilityTimeline({
                             onToggleExpand={() => toggle(cg.id ?? cg.name)}
                             onEditSettings={onEditSettings}
                             onOpenMap={setMapCgId}
+                            addHref={addHref}
                             roster={cg.id ? sitesById[cg.id] : undefined}
                             blackoutDates={blackoutDates}
                         />
