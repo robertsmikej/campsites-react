@@ -498,6 +498,27 @@ const buildDashboardCta = (siteUrl: string | undefined): string => {
         </tr>`;
 };
 
+// Shown when the per-site openings exceed MAX_OPENING_CARDS: a dashed row that
+// names the remainder and links to the dashboard, so a huge batch doesn't produce
+// a runaway email.
+const buildMoreOpeningsRow = (hiddenCount: number, siteUrl: string | undefined): string => {
+    const href = siteUrl ? siteUrl : "https://campwatch.dev";
+    return `
+        <tr>
+            <td bgcolor="${C.paper}" style="background-color:${C.paper};padding:6px 18px 0 18px;">
+                <table cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;">
+                    <tbody>
+                        <tr>
+                            <td style="padding:14px 16px;border:1px dashed ${C.rule};">
+                                <div style="font-family:${F.ital};font-style:italic;font-size:16px;line-height:22px;color:${C.inkSoft};">+ ${hiddenCount} more opening${hiddenCount === 1 ? "" : "s"} not shown here. <a href="${href}" style="color:${C.ink};text-decoration:underline;">See them all on your dashboard &rarr;</a></div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </td>
+        </tr>`;
+};
+
 const buildFooter = (unsubscribeHtml: string, siteUrl: string | undefined): string => {
     const settingsLink = siteUrl ? `${siteUrl}/app/account` : "https://campwatch.dev/app/account";
     return `
@@ -524,6 +545,9 @@ const buildFooter = (unsubscribeHtml: string, siteUrl: string | undefined): stri
             </td>
         </tr>`;
 };
+
+// Max per-site opening cards rendered in one email; the rest link to the dashboard.
+const MAX_OPENING_CARDS = 10;
 
 // ── Orchestrator ──────────────────────────────────────────────────────────────
 
@@ -599,9 +623,24 @@ export const formatEmail = (newMatches: MatchResult[], options: FormatEmailOptio
     const adjacentSection =
         adjacentGroups.length > 0 ? buildAdjacentSection(adjacentGroups, campgroundNamesById) : "";
 
+    // ── Cap the per-site opening cards ────────────────────────────────────────
+    // A fresh drop can match dozens of sites at once; a 50-card email is unwieldy
+    // and clips in some clients. Keep the existing campground-grouped,
+    // favorites-first order and link to the dashboard for the remainder. Adjacent
+    // groups (the headline feature, usually few) are not capped.
+    let openingBudget = MAX_OPENING_CARDS;
+    const cappedEntries: [string, CampgroundGroup][] = [];
+    for (const [name, group] of Object.entries(byCampground)) {
+        if (openingBudget <= 0) break;
+        const shown = group.matches.slice(0, openingBudget);
+        openingBudget -= shown.length;
+        cappedEntries.push([name, { ...group, matches: shown }]);
+    }
+    const hiddenCount = count - (MAX_OPENING_CARDS - openingBudget);
+
     // ── Per-campground sections ───────────────────────────────────────────────
     let openingCounter = 0;
-    const campgroundSections = Object.entries(byCampground)
+    const campgroundSections = cappedEntries
         .map(([name, { area, description, matches }]) => {
             const indexOfFirstOpening = openingCounter;
             openingCounter += matches.length;
@@ -645,6 +684,9 @@ ${buildMetaBar(timestamp)}
 
                     <!-- OPENINGS — one section per campground -->
                     ${campgroundSections}
+
+                    <!-- "+N more" when the opening cards were capped -->
+                    ${hiddenCount > 0 ? buildMoreOpeningsRow(hiddenCount, siteUrl) : ""}
 
                     <!-- CTA -->
                     ${buildDashboardCta(siteUrl)}

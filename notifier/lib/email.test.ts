@@ -159,3 +159,25 @@ describe("adjacent openings section", () => {
         expect(html).toContain("Site 003"); // per-site block still renders below
     });
 });
+
+describe("opening-card cap", () => {
+    const manyMatches = (n: number): MatchResult[] =>
+        Array.from({ length: n }, (_, i) =>
+            match({ siteId: String(i + 1), siteName: `Q${i + 1}`, group: "all-others" }),
+        );
+
+    it("caps the cards and links the remainder to the dashboard", () => {
+        const { html } = formatEmail(manyMatches(13), { siteUrl: "https://campwatch.dev" });
+        expect(html).toContain("+ 3 more openings not shown here");
+        expect(html).toContain("See them all on your dashboard");
+        expect(html).toContain("of 13"); // eyebrow keeps the true total
+        // sites past the cap (the 11th onward) are not rendered as cards
+        expect(html).not.toContain(">Site Q11<");
+        expect(html).not.toContain(">Site Q13<");
+    });
+
+    it("renders no 'more' row when the batch fits under the cap", () => {
+        const { html } = formatEmail(manyMatches(4), { siteUrl: "https://campwatch.dev" });
+        expect(html).not.toContain("not shown here");
+    });
+});
