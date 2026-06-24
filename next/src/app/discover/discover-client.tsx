@@ -3,13 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { DashboardTopBar } from "@/components/dashboard/dashboard-top-bar";
 import { WatchlistSection } from "@/components/dashboard/watchlist-section";
-import ProgressBarContext from "@/context/progress-bar";
-import SiteSettingsContext from "@/context/site-settings";
+import ProgressBarContext from "@/contexts/progress-bar";
+import SiteSettingsContext from "@/contexts/site-settings";
 import { useAuth } from "@/hooks/use-auth";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useCampgroundsData } from "@/hooks/use-campgrounds-data";
 import { getCampgroundOpenCount } from "@/components/campground/get-open-count";
-import type { SiteSettingsValue } from "@/context/site-settings";
+import type { SiteSettingsValue } from "@/contexts/site-settings";
 import type { SiteConfig, GlobalSettings } from "@/types/campground";
 
 interface DefaultRecord {
@@ -129,7 +129,8 @@ export function DiscoverClient() {
                                 Campgrounds we watch
                             </h1>
                             <p className="font-italic-serif italic text-[18px] sm:text-[22px] mt-2 text-cw-ink-soft">
-                                Add any of these to your own watchlist, or paste a recreation.gov URL.
+                                The curator&apos;s list is a hand-picked starter set — add any to your own
+                                watchlist, or paste a recreation.gov URL.
                             </p>
                         </div>
 

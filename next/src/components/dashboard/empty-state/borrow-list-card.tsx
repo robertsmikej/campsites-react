@@ -20,8 +20,9 @@ export function BorrowListCard({ onClone, busy }: BorrowListCardProps) {
                 </span>
             </h2>
             <p className="font-body-serif text-[14px] leading-[1.5] text-cw-ink-soft m-0 mb-[14px]">
-                Start with <strong className="text-cw-ink">hand-picked campgrounds</strong> across Sawtooth,
-                Glacier, Yosemite, and Olympic. Edit or remove any of them later.
+                The curator is a <strong className="text-cw-ink">hand-picked starter list</strong> you can
+                borrow from — campgrounds across Sawtooth, Glacier, Yosemite, and Olympic. Edit or remove any
+                of them later.
             </p>
             <button
                 onClick={() => void onClone()}

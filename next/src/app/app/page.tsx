@@ -5,8 +5,8 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { Sparkles, X } from "lucide-react";
 import { SiteConfigDialog } from "@/components/site-config-dialog";
-import SiteSettingsContext from "@/context/site-settings";
-import ProgressBarContext from "@/context/progress-bar";
+import SiteSettingsContext from "@/contexts/site-settings";
+import ProgressBarContext from "@/contexts/progress-bar";
 import { Button } from "@/components/ui/button";
 import { useUserCampgrounds } from "@/hooks/use-user-campgrounds";
 import { useCampgroundsData } from "@/hooks/use-campgrounds-data";
@@ -26,7 +26,7 @@ import { WatchlistSection } from "@/components/dashboard/watchlist-section";
 import { EmptyState } from "@/components/dashboard/empty-state";
 import { siteData } from "@/data/site-data";
 import { recentlyAddedFromDefault } from "@/lib/default-additions";
-import type { SiteSettingsValue } from "@/context/site-settings";
+import type { SiteSettingsValue } from "@/contexts/site-settings";
 import type { OpeningItem } from "@/components/dashboard/openings-feed";
 import type { Campground } from "@/types/campground";
 // import type { GroupBy } from "@/hooks/use-dashboard-prefs"; // kept for future grouping UI
@@ -52,7 +52,23 @@ export default function AppPage() {
     const [focusedCampgroundId, setFocusedCampgroundId] = useState<string | null>(null);
     const [dismissedSync, setDismissedSync] = useState(false);
     const [addModalOpen, setAddModalOpen] = useState(false);
+    const [addInitialQuery, setAddInitialQuery] = useState<string | undefined>(undefined);
     const [addingIds, setAddingIds] = useState<Set<string>>(new Set());
+
+    // Carried-through add intent: a user who looked up a campground on the
+    // homepage and signed in lands here as `/app?add=<id>`. Open the add dialog
+    // pre-filled with that id, then strip the param so a refresh/back doesn't
+    // reopen it.
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const addId = params.get("add");
+        if (!addId) return;
+        setAddInitialQuery(addId);
+        setAddModalOpen(true);
+        params.delete("add");
+        const qs = params.toString();
+        window.history.replaceState(null, "", `${window.location.pathname}${qs ? `?${qs}` : ""}`);
+    }, []);
 
     // Latest season-end across the user's watched campgrounds. The default
     // date range clamps to this so the strip doesn't show dead ticks past the
@@ -112,10 +128,21 @@ export default function AppPage() {
         [globalSettings, useMockData],
     );
 
-    const { campgroundsByAreas, isFetching, progressBarData } = useCampgroundsData({
+    const { campgroundsByAreas, isFetching, progressBarData, loadError, refresh } = useCampgroundsData({
         enabled: !isHydrating,
         siteConfig,
     });
+
+    // Surface a background availability-fetch failure (otherwise the watchlist
+    // just silently shows stale/empty data, indistinguishable from "no openings").
+    useEffect(() => {
+        if (!loadError) return;
+        toast.warning("Couldn't load the latest availability", {
+            id: "availability-load-error",
+            description: "Showing what we had last. Your watchlist may be out of date.",
+            action: { label: "Retry", onClick: () => refresh() },
+        });
+    }, [loadError, refresh]);
 
     // Rating change handler
     const handleRatingChange = useCallback(
@@ -448,7 +475,14 @@ export default function AppPage() {
                 </ProgressBarContext.Provider>
             </SiteSettingsContext.Provider>
 
-            <AddCampgroundDialog open={addModalOpen} onClose={() => setAddModalOpen(false)} />
+            <AddCampgroundDialog
+                open={addModalOpen}
+                onClose={() => {
+                    setAddModalOpen(false);
+                    setAddInitialQuery(undefined);
+                }}
+                initialQuery={addInitialQuery}
+            />
         </>
     );
 }

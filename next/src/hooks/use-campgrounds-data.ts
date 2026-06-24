@@ -23,6 +23,7 @@ export function useCampgroundsData({ enabled, siteConfig }: UseCampgroundsDataAr
     const [campgroundsData, setCampgroundsData] = useState<CampgroundsBySystem>({});
     const [campgroundsByAreas, setCampgroundsByAreas] = useState<ProcessedCampground[]>([]);
     const [isFetching, setIsFetching] = useState(false);
+    const [loadError, setLoadError] = useState(false);
     const [reloadKey, setReloadKey] = useState(0);
 
     // Kept for component-API compatibility; progress is now binary (loading vs done).
@@ -44,7 +45,10 @@ export function useCampgroundsData({ enabled, siteConfig }: UseCampgroundsDataAr
                 const response = await fetch("/api/availability");
                 if (!response.ok) {
                     console.error(`[availability] HTTP ${response.status}`);
-                    if (!cancelled) setCampgroundsData({});
+                    // Keep the last-good data rather than clearing it — a transient
+                    // failure shouldn't empty the watchlist (that's indistinguishable
+                    // from "no openings"). Flag the error so the UI can surface it.
+                    if (!cancelled) setLoadError(true);
                     return;
                 }
                 const snapshot = (await response.json()) as AvailabilitySnapshot;
@@ -56,9 +60,10 @@ export function useCampgroundsData({ enabled, siteConfig }: UseCampgroundsDataAr
                     "recreation.gov": snapshot.campgrounds as unknown as ProcessedCampground[],
                 };
                 setCampgroundsData(bySystem);
+                setLoadError(false);
             } catch (e) {
                 console.error("[availability] fetch error:", e);
-                if (!cancelled) setCampgroundsData({});
+                if (!cancelled) setLoadError(true);
             } finally {
                 if (!cancelled) setIsFetching(false);
             }
@@ -114,5 +119,5 @@ export function useCampgroundsData({ enabled, siteConfig }: UseCampgroundsDataAr
         setCampgroundsByAreas(formatGroupsByFavorites(overlaid) ?? []);
     }, [campgroundsData, ratingsById]);
 
-    return { campgroundsData, campgroundsByAreas, isFetching, progressBarData, refresh };
+    return { campgroundsData, campgroundsByAreas, isFetching, loadError, progressBarData, refresh };
 }

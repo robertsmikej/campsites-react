@@ -49,6 +49,43 @@ describe("useCampgroundsData", () => {
         await waitFor(() => expect(globalThis.fetch).toHaveBeenCalledTimes(2));
     });
 
+    it("flags loadError when the availability fetch fails", async () => {
+        vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("nope", { status: 500 }));
+        const { result } = renderHook(() => useCampgroundsData({ enabled: true }));
+        await waitFor(() => expect(result.current.loadError).toBe(true));
+    });
+
+    it("keeps prior data on a transient failure and clears the error on recovery", async () => {
+        const snapshot = {
+            updatedAt: "x",
+            campgrounds: [
+                {
+                    id: "1",
+                    name: "A",
+                    area: "",
+                    sites: { favorites: [], worthwhile: [] },
+                    siteAvailability: {},
+                },
+            ],
+        };
+        const fetchMock = vi
+            .spyOn(globalThis, "fetch")
+            .mockResolvedValueOnce(new Response(JSON.stringify(snapshot), { status: 200 }));
+        const { result } = renderHook(() => useCampgroundsData({ enabled: true }));
+        await waitFor(() => expect(result.current.campgroundsByAreas.length).toBe(1));
+
+        // A later refetch fails — the watchlist must NOT be wiped to empty.
+        fetchMock.mockResolvedValueOnce(new Response("err", { status: 500 }));
+        act(() => window.dispatchEvent(new Event(WATCHLIST_CHANGED_EVENT)));
+        await waitFor(() => expect(result.current.loadError).toBe(true));
+        expect(result.current.campgroundsByAreas.length).toBe(1);
+
+        // A successful retry clears the error flag.
+        fetchMock.mockResolvedValueOnce(new Response(JSON.stringify(snapshot), { status: 200 }));
+        act(() => result.current.refresh());
+        await waitFor(() => expect(result.current.loadError).toBe(false));
+    });
+
     it("reflects live siteConfig favorites without a refetch", async () => {
         // The snapshot carries stale favorites; the live siteConfig is authoritative.
         const snapshot = {

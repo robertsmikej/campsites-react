@@ -398,6 +398,18 @@ export function CampgroundDetail({
                         {sitesWithAvailability === 0 && (
                             <p className="text-sm text-muted-foreground">No open sites right now.</p>
                         )}
+                        {(grouped.favorites.length > 0 || grouped.worthwhile.length > 0) && (
+                            <p className="text-[12px] leading-snug text-muted-foreground">
+                                <span className="font-medium text-green-700 dark:text-green-400">
+                                    ★ Favorites
+                                </span>{" "}
+                                — the sites you&apos;d drive back for.{" "}
+                                <span className="font-medium text-yellow-700 dark:text-yellow-400">
+                                    ◇ Worthwhile
+                                </span>{" "}
+                                — good-enough backups.
+                            </p>
+                        )}
                         {grouped.favorites.length > 0 && (
                             <section className="flex flex-col gap-1.5">
                                 <h3 className="text-[13px] font-semibold uppercase tracking-wide text-green-700 dark:text-green-400">
