@@ -22,6 +22,8 @@ import {
 } from "./fetch-jobs";
 import { acquireSweepLock, type LockKv } from "./sweep-lock";
 import { acquireNotifyLock, releaseNotifyLock } from "./notify-lock";
+import { sendWebPush } from "./lib/push";
+import type { PushSubscriptionRecord } from "../next/src/lib/push/subscription";
 import type { Campground, GlobalSettings, NotifyScope } from "../next/src/types/campground";
 import type { MatchResult, SiteConfigForDiff, CampgroundResult } from "./lib/diff";
 import type { SiteAvailabilityMap } from "../next/src/lib/recgov/types";
@@ -37,6 +39,8 @@ export interface RunConfig {
     dryRun: boolean;
     kvAdapter: KvAdapter | null;
     now: Date;
+    /** When set, the notify pass also sends Web Push (additive to email). */
+    vapid?: { privateJWK: JsonWebKey; subject: string };
 }
 
 export function buildKvAdapter(): RestKvAdapter | null {
@@ -113,6 +117,7 @@ interface NotificationTarget {
         "recreation.gov"?: Campground[];
     };
     globalSettings?: GlobalSettings;
+    pushSubscriptions?: PushSubscriptionRecord[];
 }
 
 interface NotificationTargetsResponse {
@@ -851,6 +856,40 @@ export async function run(config: RunConfig, prefetchedTargets?: NotificationTar
                     const firstSeenIso = newFirstSeenMap[sig];
                     if (firstSeenIso) sentLatenciesMs.push(sentAtMs - new Date(firstSeenIso).getTime());
                 }
+                // Push to this user's registered devices too (additive to email).
+                // Prune any subscription the push service reports as gone (404/410).
+                if (config.vapid && (target.pushSubscriptions?.length ?? 0) > 0) {
+                    const firstMatch = newMatches[0];
+                    const pushTitle = firstMatch
+                        ? `${newMatches.length} new opening${newMatches.length === 1 ? "" : "s"}`
+                        : "Adjacent sites just opened";
+                    const pushBody = firstMatch
+                        ? `${firstMatch.campgroundName} · Site ${firstMatch.siteName}`
+                        : "Tap to see what's available on your watchlist.";
+                    const dead: string[] = [];
+                    for (const sub of target.pushSubscriptions ?? []) {
+                        try {
+                            const r = await sendWebPush(
+                                sub,
+                                { title: pushTitle, body: pushBody, url: `${siteUrl}/app` },
+                                config.vapid,
+                            );
+                            if (r.gone) dead.push(sub.endpoint);
+                        } catch (err) {
+                            console.error(`[push] ${target.email}: ${(err as Error).message}`);
+                        }
+                    }
+                    if (dead.length > 0) {
+                        await fetch(`${subscriberApiUrl}/api/admin/push/prune`, {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                Authorization: `Bearer ${subscriberApiSecret}`,
+                            },
+                            body: JSON.stringify({ email: target.email, endpoints: dead }),
+                        }).catch(() => {});
+                    }
+                }
                 updates.push({ email: target.email, state: mergedState, lastNotifiedAt: now.toISOString() });
             } catch (err) {
                 console.error(`[${target.email}] email send failed: ${(err as Error).message}`);
@@ -906,7 +945,9 @@ export async function run(config: RunConfig, prefetchedTargets?: NotificationTar
             if (!recentPutResp.ok) {
                 console.error(`[Warn] /api/admin/openings/recent PUT returned ${recentPutResp.status}`);
             } else {
-                console.log(`[Recent] ${trimmedRecent.length} entries in log (${newThisCycle} new this cycle)`);
+                console.log(
+                    `[Recent] ${trimmedRecent.length} entries in log (${newThisCycle} new this cycle)`,
+                );
             }
         } catch (err) {
             console.error(`[Warn] /api/admin/openings/recent PUT failed: ${(err as Error).message}`);

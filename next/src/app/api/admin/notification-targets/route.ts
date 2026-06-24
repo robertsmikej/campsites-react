@@ -1,6 +1,7 @@
 import { getEnv, getKv } from "@/lib/cloudflare";
 import { jsonResponse, withCors } from "@/lib/responses";
 import { getUserCampgrounds } from "@/lib/user-campgrounds";
+import { readPushSubs, type PushSubscriptionRecord } from "@/lib/push/subscription";
 import type { UserProfile, UserRole } from "@/types/user";
 import type { GlobalSettings, NotifyScope, SiteConfig } from "@/types/campground";
 import { withErrorLogging } from "@/lib/route-helpers";
@@ -16,6 +17,7 @@ interface NotificationTarget {
     campgrounds: SiteConfig;
     globalSettings: GlobalSettings;
     notifierState: unknown | null;
+    pushSubscriptions: PushSubscriptionRecord[];
 }
 
 const PROFILE_PREFIX = "user:";
@@ -56,6 +58,7 @@ async function getHandler(request: Request): Promise<Response> {
                 campgrounds: userList!.campgrounds,
                 globalSettings: userList!.globalSettings,
                 notifierState: notifierState ?? null,
+                pushSubscriptions: await readPushSubs(profile.email),
             };
             if (profile.defaultNotifyScope) target.defaultNotifyScope = profile.defaultNotifyScope;
             if (profile.lastNotifiedAt) target.lastNotifiedAt = profile.lastNotifiedAt;

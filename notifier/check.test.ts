@@ -2,6 +2,11 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { run } from "./check";
 import type { KvAdapter } from "../next/src/lib/recgov/cache";
 
+// Mock the Web Push sender so these tests don't run real crypto; we only assert
+// that run() fans out to it for a user with subscriptions + vapid configured.
+const { sendWebPushMock } = vi.hoisted(() => ({ sendWebPushMock: vi.fn() }));
+vi.mock("./lib/push", () => ({ sendWebPush: sendWebPushMock }));
+
 function stubKv(): KvAdapter {
     return {
         getRaw: vi.fn(async () => null),
@@ -120,6 +125,73 @@ describe("run() dry-run", () => {
         // Snapshots are intentionally still written in dry-run (they improve the
         // dashboard and are side-effect-safe).
         expect(kv.putSnapshot).toHaveBeenCalled();
+    });
+});
+
+describe("web push fan-out", () => {
+    beforeEach(() => {
+        vi.restoreAllMocks();
+        sendWebPushMock.mockReset();
+    });
+
+    it("pushes to each subscription when vapid is configured and there's a new match", async () => {
+        sendWebPushMock.mockResolvedValue({ endpoint: "https://push/1", status: 201, gone: false });
+        const pushTarget = {
+            ...target,
+            pushSubscriptions: [
+                { endpoint: "https://push/1", keys: { p256dh: "p", auth: "a" }, createdAt: "x" },
+            ],
+        };
+        vi.spyOn(globalThis, "fetch").mockImplementation(mockFetch([pushTarget]) as never);
+        vi.spyOn(console, "log").mockImplementation(() => {});
+        const kv = stubKv();
+        kv.getRaw = vi.fn(async (id: string, month: string) =>
+            id === "232358" && month === "2026-07" ? (RECGOV_WITH_MATCH as never) : null,
+        );
+
+        await run({
+            subscriberApiUrl: "https://campwatch.dev",
+            subscriberApiSecret: "secret",
+            resendApiKey: "re_x",
+            siteUrl: "https://campwatch.dev",
+            forceEmail: false,
+            dryRun: false,
+            kvAdapter: kv,
+            now: new Date("2026-07-06T00:00:00Z"),
+            vapid: { privateJWK: { kty: "EC" } as never, subject: "mailto:hello@campwatch.dev" },
+        });
+
+        expect(sendWebPushMock).toHaveBeenCalledTimes(1);
+        expect(sendWebPushMock.mock.calls[0]?.[0]).toMatchObject({ endpoint: "https://push/1" });
+    });
+
+    it("does not push when vapid is absent", async () => {
+        sendWebPushMock.mockResolvedValue({ endpoint: "https://push/1", status: 201, gone: false });
+        const pushTarget = {
+            ...target,
+            pushSubscriptions: [
+                { endpoint: "https://push/1", keys: { p256dh: "p", auth: "a" }, createdAt: "x" },
+            ],
+        };
+        vi.spyOn(globalThis, "fetch").mockImplementation(mockFetch([pushTarget]) as never);
+        vi.spyOn(console, "log").mockImplementation(() => {});
+        const kv = stubKv();
+        kv.getRaw = vi.fn(async (id: string, month: string) =>
+            id === "232358" && month === "2026-07" ? (RECGOV_WITH_MATCH as never) : null,
+        );
+
+        await run({
+            subscriberApiUrl: "https://campwatch.dev",
+            subscriberApiSecret: "secret",
+            resendApiKey: "re_x",
+            siteUrl: "https://campwatch.dev",
+            forceEmail: false,
+            dryRun: false,
+            kvAdapter: kv,
+            now: new Date("2026-07-06T00:00:00Z"),
+        });
+
+        expect(sendWebPushMock).not.toHaveBeenCalled();
     });
 });
 

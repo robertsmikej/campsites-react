@@ -9,10 +9,17 @@ interface Env {
     SUBSCRIBER_API_URL: string;
     SITE_URL?: string;
     DRY_RUN?: string;
+    VAPID_PRIVATE_JWK?: string;
 }
 
 export default {
     async scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+        const vapid = env.VAPID_PRIVATE_JWK
+            ? {
+                  privateJWK: JSON.parse(env.VAPID_PRIVATE_JWK) as JsonWebKey,
+                  subject: "mailto:hello@campwatch.dev",
+              }
+            : undefined;
         const config = {
             subscriberApiUrl: env.SUBSCRIBER_API_URL,
             subscriberApiSecret: env.SUBSCRIBER_API_SECRET,
@@ -23,6 +30,7 @@ export default {
             kvAdapter: new WorkerKvAdapter(env.SUBSCRIBERS as never),
             // scheduledTime keeps the minute stable across slow starts.
             now: new Date(controller.scheduledTime),
+            ...(vapid ? { vapid } : {}),
         };
         // Two cron patterns, distinguished by controller.cron:
         //   "* * * * *"   -> tick: fast-lane fetch (high-tier) + notify from cache
