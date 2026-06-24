@@ -1,7 +1,7 @@
 // Campsite Availability Notifier — per-user rewire (Phase 5)
 // Pulls per-user campground lists from /api/admin/notification-targets,
 // deduplicates recreation.gov fetches, and emails each user about their own matches.
-// Designed to run as a GitHub Actions scheduled workflow.
+// Runs as the campwatch-notifier Cloudflare Worker on cron triggers (tick + sweep); see worker.ts.
 
 import { stayOverlapsBlackout } from "../next/src/lib/blackout";
 import { processCampgroundResults, getAllDatesInRange } from "../next/src/lib/recgov/match-detection";
@@ -124,11 +124,11 @@ interface StateUpdate {
     lastNotifiedAt?: string;
 }
 
-interface FirstSeenMap {
+export interface FirstSeenMap {
     [signature: string]: string; // ISO timestamp
 }
 
-interface RecentOpening {
+export interface RecentOpening {
     signature: string;
     campgroundId: string;
     campgroundName: string;
@@ -145,7 +145,7 @@ interface DailyHistoryEntry {
     count: number;
 }
 
-interface StatsBody {
+export interface StatsBody {
     lastPollAt: string;
     campgroundsTracked: number;
     openingsSentToday: number;
@@ -157,7 +157,7 @@ interface StatsBody {
     _dailyHistory: DailyHistoryEntry[];
 }
 
-interface PriorStats {
+export interface PriorStats {
     todayKey?: string;
     openingsSentToday?: number;
     medianLatencyMs?: number;
@@ -702,6 +702,15 @@ export async function run(config: RunConfig, prefetchedTargets?: NotificationTar
     // 1. Fetch the existing global first-seen map.
     const existingFirstSeenMap = await fetchFirstSeenMap(subscriberApiUrl, subscriberApiSecret);
 
+    // Compute each eligible user's matches/groups exactly once. Both the
+    // first-seen pass and the per-user diff pass below reuse this. Computing it
+    // twice per tick also re-ran the adjacency KV reads and re-wrote every
+    // user's snapshot a second time for no reason.
+    const computedByTarget = new Map<NotificationTarget, ComputedUserResults>();
+    for (const target of eligible) {
+        computedByTarget.set(target, await computeMatchesForUser(target, rawByCampground));
+    }
+
     // 2. Compute all currently-visible match signatures across all eligible users.
     //    For each signature: record first-seen timestamp if not already present; keep existing if so.
     //    Only retain signatures still visible this cycle (stale ones drop naturally).
@@ -711,7 +720,7 @@ export async function run(config: RunConfig, prefetchedTargets?: NotificationTar
     const newFirstSeenMap: FirstSeenMap = {};
     const globalMatchesBySig: Record<string, Omit<RecentOpening, "signature" | "detectedAt">> = {};
     for (const target of eligible) {
-        const { matches: userMatches } = await computeMatchesForUser(target, rawByCampground);
+        const { matches: userMatches } = computedByTarget.get(target)!;
         for (const m of userMatches) {
             const sig = signatureForMatch(m);
             if (!newFirstSeenMap[sig]) {
@@ -740,7 +749,7 @@ export async function run(config: RunConfig, prefetchedTargets?: NotificationTar
             matches: userMatches,
             groups: userGroups,
             campgroundNamesById,
-        } = await computeMatchesForUser(target, rawByCampground);
+        } = computedByTarget.get(target)!;
         const isCurator = (target.roles ?? []).includes("curator");
 
         // Apply curator lead-time: non-curators only see matches whose global first-sighting
@@ -867,32 +876,16 @@ export async function run(config: RunConfig, prefetchedTargets?: NotificationTar
 
     // 5.5: Maintain recent-openings log.
     // Fetch the prior log from the public endpoint (no auth needed, falls back to []).
-    const RECENT_WINDOW_MS = 24 * 60 * 60 * 1000;
     const recentResp = await fetch(`${subscriberApiUrl}/api/openings/recent`).catch(() => null);
     const priorRecent: RecentOpening[] =
         recentResp && recentResp.ok ? ((await recentResp.json()) as RecentOpening[]) : [];
 
-    // Prune entries older than 24h.
-    const recent = priorRecent.filter(
-        (r) => r.detectedAt && Date.now() - new Date(r.detectedAt).getTime() < RECENT_WINDOW_MS,
-    );
-    const existingSigs = new Set(recent.map((r) => r.signature));
-
-    // Add any signature in the current first-seen map that isn't already in the
-    // recent log and was first seen within the 24-hour retention window.
-    // existingSigs is the real de-dupe mechanism; the timestamp filter only enforces retention.
-    for (const [sig, firstSeen] of Object.entries(newFirstSeenMap)) {
-        if (existingSigs.has(sig)) continue;
-        const firstSeenMs = new Date(firstSeen).getTime();
-        if (Date.now() - firstSeenMs > RECENT_WINDOW_MS) continue;
-        const enriched = globalMatchesBySig[sig];
-        if (!enriched) continue;
-        recent.push({ signature: sig, ...enriched, detectedAt: firstSeen });
-    }
-
-    // Sort descending by detectedAt; keep at most 200 entries.
-    recent.sort((a, b) => b.detectedAt.localeCompare(a.detectedAt));
-    const trimmedRecent = recent.slice(0, 200);
+    const { trimmedRecent, newThisCycle } = maintainRecentOpeningsLog({
+        priorRecent,
+        newFirstSeenMap,
+        globalMatchesBySig,
+        nowMs: Date.now(),
+    });
 
     if (!dryRun) {
         try {
@@ -907,9 +900,7 @@ export async function run(config: RunConfig, prefetchedTargets?: NotificationTar
             if (!recentPutResp.ok) {
                 console.error(`[Warn] /api/admin/openings/recent PUT returned ${recentPutResp.status}`);
             } else {
-                console.log(
-                    `[Recent] ${trimmedRecent.length} entries in log (${recent.length - priorRecent.filter((r) => r.detectedAt && Date.now() - new Date(r.detectedAt).getTime() < RECENT_WINDOW_MS).length} new this cycle)`,
-                );
+                console.log(`[Recent] ${trimmedRecent.length} entries in log (${newThisCycle} new this cycle)`);
             }
         } catch (err) {
             console.error(`[Warn] /api/admin/openings/recent PUT failed: ${(err as Error).message}`);
@@ -917,8 +908,6 @@ export async function run(config: RunConfig, prefetchedTargets?: NotificationTar
     }
 
     // 6. Compute and PUT stats.
-    const todayKeyUtc = now.toISOString().slice(0, 10); // "YYYY-MM-DD" UTC
-
     // Campgrounds tracked: unique campground IDs across ALL targets (not just eligible),
     // matching only enabled entries. Gives a stable "currently watched" count each cycle.
     const trackedIds = new Set<string>();
@@ -940,47 +929,12 @@ export async function run(config: RunConfig, prefetchedTargets?: NotificationTar
         console.error(`[Warn] Could not fetch prior stats: ${(err as Error).message}`);
     }
 
-    // Daily counter: reset to 0 if the date has rolled over; otherwise accumulate.
-    const priorOpenings =
-        priorStats?.todayKey === todayKeyUtc ? Number(priorStats.openingsSentToday) || 0 : 0;
-    const openingsSentToday = priorOpenings + sentLatenciesMs.length;
-
-    // Daily history for the rolling 7-day window.
-    const priorHistory = Array.isArray(priorStats?._dailyHistory) ? priorStats._dailyHistory : [];
-    const dailyHistory = updateDailyHistory(priorHistory, todayKeyUtc, openingsSentToday);
-    const openingsSentLast7Days = dailyHistory.reduce((acc, entry) => acc + (Number(entry.count) || 0), 0);
-
-    // Latency window: carry forward up to 200 prior samples, then append this cycle's.
-    const priorWindow =
-        priorStats?.todayKey === todayKeyUtc && Array.isArray(priorStats._latencyWindow)
-            ? priorStats._latencyWindow.slice(-200)
-            : [];
-    const latencyWindow = [...priorWindow, ...sentLatenciesMs].slice(-200);
-
-    // Compute median.
-    const sortedLatencies = [...latencyWindow].sort((a, b) => a - b);
-    const medianLatencyMs =
-        sortedLatencies.length === 0
-            ? Number(priorStats?.medianLatencyMs) || 0
-            : sortedLatencies.length % 2 === 1
-              ? (sortedLatencies[(sortedLatencies.length - 1) / 2] ?? 0)
-              : Math.round(
-                    ((sortedLatencies[sortedLatencies.length / 2 - 1] ?? 0) +
-                        (sortedLatencies[sortedLatencies.length / 2] ?? 0)) /
-                        2,
-                );
-
-    const statsBody: StatsBody = {
-        lastPollAt: now.toISOString(),
+    const statsBody = computeStatsBody({
+        priorStats,
+        sentLatenciesMs,
         campgroundsTracked: trackedIds.size,
-        openingsSentToday,
-        openingsSentLast7Days,
-        medianLatencyMs,
-        sampleSize: sortedLatencies.length,
-        todayKey: todayKeyUtc,
-        _latencyWindow: latencyWindow,
-        _dailyHistory: dailyHistory,
-    };
+        now,
+    });
 
     if (!dryRun) {
         try {
@@ -996,7 +950,7 @@ export async function run(config: RunConfig, prefetchedTargets?: NotificationTar
                 console.error(`[Warn] /api/admin/stats PUT returned ${statsResponse.status}`);
             } else {
                 console.log(
-                    `[Stats] ${trackedIds.size} cgs tracked, ${sentLatenciesMs.length} sent this cycle, ${openingsSentLast7Days} last 7d, ${medianLatencyMs}ms median`,
+                    `[Stats] ${trackedIds.size} cgs tracked, ${sentLatenciesMs.length} sent this cycle, ${statsBody.openingsSentLast7Days} last 7d, ${statsBody.medianLatencyMs}ms median`,
                 );
             }
         } catch (err) {
@@ -1063,4 +1017,103 @@ function updateDailyHistory(
     filtered.push({ date: todayKey, count: Number(todayCount) || 0 });
     filtered.sort((a, b) => a.date.localeCompare(b.date));
     return filtered;
+}
+
+const RECENT_OPENINGS_WINDOW_MS = 24 * 60 * 60 * 1000;
+const RECENT_OPENINGS_MAX = 200;
+
+// Pure: fold this cycle's first-seen signatures into the rolling recent-openings
+// log. Prunes entries older than the 24h retention window, de-dupes by signature,
+// sorts newest-first, and caps the list. `nowMs` is injected so the time math is
+// testable. Returns the trimmed log plus how many entries are new this cycle.
+export function maintainRecentOpeningsLog(args: {
+    priorRecent: RecentOpening[];
+    newFirstSeenMap: FirstSeenMap;
+    globalMatchesBySig: Record<string, Omit<RecentOpening, "signature" | "detectedAt">>;
+    nowMs: number;
+}): { trimmedRecent: RecentOpening[]; newThisCycle: number } {
+    const { priorRecent, newFirstSeenMap, globalMatchesBySig, nowMs } = args;
+
+    // Prune entries older than 24h.
+    const recent = priorRecent.filter(
+        (r) => r.detectedAt && nowMs - new Date(r.detectedAt).getTime() < RECENT_OPENINGS_WINDOW_MS,
+    );
+    const retainedCount = recent.length;
+    const existingSigs = new Set(recent.map((r) => r.signature));
+
+    // Add any signature in the current first-seen map that isn't already in the
+    // recent log and was first seen within the retention window. existingSigs is
+    // the real de-dupe mechanism; the timestamp filter only enforces retention.
+    for (const [sig, firstSeen] of Object.entries(newFirstSeenMap)) {
+        if (existingSigs.has(sig)) continue;
+        const firstSeenMs = new Date(firstSeen).getTime();
+        if (nowMs - firstSeenMs > RECENT_OPENINGS_WINDOW_MS) continue;
+        const enriched = globalMatchesBySig[sig];
+        if (!enriched) continue;
+        recent.push({ signature: sig, ...enriched, detectedAt: firstSeen });
+    }
+
+    recent.sort((a, b) => b.detectedAt.localeCompare(a.detectedAt));
+    return {
+        trimmedRecent: recent.slice(0, RECENT_OPENINGS_MAX),
+        newThisCycle: recent.length - retainedCount,
+    };
+}
+
+const LATENCY_WINDOW_MAX = 200;
+
+// Pure: assemble the stats payload from the prior stats blob and this cycle's
+// sent-latency samples. Handles the daily-counter rollover, the rolling 7-day
+// history, the bounded latency window, and the median. Split out of run() so the
+// median / 7-day-window math is unit-testable without standing up the HTTP loop.
+export function computeStatsBody(args: {
+    priorStats: PriorStats | null;
+    sentLatenciesMs: number[];
+    campgroundsTracked: number;
+    now: Date;
+}): StatsBody {
+    const { priorStats, sentLatenciesMs, campgroundsTracked, now } = args;
+    const todayKeyUtc = now.toISOString().slice(0, 10); // "YYYY-MM-DD" UTC
+
+    // Daily counter: reset to 0 if the date has rolled over; otherwise accumulate.
+    const priorOpenings =
+        priorStats?.todayKey === todayKeyUtc ? Number(priorStats.openingsSentToday) || 0 : 0;
+    const openingsSentToday = priorOpenings + sentLatenciesMs.length;
+
+    // Daily history for the rolling 7-day window.
+    const priorHistory = Array.isArray(priorStats?._dailyHistory) ? priorStats._dailyHistory : [];
+    const dailyHistory = updateDailyHistory(priorHistory, todayKeyUtc, openingsSentToday);
+    const openingsSentLast7Days = dailyHistory.reduce((acc, entry) => acc + (Number(entry.count) || 0), 0);
+
+    // Latency window: carry forward up to 200 prior samples, then append this cycle's.
+    const priorWindow =
+        priorStats?.todayKey === todayKeyUtc && Array.isArray(priorStats._latencyWindow)
+            ? priorStats._latencyWindow.slice(-LATENCY_WINDOW_MAX)
+            : [];
+    const latencyWindow = [...priorWindow, ...sentLatenciesMs].slice(-LATENCY_WINDOW_MAX);
+
+    // Compute median.
+    const sortedLatencies = [...latencyWindow].sort((a, b) => a - b);
+    const medianLatencyMs =
+        sortedLatencies.length === 0
+            ? Number(priorStats?.medianLatencyMs) || 0
+            : sortedLatencies.length % 2 === 1
+              ? (sortedLatencies[(sortedLatencies.length - 1) / 2] ?? 0)
+              : Math.round(
+                    ((sortedLatencies[sortedLatencies.length / 2 - 1] ?? 0) +
+                        (sortedLatencies[sortedLatencies.length / 2] ?? 0)) /
+                        2,
+                );
+
+    return {
+        lastPollAt: now.toISOString(),
+        campgroundsTracked,
+        openingsSentToday,
+        openingsSentLast7Days,
+        medianLatencyMs,
+        sampleSize: sortedLatencies.length,
+        todayKey: todayKeyUtc,
+        _latencyWindow: latencyWindow,
+        _dailyHistory: dailyHistory,
+    };
 }
