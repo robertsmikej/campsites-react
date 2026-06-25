@@ -862,6 +862,10 @@ export async function run(config: RunConfig, prefetchedTargets?: NotificationTar
                 // reports as gone (404/410).
                 if (config.vapid && (target.pushSubscriptions?.length ?? 0) > 0) {
                     const PUSH_MAX_LINES = 5;
+                    // Tier marker matching the app/email legend: ★ favorite, ◇ worthwhile,
+                    // nothing for other sites.
+                    const tierMark = (t: string) =>
+                        t === "favorites" ? "★ " : t === "worthwhile" ? "◇ " : "";
                     const byCg = new Map<string, { name: string; lines: string[] }>();
                     const addLine = (id: string, name: string, line: string) => {
                         const entry = byCg.get(id) ?? { name, lines: [] };
@@ -872,7 +876,7 @@ export async function run(config: RunConfig, prefetchedTargets?: NotificationTar
                         addLine(
                             m.campgroundId,
                             m.campgroundName,
-                            `Site ${m.siteName} · ${formatDate(m.match.from)} → ${formatDate(m.match.to)}`,
+                            `${tierMark(m.group)}Site ${m.siteName} · ${formatDate(m.match.from)} → ${formatDate(m.match.to)}`,
                         );
                     }
                     for (const g of newGroups) {
@@ -881,7 +885,7 @@ export async function run(config: RunConfig, prefetchedTargets?: NotificationTar
                         addLine(
                             g.campgroundId,
                             name,
-                            `Sites ${sites} (adjacent) · ${formatDate(g.from)} → ${formatDate(g.to)}`,
+                            `${tierMark(g.anchorTier)}Sites ${sites} (adjacent) · ${formatDate(g.from)} → ${formatDate(g.to)}`,
                         );
                     }
 

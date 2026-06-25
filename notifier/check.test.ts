@@ -170,6 +170,51 @@ describe("web push fan-out", () => {
         expect(payload.body).toContain("Outlet");
         expect(payload.body).toContain("Site 001");
         expect(payload.body).toContain("Jul 4");
+        // Not a favorite here (empty favorites) → no star prefix.
+        expect(payload.body).not.toContain("★");
+    });
+
+    it("prefixes favorite sites with a star", async () => {
+        sendWebPushMock.mockResolvedValue({ endpoint: "https://push/1", status: 201, gone: false });
+        const favTarget = {
+            ...target,
+            campgrounds: {
+                "recreation.gov": [
+                    {
+                        id: "232358",
+                        name: "Outlet",
+                        enabled: true,
+                        notifyScope: "all",
+                        dates: { startDate: "2026-07-01", endDate: "2026-07-10" },
+                        sites: { favorites: ["001"], worthwhile: [] },
+                    },
+                ],
+            },
+            pushSubscriptions: [
+                { endpoint: "https://push/1", keys: { p256dh: "p", auth: "a" }, createdAt: "x" },
+            ],
+        };
+        vi.spyOn(globalThis, "fetch").mockImplementation(mockFetch([favTarget]) as never);
+        vi.spyOn(console, "log").mockImplementation(() => {});
+        const kv = stubKv();
+        kv.getRaw = vi.fn(async (id: string, month: string) =>
+            id === "232358" && month === "2026-07" ? (RECGOV_WITH_MATCH as never) : null,
+        );
+
+        await run({
+            subscriberApiUrl: "https://campwatch.dev",
+            subscriberApiSecret: "secret",
+            resendApiKey: "re_x",
+            siteUrl: "https://campwatch.dev",
+            forceEmail: false,
+            dryRun: false,
+            kvAdapter: kv,
+            now: new Date("2026-07-06T00:00:00Z"),
+            vapid: { privateJWK: { kty: "EC" } as never, subject: "mailto:hello@campwatch.dev" },
+        });
+
+        const payload = sendWebPushMock.mock.calls[0]?.[1] as { body: string };
+        expect(payload.body).toContain("★ Site 001");
     });
 
     it("does not push when vapid is absent", async () => {
