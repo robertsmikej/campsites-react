@@ -168,7 +168,8 @@ describe("web push fan-out", () => {
         const payload = sendWebPushMock.mock.calls[0]?.[1] as { title: string; body: string };
         expect(payload.title).toBe("1 new opening");
         expect(payload.body).toContain("Outlet");
-        expect(payload.body).toContain("Site 001");
+        expect(payload.body).toContain("001");
+        expect(payload.body).not.toContain("Site 001"); // the word "Site" is dropped
         expect(payload.body).toContain("Jul 4");
         // Not a favorite here (empty favorites) → no star prefix.
         expect(payload.body).not.toContain("★");
@@ -214,7 +215,7 @@ describe("web push fan-out", () => {
         });
 
         const payload = sendWebPushMock.mock.calls[0]?.[1] as { body: string };
-        expect(payload.body).toContain("★ Site 001");
+        expect(payload.body).toContain("★ 001");
     });
 
     it("does not push when vapid is absent", async () => {

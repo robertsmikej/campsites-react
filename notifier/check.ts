@@ -876,7 +876,7 @@ export async function run(config: RunConfig, prefetchedTargets?: NotificationTar
                         addLine(
                             m.campgroundId,
                             m.campgroundName,
-                            `${tierMark(m.group)}Site ${m.siteName} · ${formatDate(m.match.from)} → ${formatDate(m.match.to)}`,
+                            `${tierMark(m.group)}${m.siteName} · ${formatDate(m.match.from)} → ${formatDate(m.match.to)}`,
                         );
                     }
                     for (const g of newGroups) {
@@ -885,7 +885,7 @@ export async function run(config: RunConfig, prefetchedTargets?: NotificationTar
                         addLine(
                             g.campgroundId,
                             name,
-                            `${tierMark(g.anchorTier)}Sites ${sites} (adjacent) · ${formatDate(g.from)} → ${formatDate(g.to)}`,
+                            `${tierMark(g.anchorTier)}${sites} (adjacent) · ${formatDate(g.from)} → ${formatDate(g.to)}`,
                         );
                     }
 
