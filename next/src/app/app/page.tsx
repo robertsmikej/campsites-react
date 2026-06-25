@@ -24,6 +24,7 @@ import { Greeting } from "@/components/dashboard/greeting";
 import { OpeningsFeed } from "@/components/dashboard/openings-feed";
 import { WatchlistSection } from "@/components/dashboard/watchlist-section";
 import { EmptyState } from "@/components/dashboard/empty-state";
+import { PushNudge } from "@/components/dashboard/push-nudge";
 import { siteData } from "@/data/site-data";
 import { recentlyAddedFromDefault } from "@/lib/default-additions";
 import type { SiteSettingsValue } from "@/contexts/site-settings";
@@ -356,6 +357,8 @@ export default function AppPage() {
                                     </div>
                                 </div>
                             )}
+
+                            <PushNudge />
 
                             {isEmpty ? (
                                 <DashboardErrorBoundary section="Empty state">
