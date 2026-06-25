@@ -1,10 +1,34 @@
 "use client";
 
+import { useState } from "react";
+import { toast } from "sonner";
 import { usePushSubscription } from "@/hooks/use-push-subscription";
 import { Button } from "@/components/ui/button";
 
 export function PushToggle() {
     const { isSupported, isInstalledPWA, status, subscribe, unsubscribe } = usePushSubscription();
+    const [testing, setTesting] = useState(false);
+
+    const sendTest = async () => {
+        setTesting(true);
+        try {
+            const res = await fetch("/api/users/me/push/test", { method: "POST", credentials: "include" });
+            if (res.ok) {
+                const data = (await res.json()) as { sent?: number };
+                toast.success(
+                    data.sent ? "Test push sent — check this device." : "No active device to push to.",
+                );
+            } else if (res.status === 404) {
+                toast.warning("No push subscription found for this account yet.");
+            } else {
+                toast.error("Couldn't send a test push.");
+            }
+        } catch {
+            toast.error("Couldn't send a test push.");
+        } finally {
+            setTesting(false);
+        }
+    };
 
     if (!isSupported) {
         return (
@@ -41,9 +65,14 @@ export function PushToggle() {
                 </div>
             </div>
             {status === "subscribed" ? (
-                <Button variant="outline" onClick={() => void unsubscribe()}>
-                    Turn off
-                </Button>
+                <div className="flex shrink-0 gap-2">
+                    <Button variant="outline" onClick={() => void sendTest()} disabled={testing}>
+                        {testing ? "Sending…" : "Send test"}
+                    </Button>
+                    <Button variant="ghost" onClick={() => void unsubscribe()}>
+                        Turn off
+                    </Button>
+                </div>
             ) : (
                 <Button onClick={() => void subscribe()} disabled={status === "subscribing"}>
                     {status === "subscribing" ? "Enabling…" : "Enable push"}

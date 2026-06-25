@@ -1,8 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 
-// Mock the crypto-heavy builder: this suite tests OUR wrapper (fetch + status +
-// gone), not pushforge's encryption (which needs real key material — that's
-// covered by the device proof). The mock echoes the subscription endpoint.
+// Mock the crypto-heavy builder: this tests OUR wrapper (fetch + status + gone),
+// not pushforge's encryption (which needs real key material).
 vi.mock("@pushforge/builder", () => ({
     buildPushHTTPRequest: async ({ subscription }: { subscription: { endpoint: string } }) => ({
         endpoint: subscription.endpoint,
@@ -11,7 +10,7 @@ vi.mock("@pushforge/builder", () => ({
     }),
 }));
 
-import { sendWebPush } from "./push";
+import { sendWebPush } from "./send";
 
 const sub = { endpoint: "https://push.example/abc", keys: { p256dh: "p", auth: "a" }, createdAt: "x" };
 const vapid = {

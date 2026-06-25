@@ -11,6 +11,8 @@ export interface CampWatchEnv {
     SESSION_SECRET?: string;
     BOOTSTRAP_ADMIN_EMAIL?: string;
     DEV_USER?: string;
+    /** VAPID private key (JWK JSON) for sending Web Push. */
+    VAPID_PRIVATE_JWK?: string;
 }
 
 let testEnvOverride: CampWatchEnv | undefined;

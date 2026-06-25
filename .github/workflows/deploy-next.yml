@@ -56,6 +56,7 @@ jobs:
                       GOOGLE_CLIENT_SECRET
                       SESSION_SECRET
                       BOOTSTRAP_ADMIN_EMAIL
+                      VAPID_PRIVATE_JWK
               env:
                   API_SECRET: ${{ secrets.SUBSCRIBER_API_SECRET }}
                   CONFIG_KEY: ${{ secrets.CONFIG_KEY }}
@@ -63,6 +64,7 @@ jobs:
                   GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
                   SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
                   BOOTSTRAP_ADMIN_EMAIL: ${{ secrets.BOOTSTRAP_ADMIN_EMAIL }}
+                  VAPID_PRIVATE_JWK: ${{ secrets.VAPID_PRIVATE_JWK }}
 
     deploy-notifier:
         runs-on: ubuntu-latest
@@ -86,6 +88,8 @@ jobs:
                   secrets: |
                       RESEND_API_KEY
                       SUBSCRIBER_API_SECRET
+                      VAPID_PRIVATE_JWK
               env:
                   RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
                   SUBSCRIBER_API_SECRET: ${{ secrets.SUBSCRIBER_API_SECRET }}
+                  VAPID_PRIVATE_JWK: ${{ secrets.VAPID_PRIVATE_JWK }}
