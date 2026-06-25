@@ -89,9 +89,11 @@ jobs:
                       RESEND_API_KEY
                       SUBSCRIBER_API_SECRET
                       VAPID_PRIVATE_JWK
-                      HEARTBEAT_URL
               env:
                   RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
                   SUBSCRIBER_API_SECRET: ${{ secrets.SUBSCRIBER_API_SECRET }}
                   VAPID_PRIVATE_JWK: ${{ secrets.VAPID_PRIVATE_JWK }}
-                  HEARTBEAT_URL: ${{ secrets.HEARTBEAT_URL }}
+              # HEARTBEAT_URL is optional and set out-of-band when you wire up a
+              # dead-man's-switch monitor:
+              #   printf '%s' '<url>' | npx wrangler secret put HEARTBEAT_URL
+              # (kept out of this list so an unset value doesn't fail the deploy).
