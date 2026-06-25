@@ -1,5 +1,5 @@
 import { CW } from "@/components/field-notes/cw-tokens";
-import { type Horizon, dateAt, isWeekendNight, pct, rangeLabel } from "@/lib/timeline";
+import { type Horizon, dateAt, isWeekendNight, pct, rangeLabel, dowRangeLabel } from "@/lib/timeline";
 import { isDateBlackedOut } from "@/lib/blackout";
 import type { BlackoutRange } from "@/types/campground";
 import { toLocalIso } from "@/components/dashboard/helpers";
@@ -29,8 +29,9 @@ export function AvailabilityBlock({ horizon, run, kind, site, ring, blackoutDate
     const left = pct(horizon, s);
     const width = pct(horizon, e - s + 1);
     const nights = e - s + 1;
-    const label = rangeLabel(horizon, s, e);
-    const tip = `${label} · ${nights} night${nights > 1 ? "s" : ""}`;
+    const label = rangeLabel(horizon, s, e); // compact, fits on the bar
+    // Hover detail gets the fuller weekday range (no width limit here).
+    const tip = `${dowRangeLabel(horizon, s, e)} · ${nights} night${nights > 1 ? "s" : ""}`;
 
     // Width-tiered label: never clip text.
     let inline: React.ReactNode = null;
