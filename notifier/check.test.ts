@@ -163,6 +163,13 @@ describe("web push fan-out", () => {
 
         expect(sendWebPushMock).toHaveBeenCalledTimes(1);
         expect(sendWebPushMock.mock.calls[0]?.[0]).toMatchObject({ endpoint: "https://push/1" });
+        // One push per campground; body leads with the campground name then the
+        // site + dates.
+        const payload = sendWebPushMock.mock.calls[0]?.[1] as { title: string; body: string };
+        expect(payload.title).toBe("1 new opening");
+        expect(payload.body).toContain("Outlet");
+        expect(payload.body).toContain("Site 001");
+        expect(payload.body).toContain("Jul 4");
     });
 
     it("does not push when vapid is absent", async () => {

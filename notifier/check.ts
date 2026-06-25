@@ -11,7 +11,7 @@ import { fetchProducedNoData } from "../next/src/lib/recgov/raw-results";
 import { findAdjacentGroups, type AdjacentGroup, type AdjacencySite } from "../next/src/lib/adjacent-groups";
 import { getSiteDetailsCached, type KvLike } from "../next/src/lib/site-details-cache";
 import { findNewMatches, generateSignature } from "./lib/diff";
-import { formatEmail, sendEmail } from "./lib/email";
+import { formatEmail, sendEmail, formatDate } from "./lib/email";
 import { resolveNotifyScope, matchPassesScope } from "./lib/notify-scope";
 import {
     buildFastLanePlan,
@@ -856,27 +856,59 @@ export async function run(config: RunConfig, prefetchedTargets?: NotificationTar
                     const firstSeenIso = newFirstSeenMap[sig];
                     if (firstSeenIso) sentLatenciesMs.push(sentAtMs - new Date(firstSeenIso).getTime());
                 }
-                // Push to this user's registered devices too (additive to email).
-                // Prune any subscription the push service reports as gone (404/410).
+                // Push to this user's registered devices too (additive to email),
+                // one notification per campground: title = count, body = campground
+                // name then each opening's site + dates. Prune subs the push service
+                // reports as gone (404/410).
                 if (config.vapid && (target.pushSubscriptions?.length ?? 0) > 0) {
-                    const firstMatch = newMatches[0];
-                    const pushTitle = firstMatch
-                        ? `${newMatches.length} new opening${newMatches.length === 1 ? "" : "s"}`
-                        : "Adjacent sites just opened";
-                    const pushBody = firstMatch
-                        ? `${firstMatch.campgroundName} · Site ${firstMatch.siteName}`
-                        : "Tap to see what's available on your watchlist.";
+                    const PUSH_MAX_LINES = 5;
+                    const byCg = new Map<string, { name: string; lines: string[] }>();
+                    const addLine = (id: string, name: string, line: string) => {
+                        const entry = byCg.get(id) ?? { name, lines: [] };
+                        entry.lines.push(line);
+                        byCg.set(id, entry);
+                    };
+                    for (const m of newMatches) {
+                        addLine(
+                            m.campgroundId,
+                            m.campgroundName,
+                            `Site ${m.siteName} · ${formatDate(m.match.from)} → ${formatDate(m.match.to)}`,
+                        );
+                    }
+                    for (const g of newGroups) {
+                        const name = campgroundNamesById[g.campgroundId] ?? "Campground";
+                        const sites = g.siteNames.map((s) => s.replace(/^Site\s+/i, "")).join(", ");
+                        addLine(
+                            g.campgroundId,
+                            name,
+                            `Sites ${sites} (adjacent) · ${formatDate(g.from)} → ${formatDate(g.to)}`,
+                        );
+                    }
+
                     const dead: string[] = [];
-                    for (const sub of target.pushSubscriptions ?? []) {
-                        try {
-                            const r = await sendWebPush(
-                                sub,
-                                { title: pushTitle, body: pushBody, url: `${siteUrl}/app` },
-                                config.vapid,
-                            );
-                            if (r.gone) dead.push(sub.endpoint);
-                        } catch (err) {
-                            console.error(`[push] ${target.email}: ${(err as Error).message}`);
+                    for (const [cgId, { name, lines }] of byCg) {
+                        const n = lines.length;
+                        const pushTitle = `${n} new opening${n === 1 ? "" : "s"}`;
+                        const shown = lines.slice(0, PUSH_MAX_LINES);
+                        if (lines.length > PUSH_MAX_LINES)
+                            shown.push(`+${lines.length - PUSH_MAX_LINES} more`);
+                        const pushBody = [name, ...shown].join("\n");
+                        for (const sub of target.pushSubscriptions ?? []) {
+                            try {
+                                const r = await sendWebPush(
+                                    sub,
+                                    {
+                                        title: pushTitle,
+                                        body: pushBody,
+                                        url: `${siteUrl}/app`,
+                                        tag: `cw-${cgId}`,
+                                    },
+                                    config.vapid,
+                                );
+                                if (r.gone && !dead.includes(sub.endpoint)) dead.push(sub.endpoint);
+                            } catch (err) {
+                                console.error(`[push] ${target.email}: ${(err as Error).message}`);
+                            }
                         }
                     }
                     if (dead.length > 0) {

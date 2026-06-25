@@ -40,7 +40,7 @@ const generateUnsubscribeToken = (email: string, secret: string): string => {
     return createHmac("sha256", secret).update(email).digest("hex");
 };
 
-const formatDate = (dateStr: string): string => {
+export const formatDate = (dateStr: string): string => {
     const parts = dateStr.split("-").map(Number);
     const y = parts[0] ?? 0;
     const m = parts[1] ?? 1;
