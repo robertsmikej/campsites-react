@@ -51,7 +51,7 @@ export const formatDate = (dateStr: string): string => {
     return `${day} ${month} ${date.getUTCDate()}`;
 };
 
-const buildReservationLink = (siteId: string, fromDate: string, nights: number): string => {
+export const buildReservationLink = (siteId: string, fromDate: string, nights: number): string => {
     const from = new Date(fromDate);
     const to = new Date(from);
     to.setDate(from.getDate() + nights);

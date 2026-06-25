@@ -11,7 +11,7 @@ import { fetchProducedNoData } from "../next/src/lib/recgov/raw-results";
 import { findAdjacentGroups, type AdjacentGroup, type AdjacencySite } from "../next/src/lib/adjacent-groups";
 import { getSiteDetailsCached, type KvLike } from "../next/src/lib/site-details-cache";
 import { findNewMatches, generateSignature } from "./lib/diff";
-import { formatEmail, sendEmail, formatDate } from "./lib/email";
+import { formatEmail, sendEmail, formatDate, buildReservationLink } from "./lib/email";
 import { resolveNotifyScope, matchPassesScope } from "./lib/notify-scope";
 import {
     buildFastLanePlan,
@@ -866,47 +866,54 @@ export async function run(config: RunConfig, prefetchedTargets?: NotificationTar
                     // nothing for other sites.
                     const tierMark = (t: string) =>
                         t === "favorites" ? "★ " : t === "worthwhile" ? "◇ " : "";
-                    const byCg = new Map<string, { name: string; lines: string[] }>();
-                    const addLine = (id: string, name: string, line: string) => {
-                        const entry = byCg.get(id) ?? { name, lines: [] };
-                        entry.lines.push(line);
-                        byCg.set(id, entry);
-                    };
+                    const byCg = new Map<
+                        string,
+                        { name: string; matches: MatchResult[]; groups: AdjacentGroup[] }
+                    >();
                     for (const m of newMatches) {
-                        addLine(
-                            m.campgroundId,
-                            m.campgroundName,
-                            `${tierMark(m.group)}${m.siteName} · ${formatDate(m.match.from)} → ${formatDate(m.match.to)}`,
-                        );
+                        const e = byCg.get(m.campgroundId) ?? {
+                            name: m.campgroundName,
+                            matches: [],
+                            groups: [],
+                        };
+                        e.matches.push(m);
+                        byCg.set(m.campgroundId, e);
                     }
                     for (const g of newGroups) {
                         const name = campgroundNamesById[g.campgroundId] ?? "Campground";
-                        const sites = g.siteNames.map((s) => s.replace(/^Site\s+/i, "")).join(", ");
-                        addLine(
-                            g.campgroundId,
-                            name,
-                            `${tierMark(g.anchorTier)}${sites} (adjacent) · ${formatDate(g.from)} → ${formatDate(g.to)}`,
-                        );
+                        const e = byCg.get(g.campgroundId) ?? { name, matches: [], groups: [] };
+                        e.groups.push(g);
+                        byCg.set(g.campgroundId, e);
                     }
 
                     const dead: string[] = [];
-                    for (const [cgId, { name, lines }] of byCg) {
-                        const n = lines.length;
-                        const pushTitle = `${n} new opening${n === 1 ? "" : "s"}`;
+                    for (const [cgId, { name, matches, groups }] of byCg) {
+                        const lines = [
+                            ...matches.map(
+                                (m) =>
+                                    `${tierMark(m.group)}${m.siteName} · ${formatDate(m.match.from)} → ${formatDate(m.match.to)}`,
+                            ),
+                            ...groups.map((g) => {
+                                const sites = g.siteNames.map((s) => s.replace(/^Site\s+/i, "")).join(", ");
+                                return `${tierMark(g.anchorTier)}${sites} (adjacent) · ${formatDate(g.from)} → ${formatDate(g.to)}`;
+                            }),
+                        ];
+                        const pushTitle = `${lines.length} new opening${lines.length === 1 ? "" : "s"}`;
                         const shown = lines.slice(0, PUSH_MAX_LINES);
                         if (lines.length > PUSH_MAX_LINES)
                             shown.push(`+${lines.length - PUSH_MAX_LINES} more`);
                         const pushBody = [name, ...shown].join("\n");
+                        // Deep link: a lone opening goes straight to that site's booking
+                        // page (dates pre-filled); otherwise the campground's rec.gov page.
+                        const sole = matches.length === 1 && groups.length === 0 ? matches[0] : undefined;
+                        const url = sole
+                            ? buildReservationLink(sole.siteId, sole.match.from, sole.match.nights)
+                            : `https://www.recreation.gov/camping/campgrounds/${cgId}`;
                         for (const sub of target.pushSubscriptions ?? []) {
                             try {
                                 const r = await sendWebPush(
                                     sub,
-                                    {
-                                        title: pushTitle,
-                                        body: pushBody,
-                                        url: `${siteUrl}/app`,
-                                        tag: `cw-${cgId}`,
-                                    },
+                                    { title: pushTitle, body: pushBody, url, tag: `cw-${cgId}` },
                                     config.vapid,
                                 );
                                 if (r.gone && !dead.includes(sub.endpoint)) dead.push(sub.endpoint);

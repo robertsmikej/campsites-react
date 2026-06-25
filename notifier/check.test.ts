@@ -165,7 +165,7 @@ describe("web push fan-out", () => {
         expect(sendWebPushMock.mock.calls[0]?.[0]).toMatchObject({ endpoint: "https://push/1" });
         // One push per campground; body leads with the campground name then the
         // site + dates.
-        const payload = sendWebPushMock.mock.calls[0]?.[1] as { title: string; body: string };
+        const payload = sendWebPushMock.mock.calls[0]?.[1] as { title: string; body: string; url: string };
         expect(payload.title).toBe("1 new opening");
         expect(payload.body).toContain("Outlet");
         expect(payload.body).toContain("001");
@@ -173,6 +173,9 @@ describe("web push fan-out", () => {
         expect(payload.body).toContain("Jul 4");
         // Not a favorite here (empty favorites) → no star prefix.
         expect(payload.body).not.toContain("★");
+        // Lone opening deep-links straight to that site's booking page with dates.
+        expect(payload.url).toContain("recreation.gov/camping/campsites/");
+        expect(payload.url).toContain("arrivalDate=2026-07-04");
     });
 
     it("prefixes favorite sites with a star", async () => {
