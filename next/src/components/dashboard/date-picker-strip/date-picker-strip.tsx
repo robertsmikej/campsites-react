@@ -4,8 +4,10 @@ import type { DateRange } from "react-day-picker";
 import { DateRangeCalendar } from "./date-range-calendar";
 import { Legend } from "./legend";
 function formatShortRange(start: Date, end: Date): string {
-    const fmt = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" });
-    return `${fmt.format(start)} – ${fmt.format(end)}`;
+    const wd = new Intl.DateTimeFormat("en-US", { weekday: "short" });
+    const md = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" });
+    const fmt = (d: Date) => `${wd.format(d)} ${md.format(d)}`; // "Sat Aug 8"
+    return `${fmt(start)} – ${fmt(end)}`;
 }
 
 interface DatePickerStripProps {
