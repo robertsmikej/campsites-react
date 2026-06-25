@@ -50,6 +50,10 @@ jobs:
               working-directory: notifier
               run: npm install
 
+            - name: Notifier format check
+              working-directory: notifier
+              run: npm run format:check
+
             - name: Notifier type-check
               working-directory: notifier
               run: npm run typecheck

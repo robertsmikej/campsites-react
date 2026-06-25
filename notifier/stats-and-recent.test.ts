@@ -6,7 +6,12 @@ const NOW_MS = NOW.getTime();
 
 describe("computeStatsBody", () => {
     it("returns zeros for an empty cycle with no prior stats", () => {
-        const body = computeStatsBody({ priorStats: null, sentLatenciesMs: [], campgroundsTracked: 0, now: NOW });
+        const body = computeStatsBody({
+            priorStats: null,
+            sentLatenciesMs: [],
+            campgroundsTracked: 0,
+            now: NOW,
+        });
         expect(body.medianLatencyMs).toBe(0);
         expect(body.sampleSize).toBe(0);
         expect(body.openingsSentToday).toBe(0);
@@ -45,7 +50,12 @@ describe("computeStatsBody", () => {
             _latencyWindow: [500, 600],
             _dailyHistory: [{ date: "2026-06-23", count: 9 }],
         };
-        const body = computeStatsBody({ priorStats, sentLatenciesMs: [10, 20], campgroundsTracked: 1, now: NOW });
+        const body = computeStatsBody({
+            priorStats,
+            sentLatenciesMs: [10, 20],
+            campgroundsTracked: 1,
+            now: NOW,
+        });
         expect(body.openingsSentToday).toBe(2); // reset, not 9 + 2
         expect(body.medianLatencyMs).toBe(15); // prior window dropped → [10, 20]
         expect(body.openingsSentLast7Days).toBe(11); // yesterday (9) still in window + today (2)
@@ -58,7 +68,12 @@ describe("computeStatsBody", () => {
             _latencyWindow: [100],
             _dailyHistory: [{ date: "2026-06-24", count: 5 }],
         };
-        const body = computeStatsBody({ priorStats, sentLatenciesMs: [200], campgroundsTracked: 2, now: NOW });
+        const body = computeStatsBody({
+            priorStats,
+            sentLatenciesMs: [200],
+            campgroundsTracked: 2,
+            now: NOW,
+        });
         expect(body.openingsSentToday).toBe(6); // 5 + 1
         expect(body.medianLatencyMs).toBe(150); // [100, 200]
     });
