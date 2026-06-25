@@ -89,7 +89,9 @@ jobs:
                       RESEND_API_KEY
                       SUBSCRIBER_API_SECRET
                       VAPID_PRIVATE_JWK
+                      HEARTBEAT_URL
               env:
                   RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
                   SUBSCRIBER_API_SECRET: ${{ secrets.SUBSCRIBER_API_SECRET }}
                   VAPID_PRIVATE_JWK: ${{ secrets.VAPID_PRIVATE_JWK }}
+                  HEARTBEAT_URL: ${{ secrets.HEARTBEAT_URL }}

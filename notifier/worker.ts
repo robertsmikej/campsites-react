@@ -10,6 +10,9 @@ interface Env {
     SITE_URL?: string;
     DRY_RUN?: string;
     VAPID_PRIVATE_JWK?: string;
+    /** Dead-man's-switch URL (e.g. healthchecks.io) pinged after a successful tick;
+     *  if pings stop, the external monitor alerts that the notifier has stalled. */
+    HEARTBEAT_URL?: string;
 }
 
 export default {
@@ -38,7 +41,19 @@ export default {
         if (controller.cron === "*/5 * * * *") {
             ctx.waitUntil(runSweep(config, env.SUBSCRIBERS as never));
         } else {
-            ctx.waitUntil(runTick(config, env.SUBSCRIBERS as never));
+            // Ping the heartbeat only after a successful tick — if runTick throws (or
+            // the cron stops firing), the ping is skipped and the external monitor alerts.
+            const heartbeat = env.HEARTBEAT_URL;
+            ctx.waitUntil(
+                runTick(config, env.SUBSCRIBERS as never).then(() =>
+                    heartbeat
+                        ? fetch(heartbeat).then(
+                              () => undefined,
+                              () => undefined,
+                          )
+                        : undefined,
+                ),
+            );
         }
     },
 };

@@ -887,6 +887,7 @@ export async function run(config: RunConfig, prefetchedTargets?: NotificationTar
                     }
 
                     const dead: string[] = [];
+                    let pushSent = 0;
                     for (const [cgId, { name, matches, groups }] of byCg) {
                         const lines = [
                             ...matches.map(
@@ -916,7 +917,11 @@ export async function run(config: RunConfig, prefetchedTargets?: NotificationTar
                                     { title: pushTitle, body: pushBody, url, tag: `cw-${cgId}` },
                                     config.vapid,
                                 );
-                                if (r.gone && !dead.includes(sub.endpoint)) dead.push(sub.endpoint);
+                                if (r.gone) {
+                                    if (!dead.includes(sub.endpoint)) dead.push(sub.endpoint);
+                                } else if (r.status >= 200 && r.status < 300) {
+                                    pushSent++;
+                                }
                             } catch (err) {
                                 console.error(`[push] ${target.email}: ${(err as Error).message}`);
                             }
@@ -931,6 +936,12 @@ export async function run(config: RunConfig, prefetchedTargets?: NotificationTar
                             },
                             body: JSON.stringify({ email: target.email, endpoints: dead }),
                         }).catch(() => {});
+                    }
+                    if (byCg.size > 0) {
+                        console.log(
+                            `[push] ${target.email}: ${pushSent} sent across ${byCg.size} campground(s)` +
+                                (dead.length > 0 ? `, ${dead.length} pruned` : ""),
+                        );
                     }
                 }
                 updates.push({ email: target.email, state: mergedState, lastNotifiedAt: now.toISOString() });

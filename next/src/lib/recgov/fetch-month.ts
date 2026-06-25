@@ -11,7 +11,11 @@ export async function fetchMonth(facilityId: string, month: string): Promise<Raw
             headers: { Accept: "application/json", "User-Agent": REC_GOV_USER_AGENT },
         });
         if (!response.ok) {
-            console.error(`[recgov] ${facilityId} ${month}: HTTP ${response.status}`);
+            // 429/403 are the rate-limit / IP-block signals — tag them distinctly so a
+            // block is greppable + alertable (e.g. a Cloudflare log alert on
+            // "recgov-block") instead of masquerading as a quiet "no openings".
+            const tag = response.status === 429 || response.status === 403 ? "recgov-block" : "recgov";
+            console.error(`[${tag}] ${facilityId} ${month}: HTTP ${response.status}`);
             return null;
         }
         return (await response.json()) as RawMonthResult;
