@@ -313,7 +313,12 @@ export default function AppPage() {
 
             <SiteSettingsContext.Provider value={settings}>
                 <ProgressBarContext.Provider value={progressBarData}>
-                    <DashboardTopBar auth={auth} onAddCampground={() => setAddModalOpen(true)} />
+                    <DashboardTopBar
+                        auth={auth}
+                        onAddCampground={() => setAddModalOpen(true)}
+                        onRefresh={refresh}
+                        isRefreshing={isFetching}
+                    />
 
                     <main className="bg-cw-paper text-cw-ink font-body-serif min-h-screen">
                         <div className="mx-auto w-full max-w-screen-2xl">

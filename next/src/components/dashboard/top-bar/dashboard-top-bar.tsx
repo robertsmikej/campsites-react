@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { RotateCw } from "lucide-react";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -16,6 +17,11 @@ import type { AuthState } from "@/hooks/use-auth";
 interface DashboardTopBarProps {
     auth: AuthState;
     onAddCampground?: () => void;
+    /** Re-fetch availability. When provided (dashboard only), a refresh button
+     * is shown next to the add button. */
+    onRefresh?: () => void;
+    /** Whether a refresh is in flight — spins the icon and disables the button. */
+    isRefreshing?: boolean;
 }
 
 interface NavLink {
@@ -40,7 +46,7 @@ async function handleSignOut() {
     window.location.href = "/";
 }
 
-export function DashboardTopBar({ auth, onAddCampground }: DashboardTopBarProps) {
+export function DashboardTopBar({ auth, onAddCampground, onRefresh, isRefreshing }: DashboardTopBarProps) {
     const pathname = usePathname() ?? "/app";
 
     return (
@@ -88,6 +94,25 @@ export function DashboardTopBar({ auth, onAddCampground }: DashboardTopBarProps)
 
                     {/* Right cluster */}
                     <div className="ml-auto flex gap-[14px] items-center">
+                        {auth.user && onRefresh && (
+                            <button
+                                type="button"
+                                onClick={onRefresh}
+                                disabled={isRefreshing}
+                                aria-label="Refresh availability"
+                                aria-busy={isRefreshing}
+                                title="Refresh availability"
+                                className="inline-flex items-center justify-center size-[34px] cursor-pointer rounded-[2px] border-[1.5px] outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default disabled:opacity-60"
+                                style={{
+                                    background: CW.cream,
+                                    color: CW.ink,
+                                    borderColor: CW.ink,
+                                }}
+                            >
+                                <RotateCw className={isRefreshing ? "size-4 animate-spin" : "size-4"} />
+                            </button>
+                        )}
+
                         {auth.user && onAddCampground && (
                             <button
                                 type="button"
