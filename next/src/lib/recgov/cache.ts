@@ -6,7 +6,12 @@ import type { RawMonthResult, SiteAvailabilityMap } from "./types";
 // KV adapters). A long TTL lets identical-content data survive between cycles
 // without burning a write per cycle. Dashboard reads serve from this cache.
 export const RAW_CACHE_TTL_SECONDS = 60 * 60;
-export const SNAPSHOT_CACHE_TTL_SECONDS = 10 * 60;
+// 3 minutes: bounds how stale a dashboard read can be. On-demand rebuilds are
+// cheap because the raw month cache underneath (RAW_CACHE_TTL_SECONDS) is kept
+// warm by the notifier's 1-min tick / 5-min sweep, so a rebuild is cache-only.
+// The 5-min sweep is the true floor for normal-tier data; a shorter TTL just
+// re-serves identical data, so 3 min biases fresh without pointless churn.
+export const SNAPSHOT_CACHE_TTL_SECONDS = 3 * 60;
 
 export const rawCacheKey = (facilityId: string, month: string): string => `recgov:${facilityId}:${month}`;
 

@@ -142,7 +142,7 @@ describe("GET /api/availability", () => {
         expect(kv.put).toHaveBeenCalledWith(
             "snapshot:alice@example.com",
             expect.any(String),
-            expect.objectContaining({ expirationTtl: 600 }),
+            expect.objectContaining({ expirationTtl: 180 }),
         );
     });
 

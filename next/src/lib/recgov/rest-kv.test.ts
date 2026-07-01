@@ -56,7 +56,7 @@ describe("RestKvAdapter", () => {
         expect(result).toEqual(body);
     });
 
-    it("putSnapshot uses 600s TTL and snapshot:{email} key", async () => {
+    it("putSnapshot uses 180s TTL and snapshot:{email} key", async () => {
         // GET miss, then PUT.
         fetchSpy
             .mockResolvedValueOnce(new Response("not found", { status: 404 }))
@@ -64,7 +64,7 @@ describe("RestKvAdapter", () => {
         await adapter.putSnapshot("alice@example.com", { updatedAt: "now", campgrounds: [] });
         const [url] = fetchSpy.mock.calls[1] ?? [];
         expect(url).toContain("snapshot%3Aalice%40example.com");
-        expect(url).toContain("expiration_ttl=600");
+        expect(url).toContain("expiration_ttl=180");
     });
 
     it("putSnapshot skips the PUT when content is identical (ignoring updatedAt)", async () => {

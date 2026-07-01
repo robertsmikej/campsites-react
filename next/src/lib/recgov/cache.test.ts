@@ -14,7 +14,7 @@ describe("cache key helpers", () => {
         expect(RAW_CACHE_TTL_SECONDS).toBe(3600);
     });
 
-    it("snapshot cache TTL is 10 minutes", () => {
-        expect(SNAPSHOT_CACHE_TTL_SECONDS).toBe(600);
+    it("snapshot cache TTL is 3 minutes", () => {
+        expect(SNAPSHOT_CACHE_TTL_SECONDS).toBe(180);
     });
 });
