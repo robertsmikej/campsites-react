@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState, useCallback } from "react";
-import Link from "next/link";
 import { toast } from "sonner";
 import { Sparkles, X } from "lucide-react";
 import { SiteConfigDialog } from "@/components/site-config-dialog";
@@ -13,23 +12,20 @@ import { useCampgroundsData } from "@/hooks/use-campgrounds-data";
 import { useAuth } from "@/hooks/use-auth";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useNowTick } from "@/hooks/use-now-tick";
-import { useRecentOpenings } from "@/hooks/use-recent-openings";
 import { useDashboardPrefs } from "@/hooks/use-dashboard-prefs";
-import { toLocalIso, writeStorage } from "@/components/dashboard/helpers";
+import { writeStorage } from "@/components/dashboard/helpers";
 import { formatRelativeTime } from "@/lib/relative-time";
 import { getCampgroundOpenCount } from "@/components/campground/get-open-count";
 import { DashboardTopBar } from "@/components/dashboard/dashboard-top-bar";
 import { AddCampgroundDialog } from "@/components/dashboard/add-campground-dialog";
 import { DashboardErrorBoundary } from "@/components/dashboard/error-boundary";
 import { Greeting } from "@/components/dashboard/greeting";
-import { OpeningsFeed } from "@/components/dashboard/openings-feed";
 import { WatchlistSection } from "@/components/dashboard/watchlist-section";
 import { EmptyState } from "@/components/dashboard/empty-state";
 import { PushNudge } from "@/components/dashboard/push-nudge";
 import { siteData } from "@/data/site-data";
 import { recentlyAddedFromDefault } from "@/lib/default-additions";
 import type { SiteSettingsValue } from "@/contexts/site-settings";
-import type { OpeningItem } from "@/components/dashboard/openings-feed";
 import type { Campground } from "@/types/campground";
 // import type { GroupBy } from "@/hooks/use-dashboard-prefs"; // kept for future grouping UI
 
@@ -241,64 +237,8 @@ export default function AppPage() {
         [campgroundsByAreas, openCounts],
     );
 
-    // Openings feed
+    // Drives the "Updated Xm ago" freshness label (re-renders on tick).
     const nowMs = useNowTick(30_000);
-    const recentOpenings = useRecentOpenings();
-
-    const userCampgroundIds = useMemo(() => {
-        const ids = new Set<string>();
-        for (const c of siteConfig["recreation.gov"] ?? []) {
-            if (c.id) ids.add(c.id);
-        }
-        return ids;
-    }, [siteConfig]);
-
-    // Build a lookup of currently-bookable (campgroundId, siteId, from, to) tuples
-    // from the snapshot, so we can suppress recent-openings entries that have
-    // already been booked.
-    const stillAvailable = useMemo(() => {
-        const set = new Set<string>();
-        for (const cg of campgroundsByAreas) {
-            if (!cg.id || !cg.siteAvailability) continue;
-            for (const site of Object.values(cg.siteAvailability)) {
-                for (const m of site.matches ?? []) {
-                    set.add(`${cg.id}|${site.siteId}|${m.from}|${m.to}`);
-                }
-            }
-        }
-        return set;
-    }, [campgroundsByAreas]);
-
-    const openingItems = useMemo((): OpeningItem[] => {
-        const winStartIso = toLocalIso(dateRange.start);
-        const winEndIso = toLocalIso(dateRange.end);
-
-        const items: OpeningItem[] = recentOpenings
-            .filter((r) => {
-                if (!userCampgroundIds.has(r.campgroundId)) return false;
-                if (r.to <= winStartIso || r.from > winEndIso) return false;
-                if (!stillAvailable.has(`${r.campgroundId}|${r.siteId}|${r.from}|${r.to}`)) return false;
-                return true;
-            })
-            .map((r) => {
-                const id = `${r.campgroundId}-${r.siteId}-${r.from}`;
-                return {
-                    id,
-                    campgroundId: r.campgroundId,
-                    campgroundName: r.campgroundName,
-                    siteId: r.siteId,
-                    siteName: r.siteName,
-                    from: r.from,
-                    to: r.to,
-                    nights: r.nights,
-                    recGovId: r.campgroundId,
-                    detectedAt: r.detectedAt,
-                };
-            });
-
-        items.sort((a, b) => b.detectedAt.localeCompare(a.detectedAt));
-        return items.slice(0, 8);
-    }, [recentOpenings, userCampgroundIds, dateRange, stillAvailable]);
 
     // PAD kept for components that still use it for dynamic scroll containers / section padding
     const PAD = isMobile ? 22 : 36;
@@ -379,47 +319,6 @@ export default function AppPage() {
                                             auth={auth}
                                             isLoading={isLoading}
                                             campgroundsWithOpenings={campgroundsWithOpenings}
-                                        />
-                                    </DashboardErrorBoundary>
-
-                                    <div style={{ padding: `8px ${PAD}px` }}>
-                                        <Link
-                                            href="/app/plan"
-                                            className="flex items-center justify-between gap-4 no-underline border-[1.5px] border-cw-ink bg-cw-cream text-cw-ink"
-                                            style={{
-                                                boxShadow: "4px 4px 0 var(--cw-forest)",
-                                                padding: "14px 18px",
-                                            }}
-                                        >
-                                            <span className="min-w-0">
-                                                <span
-                                                    className="block font-mono-field uppercase text-cw-clay"
-                                                    style={{ fontSize: 10, letterSpacing: "0.22em" }}
-                                                >
-                                                    § New · Trip planner
-                                                </span>
-                                                <span
-                                                    className="font-italic-serif italic"
-                                                    style={{ fontSize: 19 }}
-                                                >
-                                                    Plan your ideal summer — a few trips across the season
-                                                </span>
-                                            </span>
-                                            <span
-                                                className="shrink-0 font-poster font-extrabold uppercase text-cw-forest"
-                                                style={{ fontSize: 12, letterSpacing: "0.12em" }}
-                                            >
-                                                Open →
-                                            </span>
-                                        </Link>
-                                    </div>
-
-                                    <DashboardErrorBoundary section="Openings feed">
-                                        <OpeningsFeed
-                                            openingItems={openingItems}
-                                            isMobile={isMobile}
-                                            nowMs={nowMs}
-                                            PAD={PAD}
                                         />
                                     </DashboardErrorBoundary>
 
