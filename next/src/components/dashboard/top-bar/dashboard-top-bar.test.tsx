@@ -45,4 +45,14 @@ describe("DashboardTopBar refresh button", () => {
         render(<DashboardTopBar auth={signedOut} onRefresh={vi.fn()} />);
         expect(screen.queryByRole("button", { name: /refresh availability/i })).toBeNull();
     });
+
+    it("shows the freshness label when provided", () => {
+        render(<DashboardTopBar auth={signedIn} onRefresh={vi.fn()} lastUpdatedLabel="5m ago" />);
+        expect(screen.getByText(/updated 5m ago/i)).toBeTruthy();
+    });
+
+    it("omits the freshness label when not provided", () => {
+        render(<DashboardTopBar auth={signedIn} onRefresh={vi.fn()} />);
+        expect(screen.queryByText(/updated/i)).toBeNull();
+    });
 });

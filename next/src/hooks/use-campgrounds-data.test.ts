@@ -1,7 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, waitFor, act } from "@testing-library/react";
 import { useCampgroundsData } from "./use-campgrounds-data";
-import { WATCHLIST_CHANGED_EVENT } from "@/lib/events";
+import {
+    WATCHLIST_CHANGED_EVENT,
+    AVAILABILITY_UPDATED_MESSAGE,
+    AVAILABILITY_POLL_INTERVAL_MS,
+} from "@/lib/events";
 
 function okSnapshot() {
     return new Response(JSON.stringify({ updatedAt: "x", campgrounds: [] }), { status: 200 });
@@ -47,6 +51,71 @@ describe("useCampgroundsData", () => {
         });
 
         await waitFor(() => expect(globalThis.fetch).toHaveBeenCalledTimes(2));
+    });
+
+    it("refetches when the window regains focus", async () => {
+        renderHook(() => useCampgroundsData({ enabled: true }));
+        await waitFor(() => expect(globalThis.fetch).toHaveBeenCalledTimes(1));
+
+        act(() => window.dispatchEvent(new Event("focus")));
+
+        await waitFor(() => expect(globalThis.fetch).toHaveBeenCalledTimes(2));
+    });
+
+    it("refetches when the network comes back online", async () => {
+        renderHook(() => useCampgroundsData({ enabled: true }));
+        await waitFor(() => expect(globalThis.fetch).toHaveBeenCalledTimes(1));
+
+        act(() => window.dispatchEvent(new Event("online")));
+
+        await waitFor(() => expect(globalThis.fetch).toHaveBeenCalledTimes(2));
+    });
+
+    it("refetches when the service worker signals an availability update", async () => {
+        const swTarget = new EventTarget();
+        Object.defineProperty(navigator, "serviceWorker", { value: swTarget, configurable: true });
+        try {
+            renderHook(() => useCampgroundsData({ enabled: true }));
+            await waitFor(() => expect(globalThis.fetch).toHaveBeenCalledTimes(1));
+
+            act(() => {
+                swTarget.dispatchEvent(
+                    new MessageEvent("message", { data: { type: AVAILABILITY_UPDATED_MESSAGE } }),
+                );
+            });
+
+            await waitFor(() => expect(globalThis.fetch).toHaveBeenCalledTimes(2));
+
+            // An unrelated SW message must NOT trigger a refetch.
+            act(() => {
+                swTarget.dispatchEvent(new MessageEvent("message", { data: { type: "something-else" } }));
+            });
+            await new Promise((r) => setTimeout(r, 20));
+            expect(globalThis.fetch).toHaveBeenCalledTimes(2);
+        } finally {
+            Reflect.deleteProperty(navigator, "serviceWorker");
+        }
+    });
+
+    it("polls availability on an interval while the tab is visible", async () => {
+        vi.useFakeTimers();
+        try {
+            renderHook(() => useCampgroundsData({ enabled: true }));
+            // fetch() is invoked synchronously inside the mount effect.
+            expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+
+            await act(async () => {
+                await vi.advanceTimersByTimeAsync(AVAILABILITY_POLL_INTERVAL_MS);
+            });
+            expect(globalThis.fetch).toHaveBeenCalledTimes(2);
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    it("exposes the snapshot updatedAt", async () => {
+        const { result } = renderHook(() => useCampgroundsData({ enabled: true }));
+        await waitFor(() => expect(result.current.updatedAt).toBe("x"));
     });
 
     it("flags loadError when the availability fetch fails", async () => {

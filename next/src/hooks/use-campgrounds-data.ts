@@ -2,7 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { formatGroupsByFavorites, overlayConfigRatings, type ConfigOverlay } from "@/lib/campground-utils";
-import { WATCHLIST_CHANGED_EVENT } from "@/lib/events";
+import {
+    WATCHLIST_CHANGED_EVENT,
+    AVAILABILITY_UPDATED_MESSAGE,
+    AVAILABILITY_POLL_INTERVAL_MS,
+} from "@/lib/events";
 import type { AvailabilitySnapshot } from "@/lib/recgov";
 import type { CampgroundsBySystem, ProcessedCampground, SiteConfig } from "@/types/campground";
 
@@ -24,6 +28,7 @@ export function useCampgroundsData({ enabled, siteConfig }: UseCampgroundsDataAr
     const [campgroundsByAreas, setCampgroundsByAreas] = useState<ProcessedCampground[]>([]);
     const [isFetching, setIsFetching] = useState(false);
     const [loadError, setLoadError] = useState(false);
+    const [updatedAt, setUpdatedAt] = useState<string | null>(null);
     const [reloadKey, setReloadKey] = useState(0);
 
     // Kept for component-API compatibility; progress is now binary (loading vs done).
@@ -60,6 +65,7 @@ export function useCampgroundsData({ enabled, siteConfig }: UseCampgroundsDataAr
                     "recreation.gov": snapshot.campgrounds as unknown as ProcessedCampground[],
                 };
                 setCampgroundsData(bySystem);
+                setUpdatedAt(snapshot.updatedAt ?? null);
                 setLoadError(false);
             } catch (e) {
                 console.error("[availability] fetch error:", e);
@@ -75,20 +81,43 @@ export function useCampgroundsData({ enabled, siteConfig }: UseCampgroundsDataAr
         };
     }, [enabled, reloadKey]);
 
-    // Keep availability fresh without a manual page reload: refetch after the
-    // watchlist changes (campground added/edited) and whenever the tab regains
-    // focus. The snapshot is cache-backed, so a repeat fetch is cheap.
+    // Keep availability fresh without a manual page reload. The snapshot is
+    // cache-backed (3-min TTL over a notifier-warmed raw cache), so repeat
+    // fetches are cheap. We refetch on every signal that means "the data on
+    // screen might be stale":
+    //   - watchlist changed (campground added/edited)
+    //   - tab became visible / window refocused / network came back
+    //   - the push service worker signaled a watched site opened
+    //   - a visible-only interval, so a left-open dashboard stays current
     useEffect(() => {
         if (!enabled) return;
-        const onChanged = () => setReloadKey((k) => k + 1);
-        const onVisible = () => {
-            if (document.visibilityState === "visible") setReloadKey((k) => k + 1);
+        const bump = () => setReloadKey((k) => k + 1);
+        const bumpIfVisible = () => {
+            if (document.visibilityState === "visible") bump();
         };
-        window.addEventListener(WATCHLIST_CHANGED_EVENT, onChanged);
-        document.addEventListener("visibilitychange", onVisible);
+        const onSwMessage = (event: MessageEvent) => {
+            if (event.data?.type === AVAILABILITY_UPDATED_MESSAGE) bump();
+        };
+
+        window.addEventListener(WATCHLIST_CHANGED_EVENT, bump);
+        window.addEventListener("focus", bump);
+        window.addEventListener("online", bump);
+        document.addEventListener("visibilitychange", bumpIfVisible);
+
+        const sw = typeof navigator !== "undefined" ? navigator.serviceWorker : undefined;
+        sw?.addEventListener("message", onSwMessage);
+
+        // Hidden tabs skip the bump (and browsers throttle background timers), so
+        // this never fetches behind the user's back.
+        const pollId = setInterval(bumpIfVisible, AVAILABILITY_POLL_INTERVAL_MS);
+
         return () => {
-            window.removeEventListener(WATCHLIST_CHANGED_EVENT, onChanged);
-            document.removeEventListener("visibilitychange", onVisible);
+            window.removeEventListener(WATCHLIST_CHANGED_EVENT, bump);
+            window.removeEventListener("focus", bump);
+            window.removeEventListener("online", bump);
+            document.removeEventListener("visibilitychange", bumpIfVisible);
+            sw?.removeEventListener("message", onSwMessage);
+            clearInterval(pollId);
         };
     }, [enabled]);
 
@@ -119,5 +148,13 @@ export function useCampgroundsData({ enabled, siteConfig }: UseCampgroundsDataAr
         setCampgroundsByAreas(formatGroupsByFavorites(overlaid) ?? []);
     }, [campgroundsData, ratingsById]);
 
-    return { campgroundsData, campgroundsByAreas, isFetching, loadError, progressBarData, refresh };
+    return {
+        campgroundsData,
+        campgroundsByAreas,
+        isFetching,
+        loadError,
+        updatedAt,
+        progressBarData,
+        refresh,
+    };
 }

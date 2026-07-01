@@ -22,6 +22,8 @@ interface DashboardTopBarProps {
     onRefresh?: () => void;
     /** Whether a refresh is in flight — spins the icon and disables the button. */
     isRefreshing?: boolean;
+    /** Relative "updated Xm ago" label shown beside the refresh button. */
+    lastUpdatedLabel?: string | null;
 }
 
 interface NavLink {
@@ -46,7 +48,13 @@ async function handleSignOut() {
     window.location.href = "/";
 }
 
-export function DashboardTopBar({ auth, onAddCampground, onRefresh, isRefreshing }: DashboardTopBarProps) {
+export function DashboardTopBar({
+    auth,
+    onAddCampground,
+    onRefresh,
+    isRefreshing,
+    lastUpdatedLabel,
+}: DashboardTopBarProps) {
     const pathname = usePathname() ?? "/app";
 
     return (
@@ -95,22 +103,36 @@ export function DashboardTopBar({ auth, onAddCampground, onRefresh, isRefreshing
                     {/* Right cluster */}
                     <div className="ml-auto flex gap-[14px] items-center">
                         {auth.user && onRefresh && (
-                            <button
-                                type="button"
-                                onClick={onRefresh}
-                                disabled={isRefreshing}
-                                aria-label="Refresh availability"
-                                aria-busy={isRefreshing}
-                                title="Refresh availability"
-                                className="inline-flex items-center justify-center size-[34px] cursor-pointer rounded-[2px] border-[1.5px] outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default disabled:opacity-60"
-                                style={{
-                                    background: CW.cream,
-                                    color: CW.ink,
-                                    borderColor: CW.ink,
-                                }}
-                            >
-                                <RotateCw className={isRefreshing ? "size-4 animate-spin" : "size-4"} />
-                            </button>
+                            <div className="flex items-center gap-[8px]">
+                                {lastUpdatedLabel && (
+                                    <span
+                                        className="hidden sm:inline font-mono-field text-[11px] font-medium leading-none uppercase tracking-[0.1em] text-cw-ink-faint"
+                                        aria-live="polite"
+                                    >
+                                        Updated {lastUpdatedLabel}
+                                    </span>
+                                )}
+                                <button
+                                    type="button"
+                                    onClick={onRefresh}
+                                    disabled={isRefreshing}
+                                    aria-label="Refresh availability"
+                                    aria-busy={isRefreshing}
+                                    title={
+                                        lastUpdatedLabel
+                                            ? `Refresh availability (updated ${lastUpdatedLabel})`
+                                            : "Refresh availability"
+                                    }
+                                    className="inline-flex items-center justify-center size-[34px] cursor-pointer rounded-[2px] border-[1.5px] outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default disabled:opacity-60"
+                                    style={{
+                                        background: CW.cream,
+                                        color: CW.ink,
+                                        borderColor: CW.ink,
+                                    }}
+                                >
+                                    <RotateCw className={isRefreshing ? "size-4 animate-spin" : "size-4"} />
+                                </button>
+                            </div>
                         )}
 
                         {auth.user && onAddCampground && (

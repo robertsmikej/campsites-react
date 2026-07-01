@@ -16,6 +16,7 @@ import { useNowTick } from "@/hooks/use-now-tick";
 import { useRecentOpenings } from "@/hooks/use-recent-openings";
 import { useDashboardPrefs } from "@/hooks/use-dashboard-prefs";
 import { toLocalIso, writeStorage } from "@/components/dashboard/helpers";
+import { formatRelativeTime } from "@/lib/relative-time";
 import { getCampgroundOpenCount } from "@/components/campground/get-open-count";
 import { DashboardTopBar } from "@/components/dashboard/dashboard-top-bar";
 import { AddCampgroundDialog } from "@/components/dashboard/add-campground-dialog";
@@ -129,10 +130,11 @@ export default function AppPage() {
         [globalSettings, useMockData],
     );
 
-    const { campgroundsByAreas, isFetching, progressBarData, loadError, refresh } = useCampgroundsData({
-        enabled: !isHydrating,
-        siteConfig,
-    });
+    const { campgroundsByAreas, isFetching, progressBarData, loadError, updatedAt, refresh } =
+        useCampgroundsData({
+            enabled: !isHydrating,
+            siteConfig,
+        });
 
     // Surface a background availability-fetch failure (otherwise the watchlist
     // just silently shows stale/empty data, indistinguishable from "no openings").
@@ -318,6 +320,7 @@ export default function AppPage() {
                         onAddCampground={() => setAddModalOpen(true)}
                         onRefresh={refresh}
                         isRefreshing={isFetching}
+                        lastUpdatedLabel={formatRelativeTime(updatedAt, nowMs)}
                     />
 
                     <main className="bg-cw-paper text-cw-ink font-body-serif min-h-screen">
