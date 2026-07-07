@@ -10,6 +10,7 @@ Launch: `cd next && pnpm dev` (ready in ~10s, listens on http://localhost:3000).
 Drive: plain curl against localhost:3000. For host-dependent behavior (e.g. the www-to-apex 301 in `src/middleware.ts`), override with `curl -H "Host: www.campwatch.dev" http://localhost:3000/...` and check `%{http_code}` / `%{redirect_url}`.
 
 Gotchas:
+
 - Dev skips the auth redirects in middleware (`NODE_ENV !== "production"` branches), so `/app` returns 200 without a session cookie locally. That is expected, not a regression.
 - CI has a separate `pnpm format:check` gate; run `pnpm format` before pushing.
 - Kill the server with `pkill -f "next dev"` when done.
