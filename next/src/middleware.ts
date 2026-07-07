@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { canonicalRedirectUrl } from "@/lib/canonical-host";
 import { SESSION_COOKIE } from "@/lib/sessions";
 
 // Paths that require a signed-in user. Anonymous visitors get 307'd to
@@ -12,6 +13,12 @@ function requiresAuth(pathname: string): boolean {
 
 export function middleware(request: NextRequest) {
     const { pathname, searchParams } = request.nextUrl;
+
+    // www.campwatch.dev is attached to this worker only so we can bounce it
+    // here; the apex is the single canonical origin (service worker and push
+    // subscriptions are origin-scoped, so the app must never serve on www).
+    const canonical = canonicalRedirectUrl(request.headers.get("host"), pathname, request.nextUrl.search);
+    if (canonical) return NextResponse.redirect(canonical, 301);
 
     // Signed-in visitors to the marketing homepage go straight to their dashboard,
     // unless they explicitly asked to see it (?home — the account menu's "Home page"
@@ -46,5 +53,7 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-    matcher: ["/", "/app", "/app/:path*"],
+    // All paths, not just the auth-gated ones: the www redirect must cover
+    // every URL. The auth logic above still only acts on "/" and "/app/*".
+    matcher: ["/:path*"],
 };
