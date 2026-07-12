@@ -1,0 +1,36 @@
+{
+  "expo": {
+    "name": "GearShed",
+    "slug": "gearshed",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "dev.campwatch.gearshed"
+    },
+    "android": {
+      "package": "dev.campwatch.gearshed",
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "GearShed uses your photo library so you can scan pictures of your camping gear.",
+          "cameraPermission": "GearShed uses the camera to photograph your camping gear for AI detection."
+        }
+      ]
+    ]
+  }
+}
