@@ -20,13 +20,14 @@ import { DashboardTopBar } from "@/components/dashboard/dashboard-top-bar";
 import { AddCampgroundDialog } from "@/components/dashboard/add-campground-dialog";
 import { DashboardErrorBoundary } from "@/components/dashboard/error-boundary";
 import { Greeting } from "@/components/dashboard/greeting";
+import { TripsCard } from "@/components/dashboard/trips-card/trips-card";
 import { WatchlistSection } from "@/components/dashboard/watchlist-section";
 import { EmptyState } from "@/components/dashboard/empty-state";
 import { PushNudge } from "@/components/dashboard/push-nudge";
 import { siteData } from "@/data/site-data";
 import { recentlyAddedFromDefault } from "@/lib/default-additions";
 import type { SiteSettingsValue } from "@/contexts/site-settings";
-import type { Campground } from "@/types/campground";
+import type { Campground, TripWindow } from "@/types/campground";
 // import type { GroupBy } from "@/hooks/use-dashboard-prefs"; // kept for future grouping UI
 
 export default function AppPage() {
@@ -156,6 +157,13 @@ export default function AppPage() {
                 return { ...cg, sites: { favorites: favs, worthwhile } };
             });
             void save({ ...siteConfig, "recreation.gov": updated }, globalSettings);
+        },
+        [siteConfig, globalSettings, save],
+    );
+
+    const handleTripWindowsChange = useCallback(
+        (next: TripWindow[]) => {
+            void save(siteConfig, { ...globalSettings, tripWindows: next });
         },
         [siteConfig, globalSettings, save],
     );
@@ -319,6 +327,16 @@ export default function AppPage() {
                                             auth={auth}
                                             isLoading={isLoading}
                                             campgroundsWithOpenings={campgroundsWithOpenings}
+                                        />
+                                    </DashboardErrorBoundary>
+
+                                    <DashboardErrorBoundary section="Trips">
+                                        <TripsCard
+                                            tripWindows={globalSettings.tripWindows ?? []}
+                                            campgrounds={siteConfig["recreation.gov"] ?? []}
+                                            campgroundsByAreas={campgroundsByAreas}
+                                            onChange={handleTripWindowsChange}
+                                            isMobile={isMobile}
                                         />
                                     </DashboardErrorBoundary>
 
