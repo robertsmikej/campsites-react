@@ -13,7 +13,9 @@ import {
     openNightsBySiteFromRaw,
     tripHitsForCampground,
     validTripWindows,
+    serverTodayIso,
     TRIP_MAX_WINDOWS,
+    TRIP_MAX_NIGHTS,
 } from "./trip-windows";
 import type { TripWindow } from "@/types/campground";
 
@@ -31,6 +33,16 @@ describe("date helpers", () => {
     });
     it("diffDays counts whole days", () => {
         expect(diffDays("2026-07-30", "2026-08-03")).toBe(4);
+    });
+});
+
+describe("serverTodayIso", () => {
+    it("Saturday evening Pacific still counts as Saturday", () => {
+        // 2026-07-26T01:00:00Z is 2026-07-25 6pm Pacific (UTC-7).
+        expect(serverTodayIso(new Date("2026-07-26T01:00:00Z"))).toBe("2026-07-25");
+    });
+    it("rolls to the next day once the 8h grace has elapsed", () => {
+        expect(serverTodayIso(new Date("2026-07-26T09:00:00Z"))).toBe("2026-07-26");
     });
 });
 
@@ -195,5 +207,22 @@ describe("validTripWindows", () => {
                 Array.from({ length: TRIP_MAX_WINDOWS + 1 }, (_, i) => ({ ...valid, id: `w${i}` })),
             ),
         ).toBe(false);
+    });
+    it("caps span at TRIP_MAX_NIGHTS", () => {
+        expect(
+            validTripWindows([
+                { id: "a", from: "2026-07-01", to: addDaysIso("2026-07-01", TRIP_MAX_NIGHTS) },
+            ]),
+        ).toBe(true);
+        expect(
+            validTripWindows([
+                { id: "a", from: "2026-07-01", to: addDaysIso("2026-07-01", TRIP_MAX_NIGHTS + 1) },
+            ]),
+        ).toBe(false);
+    });
+    it("rejects a list with duplicate ids", () => {
+        const a = { ...valid, id: "dup" };
+        const b = { id: "dup", from: "2026-09-01", to: "2026-09-03" };
+        expect(validTripWindows([a, b])).toBe(false);
     });
 });

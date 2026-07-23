@@ -226,4 +226,11 @@ describe("trip digests in email", () => {
     it("buildTripPreheaderText leads with the first hit", () => {
         expect(buildTripPreheaderText([digest])).toContain("A01");
     });
+
+    it("escapes a user-typed label containing markup in the trip card heading", () => {
+        const malicious = { ...digest, window: { ...digest.window, label: "<img src=x onerror=alert(1)>" } };
+        const { html } = formatEmail([], { tripDigests: [malicious] });
+        expect(html).toContain("&lt;img src=x onerror=alert(1)&gt;");
+        expect(html).not.toContain("<img src=x onerror=alert(1)>");
+    });
 });

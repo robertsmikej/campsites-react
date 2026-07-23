@@ -7,7 +7,7 @@ import { withErrorLogging } from "@/lib/route-helpers";
 import { WorkerKvAdapter } from "@/lib/recgov/worker-kv";
 import { HIGH_PRIORITY_CAP } from "@/types/campground";
 import { archiveRemovedCampgrounds } from "@/lib/campground-archive";
-import { validTripWindows, windowIsPast } from "@/lib/trip-windows";
+import { validTripWindows, windowIsPast, serverTodayIso, TRIP_MAX_NIGHTS } from "@/lib/trip-windows";
 import type { Campground, TripWindow } from "@/types/campground";
 
 const VALID_CHECK_PRIORITIES = new Set(["high", "normal", "low"]);
@@ -108,7 +108,7 @@ async function putHandler(request: Request): Promise<Response> {
         return withCors(
             jsonResponse(
                 {
-                    error: "tripWindows must be valid ranges (id, YYYY-MM-DD from < to, label <= 80, flex 0-3 leaving >= 1 core night, max 10)",
+                    error: `tripWindows must be valid ranges (id, YYYY-MM-DD from < to, max ${TRIP_MAX_NIGHTS} nights, label <= 80, flex 0-3 leaving >= 1 core night, max 10, unique ids)`,
                 },
                 400,
             ),
@@ -116,7 +116,7 @@ async function putHandler(request: Request): Promise<Response> {
     }
     // Past windows are dead weight: drop them on every save.
     if (Array.isArray(gsTrips.tripWindows)) {
-        const todayIso = new Date().toISOString().slice(0, 10);
+        const todayIso = serverTodayIso();
         gsTrips.tripWindows = (gsTrips.tripWindows as TripWindow[]).filter((w) => !windowIsPast(w, todayIso));
     }
 

@@ -430,6 +430,12 @@ const TRIP_MAX_EMAIL_HITS = 6;
 const tripWindowLabel = (w: TripWindow): string =>
     w.label?.trim() || `${formatDate(w.from)} – ${formatDate(w.to)}`;
 
+// The window label is user-typed (up to 80 chars) and lands in HTML in the trip
+// card heading below. Escape it there so a label like "<img src=x onerror=...>"
+// can't inject markup into the email.
+const escapeHtml = (s: string): string =>
+    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
 const buildTripCard = (digest: TripEmailDigest): string => {
     const { window: w, hits } = digest;
     const shown = hits.slice(0, TRIP_MAX_EMAIL_HITS);
@@ -487,7 +493,7 @@ const buildTripCard = (digest: TripEmailDigest): string => {
                                                         </tr>
                                                     </tbody>
                                                 </table>
-                                                <div style="font-family:${F.poster};font-weight:900;font-size:20px;line-height:24px;color:${C.ink};text-transform:uppercase;">${tripWindowLabel(w)}</div>
+                                                <div style="font-family:${F.poster};font-weight:900;font-size:20px;line-height:24px;color:${C.ink};text-transform:uppercase;">${escapeHtml(tripWindowLabel(w))}</div>
                                                 <div style="font-family:${F.mono};font-weight:700;font-size:12px;color:${C.inkSubtle};letter-spacing:0.12em;text-transform:uppercase;margin-top:4px;">${formatDate(w.from)} &rarr; ${formatDate(w.to)}${w.flexDays ? ` &middot; &plusmn;${w.flexDays}d` : ""}</div>
                                             </td>
                                         </tr>

@@ -94,4 +94,29 @@ describe("getDefaultConfig", () => {
         const cfg = await getDefaultConfig();
         expect(cfg.campgrounds["recreation.gov"].length).toBeGreaterThan(0);
     });
+
+    it("strips the curator's tripWindows from the returned globalSettings", async () => {
+        const kv = createMockKv({
+            "user:boss@example.com:profile": curatorProfile("boss@example.com"),
+            "user:boss@example.com:campgrounds": JSON.stringify({
+                campgrounds: {
+                    "recreation.gov": [{ id: "A", name: "Camp A", sites: { favorites: [], worthwhile: [] } }],
+                },
+                globalSettings: {
+                    stayLengths: [4, 5],
+                    validStartDays: ["Friday"],
+                    blackoutDates: [{ from: "2026-08-01", to: "2026-08-03" }],
+                    tripWindows: [{ id: "w1", from: "2026-09-01", to: "2026-09-03" }],
+                },
+                updatedAt: "2024-01-02",
+            }),
+        });
+        wire(kv, "boss@example.com");
+        const { getDefaultConfig } = await import("./default-config");
+        const cfg = await getDefaultConfig();
+        expect(cfg.globalSettings.tripWindows).toBeUndefined();
+        // Everything else still flows through untouched.
+        expect(cfg.globalSettings.blackoutDates).toEqual([{ from: "2026-08-01", to: "2026-08-03" }]);
+        expect(cfg.globalSettings.stayLengths).toEqual([4, 5]);
+    });
 });

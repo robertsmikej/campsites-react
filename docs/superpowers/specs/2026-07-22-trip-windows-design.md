@@ -79,7 +79,7 @@ Blackout interplay: a trip window wins over an overlapping blackout (setting one
 ### Fetch coverage + fast lane (`fetch-jobs.ts`)
 
 - Month planning per campground unions in months from the owner's non-past trip windows targeting it, so a window outside the campground's watch `dates` range still gets data.
-- Fast lane: campgrounds targeted by an **imminent** window (`from − 14d <= today <= to`) join `buildFastLanePlan` (1-minute tick) regardless of `checkPriority`. This is notifier-side only and doesn't count against `HIGH_PRIORITY_CAP` (which caps user-set priorities); the fetch lane stays serial + throttled, so worst case is a few extra cached-month refreshes per tick.
+- Fast lane: campgrounds targeted by an **imminent** window (`from − 14d <= today <= to`) join `buildFastLanePlan` (1-minute tick) regardless of `checkPriority`. This is notifier-side only and doesn't count against `HIGH_PRIORITY_CAP` (which caps user-set priorities). The real worst case is bigger than a few extra refreshes: a window with no `campgroundIds` filter fast-lanes every one of the user's watched campgrounds for its window months, every tick, for the full 14-day lead. Two mitigations are in as of this pass: window span is capped at `TRIP_MAX_NIGHTS` (30 nights), which bounds how many months one window can pull in. There is no cap yet on how many campgrounds/windows can ride the fast lane at once; that's deferred as a follow-up if it proves to be a real load problem in practice.
 
 ## Dashboard UI
 

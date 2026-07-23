@@ -17,7 +17,7 @@ import {
 import type { Campground, GlobalSettings } from "@/types/campground";
 import { findAdjacentGroups, type AdjacencySite } from "@/lib/adjacent-groups";
 import { getSiteDetailsCached, kvNamespaceLike } from "@/lib/site-details-cache";
-import { activeWindowsFor, addDaysIso, tripHitsForCampground } from "@/lib/trip-windows";
+import { activeWindowsFor, addDaysIso, tripHitsForCampground, serverTodayIso } from "@/lib/trip-windows";
 
 interface SourceConfig {
     campgrounds: { "recreation.gov"?: Campground[] };
@@ -46,16 +46,17 @@ async function buildSnapshot(config: SourceConfig, adapter: WorkerKvAdapter): Pr
     const campgrounds = config.campgrounds["recreation.gov"] ?? [];
     const results: SnapshotCampground[] = [];
 
+    // Fully past months can't produce bookable openings — skip their fetches.
+    // The month containing today always stays. Mirrors the notifier's plan clamp.
+    const nowMonth = new Date().toISOString().slice(0, 7);
+    const todayIso = serverTodayIso();
+
     for (const cg of campgrounds) {
         if (cg.enabled === false) continue;
         const start = cg.dates?.startDate;
         const end = cg.dates?.endDate;
         if (!start || !end) continue;
 
-        // Fully past months can't produce bookable openings — skip their fetches.
-        // The month containing today always stays. Mirrors the notifier's plan clamp.
-        const nowMonth = new Date().toISOString().slice(0, 7);
-        const todayIso = new Date().toISOString().slice(0, 10);
         const tripWins = activeWindowsFor(config.globalSettings.tripWindows, cg.id, todayIso);
         const monthSet = new Set(monthsBetween(start, end).filter((m) => m >= nowMonth));
         for (const w of tripWins) {

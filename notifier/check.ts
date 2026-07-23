@@ -29,7 +29,7 @@ import type { MatchResult, SiteConfigForDiff, CampgroundResult } from "./lib/dif
 import type { SiteAvailabilityMap } from "../next/src/lib/recgov/types";
 import type { AvailabilitySnapshot, SnapshotCampground } from "../next/src/lib/recgov/cache";
 import type { KvAdapter } from "../next/src/lib/recgov/cache";
-import { tripHitsForCampground, type TripSiteHit } from "../next/src/lib/trip-windows";
+import { tripHitsForCampground, serverTodayIso, type TripSiteHit } from "../next/src/lib/trip-windows";
 import { TRIP_COOLDOWN_MS } from "../next/src/lib/notifier-state-merge";
 import type { TripWindow } from "../next/src/types/campground";
 
@@ -844,7 +844,7 @@ export async function run(config: RunConfig, prefetchedTargets?: NotificationTar
     // Notify reads the KV cache only — no rec.gov calls. The cache is kept warm
     // by runTick (fast lane) and runSweep. A cache miss = carry-forward no-data.
     const nowMonth = now.toISOString().slice(0, 7);
-    const todayIso = now.toISOString().slice(0, 10);
+    const todayIso = serverTodayIso(now);
     const plan = buildNotifyPlan(eligible, nowMonth, todayIso);
     const rawByCampground = kvAdapter ? await readCachedMonths(plan, kvAdapter) : {};
     console.log(`[Notify] reading cache for ${plan.length} (campground, month) pairs`);
@@ -1242,7 +1242,7 @@ export async function runTick(config: RunConfig, lockKv?: LockKv): Promise<void>
         const targets = await fetchTargets(config);
         const nowMonth = config.now.toISOString().slice(0, 7);
         if (config.kvAdapter && !config.dryRun) {
-            const fastLane = buildFastLanePlan(targets, nowMonth, config.now.toISOString().slice(0, 10));
+            const fastLane = buildFastLanePlan(targets, nowMonth, serverTodayIso(config.now));
             if (fastLane.length) {
                 console.log(`[FastLane] fetching ${fastLane.length} high-tier (campground, month) pairs`);
                 await fetchToCache(fastLane, config.kvAdapter, { concurrency: 1, delayMs: 250 });
@@ -1266,7 +1266,7 @@ export async function runSweep(config: RunConfig, lockKv: LockKv): Promise<void>
     const targets = await fetchTargets(config);
     const nowMonth = config.now.toISOString().slice(0, 7);
     const minute = config.now.getUTCMinutes();
-    const plan = buildSweepPlan(targets, minute, nowMonth, config.now.toISOString().slice(0, 10));
+    const plan = buildSweepPlan(targets, minute, nowMonth, serverTodayIso(config.now));
     if (plan.length === 0) {
         console.log(`[Sweep] minute=${minute} — no normal/low campgrounds due`);
         return;

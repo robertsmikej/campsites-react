@@ -11,6 +11,9 @@ import type { StayMatch, TripWindow, Campground } from "@/types/campground";
 export const TRIP_MAX_WINDOWS = 10;
 export const TRIP_MAX_FLEX_DAYS = 3;
 export const TRIP_MAX_LABEL = 80;
+/** Longest span (in nights) a single trip window may cover. Unbounded spans
+ *  amplify rec.gov fetch volume (every month in range joins the fetch plan). */
+export const TRIP_MAX_NIGHTS = 30;
 /** Fast-lane (every-minute) polling starts this many days before arrival. */
 export const TRIP_FAST_LANE_LEAD_DAYS = 14;
 
@@ -27,6 +30,13 @@ export interface TripSiteHit {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const ISO_DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Server-side "today" for trip-window liveness. Uses an 8h westward grace
+ *  (UTC-8) so a window stays live through its final evening for US users;
+ *  after the grace it is genuinely past everywhere in the US. */
+export function serverTodayIso(now: Date = new Date()): string {
+    return new Date(now.getTime() - 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
 
 export function addDaysIso(iso: string, days: number): string {
     const d = new Date(iso + "T00:00:00Z");
@@ -174,13 +184,18 @@ export function tripHitsForCampground(
 export function validTripWindows(v: unknown): boolean {
     if (v === undefined) return true;
     if (!Array.isArray(v) || v.length > TRIP_MAX_WINDOWS) return false;
+    const seenIds = new Set<string>();
     return v.every((r) => {
         if (!r || typeof r !== "object") return false;
         const w = r as Partial<TripWindow>;
         if (typeof w.id !== "string" || w.id.length === 0 || w.id.length > 64) return false;
+        // Duplicate ids would double-fire dedup keys and collide push tags.
+        if (seenIds.has(w.id)) return false;
+        seenIds.add(w.id);
         if (typeof w.from !== "string" || !ISO_DAY_RE.test(w.from)) return false;
         if (typeof w.to !== "string" || !ISO_DAY_RE.test(w.to)) return false;
         if (w.from >= w.to) return false;
+        if (diffDays(w.from, w.to) > TRIP_MAX_NIGHTS) return false;
         if (w.label !== undefined && (typeof w.label !== "string" || w.label.length > TRIP_MAX_LABEL))
             return false;
         if (w.flexDays !== undefined) {
