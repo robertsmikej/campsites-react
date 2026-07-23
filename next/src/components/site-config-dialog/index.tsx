@@ -52,6 +52,35 @@ import { AddCampground } from "./add-campground";
 import { CampgroundEditor } from "./campground-editor";
 import { CampgroundsTable } from "./campgrounds-table";
 
+// Confirm wrapper for "Start fresh", rendered from the desktop footer and the
+// mobile in-body actions block.
+function StartFreshConfirm({
+    onStartFresh,
+    trigger,
+}: {
+    onStartFresh: () => void;
+    trigger: React.ReactNode;
+}) {
+    return (
+        <AlertDialog>
+            <AlertDialogTrigger asChild>{trigger}</AlertDialogTrigger>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Erase your whole watchlist?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This removes every campground from your list. Your notification settings stay, and you
+                        can add any campground back afterward.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Keep them</AlertDialogCancel>
+                    <AlertDialogAction onClick={onStartFresh}>Erase all</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+    );
+}
+
 // Wrapper to apply dnd-kit sortable to each CampgroundEditor
 function SortableCampgroundEditor(props: {
     campground: EditableCampground;
@@ -347,34 +376,30 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
             >
                 {/* Masthead */}
                 <div
-                    className="flex items-start justify-between"
-                    style={{
-                        background: CW.cream,
-                        borderBottom: `2px solid ${CW.ink}`,
-                        padding: "24px 30px 20px",
-                    }}
+                    className="flex items-start justify-between p-4 sm:px-[30px] sm:pb-5 sm:pt-6"
+                    style={{ background: CW.cream, borderBottom: `2px solid ${CW.ink}` }}
                 >
-                    <div>
+                    <div className="min-w-0">
                         <div
-                            className="font-mono-field font-medium uppercase"
+                            className="hidden font-mono-field font-medium uppercase sm:block"
                             style={{ fontSize: 10, letterSpacing: "0.22em", color: CW.clay }}
                         >
                             § Watchlist · Field Station Setup
                         </div>
                         <DialogTitle
-                            className="font-poster font-black uppercase"
-                            style={{ fontSize: 38, lineHeight: 0.92, letterSpacing: "-0.01em", marginTop: 9 }}
+                            className="font-poster text-[22px] font-black uppercase leading-none sm:mt-[9px] sm:text-[38px] sm:leading-[0.92]"
+                            style={{ letterSpacing: "-0.01em" }}
                         >
                             Configure{" "}
                             <span
-                                className="block font-italic-serif italic normal-case"
-                                style={{ fontSize: 30, lineHeight: 1, color: CW.forest, marginTop: 2 }}
+                                className="font-italic-serif text-[20px] italic normal-case sm:mt-[2px] sm:block sm:text-[30px] sm:leading-none"
+                                style={{ color: CW.forest }}
                             >
                                 campgrounds
                             </span>
                         </DialogTitle>
                         <div
-                            className="font-italic-serif italic"
+                            className="hidden font-italic-serif italic sm:block"
                             style={{ fontSize: 16, lineHeight: 1.3, color: CW.inkSoft, marginTop: 7 }}
                         >
                             {campgrounds.length} place{campgrounds.length === 1 ? "" : "s"} on watch · drag to
@@ -399,7 +424,7 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
                     </button>
                 </div>
 
-                <div className="flex-1 space-y-4 overflow-y-auto" style={{ padding: "24px 30px 30px" }}>
+                <div className="flex-1 space-y-4 overflow-y-auto p-4 sm:px-[30px] sm:pb-[30px] sm:pt-6">
                     {/* General settings */}
                     <GeneralSettings
                         stayRange={stayRange}
@@ -422,12 +447,14 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
                                 onAdd={handleAddCampground}
                             />
                         </div>
-                        <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "cards" | "list")}>
-                            <TabsList>
-                                <TabsTrigger value="cards">Cards</TabsTrigger>
-                                <TabsTrigger value="list">List</TabsTrigger>
-                            </TabsList>
-                        </Tabs>
+                        <div className="hidden sm:block">
+                            <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "cards" | "list")}>
+                                <TabsList>
+                                    <TabsTrigger value="cards">Cards</TabsTrigger>
+                                    <TabsTrigger value="list">List</TabsTrigger>
+                                </TabsList>
+                            </Tabs>
+                        </div>
                     </div>
 
                     {/* Expand/collapse controls (cards only) */}
@@ -516,18 +543,39 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
                             </SortableContext>
                         </DndContext>
                     )}
+
+                    {/* Rare bulk actions live in the scroll body on mobile; the
+                        sticky footer keeps only Cancel/Save. Desktop shows these
+                        in the footer instead. */}
+                    <div className="flex flex-col items-start gap-1 border-t border-[var(--cw-rule)] pt-3 sm:hidden">
+                        <button
+                            type="button"
+                            onClick={onAddDefaults}
+                            className="cursor-pointer rounded-[2px] px-2 py-2 font-poster text-[12px] font-extrabold uppercase tracking-[0.12em]"
+                            style={{ color: CW.clay }}
+                        >
+                            Add the curator&apos;s picks
+                        </button>
+                        <StartFreshConfirm
+                            onStartFresh={onStartFresh}
+                            trigger={
+                                <button
+                                    type="button"
+                                    className="cursor-pointer rounded-[2px] px-2 py-2 font-poster text-[12px] font-extrabold uppercase tracking-[0.12em]"
+                                    style={{ color: CW.inkSoft }}
+                                >
+                                    Start fresh
+                                </button>
+                            }
+                        />
+                    </div>
                 </div>
 
                 <DialogFooter
-                    className="flex-row items-center justify-between gap-3 sm:justify-between"
-                    style={{
-                        background: CW.cream,
-                        borderTop: `2px solid ${CW.ink}`,
-                        padding: "18px 30px",
-                        margin: 0,
-                    }}
+                    className="flex-row items-center justify-between gap-3 px-4 py-3 sm:justify-between sm:px-[30px] sm:py-[18px]"
+                    style={{ background: CW.cream, borderTop: `2px solid ${CW.ink}`, margin: 0 }}
                 >
-                    <div className="flex items-center gap-1 sm:gap-3">
+                    <div className="hidden items-center gap-1 sm:flex sm:gap-3">
                         <button
                             type="button"
                             onClick={onAddDefaults}
@@ -542,8 +590,9 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
                         >
                             Add the curator&apos;s picks
                         </button>
-                        <AlertDialog>
-                            <AlertDialogTrigger asChild>
+                        <StartFreshConfirm
+                            onStartFresh={onStartFresh}
+                            trigger={
                                 <button
                                     type="button"
                                     className="cursor-pointer whitespace-nowrap rounded-[2px] font-poster font-extrabold uppercase transition-colors hover:bg-[color-mix(in_srgb,var(--cw-ink-soft)_8%,transparent)]"
@@ -557,27 +606,14 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
                                 >
                                     Start fresh
                                 </button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                                <AlertDialogHeader>
-                                    <AlertDialogTitle>Erase your whole watchlist?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                        This removes every campground from your list. Your notification
-                                        settings stay, and you can add any campground back afterward.
-                                    </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                    <AlertDialogCancel>Keep them</AlertDialogCancel>
-                                    <AlertDialogAction onClick={onStartFresh}>Erase all</AlertDialogAction>
-                                </AlertDialogFooter>
-                            </AlertDialogContent>
-                        </AlertDialog>
+                            }
+                        />
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex w-full items-center gap-3 sm:w-auto">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="cursor-pointer whitespace-nowrap rounded-[2px] font-poster font-extrabold uppercase transition-colors hover:bg-cw-ink hover:text-cw-cream"
+                            className="cursor-pointer whitespace-nowrap rounded-[2px] font-poster font-extrabold uppercase transition-colors hover:bg-cw-ink hover:text-cw-cream flex-1 sm:flex-initial"
                             style={{
                                 fontSize: 12,
                                 letterSpacing: "0.12em",
@@ -593,7 +629,7 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
                             type="button"
                             onClick={handleSave}
                             disabled={isSaveDisabled}
-                            className="cursor-pointer whitespace-nowrap rounded-[2px] font-poster font-extrabold uppercase transition-transform hover:-translate-x-px hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-50"
+                            className="cursor-pointer whitespace-nowrap rounded-[2px] font-poster font-extrabold uppercase transition-transform hover:-translate-x-px hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-50 flex-1 sm:flex-initial"
                             style={{
                                 fontSize: 12,
                                 letterSpacing: "0.12em",

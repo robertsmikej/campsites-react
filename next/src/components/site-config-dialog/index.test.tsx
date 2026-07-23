@@ -84,3 +84,38 @@ describe("SiteConfigDialog mobile history integration", () => {
         expect(pushSpy).toHaveBeenCalledTimes(1);
     });
 });
+
+describe("SiteConfigDialog mobile layout wiring", () => {
+    beforeEach(() => {
+        vi.restoreAllMocks();
+        mockMatchMedia(false);
+    });
+    afterEach(() => {
+        cleanup();
+        vi.unstubAllGlobals();
+    });
+
+    it("renders the rare actions twice: desktop footer and mobile in-body block", () => {
+        const { getAllByRole } = render(<SiteConfigDialog {...baseProps} open onClose={vi.fn()} />);
+        expect(getAllByRole("button", { name: /add the curator's picks/i })).toHaveLength(2);
+        expect(getAllByRole("button", { name: /start fresh/i })).toHaveLength(2);
+    });
+
+    it("hides the Cards/List toggle below sm via classes", () => {
+        const { getByRole } = render(<SiteConfigDialog {...baseProps} open onClose={vi.fn()} />);
+        const tablist = getByRole("tablist");
+        expect(tablist.closest(".hidden.sm\\:block")).not.toBeNull();
+    });
+
+    it("both Start fresh buttons open the same confirm and fire onStartFresh", async () => {
+        const onStartFresh = vi.fn();
+        const { getAllByRole, findByRole } = render(
+            <SiteConfigDialog {...baseProps} open onClose={vi.fn()} onStartFresh={onStartFresh} />,
+        );
+        const buttons = getAllByRole("button", { name: /start fresh/i });
+        buttons[1]!.click();
+        const confirm = await findByRole("button", { name: /erase all/i });
+        confirm.click();
+        expect(onStartFresh).toHaveBeenCalled();
+    });
+});
