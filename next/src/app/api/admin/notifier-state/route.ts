@@ -3,7 +3,7 @@ import { jsonResponse, withCors } from "@/lib/responses";
 import { getUserProfile, updateUserProfile } from "@/lib/users";
 import { withErrorLogging } from "@/lib/route-helpers";
 import { putIfChanged } from "@/lib/kv-utils";
-import { mergeNotifierSites, type NotifierSites } from "@/lib/notifier-state-merge";
+import { mergeNotifierSites, TRIP_COOLDOWN_MS, type NotifierSites } from "@/lib/notifier-state-merge";
 
 interface UpdateEntry {
     email: string;
@@ -58,15 +58,26 @@ async function putHandler(request: Request): Promise<Response> {
         const existing = (await kv.get(key, "json")) as {
             sites?: NotifierSites;
             groups?: NotifierSites;
+            trips?: NotifierSites;
         } | null;
-        const incoming = (entry.state ?? {}) as { sites?: NotifierSites; groups?: NotifierSites };
+        const incoming = (entry.state ?? {}) as {
+            sites?: NotifierSites;
+            groups?: NotifierSites;
+            trips?: NotifierSites;
+        };
         const sites = mergeNotifierSites(existing?.sites, incoming.sites, nowMs);
         // The adjacent-group dedup bucket has the same shape as `sites`
         // (key -> SeenRange[]) and the same overlapping-cron clobber risk, so it
         // gets the identical merge. Dropping it here meant group cooldown state
         // never persisted, so the same adjacent-site email re-sent every cycle.
         const groups = mergeNotifierSites(existing?.groups, incoming.groups, nowMs);
-        const nextBlob = Object.keys(groups).length > 0 ? { sites, groups } : { sites };
+        // Trip-match bucket: same shape again, but a 6h cooldown. The age-out IS
+        // the re-alert cadence (still-open trip sites re-fire when their range
+        // expires here), so do not "fix" this to the 24h cooldown.
+        const trips = mergeNotifierSites(existing?.trips, incoming.trips, nowMs, TRIP_COOLDOWN_MS);
+        const nextBlob: { sites: NotifierSites; groups?: NotifierSites; trips?: NotifierSites } = { sites };
+        if (Object.keys(groups).length > 0) nextBlob.groups = groups;
+        if (Object.keys(trips).length > 0) nextBlob.trips = trips;
         const result = await putIfChanged(kv, key, JSON.stringify(nextBlob));
         if (result.written) written++;
         // lastNotifiedAt is the same clobber class: only ever advance it, so a

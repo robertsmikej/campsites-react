@@ -25,6 +25,11 @@ export type NotifierSites = Record<string, SeenRange[]>;
 // Keep this in lockstep with the notifier's COOLDOWN_MS (notifier/check.ts).
 export const COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
+// Trip-match re-alert cadence. Shorter than the normal cooldown on purpose:
+// a still-open trip site ages out of this bucket and re-fires every 6h until
+// the window passes or it's booked. Keep in lockstep with notifier/check.ts.
+export const TRIP_COOLDOWN_MS = 6 * 60 * 60 * 1000;
+
 function isValidRange(r: unknown): r is SeenRange {
     if (!r || typeof r !== "object") return false;
     const { from, to, seen } = r as Partial<SeenRange>;

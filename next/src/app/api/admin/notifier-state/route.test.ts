@@ -258,4 +258,74 @@ describe("PUT /api/admin/notifier-state", () => {
         expect(state.groups?.["232085:020,021"]).toBeDefined();
         expect(state.groups?.["232085:099,100"]).toBeUndefined();
     });
+
+    it("merge-persists the trips bucket with the 6h cooldown", async () => {
+        vi.mocked(cloudflare.getEnv).mockReturnValue({ API_SECRET: SECRET } as never);
+        // Past the 6h trip cooldown but inside the 24h sites cooldown.
+        const sevenHoursIso = new Date(Date.now() - 7 * 60 * 60 * 1000).toISOString();
+        const kv = createMockKv({
+            "user:mike@x.com:notifier-state": JSON.stringify({
+                sites: { "232431:18649": [{ from: "2026-07-16", to: "2026-07-19", seen: sevenHoursIso }] },
+                trips: {
+                    "w1:232431:18649": [{ from: "2026-07-31", to: "2026-08-02", seen: recentIso }],
+                    "w1:232431:99999": [{ from: "2026-07-31", to: "2026-08-02", seen: sevenHoursIso }],
+                },
+            }),
+        });
+        vi.mocked(cloudflare.getKv).mockReturnValue(kv);
+
+        const res = await put(
+            {
+                updates: [
+                    {
+                        email: "mike@x.com",
+                        state: {
+                            sites: {},
+                            trips: {
+                                "w2:232085:53676": [
+                                    { from: "2026-08-07", to: "2026-08-09", seen: recentIso },
+                                ],
+                            },
+                        },
+                    },
+                ],
+            },
+            `Bearer ${SECRET}`,
+        );
+
+        expect(res.status).toBe(200);
+        const state = (await kv.get("user:mike@x.com:notifier-state", "json")) as {
+            sites: Record<string, unknown>;
+            trips?: Record<string, unknown[]>;
+        };
+        // Union merge: existing fresh trip range kept, incoming added.
+        expect(state.trips?.["w1:232431:18649"]).toBeDefined();
+        expect(state.trips?.["w2:232085:53676"]).toBeDefined();
+        // 6h cooldown: the 7h-old trip range aged out...
+        expect(state.trips?.["w1:232431:99999"]).toBeUndefined();
+        // ...while the 7h-old sites range survives its 24h cooldown.
+        expect(state.sites["232431:18649"]).toBeDefined();
+    });
+
+    it("omits the trips key when the merge comes out empty", async () => {
+        vi.mocked(cloudflare.getEnv).mockReturnValue({ API_SECRET: SECRET } as never);
+        const kv = createMockKv();
+        vi.mocked(cloudflare.getKv).mockReturnValue(kv);
+        const res = await put(
+            {
+                updates: [
+                    {
+                        email: "mike@x.com",
+                        state: {
+                            sites: { "1:2": [{ from: "2026-08-01", to: "2026-08-03", seen: recentIso }] },
+                        },
+                    },
+                ],
+            },
+            `Bearer ${SECRET}`,
+        );
+        expect(res.status).toBe(200);
+        const state = (await kv.get("user:mike@x.com:notifier-state", "json")) as Record<string, unknown>;
+        expect("trips" in state).toBe(false);
+    });
 });
