@@ -29,6 +29,9 @@ import type { MatchResult, SiteConfigForDiff, CampgroundResult } from "./lib/dif
 import type { SiteAvailabilityMap } from "../next/src/lib/recgov/types";
 import type { AvailabilitySnapshot, SnapshotCampground } from "../next/src/lib/recgov/cache";
 import type { KvAdapter } from "../next/src/lib/recgov/cache";
+import type { TripSiteHit } from "../next/src/lib/trip-windows";
+import { TRIP_COOLDOWN_MS } from "../next/src/lib/notifier-state-merge";
+import type { TripWindow } from "../next/src/types/campground";
 
 export interface RunConfig {
     subscriberApiUrl: string;
@@ -81,6 +84,11 @@ const LEAD_TIME_MS = 15 * 60 * 1000;
 // while still re-alerting if the opening genuinely frees up again a day+ later.
 const COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
+const PUSH_MAX_LINES = 5;
+// Tier marker matching the app/email legend: ★ favorite, ◇ worthwhile.
+const tierMark = (t: string) => (t === "favorites" ? "★ " : t === "worthwhile" ? "◇ " : "");
+const TIER_ORDER: Record<string, number> = { favorites: 0, worthwhile: 1, "all-others": 2 };
+
 // ── API response types ────────────────────────────────────────────────────────
 
 interface NotifierState {
@@ -93,6 +101,10 @@ interface NotifierState {
     /** group key ("campgroundId:sortedSiteIds") -> alerted windows with last-seen ISO.
      *  Separate bucket from `sites` so adjacent-group dedup is independent of per-site dedup. */
     groups?: Record<string, Array<{ from: string; to: string; seen: string }>>;
+    /** trip key ("windowId:campgroundId:siteId") -> alerted runs with last-ALERT ISO.
+     *  6h cooldown (TRIP_COOLDOWN_MS): the age-out IS the re-alert cadence, so
+     *  `seen` is stamped only when a hit actually fires, never refreshed on sight. */
+    trips?: Record<string, Array<{ from: string; to: string; seen: string }>>;
     /** @deprecated v1 cooldown shape (signature -> last-seen ISO); migrated on read. */
     notified?: Record<string, string>;
     /** @deprecated original shape (currently-visible signatures); migrated on read. */
@@ -600,6 +612,106 @@ export function diffGroupsWithCooldown(
     return { newGroups, nextGroupState: next };
 }
 
+// ── Trip-window dedup ─────────────────────────────────────────────────────────
+
+// Same overlap-within-cooldown semantics as diffPerUser, keyed by
+// (window, campground, site), with two deliberate differences: the cooldown is
+// 6h, and a still-visible non-new run does NOT refresh `seen`. Refreshing would
+// keep the range alive forever and kill the every-6h re-alert.
+export function diffTripsWithCooldown(
+    hits: TripSiteHit[],
+    priorState: { trips?: NotifierState["trips"] } | null | undefined,
+    nowMs: number,
+    cooldownMs: number = TRIP_COOLDOWN_MS,
+): { newHits: TripSiteHit[]; nextTripState: NonNullable<NotifierState["trips"]> } {
+    const cutoff = nowMs - cooldownMs;
+    const seenIso = new Date(nowMs).toISOString();
+
+    const next: NonNullable<NotifierState["trips"]> = {};
+    const priorFresh = new Map<string, Array<{ from: string; to: string; seen: string }>>();
+    for (const [key, ranges] of Object.entries(priorState?.trips ?? {})) {
+        const fresh = ranges.filter((r) => Date.parse(r.seen) > cutoff);
+        if (fresh.length) {
+            priorFresh.set(key, fresh);
+            next[key] = fresh.map((r) => ({ ...r }));
+        }
+    }
+
+    const newHits: TripSiteHit[] = [];
+    for (const h of hits) {
+        const key = `${h.windowId}:${h.campgroundId}:${h.siteId}`;
+        const prior = priorFresh.get(key) ?? [];
+        if (prior.some((r) => rangesOverlap(r.from, r.to, h.run.from, h.run.to))) continue;
+        newHits.push(h);
+        (next[key] ??= []).push({ from: h.run.from, to: h.run.to, seen: seenIso });
+    }
+    return { newHits, nextTripState: next };
+}
+
+// Same-run dupe suppression: a normal alert whose site+range is already covered
+// by a trip digest this cycle would be a duplicate push/email card.
+export function suppressTripDuplicates(matches: MatchResult[], tripHits: TripSiteHit[]): MatchResult[] {
+    if (tripHits.length === 0) return matches;
+    return matches.filter(
+        (m) =>
+            !tripHits.some(
+                (h) =>
+                    h.campgroundId === m.campgroundId &&
+                    h.siteId === m.siteId &&
+                    rangesOverlap(h.run.from, h.run.to, m.match.from, m.match.to),
+            ),
+    );
+}
+
+export interface TripDigest {
+    window: TripWindow;
+    hits: TripSiteHit[];
+    push: { title: string; body: string; url: string; tag: string };
+}
+
+// One digest per window that has new hits: distinct title, per-window tag (new
+// sends replace the prior notification), deep link to the sole site / sole
+// campground / dashboard.
+export function buildTripDigests(
+    newHits: TripSiteHit[],
+    windows: TripWindow[],
+    siteUrl: string,
+): TripDigest[] {
+    if (newHits.length === 0) return [];
+    const digests: TripDigest[] = [];
+    for (const w of [...windows].sort((a, b) => a.from.localeCompare(b.from))) {
+        const hits = newHits
+            .filter((h) => h.windowId === w.id)
+            .sort(
+                (a, b) =>
+                    (TIER_ORDER[a.tier] ?? 2) - (TIER_ORDER[b.tier] ?? 2) ||
+                    a.campgroundName.localeCompare(b.campgroundName) ||
+                    a.siteName.localeCompare(b.siteName),
+            );
+        if (hits.length === 0) continue;
+        const label = w.label?.trim() || `${formatDate(w.from)} – ${formatDate(w.to)}`;
+        const lines = hits.map(
+            (h) =>
+                `${tierMark(h.tier)}${h.campgroundName} · ${h.siteName} · ${formatDate(h.run.from)} → ${formatDate(h.run.to)}`,
+        );
+        const shown = lines.slice(0, PUSH_MAX_LINES);
+        if (lines.length > PUSH_MAX_LINES) shown.push(`+${lines.length - PUSH_MAX_LINES} more`);
+        const cgIds = new Set(hits.map((h) => h.campgroundId));
+        const sole = hits.length === 1 ? hits[0] : undefined;
+        const url = sole
+            ? buildReservationLink(sole.siteId, sole.run.from, sole.run.nights)
+            : cgIds.size === 1
+              ? `https://www.recreation.gov/camping/campgrounds/${hits[0]!.campgroundId}`
+              : `${siteUrl || "https://campwatch.dev"}/app`;
+        digests.push({
+            window: w,
+            hits,
+            push: { title: `Trip match: ${label}`, body: shown.join("\n"), url, tag: `cw-trip-${w.id}` },
+        });
+    }
+    return digests;
+}
+
 // ── Send email to a single user ───────────────────────────────────────────────
 
 async function sendEmailToUser({
@@ -861,11 +973,6 @@ export async function run(config: RunConfig, prefetchedTargets?: NotificationTar
                 // name then each opening's site + dates. Prune subs the push service
                 // reports as gone (404/410).
                 if (config.vapid && (target.pushSubscriptions?.length ?? 0) > 0) {
-                    const PUSH_MAX_LINES = 5;
-                    // Tier marker matching the app/email legend: ★ favorite, ◇ worthwhile,
-                    // nothing for other sites.
-                    const tierMark = (t: string) =>
-                        t === "favorites" ? "★ " : t === "worthwhile" ? "◇ " : "";
                     const byCg = new Map<
                         string,
                         { name: string; matches: MatchResult[]; groups: AdjacentGroup[] }
