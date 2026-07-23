@@ -200,7 +200,7 @@ function MultiSelectSites({
                         )}
                     </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-64 p-0" align="start">
+                <PopoverContent className="w-[min(16rem,calc(100vw-2rem))] p-0" align="start">
                     <Command>
                         <CommandInput
                             placeholder="Search or add site..."
@@ -311,10 +311,10 @@ export function CampgroundEditor({
             }}
         >
             <AccordionTrigger
-                className="px-[18px] py-[15px] hover:no-underline [&>svg]:hidden"
+                className="px-3 py-[15px] hover:no-underline sm:px-[18px] [&>svg]:hidden"
                 asChild={false}
             >
-                <div className="flex w-full items-center gap-[14px]">
+                <div className="flex w-full items-center gap-2 sm:gap-[14px]">
                     <span
                         className="cursor-grab"
                         style={{ color: CW.inkFaint }}
@@ -324,8 +324,8 @@ export function CampgroundEditor({
                         <GripVertical className="size-4" />
                     </span>
                     <span
-                        className="flex-1 text-left font-italic-serif italic"
-                        style={{ fontSize: 23, color: expanded ? CW.ink : CW.inkSoft }}
+                        className="min-w-0 flex-1 truncate text-left font-italic-serif text-[18px] italic sm:text-[23px]"
+                        style={{ color: expanded ? CW.ink : CW.inkSoft }}
                     >
                         {campground.name || `Campground ${index + 1}`}
                         {!isEnabled && (
@@ -334,12 +334,14 @@ export function CampgroundEditor({
                             </span>
                         )}
                     </span>
-                    {campground.favoritesArray.length > 0 && (
-                        <TierChip tier="fav" count={campground.favoritesArray.length} />
-                    )}
-                    {campground.worthwhileArray.length > 0 && (
-                        <TierChip tier="worth" count={campground.worthwhileArray.length} />
-                    )}
+                    <span className="hidden items-center gap-1 sm:flex">
+                        {campground.favoritesArray.length > 0 && (
+                            <TierChip tier="fav" count={campground.favoritesArray.length} />
+                        )}
+                        {campground.worthwhileArray.length > 0 && (
+                            <TierChip tier="worth" count={campground.worthwhileArray.length} />
+                        )}
+                    </span>
                     <span className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                         <TooltipProvider>
                             <Tooltip>
@@ -453,7 +455,7 @@ export function CampgroundEditor({
                     </div>
                     {/* Image preview */}
                     {campground.image && (
-                        <div className="w-32 shrink-0">
+                        <div className="hidden w-32 shrink-0 sm:block">
                             <div className="overflow-hidden rounded-lg border">
                                 {/* eslint-disable-next-line @next/next/no-img-element */}
                                 <img
@@ -470,7 +472,7 @@ export function CampgroundEditor({
 
                 <SectionDivider label="I — Season Window" />
                 {/* Date pickers */}
-                <div className="flex gap-3">
+                <div className="flex flex-col gap-3 sm:flex-row">
                     <DatePickerField
                         label="Start Date"
                         value={campground.dates?.startDate ?? ""}
@@ -487,7 +489,7 @@ export function CampgroundEditor({
 
                 <SectionDivider label="II — Sites that matter" />
                 {/* Site multi-selects */}
-                <div className="flex gap-3">
+                <div className="flex flex-col gap-3 sm:flex-row">
                     {availableSites.length > 0 ? (
                         <>
                             <MultiSelectSites
