@@ -105,57 +105,63 @@ export function GeneralSettings(props: GeneralSettingsProps) {
                             planner, and no alert emails for stays that overlap them.
                         </p>
                         {blackoutDates.map((b, i) => (
-                            <div key={i} className="mb-2 flex items-center gap-2">
-                                <input
-                                    type="date"
-                                    value={b.from}
-                                    onChange={(e) =>
-                                        onBlackoutDatesChange(
-                                            blackoutDates.map((x, j) =>
-                                                j === i ? { ...x, from: e.target.value } : x,
-                                            ),
-                                        )
-                                    }
-                                    className="rounded border bg-cw-cream px-2 py-1 text-sm"
-                                />
-                                <span className="text-xs">→</span>
-                                <input
-                                    type="date"
-                                    value={b.to}
-                                    onChange={(e) =>
-                                        onBlackoutDatesChange(
-                                            blackoutDates.map((x, j) =>
-                                                j === i ? { ...x, to: e.target.value } : x,
-                                            ),
-                                        )
-                                    }
-                                    className="rounded border bg-cw-cream px-2 py-1 text-sm"
-                                />
-                                <input
-                                    type="text"
-                                    placeholder="label (optional)"
-                                    value={b.label ?? ""}
-                                    maxLength={80}
-                                    onChange={(e) =>
-                                        onBlackoutDatesChange(
-                                            blackoutDates.map((x, j) =>
-                                                j === i ? { ...x, label: e.target.value || undefined } : x,
-                                            ),
-                                        )
-                                    }
-                                    className="min-w-0 flex-1 rounded border bg-cw-cream px-2 py-1 text-sm"
-                                />
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="size-7"
-                                    aria-label="Remove blackout"
-                                    onClick={() =>
-                                        onBlackoutDatesChange(blackoutDates.filter((_, j) => j !== i))
-                                    }
-                                >
-                                    <Trash2 className="size-3.5" />
-                                </Button>
+                            <div key={i} className="mb-2 flex flex-wrap items-center gap-2 sm:flex-nowrap">
+                                <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
+                                    <input
+                                        type="date"
+                                        value={b.from}
+                                        onChange={(e) =>
+                                            onBlackoutDatesChange(
+                                                blackoutDates.map((x, j) =>
+                                                    j === i ? { ...x, from: e.target.value } : x,
+                                                ),
+                                            )
+                                        }
+                                        className="min-w-0 flex-1 rounded border bg-cw-cream px-2 py-1 text-sm sm:flex-initial"
+                                    />
+                                    <span className="text-xs">→</span>
+                                    <input
+                                        type="date"
+                                        value={b.to}
+                                        onChange={(e) =>
+                                            onBlackoutDatesChange(
+                                                blackoutDates.map((x, j) =>
+                                                    j === i ? { ...x, to: e.target.value } : x,
+                                                ),
+                                            )
+                                        }
+                                        className="min-w-0 flex-1 rounded border bg-cw-cream px-2 py-1 text-sm sm:flex-initial"
+                                    />
+                                </div>
+                                <div className="flex w-full min-w-0 flex-1 items-center gap-2 sm:w-auto">
+                                    <input
+                                        type="text"
+                                        placeholder="label (optional)"
+                                        value={b.label ?? ""}
+                                        maxLength={80}
+                                        onChange={(e) =>
+                                            onBlackoutDatesChange(
+                                                blackoutDates.map((x, j) =>
+                                                    j === i
+                                                        ? { ...x, label: e.target.value || undefined }
+                                                        : x,
+                                                ),
+                                            )
+                                        }
+                                        className="min-w-0 flex-1 rounded border bg-cw-cream px-2 py-1 text-sm"
+                                    />
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="size-7"
+                                        aria-label="Remove blackout"
+                                        onClick={() =>
+                                            onBlackoutDatesChange(blackoutDates.filter((_, j) => j !== i))
+                                        }
+                                    >
+                                        <Trash2 className="size-3.5" />
+                                    </Button>
+                                </div>
                             </div>
                         ))}
                     </div>

@@ -62,12 +62,11 @@ interface SegmentedControlProps<T extends string> {
 
 export function SegmentedControl<T extends string>({ options, value, onChange }: SegmentedControlProps<T>) {
     return (
-        <div
-            className="inline-flex overflow-hidden rounded-[3px]"
-            style={{ border: `1.5px solid ${CW.ink}` }}
-        >
+        <div className="flex flex-wrap gap-1.5 sm:inline-flex sm:flex-nowrap sm:gap-0 sm:overflow-hidden sm:rounded-[3px] sm:border-[1.5px] sm:border-[var(--cw-ink)]">
             {options.map((opt, i) => {
                 const active = opt.value === value;
+                const joinBorder =
+                    i < options.length - 1 ? "sm:border-r-[1.5px] sm:border-r-[var(--cw-ink)]" : "";
                 return (
                     <button
                         key={opt.value}
@@ -75,12 +74,11 @@ export function SegmentedControl<T extends string>({ options, value, onChange }:
                         aria-pressed={active}
                         disabled={opt.disabled}
                         onClick={() => onChange(opt.value)}
-                        className="cursor-pointer whitespace-nowrap font-mono-field font-bold uppercase transition-colors"
+                        className={`cursor-pointer whitespace-nowrap rounded-[3px] border-[1.5px] border-[var(--cw-ink)] font-mono-field font-bold uppercase transition-colors sm:rounded-none sm:border-0 ${joinBorder}`}
                         style={{
                             fontSize: 11,
                             letterSpacing: "0.1em",
                             padding: "11px 15px",
-                            borderRight: i < options.length - 1 ? `1.5px solid ${CW.ink}` : undefined,
                             background: active ? CW.forest : CW.cream,
                             color: active ? CW.cream : CW.inkSoft,
                             opacity: opt.disabled ? 0.45 : undefined,

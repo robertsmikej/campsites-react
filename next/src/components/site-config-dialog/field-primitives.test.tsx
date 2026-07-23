@@ -42,6 +42,27 @@ describe("SegmentedControl", () => {
         fireEvent.click(disabledBtn);
         expect(onChange).not.toHaveBeenCalled();
     });
+
+    it("SegmentedControl buttons are standalone pills on mobile and joined at sm", () => {
+        const { getAllByRole, container } = render(
+            <SegmentedControl
+                options={[
+                    { value: "a", label: "Alpha" },
+                    { value: "b", label: "Beta" },
+                ]}
+                value="a"
+                onChange={() => {}}
+            />,
+        );
+        const group = container.firstElementChild as HTMLElement;
+        expect(group.className).toContain("flex-wrap");
+        expect(group.className).toContain("sm:flex-nowrap");
+        const buttons = getAllByRole("button");
+        for (const b of buttons) {
+            expect(b.className).toContain("border-[1.5px]");
+            expect(b.className).toContain("sm:border-0");
+        }
+    });
 });
 
 describe("TierChip", () => {
