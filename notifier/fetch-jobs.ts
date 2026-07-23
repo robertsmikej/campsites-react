@@ -4,6 +4,8 @@ import type { KvAdapter } from "../next/src/lib/recgov/cache";
 import type { RawMonthResult } from "../next/src/lib/recgov/types";
 import { fetchMonthWithCache } from "../next/src/lib/recgov/fetch-with-cache";
 import { fetchDedupedConcurrent } from "../next/src/lib/recgov/fetch-deduped";
+import { activeWindowsFor, addDaysIso, windowIsImminent } from "../next/src/lib/trip-windows";
+import type { TripWindow } from "../next/src/types/campground";
 
 export interface FetchPlanItem {
     campgroundId: string;
@@ -12,6 +14,7 @@ export interface FetchPlanItem {
 
 export interface PlannableTarget {
     campgrounds: { "recreation.gov"?: Campground[] };
+    globalSettings?: { tripWindows?: TripWindow[] };
 }
 
 function monthsBetween(startIso: string, endIso: string): string[] {
@@ -21,6 +24,7 @@ function monthsBetween(startIso: string, endIso: string): string[] {
     const cur = new Date(start);
     while (cur <= end) {
         months.add(`${cur.getUTCFullYear()}-${String(cur.getUTCMonth() + 1).padStart(2, "0")}`);
+        cur.setUTCDate(1); // Set to 1st to avoid day-of-month issues when advancing
         cur.setUTCMonth(cur.getUTCMonth() + 1);
     }
     return [...months];
@@ -28,6 +32,18 @@ function monthsBetween(startIso: string, endIso: string): string[] {
 
 function tierOf(c: Campground): CheckPriority {
     return c.checkPriority ?? "normal";
+}
+
+// Months a set of windows needs fetched. `to` is checkout, so the last night
+// (and last month) is the day before.
+function tripMonths(windows: TripWindow[], nowMonth: string): string[] {
+    const months = new Set<string>();
+    for (const w of windows) {
+        for (const m of monthsBetween(w.from, addDaysIso(w.to, -1))) {
+            if (m >= nowMonth) months.add(m);
+        }
+    }
+    return [...months];
 }
 
 // Shared core: union of (campgroundId, month) across targets for campgrounds
@@ -38,19 +54,36 @@ function buildPlan(
     tiers: CheckPriority[],
     nowMonth: string,
     minute?: number,
+    todayIso?: string,
+    opts?: { imminentTripBoost?: boolean },
 ): FetchPlanItem[] {
     const ranges = new Map<string, Set<string>>();
     for (const target of targets) {
         for (const c of target.campgrounds["recreation.gov"] ?? []) {
             if (c.enabled === false) continue;
             const tier = tierOf(c);
-            if (!tiers.includes(tier)) continue;
-            if (minute !== undefined && minute % CHECK_PRIORITY_INTERVAL_MINUTES[tier] !== 0) continue;
-            const start = c.dates?.startDate;
-            const end = c.dates?.endDate;
-            if (!start || !end) continue;
-            const months = monthsBetween(start, end).filter((m) => m >= nowMonth);
-            if (months.length === 0) continue;
+            const inTier =
+                tiers.includes(tier) &&
+                (minute === undefined || minute % CHECK_PRIORITY_INTERVAL_MINUTES[tier] === 0);
+            const windows = todayIso
+                ? activeWindowsFor(target.globalSettings?.tripWindows, c.id, todayIso)
+                : [];
+
+            const months = new Set<string>();
+            if (inTier) {
+                const start = c.dates?.startDate;
+                const end = c.dates?.endDate;
+                if (start && end) {
+                    for (const m of monthsBetween(start, end)) if (m >= nowMonth) months.add(m);
+                }
+                for (const m of tripMonths(windows, nowMonth)) months.add(m);
+            } else if (opts?.imminentTripBoost && todayIso) {
+                // Out-of-tier campgrounds ride the fast lane for imminent trip
+                // windows only, and only for the window months (not the season).
+                const imminent = windows.filter((w) => windowIsImminent(w, todayIso));
+                for (const m of tripMonths(imminent, nowMonth)) months.add(m);
+            }
+            if (months.size === 0) continue;
             if (!ranges.has(c.id)) ranges.set(c.id, new Set());
             for (const m of months) ranges.get(c.id)!.add(m);
         }
@@ -62,8 +95,12 @@ function buildPlan(
 }
 
 // High-tier only, every tick (high interval = 1, so no effective minute gate).
-export function buildFastLanePlan(targets: PlannableTarget[], nowMonth: string): FetchPlanItem[] {
-    return buildPlan(targets, ["high"], nowMonth);
+export function buildFastLanePlan(
+    targets: PlannableTarget[],
+    nowMonth: string,
+    todayIso?: string,
+): FetchPlanItem[] {
+    return buildPlan(targets, ["high"], nowMonth, undefined, todayIso, { imminentTripBoost: true });
 }
 
 // Normal/low only, minute-gated. Runs under a */5 cron, so normal (5) fires every
@@ -72,13 +109,18 @@ export function buildSweepPlan(
     targets: PlannableTarget[],
     minute: number,
     nowMonth: string,
+    todayIso?: string,
 ): FetchPlanItem[] {
-    return buildPlan(targets, ["normal", "low"], nowMonth, minute);
+    return buildPlan(targets, ["normal", "low"], nowMonth, minute, todayIso);
 }
 
 // Every enabled campground, all due months, no gate — notify reads cache cheaply.
-export function buildNotifyPlan(targets: PlannableTarget[], nowMonth: string): FetchPlanItem[] {
-    return buildPlan(targets, ["high", "normal", "low"], nowMonth);
+export function buildNotifyPlan(
+    targets: PlannableTarget[],
+    nowMonth: string,
+    todayIso?: string,
+): FetchPlanItem[] {
+    return buildPlan(targets, ["high", "normal", "low"], nowMonth, undefined, todayIso);
 }
 
 // Assemble the per-campground raw-results map from the KV cache, preserving the

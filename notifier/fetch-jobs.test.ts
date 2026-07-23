@@ -126,3 +126,61 @@ describe("fetchToCache", () => {
         expect(putRaw).not.toHaveBeenCalledWith("FAIL", "2026-07", expect.anything());
     });
 });
+
+describe("trip-window months", () => {
+    const TODAY = "2026-07-22";
+    const NOW_MONTH = "2026-07";
+    const cg = (over: Record<string, unknown> = {}) => ({
+        id: "233563",
+        name: "Point",
+        sites: { favorites: [], worthwhile: [] },
+        dates: { startDate: "2026-07-01", endDate: "2026-07-31" },
+        enabled: true,
+        ...over,
+    });
+    const target = (campground: unknown, tripWindows?: unknown[]) =>
+        ({
+            campgrounds: { "recreation.gov": [campground] },
+            ...(tripWindows ? { globalSettings: { tripWindows } } : {}),
+        }) as never;
+
+    it("notify plan unions trip-window months beyond the watch dates", () => {
+        const t = target(cg(), [{ id: "w1", from: "2026-09-04", to: "2026-09-07" }]);
+        const months = buildNotifyPlan([t], NOW_MONTH, TODAY)
+            .map((p) => p.month)
+            .sort();
+        expect(months).toEqual(["2026-07", "2026-09"]);
+    });
+
+    it("covers a campground with no watch dates via its trip window", () => {
+        const t = target(cg({ dates: undefined }), [{ id: "w1", from: "2026-08-07", to: "2026-08-09" }]);
+        expect(buildNotifyPlan([t], NOW_MONTH, TODAY)).toEqual([
+            { campgroundId: "233563", month: "2026-08" },
+        ]);
+    });
+
+    it("fast lane boosts a normal-tier campground only for an imminent window", () => {
+        const imminent = [{ id: "w1", from: "2026-07-31", to: "2026-08-02" }];
+        const distant = [{ id: "w2", from: "2026-10-02", to: "2026-10-04" }];
+        expect(buildFastLanePlan([target(cg(), imminent)], NOW_MONTH, TODAY).length).toBeGreaterThan(0);
+        expect(buildFastLanePlan([target(cg(), distant)], NOW_MONTH, TODAY)).toEqual([]);
+        // Boost fetches only the window months, not the whole season.
+        const months = buildFastLanePlan([target(cg(), imminent)], NOW_MONTH, TODAY)
+            .map((p) => p.month)
+            .sort();
+        expect(months).toEqual(["2026-07", "2026-08"]);
+    });
+
+    it("window checkout on the 1st does not drag in the extra month", () => {
+        const t = target(cg({ dates: undefined }), [{ id: "w1", from: "2026-08-28", to: "2026-09-01" }]);
+        const months = buildNotifyPlan([t], NOW_MONTH, TODAY)
+            .map((p) => p.month)
+            .sort();
+        expect(months).toEqual(["2026-08"]);
+    });
+
+    it("omitting todayIso keeps legacy behavior", () => {
+        const t = target(cg(), [{ id: "w1", from: "2026-09-04", to: "2026-09-07" }]);
+        expect(buildNotifyPlan([t], NOW_MONTH).map((p) => p.month)).toEqual(["2026-07"]);
+    });
+});
