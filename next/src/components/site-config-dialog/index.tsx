@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
     DndContext,
     closestCenter,
@@ -150,6 +150,47 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
         setViewMode("cards");
     }, [open, initialData, globalSettings]);
 
+    // Mobile back-swipe: the full-screen dialog owns a history entry so the
+    // phone's back gesture (or back button) closes it instead of leaving the
+    // page. Mirrors mobile-timeline's detail-screen pattern, though the ref
+    // indirection below is new here: onClose is an external, non-memoized
+    // prop, while mobile-timeline's equivalent used stable setState functions
+    // that never needed one. onClose is read through a ref so a new inline
+    // callback identity can't re-run the effect and push duplicate entries.
+    const onCloseRef = useRef(onClose);
+    // Layout effects run synchronously after commit (before the browser
+    // paints or any event, including popstate, can fire), so a popstate
+    // handler can never observe a stale onClose the way it could with a
+    // passive effect that hasn't flushed yet.
+    useLayoutEffect(() => {
+        onCloseRef.current = onClose;
+    });
+    const ownsHistoryEntry = useRef(false);
+    useEffect(() => {
+        if (!open) return;
+        if (typeof window === "undefined") return;
+        if (!window.matchMedia("(max-width: 639px)").matches) return;
+        window.history.pushState({ cwConfigDialog: true }, "");
+        ownsHistoryEntry.current = true;
+        const onPop = () => {
+            ownsHistoryEntry.current = false;
+            onCloseRef.current();
+        };
+        window.addEventListener("popstate", onPop);
+        return () => {
+            window.removeEventListener("popstate", onPop);
+            if (
+                ownsHistoryEntry.current &&
+                (window.history.state as { cwConfigDialog?: boolean } | null)?.cwConfigDialog
+            ) {
+                // Closed by a button while our entry is still on top: unwind it
+                // so the stack stays consistent.
+                ownsHistoryEntry.current = false;
+                window.history.back();
+            }
+        };
+    }, [open]);
+
     // Focus a specific campground when the dialog opens with focusedCampgroundId set
     useEffect(() => {
         if (!open || !focusedCampgroundId) return;
@@ -287,14 +328,22 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
 
     return (
         <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+            {/* The shadcn DialogContent primitive centers itself with
+                `fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2`,
+                which assumes translating by half of a stable viewport
+                height lands it back at the true center. On mobile, showing
+                or hiding the browser's URL bar changes 100dvh after the
+                dialog has already painted, so that 50% + translate(-50%)
+                math no longer cancels out to edge-to-edge: the panel visibly
+                shifts instead of filling the screen. inset-0 with no
+                translate sidesteps the math entirely. sm:inset-auto plus
+                sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2
+                restore the primitive's original centering once the dialog
+                is no longer full screen at the sm breakpoint. */}
             <DialogContent
                 showCloseButton={false}
-                className="flex max-h-[90vh] w-[95vw] max-w-[95vw] flex-col overflow-hidden rounded-none p-0 sm:max-w-6xl"
-                style={{
-                    background: CW.paper,
-                    border: `1.5px solid ${CW.ink}`,
-                    boxShadow: `10px 12px 0 ${CW.forest}, 0 40px 90px -30px rgba(20,15,12,0.8)`,
-                }}
+                className="flex h-dvh max-h-dvh w-screen max-w-none flex-col overflow-hidden rounded-none border-0 p-0 shadow-none sm:h-auto sm:max-h-[90vh] sm:w-[95vw] sm:max-w-6xl sm:border-[1.5px] sm:border-[var(--cw-ink)] sm:shadow-[10px_12px_0_var(--cw-forest),0_40px_90px_-30px_rgba(20,15,12,0.8)] inset-0 translate-x-0 translate-y-0 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2"
+                style={{ background: CW.paper }}
             >
                 {/* Masthead */}
                 <div
