@@ -28,5 +28,8 @@ notifier/pending-notifications.json
 notifier/email-preview.html
 notifier/node_modules/
 
+# Wrangler/Miniflare local state
+.wrangler/
+
 # Personal Cloudflare API token for local wrangler (never commit)
 .campwatch-personal-cf.env

@@ -103,6 +103,8 @@ export interface ProcessedCampground extends Campground {
     };
     hasAvailability?: boolean;
     adjacentGroups?: AdjacentGroup[];
+    /** Sites that can host a trip window (server-computed; see lib/trip-windows). */
+    tripMatches?: import("../lib/trip-windows").TripSiteHit[];
 }
 
 /** A user-level "I'm busy/booked" range. Inclusive calendar days, ISO dates. */
@@ -112,12 +114,31 @@ export interface BlackoutRange {
     label?: string;
 }
 
+/** A user-level "I want to camp these dates" range. `from` is
+ *  arrival, `to` is checkout, so the nights are the half-open [from, to) (unlike BlackoutRange,
+ *  which is inclusive days). Openings covering the flex-shrunk core trigger
+ *  boosted "trip match" alerts: notify scope bypassed, 6h re-alert cadence,
+ *  one digest push per window. */
+export interface TripWindow {
+    /** crypto.randomUUID() at creation; keys dedup state and push tags. */
+    id: string;
+    from: string; // YYYY-MM-DD arrival (first night)
+    to: string; // YYYY-MM-DD departure/checkout, > from
+    label?: string; // <= 80 chars
+    /** Each end may shrink by up to this many days (default 0, max 3). */
+    flexDays?: number;
+    /** Restrict to these watched campground ids. Absent/empty = all. */
+    campgroundIds?: string[];
+}
+
 export interface GlobalSettings {
     stayLengths: number[];
     validStartDays: string[];
     /** Dates the user can't camp: greyed in views, excluded from the planner,
      *  and alert emails are suppressed for stays overlapping these nights. */
     blackoutDates?: BlackoutRange[];
+    /** Dates the user is actively trying to book. See TripWindow. */
+    tripWindows?: TripWindow[];
 }
 
 export interface SiteConfig {
