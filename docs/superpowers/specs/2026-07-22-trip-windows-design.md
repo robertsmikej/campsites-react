@@ -1,4 +1,4 @@
-# Trip Windows — Design
+# Trip Windows: Design
 
 **Date:** 2026-07-22
 **Status:** Approved
@@ -45,14 +45,14 @@ Validation in `PUT /api/users/me/campgrounds` (alongside `validBlackoutDates`): 
 
 ## Shared matching lib
 
-`next/src/lib/trip-windows.ts` — pure TS, imported by both the Next app (dashboard badge, timeline) and the notifier at build time (same pattern as `lib/blackout.ts`). ISO-string date math only, no `Date` round-trips.
+`next/src/lib/trip-windows.ts`: pure TS, imported by both the Next app (dashboard badge, timeline) and the notifier at build time (same pattern as `lib/blackout.ts`). ISO-string date math only, no `Date` round-trips.
 
-- `coreRange(w): { from, to }` — window shrunk by flex on each end.
-- `windowIsPast(w, todayIso)` — `to <= today` (checkout passed).
-- `windowTargets(w, campgroundId)` — filter check.
-- `siteMatchesWindow(availabilities, w)` — every core night `"Available"` in a `RawSiteData.availabilities` map (same status predicate as `findConsecutiveAvailableRanges`).
-- `maximalRunInWindow(availabilities, w): StayMatch` — the longest consecutive open run within `[from, to)` containing the core; this is what alerts display and what dedup records.
-- `validTripWindows(v): boolean` — for the PUT route.
+- `coreRange(w): { from, to }`: window shrunk by flex on each end.
+- `windowIsPast(w, todayIso)`: `to <= today` (checkout passed).
+- `windowTargets(w, campgroundId)`: filter check.
+- `siteMatchesWindow(availabilities, w)`: every core night `"Available"` in a `RawSiteData.availabilities` map (same status predicate as `findConsecutiveAvailableRanges`).
+- `maximalRunInWindow(availabilities, w): StayMatch`: the longest consecutive open run within `[from, to)` containing the core; this is what alerts display and what dedup records.
+- `validTripWindows(v): boolean`: for the PUT route.
 
 ## Notifier changes (`notifier/check.ts` + `notifier/fetch-jobs.ts`)
 
@@ -66,9 +66,9 @@ Blackout interplay: a trip window wins over an overlapping blackout (setting one
 
 ### Dedup: new `trips` bucket
 
-`NotifierState.trips?: Record<string, SeenRange[]>` keyed `${windowId}:${campgroundId}:${siteId}` — the **same shape** as the `sites`/`groups` buckets, so `mergeNotifierSites` is reused verbatim with a new exported constant `TRIP_COOLDOWN_MS = 6h` (defined in `next/src/lib/notifier-state-merge.ts`, imported by the notifier). A candidate is new if its run overlaps no in-cooldown seen range for its key (same overlap logic as `diffPerUser`). The 6h age-out **is** the re-alert cadence: still-open sites fall out of cooldown and re-fire. Stale keys (deleted or past windows) age out on their own within 6h; the notifier additionally skips past windows when diffing.
+`NotifierState.trips?: Record<string, SeenRange[]>` keyed `${windowId}:${campgroundId}:${siteId}`: the **same shape** as the `sites`/`groups` buckets, so `mergeNotifierSites` is reused verbatim with a new exported constant `TRIP_COOLDOWN_MS = 6h` (defined in `next/src/lib/notifier-state-merge.ts`, imported by the notifier). A candidate is new if its run overlaps no in-cooldown seen range for its key (same overlap logic as `diffPerUser`). The 6h age-out **is** the re-alert cadence: still-open sites fall out of cooldown and re-fire. Stale keys (deleted or past windows) age out on their own within 6h; the notifier additionally skips past windows when diffing.
 
-**Landmine (the June `groups` incident):** `PUT /api/admin/notifier-state` normalizes the blob and silently drops unknown keys. It MUST be updated in the same commit to merge and persist `trips` (via `mergeNotifierSites(existing.trips, incoming.trips, now, TRIP_COOLDOWN_MS)`, included in the blob only when non-empty, like `groups`), with a route test in `next/` proving the round-trip — that test is the only automated guard, since notifier CI coverage is thin.
+**Landmine (the June `groups` incident):** `PUT /api/admin/notifier-state` normalizes the blob and silently drops unknown keys. It MUST be updated in the same commit to merge and persist `trips` (via `mergeNotifierSites(existing.trips, incoming.trips, now, TRIP_COOLDOWN_MS)`, included in the blob only when non-empty, like `groups`), with a route test in `next/` proving the round-trip: that test is the only automated guard, since notifier CI coverage is thin.
 
 ### Fan-out
 
@@ -99,7 +99,7 @@ Thread `tripWindows` through the timeline components the way `blackoutDates` alr
 ## Testing
 
 - `next/` (Vitest, colocated, in CI): trip-windows lib (flex/core math, matching, maximal run, validation edge cases), campgrounds PUT validation for `tripWindows` incl. pruning, **notifier-state PUT round-trip test for the `trips` bucket** (regression guard for the normalization landmine), Trips card component test (add/delete/badge).
-- `notifier/` (Vitest, NOT in CI — run `tsc` + `vitest` manually before deploy): trip diff/dedup semantics (new vs in-cooldown, 6h re-fire, past-window skip), digest push formatting + tag/url, same-run dupe suppression, fetch-plan month union, fast-lane inclusion window.
+- `notifier/` (Vitest, NOT in CI: run `tsc` + `vitest` manually before deploy): trip diff/dedup semantics (new vs in-cooldown, 6h re-fire, past-window skip), digest push formatting + tag/url, same-run dupe suppression, fetch-plan month union, fast-lane inclusion window.
 - End-to-end: `next:verify` skill against the local dev server for the dashboard card; real push via the existing account-page "Send test" plus a live window after deploy.
 
 ## Out of scope (v1)
