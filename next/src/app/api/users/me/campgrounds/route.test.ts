@@ -547,4 +547,71 @@ describe("PUT /api/users/me/campgrounds", () => {
         const defaultRaw = await kv.get("config:campgrounds");
         expect(defaultRaw).toBeNull();
     });
+
+    describe("PUT tripWindows validation", () => {
+        function sessionAndKv() {
+            vi.mocked(sessions.readSession).mockResolvedValue({
+                id: "x",
+                email: "user@example.com",
+                createdAt: "x",
+                expiresAt: "x",
+            });
+            const kv = createMockKv();
+            vi.mocked(cloudflare.getKv).mockReturnValue(kv);
+            return kv;
+        }
+        const base = {
+            campgrounds: { "recreation.gov": [] },
+            globalSettings: { stayLengths: [2], validStartDays: ["Friday"] },
+        };
+        const futureFrom = "2100-07-31";
+        const futureTo = "2100-08-02";
+
+        it("rejects an invalid tripWindows list", async () => {
+            sessionAndKv();
+            const res = await doPut({
+                ...base,
+                globalSettings: {
+                    ...base.globalSettings,
+                    tripWindows: [{ id: "", from: futureFrom, to: futureTo }],
+                },
+            });
+            expect(res.status).toBe(400);
+        });
+
+        it("stores a valid tripWindows list", async () => {
+            sessionAndKv();
+            const res = await doPut({
+                ...base,
+                globalSettings: {
+                    ...base.globalSettings,
+                    tripWindows: [{ id: "w1", from: futureFrom, to: futureTo, flexDays: 0 }],
+                },
+            });
+            expect(res.status).toBe(200);
+            const stored = (await (await doGet()).json()) as {
+                globalSettings: { tripWindows?: unknown[] };
+            };
+            expect(stored.globalSettings.tripWindows).toHaveLength(1);
+        });
+
+        it("prunes past windows on save", async () => {
+            sessionAndKv();
+            const res = await doPut({
+                ...base,
+                globalSettings: {
+                    ...base.globalSettings,
+                    tripWindows: [
+                        { id: "old", from: "2020-07-31", to: "2020-08-02" },
+                        { id: "new", from: futureFrom, to: futureTo },
+                    ],
+                },
+            });
+            expect(res.status).toBe(200);
+            const stored = (await (await doGet()).json()) as {
+                globalSettings: { tripWindows?: Array<{ id: string }> };
+            };
+            expect(stored.globalSettings.tripWindows?.map((w) => w.id)).toEqual(["new"]);
+        });
+    });
 });

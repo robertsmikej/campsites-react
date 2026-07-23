@@ -7,7 +7,8 @@ import { withErrorLogging } from "@/lib/route-helpers";
 import { WorkerKvAdapter } from "@/lib/recgov/worker-kv";
 import { HIGH_PRIORITY_CAP } from "@/types/campground";
 import { archiveRemovedCampgrounds } from "@/lib/campground-archive";
-import type { Campground } from "@/types/campground";
+import { validTripWindows, windowIsPast } from "@/lib/trip-windows";
+import type { Campground, TripWindow } from "@/types/campground";
 
 const VALID_CHECK_PRIORITIES = new Set(["high", "normal", "low"]);
 
@@ -100,6 +101,23 @@ async function putHandler(request: Request): Promise<Response> {
                 400,
             ),
         );
+    }
+
+    const gsTrips = body.globalSettings as { tripWindows?: unknown };
+    if (!validTripWindows(gsTrips.tripWindows)) {
+        return withCors(
+            jsonResponse(
+                {
+                    error: "tripWindows must be valid ranges (id, YYYY-MM-DD from < to, label <= 80, flex 0-3 leaving >= 1 core night, max 10)",
+                },
+                400,
+            ),
+        );
+    }
+    // Past windows are dead weight: drop them on every save.
+    if (Array.isArray(gsTrips.tripWindows)) {
+        const todayIso = new Date().toISOString().slice(0, 10);
+        gsTrips.tripWindows = (gsTrips.tripWindows as TripWindow[]).filter((w) => !windowIsPast(w, todayIso));
     }
 
     const highCount = body.campgrounds["recreation.gov"].filter((cg) => {
