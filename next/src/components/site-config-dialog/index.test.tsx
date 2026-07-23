@@ -32,12 +32,25 @@ function mockMatchMedia(matches: boolean) {
 }
 
 describe("SiteConfigDialog mobile history integration", () => {
+    // A couple of tests below override window.history.state with
+    // Object.defineProperty (happy-dom's pushState doesn't update it on its
+    // own). Capture whatever was there before each test and put it back
+    // after, so the override can't leak into later tests regardless of run
+    // order.
+    let historyStateDescriptor: PropertyDescriptor | undefined;
+
     beforeEach(() => {
         vi.restoreAllMocks();
+        historyStateDescriptor = Object.getOwnPropertyDescriptor(window.history, "state");
     });
     afterEach(() => {
         cleanup();
         vi.unstubAllGlobals();
+        if (historyStateDescriptor) {
+            Object.defineProperty(window.history, "state", historyStateDescriptor);
+        } else {
+            delete (window.history as { state?: unknown }).state;
+        }
     });
 
     it("pushes a history entry when opened on a narrow viewport", () => {
@@ -45,6 +58,17 @@ describe("SiteConfigDialog mobile history integration", () => {
         const pushSpy = vi.spyOn(window.history, "pushState");
         render(<SiteConfigDialog {...baseProps} open onClose={vi.fn()} />);
         expect(pushSpy).toHaveBeenCalledWith({ cwConfigDialog: true }, "");
+    });
+
+    it("carries the detail-screen flag onto its own entry when opened over the mobile detail screen", () => {
+        mockMatchMedia(true);
+        Object.defineProperty(window.history, "state", {
+            value: { cwCampgroundDetail: true },
+            configurable: true,
+        });
+        const pushSpy = vi.spyOn(window.history, "pushState");
+        render(<SiteConfigDialog {...baseProps} open onClose={vi.fn()} />);
+        expect(pushSpy).toHaveBeenCalledWith({ cwCampgroundDetail: true, cwConfigDialog: true }, "");
     });
 
     it("does not touch history on a desktop viewport", () => {

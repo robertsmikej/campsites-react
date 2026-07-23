@@ -199,7 +199,18 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
         if (!open) return;
         if (typeof window === "undefined") return;
         if (!window.matchMedia("(max-width: 639px)").matches) return;
-        window.history.pushState({ cwConfigDialog: true }, "");
+        // Carry the detail screen's flag onto our own entry: if this dialog
+        // was opened from mobile-timeline's detail screen (whose entry has
+        // cwCampgroundDetail: true), a later forward-swipe lands on our entry
+        // instead of the detail screen's. Dropping the flag here would make
+        // mobile-timeline's popstate handler think the detail screen closed,
+        // collapsing it underneath us. Mirrors mobile-timeline's own map
+        // modal, which carries cwCampgroundDetail forward the same way.
+        const under = window.history.state as { cwCampgroundDetail?: boolean } | null;
+        window.history.pushState(
+            { ...(under?.cwCampgroundDetail ? { cwCampgroundDetail: true } : {}), cwConfigDialog: true },
+            "",
+        );
         ownsHistoryEntry.current = true;
         const onPop = () => {
             ownsHistoryEntry.current = false;
@@ -371,7 +382,7 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
                 is no longer full screen at the sm breakpoint. */}
             <DialogContent
                 showCloseButton={false}
-                className="flex h-dvh max-h-dvh w-screen max-w-none flex-col overflow-hidden rounded-none border-0 p-0 shadow-none sm:h-auto sm:max-h-[90vh] sm:w-[95vw] sm:max-w-6xl sm:border-[1.5px] sm:border-[var(--cw-ink)] sm:shadow-[10px_12px_0_var(--cw-forest),0_40px_90px_-30px_rgba(20,15,12,0.8)] inset-0 translate-x-0 translate-y-0 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2"
+                className="flex h-dvh w-screen max-w-none flex-col overflow-hidden rounded-none border-0 p-0 shadow-none sm:h-auto sm:max-h-[90vh] sm:w-[95vw] sm:max-w-6xl sm:border-[1.5px] sm:border-[var(--cw-ink)] sm:shadow-[10px_12px_0_var(--cw-forest),0_40px_90px_-30px_rgba(20,15,12,0.8)] inset-0 translate-x-0 translate-y-0 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2"
                 style={{ background: CW.paper }}
             >
                 {/* Masthead */}
