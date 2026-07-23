@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatSpottedLine, formatEmail } from "./email";
+import { formatSpottedLine, formatEmail, buildTripPreheaderText } from "./email";
 import type { MatchResult } from "./diff";
 
 function match(over: Partial<MatchResult>): MatchResult {
@@ -179,5 +179,51 @@ describe("opening-card cap", () => {
     it("renders no 'more' row when the batch fits under the cap", () => {
         const { html } = formatEmail(manyMatches(4), { siteUrl: "https://campwatch.dev" });
         expect(html).not.toContain("not shown here");
+    });
+});
+
+import type { TripEmailDigest } from "./email";
+
+describe("trip digests in email", () => {
+    const digest: TripEmailDigest = {
+        window: { id: "w1", from: "2026-07-31", to: "2026-08-02", label: "Lake weekend" },
+        hits: [
+            {
+                windowId: "w1",
+                campgroundId: "233563",
+                campgroundName: "Point Campground",
+                siteId: "111",
+                siteName: "A01",
+                tier: "favorites",
+                run: { from: "2026-07-31", to: "2026-08-02", nights: 2 },
+            },
+        ],
+    };
+
+    it("subject leads with the trip match", () => {
+        const { subject } = formatEmail([], { tripDigests: [digest] });
+        expect(subject).toBe("Trip match: Lake weekend · 1 site");
+    });
+
+    it("falls back to formatted dates when the window has no label", () => {
+        // Omit (not `label: undefined`): notifier's tsconfig has exactOptionalPropertyTypes,
+        // which treats an explicit `undefined` as a distinct, disallowed assignment.
+        const { label: _label, ...windowWithoutLabel } = digest.window;
+        const unlabeled = { ...digest, window: windowWithoutLabel };
+        const { subject } = formatEmail([], { tripDigests: [unlabeled] });
+        expect(subject).toContain("Trip match: Fri Jul 31");
+    });
+
+    it("renders a trip section with a book link and survives zero normal matches", () => {
+        const { html } = formatEmail([], { tripDigests: [digest] });
+        expect(html).toContain("Trip match");
+        expect(html).toContain("Point Campground");
+        expect(html).toContain(
+            "https://www.recreation.gov/camping/campsites/111?arrivalDate=2026-07-31&departureDate=2026-08-02",
+        );
+    });
+
+    it("buildTripPreheaderText leads with the first hit", () => {
+        expect(buildTripPreheaderText([digest])).toContain("A01");
     });
 });

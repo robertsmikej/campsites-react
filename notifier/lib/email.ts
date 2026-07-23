@@ -4,6 +4,8 @@
 import { createHmac } from "node:crypto";
 import type { MatchResult } from "./diff";
 import type { AdjacentGroup } from "../../next/src/lib/adjacent-groups";
+import type { TripWindow } from "../../next/src/types/campground";
+import type { TripSiteHit } from "../../next/src/lib/trip-windows";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -16,6 +18,13 @@ export interface FormatEmailOptions {
     adjacentGroups?: AdjacentGroup[];
     /** campgroundId -> display name, used to label the adjacent-group block. */
     campgroundNamesById?: Record<string, string>;
+    /** Trip-window digests to feature above everything else. */
+    tripDigests?: TripEmailDigest[];
+}
+
+export interface TripEmailDigest {
+    window: TripWindow;
+    hits: TripSiteHit[];
 }
 
 export interface FormattedEmail {
@@ -116,8 +125,19 @@ export const buildPreheaderText = (matches: MatchResult[]): string => {
     return remaining > 0 ? `${lead} +${remaining} more opening${remaining === 1 ? "" : "s"}` : lead;
 };
 
-const buildPreheader = (matches: MatchResult[]): string => {
-    const text = buildPreheaderText(matches);
+/** Preheader for trip-led emails: first hit's campground, site, arrival, nights. */
+export const buildTripPreheaderText = (digests: TripEmailDigest[]): string => {
+    const first = digests[0]?.hits[0];
+    if (!first) return "Trip match on your watchlist";
+    const total = digests.reduce((n, d) => n + d.hits.length, 0);
+    const star = first.tier === "favorites" ? "★ " : "";
+    const lead = `${star}${first.campgroundName} ${first.siteName} · ${formatDate(first.run.from)} · ${first.run.nights} ${first.run.nights === 1 ? "night" : "nights"}`;
+    const remaining = total - 1;
+    return remaining > 0 ? `${lead} +${remaining} more site${remaining === 1 ? "" : "s"}` : lead;
+};
+
+const buildPreheader = (matches: MatchResult[], overrideText?: string): string => {
+    const text = overrideText ?? buildPreheaderText(matches);
 
     // Padding (zero-width joiner + nbsp) so clients don't pull body boilerplate
     // (the masthead / "Polling every 5 min" meta bar) into the preview snippet.
@@ -405,6 +425,105 @@ const buildAdjacentSection = (
         </tr>`;
 };
 
+const TRIP_MAX_EMAIL_HITS = 6;
+
+const tripWindowLabel = (w: TripWindow): string =>
+    w.label?.trim() || `${formatDate(w.from)} – ${formatDate(w.to)}`;
+
+const buildTripCard = (digest: TripEmailDigest): string => {
+    const { window: w, hits } = digest;
+    const shown = hits.slice(0, TRIP_MAX_EMAIL_HITS);
+    const hidden = hits.length - shown.length;
+
+    const rows = shown
+        .map((h) => {
+            const link = buildReservationLink(h.siteId, h.run.from, h.run.nights);
+            const star = h.tier === "favorites" ? "&#9733; " : h.tier === "worthwhile" ? "&#9671; " : "";
+            const dates = `${formatDate(h.run.from)} &rarr; ${formatDate(h.run.to)} &middot; ${h.run.nights} ${h.run.nights === 1 ? "night" : "nights"}`;
+            return `
+                                        <tr>
+                                            <td style="padding:10px 16px 0 16px;">
+                                                <div style="font-family:${F.ital};font-style:italic;font-size:18px;line-height:24px;color:${C.ink};">${star}${h.campgroundName} &middot; Site ${h.siteName.replace(/^Site\s+/i, "")}</div>
+                                                <div style="font-family:${F.body};font-weight:bold;font-size:14px;line-height:20px;color:${C.ink};margin-top:2px;">${dates}</div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td style="padding:8px 16px 4px 16px;">
+                                                <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                                                    <tbody>
+                                                        <tr>
+                                                            <td bgcolor="${C.forest}" align="center" style="background-color:${C.forest};">
+                                                                <a href="${link}" style="display:block;padding:11px 12px;font-family:${F.poster};font-weight:800;font-size:13px;color:${C.cream};text-decoration:none;letter-spacing:0.10em;text-transform:uppercase;text-align:center;">Book on recreation.gov &rarr;</a>
+                                                            </td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </td>
+                                        </tr>`;
+        })
+        .join("");
+
+    const hiddenRow =
+        hidden > 0
+            ? `
+                                        <tr>
+                                            <td style="padding:6px 16px 4px 16px;">
+                                                <div style="font-family:${F.ital};font-style:italic;font-size:14px;color:${C.inkSoft};">+ ${hidden} more site${hidden === 1 ? "" : "s"} for this window on your dashboard</div>
+                                            </td>
+                                        </tr>`
+            : "";
+
+    return `
+                        <tr>
+                            <td style="padding-bottom:10px;">
+                                <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:${C.cream};border:1.5px solid ${C.ink};border-collapse:separate;">
+                                    <tbody>
+                                        <tr>
+                                            <td style="padding:14px 16px 0 16px;">
+                                                <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom:8px;">
+                                                    <tbody>
+                                                        <tr>
+                                                            <td bgcolor="${C.clay}" style="background-color:${C.clay};font-family:${F.mono};font-size:12px;color:${C.cream};letter-spacing:0.18em;text-transform:uppercase;font-weight:700;padding:4px 8px;">Trip match &middot; ${hits.length} site${hits.length === 1 ? "" : "s"}</td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                                <div style="font-family:${F.poster};font-weight:900;font-size:20px;line-height:24px;color:${C.ink};text-transform:uppercase;">${tripWindowLabel(w)}</div>
+                                                <div style="font-family:${F.mono};font-weight:700;font-size:12px;color:${C.inkSubtle};letter-spacing:0.12em;text-transform:uppercase;margin-top:4px;">${formatDate(w.from)} &rarr; ${formatDate(w.to)}${w.flexDays ? ` &middot; &plusmn;${w.flexDays}d` : ""}</div>
+                                            </td>
+                                        </tr>
+                                        ${rows}
+                                        ${hiddenRow}
+                                        <tr><td style="padding-bottom:12px;"></td></tr>
+                                    </tbody>
+                                </table>
+                            </td>
+                        </tr>`;
+};
+
+const buildTripSection = (digests: TripEmailDigest[]): string => {
+    const cards = digests.map(buildTripCard).join("");
+    return `
+        <tr>
+            <td bgcolor="${C.paper}" style="background-color:${C.paper};padding:28px 18px 6px 18px;">
+                <table cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;">
+                    <tbody>
+                        <tr>
+                            <td style="padding-bottom:8px;">
+                                <div style="font-family:${F.mono};font-weight:700;font-size:13px;color:${C.clay};letter-spacing:0.18em;text-transform:uppercase;">&sect; Trip match</div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding-bottom:14px;">
+                                <div style="font-family:${F.ital};font-style:italic;font-size:16px;line-height:22px;color:${C.inkSoft};">Sites that can host your trip dates: the ones you asked us to hunt for.</div>
+                            </td>
+                        </tr>
+                        ${cards}
+                    </tbody>
+                </table>
+            </td>
+        </tr>`;
+};
+
 const buildCampgroundSection = (
     group: CampgroundGroup & { name: string },
     indexOfFirstOpening: number,
@@ -557,6 +676,7 @@ export const formatEmail = (newMatches: MatchResult[], options: FormatEmailOptio
     const count = newMatches.length;
     const adjacentGroups = options.adjacentGroups ?? [];
     const campgroundNamesById = options.campgroundNamesById ?? {};
+    const tripDigests = options.tripDigests ?? [];
 
     // Campground names: union of per-site matches and any adjacent-group campgrounds,
     // so a groups-only email still names the right campground in the banner/header.
@@ -564,13 +684,23 @@ export const formatEmail = (newMatches: MatchResult[], options: FormatEmailOptio
         (g) => campgroundNamesById[g.campgroundId] ?? "A campground",
     );
     const uniqueCampgroundNames = [
-        ...new Set([...newMatches.map((m) => m.campgroundName), ...groupCampgroundNames]),
+        ...new Set([
+            ...tripDigests.flatMap((d) => d.hits.map((h) => h.campgroundName)),
+            ...newMatches.map((m) => m.campgroundName),
+            ...groupCampgroundNames,
+        ]),
     ];
 
-    // Subject line. Adjacent groups lead when present (the headline feature), then
-    // fall back to the per-site opening count.
+    // Subject line. Trip matches lead when present (the headline feature), then
+    // adjacent groups, then fall back to the per-site opening count.
     let subject: string;
-    if (adjacentGroups.length > 0) {
+    if (tripDigests.length > 0) {
+        const d = tripDigests[0]!;
+        const totalSites = tripDigests.reduce((n, t) => n + t.hits.length, 0);
+        subject =
+            `Trip match: ${tripWindowLabel(d.window)} · ${totalSites} site${totalSites === 1 ? "" : "s"}` +
+            (tripDigests.length > 1 ? ` (+${tripDigests.length - 1} more windows)` : "");
+    } else if (adjacentGroups.length > 0) {
         const g = adjacentGroups[0]!;
         const name = campgroundNamesById[g.campgroundId] ?? "a campground";
         subject =
@@ -619,6 +749,9 @@ export const formatEmail = (newMatches: MatchResult[], options: FormatEmailOptio
     // ── Logo URL ─────────────────────────────────────────────────────────────
     const logoUrl = siteUrl ? `${siteUrl}/images/logos/CampWatch_Logo_trimmed_small.png` : "";
 
+    // ── Trip-match section (featured above everything else) ───────────────────
+    const tripSection = tripDigests.length > 0 ? buildTripSection(tripDigests) : "";
+
     // ── Adjacent-group section (featured, above per-site openings) ────────────
     const adjacentSection =
         adjacentGroups.length > 0 ? buildAdjacentSection(adjacentGroups, campgroundNamesById) : "";
@@ -648,9 +781,9 @@ export const formatEmail = (newMatches: MatchResult[], options: FormatEmailOptio
         })
         .join("\n");
 
-    // Banner count includes adjacent groups so a groups-only email doesn't read
-    // "0 NEW OPENINGS"; each group counts as one featured opening.
-    const headerCount = count + adjacentGroups.length;
+    // Banner count includes adjacent groups and trip hits so a groups/trip-only
+    // email doesn't read "0 NEW OPENINGS"; each group counts as one featured opening.
+    const headerCount = count + adjacentGroups.length + tripDigests.reduce((n, d) => n + d.hits.length, 0);
 
     // ── Unsubscribe footer HTML ───────────────────────────────────────────────
     const unsubscribeFooterHtml = unsubscribeLink
@@ -675,9 +808,12 @@ export const formatEmail = (newMatches: MatchResult[], options: FormatEmailOptio
             <!-- Email card — max 600px -->
             <table cellpadding="0" cellspacing="0" border="0" width="600" style="max-width:600px;width:100%;border-collapse:collapse;">
                 <tbody>
-${buildPreheader(newMatches)}
+${buildPreheader(newMatches, tripDigests.length > 0 ? buildTripPreheaderText(tripDigests) : undefined)}
 ${buildHeader(headerCount, uniqueCampgroundNames, logoUrl)}
 ${buildMetaBar(timestamp)}
+
+                    <!-- TRIP MATCHES: featured above everything -->
+                    ${tripSection}
 
                     <!-- ADJACENT OPENINGS — featured group block -->
                     ${adjacentSection}
