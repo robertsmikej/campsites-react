@@ -4,7 +4,6 @@ import {
     diffDays,
     coreRange,
     windowIsPast,
-    windowIsImminent,
     windowTargets,
     activeWindowsFor,
     isNightInWindow,
@@ -59,12 +58,6 @@ describe("window predicates", () => {
     it("windowIsPast once checkout day arrives", () => {
         expect(windowIsPast(w(), "2026-08-02")).toBe(false);
         expect(windowIsPast(w(), "2026-08-03")).toBe(true);
-    });
-    it("windowIsImminent inside the 14-day lead, not when past", () => {
-        expect(windowIsImminent(w(), "2026-07-15")).toBe(false);
-        expect(windowIsImminent(w(), "2026-07-16")).toBe(true);
-        expect(windowIsImminent(w(), "2026-08-02")).toBe(true);
-        expect(windowIsImminent(w(), "2026-08-03")).toBe(false);
     });
     it("windowTargets: absent/empty means all", () => {
         expect(windowTargets(w(), "123")).toBe(true);

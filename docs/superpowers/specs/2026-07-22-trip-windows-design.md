@@ -19,7 +19,7 @@ Trip windows let a user declare date ranges they're actively trying to book. Ope
    - Shorter cooldown: trip matches re-alert every **6h** (vs 24h) while still open and the window hasn't passed.
    - Digest per window: one push per window listing all matching sites, not the per-campground grouping.
 4. **UI:** a Trips card on the main dashboard, with This weekend / Next weekend quick-add chips.
-5. **Extras in v1:** timeline highlight of window dates; auto fast-lane polling for campgrounds covered by an imminent window.
+5. **Extras in v1:** timeline highlight of window dates. (Auto fast-lane polling for imminent windows was built, then removed 2026-07-23: polling cadence always follows each campground's configured checkPriority.)
 
 ## Data model
 
@@ -79,7 +79,7 @@ Blackout interplay: a trip window wins over an overlapping blackout (setting one
 ### Fetch coverage + fast lane (`fetch-jobs.ts`)
 
 - Month planning per campground unions in months from the owner's non-past trip windows targeting it, so a window outside the campground's watch `dates` range still gets data.
-- Fast lane: campgrounds targeted by an **imminent** window (`from − 14d <= today <= to`) join `buildFastLanePlan` (1-minute tick) regardless of `checkPriority`. This is notifier-side only and doesn't count against `HIGH_PRIORITY_CAP` (which caps user-set priorities). The real worst case is bigger than a few extra refreshes: a window with no `campgroundIds` filter fast-lanes every one of the user's watched campgrounds for its window months, every tick, for the full 14-day lead. Two mitigations are in as of this pass: window span is capped at `TRIP_MAX_NIGHTS` (30 nights), which bounds how many months one window can pull in. There is no cap yet on how many campgrounds/windows can ride the fast lane at once; that's deferred as a follow-up if it proves to be a real load problem in practice.
+- Cadence: trip windows never change how often a campground is polled. Window months ride along at each campground's own `checkPriority` cadence (high 1 min, normal 5, low 10). The originally planned "imminent window joins the fast lane" boost was REMOVED on 2026-07-23 (Mike's call: don't raise rec.gov call volume and risk blocks). Want minutes-fresh trip alerts for a specific campground? Set that campground to high priority in settings, same as any other. Window span stays capped at `TRIP_MAX_NIGHTS` (30 nights) to bound how many months one window can pull into the plans.
 
 ## Dashboard UI
 

@@ -159,13 +159,22 @@ describe("trip-window months", () => {
         ]);
     });
 
-    it("fast lane boosts a normal-tier campground only for an imminent window", () => {
-        const imminent = [{ id: "w1", from: "2026-07-31", to: "2026-08-02" }];
-        const distant = [{ id: "w2", from: "2026-10-02", to: "2026-10-04" }];
-        expect(buildFastLanePlan([target(cg(), imminent)], NOW_MONTH, TODAY).length).toBeGreaterThan(0);
-        expect(buildFastLanePlan([target(cg(), distant)], NOW_MONTH, TODAY)).toEqual([]);
-        // Boost fetches only the window months, not the whole season.
-        const months = buildFastLanePlan([target(cg(), imminent)], NOW_MONTH, TODAY)
+    it("fast lane never promotes an out-of-tier campground, window or not", () => {
+        // Trip windows must not raise a campground's configured check cadence:
+        // a normal-tier campground stays out of the 1-minute fast lane even
+        // with a window starting in days.
+        const soon = [{ id: "w1", from: "2026-07-31", to: "2026-08-02" }];
+        expect(buildFastLanePlan([target(cg(), soon)], NOW_MONTH, TODAY)).toEqual([]);
+        // A high-tier campground's trip months ride its own (1-minute) lane.
+        const months = buildFastLanePlan([target(cg({ checkPriority: "high" }), soon)], NOW_MONTH, TODAY)
+            .map((p) => p.month)
+            .sort();
+        expect(months).toEqual(["2026-07", "2026-08"]);
+    });
+
+    it("sweep fetches a normal-tier campground's trip months at its own cadence", () => {
+        const soon = [{ id: "w1", from: "2026-07-31", to: "2026-08-02" }];
+        const months = buildSweepPlan([target(cg(), soon)], 5, NOW_MONTH, TODAY)
             .map((p) => p.month)
             .sort();
         expect(months).toEqual(["2026-07", "2026-08"]);

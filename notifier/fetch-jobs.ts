@@ -4,7 +4,7 @@ import type { KvAdapter } from "../next/src/lib/recgov/cache";
 import type { RawMonthResult } from "../next/src/lib/recgov/types";
 import { fetchMonthWithCache } from "../next/src/lib/recgov/fetch-with-cache";
 import { fetchDedupedConcurrent } from "../next/src/lib/recgov/fetch-deduped";
-import { activeWindowsFor, addDaysIso, windowIsImminent } from "../next/src/lib/trip-windows";
+import { activeWindowsFor, addDaysIso } from "../next/src/lib/trip-windows";
 import type { TripWindow } from "../next/src/types/campground";
 
 export interface FetchPlanItem {
@@ -55,7 +55,6 @@ function buildPlan(
     nowMonth: string,
     minute?: number,
     todayIso?: string,
-    opts?: { imminentTripBoost?: boolean },
 ): FetchPlanItem[] {
     const ranges = new Map<string, Set<string>>();
     for (const target of targets) {
@@ -65,9 +64,6 @@ function buildPlan(
             const inTier =
                 tiers.includes(tier) &&
                 (minute === undefined || minute % CHECK_PRIORITY_INTERVAL_MINUTES[tier] === 0);
-            const windows = todayIso
-                ? activeWindowsFor(target.globalSettings?.tripWindows, c.id, todayIso)
-                : [];
 
             const months = new Set<string>();
             if (inTier) {
@@ -76,12 +72,13 @@ function buildPlan(
                 if (start && end) {
                     for (const m of monthsBetween(start, end)) if (m >= nowMonth) months.add(m);
                 }
+                // Trip-window months ride along at the campground's OWN tier
+                // cadence. A window never raises the polling rate; that keeps
+                // the rec.gov footprint bounded by the user's settings.
+                const windows = todayIso
+                    ? activeWindowsFor(target.globalSettings?.tripWindows, c.id, todayIso)
+                    : [];
                 for (const m of tripMonths(windows, nowMonth)) months.add(m);
-            } else if (opts?.imminentTripBoost && todayIso) {
-                // Out-of-tier campgrounds ride the fast lane for imminent trip
-                // windows only, and only for the window months (not the season).
-                const imminent = windows.filter((w) => windowIsImminent(w, todayIso));
-                for (const m of tripMonths(imminent, nowMonth)) months.add(m);
             }
             if (months.size === 0) continue;
             if (!ranges.has(c.id)) ranges.set(c.id, new Set());
@@ -100,7 +97,7 @@ export function buildFastLanePlan(
     nowMonth: string,
     todayIso?: string,
 ): FetchPlanItem[] {
-    return buildPlan(targets, ["high"], nowMonth, undefined, todayIso, { imminentTripBoost: true });
+    return buildPlan(targets, ["high"], nowMonth, undefined, todayIso);
 }
 
 // Normal/low only, minute-gated. Runs under a */5 cron, so normal (5) fires every

@@ -14,8 +14,6 @@ export const TRIP_MAX_LABEL = 80;
 /** Longest span (in nights) a single trip window may cover. Unbounded spans
  *  amplify rec.gov fetch volume (every month in range joins the fetch plan). */
 export const TRIP_MAX_NIGHTS = 30;
-/** Fast-lane (every-minute) polling starts this many days before arrival. */
-export const TRIP_FAST_LANE_LEAD_DAYS = 14;
 
 export interface TripSiteHit {
     windowId: string;
@@ -58,11 +56,6 @@ export function coreRange(w: TripWindow): { from: string; to: string } {
 /** Checkout day has arrived or passed (the last night is to - 1). */
 export function windowIsPast(w: TripWindow, todayIso: string): boolean {
     return w.to <= todayIso;
-}
-
-/** Inside the fast-lane lead window and not past. */
-export function windowIsImminent(w: TripWindow, todayIso: string): boolean {
-    return !windowIsPast(w, todayIso) && addDaysIso(w.from, -TRIP_FAST_LANE_LEAD_DAYS) <= todayIso;
 }
 
 export function windowTargets(w: TripWindow, campgroundId: string): boolean {
