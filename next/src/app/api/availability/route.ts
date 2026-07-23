@@ -17,6 +17,7 @@ import {
 import type { Campground, GlobalSettings } from "@/types/campground";
 import { findAdjacentGroups, type AdjacencySite } from "@/lib/adjacent-groups";
 import { getSiteDetailsCached, kvNamespaceLike } from "@/lib/site-details-cache";
+import { activeWindowsFor, addDaysIso, tripHitsForCampground } from "@/lib/trip-windows";
 
 interface SourceConfig {
     campgrounds: { "recreation.gov"?: Campground[] };
@@ -54,7 +55,15 @@ async function buildSnapshot(config: SourceConfig, adapter: WorkerKvAdapter): Pr
         // Fully past months can't produce bookable openings — skip their fetches.
         // The month containing today always stays. Mirrors the notifier's plan clamp.
         const nowMonth = new Date().toISOString().slice(0, 7);
-        const months = monthsBetween(start, end).filter((m) => m >= nowMonth);
+        const todayIso = new Date().toISOString().slice(0, 10);
+        const tripWins = activeWindowsFor(config.globalSettings.tripWindows, cg.id, todayIso);
+        const monthSet = new Set(monthsBetween(start, end).filter((m) => m >= nowMonth));
+        for (const w of tripWins) {
+            for (const m of monthsBetween(w.from, addDaysIso(w.to, -1))) {
+                if (m >= nowMonth) monthSet.add(m);
+            }
+        }
+        const months = [...monthSet];
         if (months.length === 0) continue;
         const rawResults = await Promise.all(
             months.map((month) => fetchMonthWithCache(cg.id, month, adapter)),
@@ -122,11 +131,19 @@ async function buildSnapshot(config: SourceConfig, adapter: WorkerKvAdapter): Pr
             if (groups.length > 0) adjacentGroups = groups;
         }
 
+        const tripMatches = tripHitsForCampground(
+            rawResults,
+            cg,
+            config.globalSettings.tripWindows,
+            todayIso,
+        );
+
         results.push({
             ...cg,
             siteAvailability: sitesWithMatches,
             totalSitesCount,
             ...(adjacentGroups ? { adjacentGroups } : {}),
+            ...(tripMatches.length > 0 ? { tripMatches } : {}),
         });
     }
 

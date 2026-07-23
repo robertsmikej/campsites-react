@@ -422,4 +422,51 @@ describe("GET /api/availability", () => {
         // The campground is omitted, not shown with a misleading totalSitesCount: 0.
         expect(body.campgrounds).toHaveLength(0);
     });
+
+    it("attaches tripMatches when a window is covered", async () => {
+        vi.mocked(sessions.readSession).mockResolvedValue({ email: "alice@example.com" } as never);
+        vi.mocked(userCampgrounds.getUserCampgrounds).mockResolvedValue({
+            campgrounds: {
+                "recreation.gov": [
+                    {
+                        id: "232358",
+                        name: "Test CG",
+                        enabled: true,
+                        dates: { startDate: "2100-07-01", endDate: "2100-07-31" },
+                        sites: { favorites: ["001"], worthwhile: [] },
+                    },
+                ],
+            },
+            globalSettings: {
+                stayLengths: [7],
+                validStartDays: ["Monday"],
+                tripWindows: [{ id: "w1", from: "2100-07-10", to: "2100-07-12" }],
+            },
+            updatedAt: "2026-05-01T00:00:00Z",
+        } as never);
+        fetchSpy.mockResolvedValue(
+            new Response(
+                JSON.stringify({
+                    campsites: {
+                        "1": {
+                            site: "001",
+                            campsite_type: "STANDARD",
+                            availabilities: {
+                                "2100-07-10T00:00:00Z": "Available",
+                                "2100-07-11T00:00:00Z": "Available",
+                            },
+                        },
+                    },
+                }),
+                { status: 200 },
+            ),
+        );
+
+        const response = await GET(new Request("http://x/api/availability"));
+        const body = (await response.json()) as {
+            campgrounds: Array<{ tripMatches?: Array<{ windowId: string; siteId: string }> }>;
+        };
+        expect(body.campgrounds[0]?.tripMatches).toHaveLength(1);
+        expect(body.campgrounds[0]?.tripMatches?.[0]).toMatchObject({ windowId: "w1", siteId: "1" });
+    });
 });
