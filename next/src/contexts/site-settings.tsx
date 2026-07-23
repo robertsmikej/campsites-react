@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext } from "react";
-import type { BlackoutRange } from "@/types/campground";
+import type { BlackoutRange, TripWindow } from "@/types/campground";
 
 export interface SiteSettingsValue {
     dates: {
@@ -10,6 +10,7 @@ export interface SiteSettingsValue {
         stayLengths: number[];
         validStartDays: string[];
         blackoutDates?: BlackoutRange[];
+        tripWindows?: TripWindow[];
     };
     views?: { type: string };
     appearance?: { mode: string };

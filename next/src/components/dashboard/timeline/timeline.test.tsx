@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 import { render, screen, fireEvent, within } from "@testing-library/react";
 import { AvailabilityTimeline } from "./availability-timeline";
 import SiteSettingsContext from "@/contexts/site-settings";
-import type { ProcessedCampground, SiteAvailability, BlackoutRange } from "@/types/campground";
+import type { ProcessedCampground, SiteAvailability, BlackoutRange, TripWindow } from "@/types/campground";
 import type { SiteSettingsValue } from "@/contexts/site-settings";
 
 function site(name: string, matches: Array<[string, string]>): SiteAvailability {
@@ -136,5 +136,18 @@ describe("AvailabilityTimeline", () => {
             return Array.from(segs).some((s) => s.style.background === "var(--cw-ink-faint)");
         });
         expect(hasGreySeg).toBe(true);
+    });
+
+    it("tints nights that fall inside a trip window", () => {
+        const tripWindows: TripWindow[] = [{ id: "w1", from: "2026-06-20", to: "2026-06-22" }];
+        const settings: SiteSettingsValue = {
+            dates: { stayLengths: [2], validStartDays: ["Saturday"], tripWindows },
+        };
+        render(
+            <SiteSettingsContext.Provider value={settings}>
+                <AvailabilityTimeline rows={ROWS} dateRange={DATE_RANGE} defaultExpandFirst />
+            </SiteSettingsContext.Provider>,
+        );
+        expect(screen.getAllByTestId("trip-tint").length).toBeGreaterThan(0);
     });
 });

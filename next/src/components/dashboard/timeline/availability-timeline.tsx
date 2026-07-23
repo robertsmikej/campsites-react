@@ -32,6 +32,7 @@ export function AvailabilityTimeline({
     const horizon = buildHorizon(view.start, view.end);
     const { sitesById, ensureLoaded } = useCampgroundSites();
     const blackoutDates = useSiteSettings()?.dates.blackoutDates;
+    const tripWindows = useSiteSettings()?.dates.tripWindows;
     const [mapCgId, setMapCgId] = useState<string | null>(null);
     const [expandedIds, setExpandedIds] = useState<Set<string>>(() => {
         const first = defaultExpandFirst ? rows[0]?.id : undefined;
@@ -90,6 +91,7 @@ export function AvailabilityTimeline({
                             addHref={addHref}
                             roster={cg.id ? sitesById[cg.id] : undefined}
                             blackoutDates={blackoutDates}
+                            tripWindows={tripWindows}
                         />
                     ))}
                 </div>

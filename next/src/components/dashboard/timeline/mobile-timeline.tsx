@@ -16,7 +16,7 @@ import {
     siteFeature,
     siteOpenRuns,
 } from "@/lib/timeline";
-import type { BlackoutRange, ProcessedCampground } from "@/types/campground";
+import type { BlackoutRange, ProcessedCampground, TripWindow } from "@/types/campground";
 import { useSiteSettings } from "@/contexts/site-settings";
 import { TimelineAxis } from "./timeline-axis";
 import { TimelineTrack } from "./timeline-track";
@@ -68,6 +68,7 @@ export function MobileTimeline({ rows, dateRange, onEditSettings, addHref }: Mob
     const [mapOpen, setMapOpen] = useState(false);
     const { sitesById, ensureLoaded } = useCampgroundSites();
     const blackoutDates = useSiteSettings()?.dates.blackoutDates;
+    const tripWindows = useSiteSettings()?.dates.tripWindows;
 
     const selected = selectedId ? rows.find((r) => (r.id ?? r.name) === selectedId) : undefined;
 
@@ -121,6 +122,7 @@ export function MobileTimeline({ rows, dateRange, onEditSettings, addHref }: Mob
                     addHref={addHref}
                     roster={selected.id ? sitesById[selected.id] : undefined}
                     blackoutDates={blackoutDates}
+                    tripWindows={tripWindows}
                 />
                 <CampgroundMapModal campground={selected} open={mapOpen} onClose={closeMap} />
             </>
@@ -204,6 +206,7 @@ export function MobileTimeline({ rows, dateRange, onEditSettings, addHref }: Mob
                             pad={0}
                             height={40}
                             blackoutDates={blackoutDates}
+                            tripWindows={tripWindows}
                         />
                     </button>
                 );
@@ -221,6 +224,7 @@ function DetailScreen({
     addHref,
     roster,
     blackoutDates,
+    tripWindows,
 }: {
     campground: ProcessedCampground;
     horizon: Horizon;
@@ -230,6 +234,7 @@ function DetailScreen({
     addHref?: (campgroundId: string) => string;
     roster?: string[];
     blackoutDates?: BlackoutRange[];
+    tripWindows?: TripWindow[];
 }) {
     const { runs, openDays, limitedDays } = dayStatusSets(horizon, campground);
     const [openSites, setOpenSites] = useState<Set<string>>(new Set());
@@ -330,6 +335,7 @@ function DetailScreen({
                     limited={runs.limited}
                     pad={0}
                     blackoutDates={blackoutDates}
+                    tripWindows={tripWindows}
                 />
             </div>
 
@@ -430,6 +436,7 @@ function DetailScreen({
                                 ring={tier === "fav"}
                                 pad={PAD}
                                 blackoutDates={blackoutDates}
+                                tripWindows={tripWindows}
                             />
                             {hasOpen && showWindows && (
                                 <SiteWindowsList horizon={horizon} site={site} indent={PAD} />

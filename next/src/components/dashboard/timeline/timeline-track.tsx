@@ -1,6 +1,8 @@
 import { CW } from "@/components/field-notes/cw-tokens";
 import { type Horizon, dateAt, monthTicks, nowIndex, pct } from "@/lib/timeline";
-import type { BlackoutRange } from "@/types/campground";
+import type { BlackoutRange, TripWindow } from "@/types/campground";
+import { toLocalIso } from "@/components/dashboard/helpers";
+import { isNightInAnyWindow } from "@/lib/trip-windows";
 import { AvailabilityBlock } from "./availability-block";
 
 interface TimelineTrackProps {
@@ -17,6 +19,8 @@ interface TimelineTrackProps {
     height?: number;
     /** user's blackout ranges — passed down to AvailabilityBlock for per-night grey */
     blackoutDates?: BlackoutRange[];
+    /** user's trip windows: nights inside any window get a forest tint */
+    tripWindows?: TripWindow[];
 }
 
 export function TimelineTrack({
@@ -28,6 +32,7 @@ export function TimelineTrack({
     pad = 26,
     height,
     blackoutDates,
+    tripWindows,
 }: TimelineTrackProps) {
     const h = height ?? (site ? 42 : 64);
     const ticks = monthTicks(horizon);
@@ -39,11 +44,32 @@ export function TimelineTrack({
         if (dateAt(horizon, i).getDay() === 5) weekendCols.push(i);
     }
 
+    // Trip-window tint columns: one per night inside any window.
+    const tripCols: number[] = [];
+    if (tripWindows?.length) {
+        for (let i = 0; i < horizon.totalDays; i++) {
+            if (isNightInAnyWindow(toLocalIso(dateAt(horizon, i)), tripWindows)) tripCols.push(i);
+        }
+    }
+
     const hasBlocks = open.length > 0 || limited.length > 0;
 
     return (
         <div className="relative" style={{ height: h, paddingLeft: pad, paddingRight: pad }}>
             <div className="absolute inset-0" style={{ marginLeft: pad, marginRight: pad }}>
+                {/* trip-window tint */}
+                {tripCols.map((i) => (
+                    <div
+                        key={`trip-${i}`}
+                        data-testid="trip-tint"
+                        className="absolute top-0 bottom-0"
+                        style={{
+                            left: `${pct(horizon, i)}%`,
+                            width: `${pct(horizon, 1)}%`,
+                            background: "color-mix(in srgb, var(--cw-forest) 9%, transparent)",
+                        }}
+                    />
+                ))}
                 {/* weekend shading */}
                 {weekendCols.map((i) => (
                     <div
