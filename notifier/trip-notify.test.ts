@@ -1,8 +1,9 @@
-import { describe, it, expect } from "vitest";
-import { diffTripsWithCooldown, suppressTripDuplicates, buildTripDigests } from "./check";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { run, diffTripsWithCooldown, suppressTripDuplicates, buildTripDigests } from "./check";
 import type { TripSiteHit } from "../next/src/lib/trip-windows";
 import type { TripWindow } from "../next/src/types/campground";
 import type { MatchResult } from "./lib/diff";
+import type { KvAdapter } from "../next/src/lib/recgov/cache";
 
 const NOW = Date.parse("2026-07-22T18:00:00Z");
 const HOURS = 60 * 60 * 1000;
@@ -112,5 +113,146 @@ describe("buildTripDigests", () => {
     });
     it("returns nothing for windows with no hits", () => {
         expect(buildTripDigests([], [win], "")).toEqual([]);
+    });
+});
+
+// End-to-end through run(): a trip-only opening (no normal match) must produce a
+// "Trip match" email, persist the trip dedup bucket, and stay quiet on the next
+// run inside the 6h cooldown. Mirrors the run()-level harness in check.test.ts.
+describe("run() trip alerts (integration)", () => {
+    beforeEach(() => vi.restoreAllMocks());
+
+    // One site open exactly the trip weekend (Fri+Sat nights). With stayLengths [7]
+    // the normal match path finds zero stays, so any Resend send here is purely
+    // trip-driven.
+    const RECGOV_TRIP_ONLY = {
+        campsites: {
+            "111": {
+                site: "A01",
+                campsite_type: "STANDARD",
+                availabilities: {
+                    "2026-07-24T00:00:00Z": "Available",
+                    "2026-07-25T00:00:00Z": "Available",
+                },
+            },
+        },
+    };
+
+    function tripTarget(notifierState: unknown) {
+        return {
+            email: "boss@example.com",
+            roles: ["curator"],
+            notifications: { enabled: true, frequencyMinutes: 0 },
+            defaultNotifyScope: "all",
+            campgrounds: {
+                "recreation.gov": [
+                    {
+                        id: "232358",
+                        name: "Outlet",
+                        enabled: true,
+                        notifyScope: "all",
+                        dates: { startDate: "2026-07-01", endDate: "2026-07-31" },
+                        sites: { favorites: [], worthwhile: [] },
+                    },
+                ],
+            },
+            globalSettings: {
+                stayLengths: [7],
+                validStartDays: [
+                    "Monday",
+                    "Tuesday",
+                    "Wednesday",
+                    "Thursday",
+                    "Friday",
+                    "Saturday",
+                    "Sunday",
+                ],
+                tripWindows: [{ id: "w1", from: "2026-07-24", to: "2026-07-26", label: "Lake weekend" }],
+            },
+            notifierState,
+        };
+    }
+
+    function stubKv(): KvAdapter {
+        return {
+            getRaw: vi.fn(async (id: string, month: string) =>
+                id === "232358" && month === "2026-07" ? (RECGOV_TRIP_ONLY as never) : null,
+            ),
+            putRaw: vi.fn(async () => {}),
+            getSnapshot: vi.fn(async () => null),
+            putSnapshot: vi.fn(async () => {}),
+            deleteSnapshot: vi.fn(async () => {}),
+        };
+    }
+
+    function mockFetch(targets: unknown[]) {
+        return vi.fn(async (url: string | URL) => {
+            const u = String(url);
+            if (u.includes("/api/admin/notification-targets")) {
+                return new Response(JSON.stringify({ targets }), { status: 200 });
+            }
+            if (u.includes("/api/admin/first-seen")) {
+                return new Response(JSON.stringify({}), { status: 200 });
+            }
+            if (u.includes("/api/openings/recent")) {
+                return new Response(JSON.stringify([]), { status: 200 });
+            }
+            // Resend POST + every other admin write falls through here (status 200).
+            return new Response("{}", { status: 200 });
+        });
+    }
+
+    const runConfig = (kv: KvAdapter, now: Date) => ({
+        subscriberApiUrl: "https://campwatch.dev",
+        subscriberApiSecret: "secret",
+        resendApiKey: "re_x",
+        siteUrl: "https://campwatch.dev",
+        forceEmail: false,
+        dryRun: false,
+        kvAdapter: kv,
+        now,
+    });
+
+    it("emails a Trip match, persists the trip bucket, then holds within cooldown", async () => {
+        // ── First run: empty (non-null) state so it isn't treated as a first run.
+        const fetchSpy = vi
+            .spyOn(globalThis, "fetch")
+            .mockImplementation(mockFetch([tripTarget({})]) as never);
+        vi.spyOn(console, "log").mockImplementation(() => {});
+
+        await run(runConfig(stubKv(), new Date("2026-07-22T18:00:00Z")));
+
+        // Subject leads with "Trip match:".
+        const resendCalls = fetchSpy.mock.calls.filter((c) => String(c[0]).includes("api.resend.com"));
+        expect(resendCalls.length).toBeGreaterThan(0);
+        const emailBody = JSON.parse(String((resendCalls[0]![1] as RequestInit)?.body)) as {
+            subject: string;
+        };
+        expect(emailBody.subject.startsWith("Trip match:")).toBe(true);
+
+        // Persisted state carries the trip bucket keyed w1:<cgId>:<siteId>.
+        const stateCall = fetchSpy.mock.calls.find(
+            (c) =>
+                String(c[0]).includes("/api/admin/notifier-state") && (c[1] as RequestInit)?.method === "PUT",
+        );
+        const persisted = JSON.parse(String((stateCall![1] as RequestInit).body)) as {
+            updates: Array<{ email: string; state: { trips?: Record<string, unknown> } }>;
+        };
+        const userState = persisted.updates.find((u) => u.email === "boss@example.com")!.state;
+        expect(userState.trips).toBeTruthy();
+        expect(Object.keys(userState.trips!)).toContain("w1:232358:111");
+
+        // ── Second run 2h later, feeding the persisted state back. The still-open run
+        //    overlaps the alerted window inside the 6h trip cooldown → no re-send.
+        vi.restoreAllMocks();
+        const fetchSpy2 = vi
+            .spyOn(globalThis, "fetch")
+            .mockImplementation(mockFetch([tripTarget(userState)]) as never);
+        vi.spyOn(console, "log").mockImplementation(() => {});
+
+        await run(runConfig(stubKv(), new Date("2026-07-22T20:00:00Z")));
+
+        const resend2 = fetchSpy2.mock.calls.filter((c) => String(c[0]).includes("api.resend.com"));
+        expect(resend2).toHaveLength(0);
     });
 });

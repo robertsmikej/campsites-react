@@ -29,7 +29,7 @@ import type { MatchResult, SiteConfigForDiff, CampgroundResult } from "./lib/dif
 import type { SiteAvailabilityMap } from "../next/src/lib/recgov/types";
 import type { AvailabilitySnapshot, SnapshotCampground } from "../next/src/lib/recgov/cache";
 import type { KvAdapter } from "../next/src/lib/recgov/cache";
-import type { TripSiteHit } from "../next/src/lib/trip-windows";
+import { tripHitsForCampground, type TripSiteHit } from "../next/src/lib/trip-windows";
 import { TRIP_COOLDOWN_MS } from "../next/src/lib/notifier-state-merge";
 import type { TripWindow } from "../next/src/types/campground";
 
@@ -200,6 +200,7 @@ async function writeUserSnapshot(
     target: NotificationTarget,
     syntheticResults: CampgroundResult[],
     failedCampgroundIds: Set<string>,
+    tripHitsByCg: Map<string, TripSiteHit[]>,
 ): Promise<void> {
     if (!kvAdapter) return;
     const cgById = new Map<string, Campground>();
@@ -224,10 +225,12 @@ async function writeUserSnapshot(
                 sitesWithMatches[siteId] = site;
             }
         }
+        const tripMatches = tripHitsByCg.get(r.campgroundId);
         campgrounds.push({
             ...cg,
             siteAvailability: sitesWithMatches,
             totalSitesCount,
+            ...(tripMatches?.length ? { tripMatches } : {}),
         });
         emitted.add(r.campgroundId);
     }
@@ -296,11 +299,13 @@ interface ComputedUserResults {
     matches: MatchResult[];
     groups: AdjacentGroup[];
     campgroundNamesById: Record<string, string>;
+    tripHits: TripSiteHit[];
 }
 
 async function computeMatchesForUser(
     target: NotificationTarget,
     rawByCampground: Record<string, unknown[]>,
+    todayIso: string,
 ): Promise<ComputedUserResults> {
     const globalSettings = target.globalSettings ?? ({} as Partial<GlobalSettings>);
     const defaultSettings = {
@@ -398,6 +403,24 @@ async function computeMatchesForUser(
         }
     }
 
+    // Trip-window hits: computed from the RAW months directly, so they ignore
+    // stay-length/start-day settings, notify scope, blackouts, and the
+    // campground watch dates. A disabled campground still opts out entirely.
+    const tripHits: TripSiteHit[] = [];
+    const tripHitsByCg = new Map<string, TripSiteHit[]>();
+    for (const c of target.campgrounds["recreation.gov"] ?? []) {
+        if (c.enabled === false) continue;
+        const hits = tripHitsForCampground(
+            rawByCampground[c.id],
+            c,
+            target.globalSettings?.tripWindows,
+            todayIso,
+        );
+        if (hits.length === 0) continue;
+        tripHits.push(...hits);
+        tripHitsByCg.set(c.id, hits);
+    }
+
     // Build a "siteConfigurations" list in the shape findNewMatches expects.
     const siteConfigurations: SiteConfigForDiff[] = (target.campgrounds["recreation.gov"] ?? []).map((c) => ({
         id: c.id,
@@ -431,9 +454,9 @@ async function computeMatchesForUser(
         ? filtered.filter((m) => !stayOverlapsBlackout(m.match.from, m.match.to, blackouts))
         : filtered;
 
-    await writeUserSnapshot(target, syntheticResults, failedCampgroundIds);
+    await writeUserSnapshot(target, syntheticResults, failedCampgroundIds, tripHitsByCg);
 
-    return { matches: sendable, groups, campgroundNamesById };
+    return { matches: sendable, groups, campgroundNamesById, tripHits };
 }
 
 // ── Diff per user ─────────────────────────────────────────────────────────────
@@ -719,6 +742,7 @@ async function sendEmailToUser({
     matches,
     groups = [],
     campgroundNamesById = {},
+    tripDigests = [],
     resendApiKey,
     siteUrl,
     apiSecret,
@@ -728,6 +752,7 @@ async function sendEmailToUser({
     matches: MatchResult[];
     groups?: AdjacentGroup[];
     campgroundNamesById?: Record<string, string>;
+    tripDigests?: TripDigest[];
     resendApiKey: string;
     siteUrl: string;
     apiSecret: string;
@@ -739,6 +764,7 @@ async function sendEmailToUser({
         apiSecret,
         siteUrl,
         ...(groups.length > 0 ? { adjacentGroups: groups, campgroundNamesById } : {}),
+        ...(tripDigests.length > 0 ? { tripDigests } : {}),
     });
     // Deliver to the verified override when set; unsubscribe identity stays the account email.
     const deliverTo = user.notificationEmail ?? user.email;
@@ -818,7 +844,8 @@ export async function run(config: RunConfig, prefetchedTargets?: NotificationTar
     // Notify reads the KV cache only — no rec.gov calls. The cache is kept warm
     // by runTick (fast lane) and runSweep. A cache miss = carry-forward no-data.
     const nowMonth = now.toISOString().slice(0, 7);
-    const plan = buildNotifyPlan(eligible, nowMonth);
+    const todayIso = now.toISOString().slice(0, 10);
+    const plan = buildNotifyPlan(eligible, nowMonth, todayIso);
     const rawByCampground = kvAdapter ? await readCachedMonths(plan, kvAdapter) : {};
     console.log(`[Notify] reading cache for ${plan.length} (campground, month) pairs`);
 
@@ -831,7 +858,7 @@ export async function run(config: RunConfig, prefetchedTargets?: NotificationTar
     // user's snapshot a second time for no reason.
     const computedByTarget = new Map<NotificationTarget, ComputedUserResults>();
     for (const target of eligible) {
-        computedByTarget.set(target, await computeMatchesForUser(target, rawByCampground));
+        computedByTarget.set(target, await computeMatchesForUser(target, rawByCampground, todayIso));
     }
 
     // 2. Compute all currently-visible match signatures across all eligible users.
@@ -872,6 +899,7 @@ export async function run(config: RunConfig, prefetchedTargets?: NotificationTar
             matches: userMatches,
             groups: userGroups,
             campgroundNamesById,
+            tripHits,
         } = computedByTarget.get(target)!;
         const isCurator = (target.roles ?? []).includes("curator");
 
@@ -917,10 +945,16 @@ export async function run(config: RunConfig, prefetchedTargets?: NotificationTar
             priorState,
             now.getTime(),
         );
+        const { newHits: newTripHits, nextTripState } = diffTripsWithCooldown(
+            tripHits,
+            priorState,
+            now.getTime(),
+        );
         // Merge the group bucket into the per-user state alongside `sites` — never
         // overwrite the sites bucket diffPerUser produced.
         const mergedState: NotifierState = { ...nextState };
         if (Object.keys(nextGroupState).length > 0) mergedState.groups = nextGroupState;
+        if (Object.keys(nextTripState).length > 0) mergedState.trips = nextTripState;
 
         if (isFirstRun && !forceEmail) {
             console.log(`[${target.email}] first run — seeding state, no email`);
@@ -928,25 +962,30 @@ export async function run(config: RunConfig, prefetchedTargets?: NotificationTar
             continue;
         }
 
-        if (newMatches.length === 0 && newGroups.length === 0) {
+        if (newMatches.length === 0 && newGroups.length === 0 && newTripHits.length === 0) {
             console.log(`[${target.email}] 0 new matches`);
             updates.push({ email: target.email, state: mergedState });
             continue;
         }
 
+        const tripDigests = buildTripDigests(newTripHits, target.globalSettings?.tripWindows ?? [], siteUrl);
+        // A normal alert whose site+range a trip digest already covers this run
+        // would be a duplicate card/push line.
+        const sendableMatches = suppressTripDuplicates(newMatches, newTripHits);
+
         // Stamp each match with its global first-sighting so the email can say how
         // long the opening has been visible (same lookup the latency stats use below).
-        for (const m of newMatches) {
+        for (const m of sendableMatches) {
             const firstSeen = newFirstSeenMap[signatureForMatch(m)];
             if (firstSeen) m.firstSeenAt = firstSeen;
         }
 
         console.log(
-            `[${target.email}] ${newMatches.length} new match(es), ${newGroups.length} new group(s) — sending email`,
+            `[${target.email}] ${sendableMatches.length} new match(es), ${newGroups.length} new group(s), ${newTripHits.length} trip hit(s), sending email`,
         );
         if (dryRun) {
             console.log(
-                `[dry-run] would email ${newMatches.length} match(es) + ${newGroups.length} group(s) to ${target.email}`,
+                `[dry-run] would email ${sendableMatches.length} match(es) + ${newGroups.length} group(s) + ${newTripHits.length} trip hit(s) to ${target.email}`,
             );
             updates.push({ email: target.email, state: mergedState });
         } else {
@@ -954,16 +993,17 @@ export async function run(config: RunConfig, prefetchedTargets?: NotificationTar
                 const sentAtMs = Date.now();
                 await sendEmailToUser({
                     user: target,
-                    matches: newMatches,
+                    matches: sendableMatches,
                     groups: newGroups,
                     campgroundNamesById,
+                    tripDigests,
                     resendApiKey,
                     siteUrl,
                     apiSecret: subscriberApiSecret,
                     subscriberApiUrl,
                 });
                 // Record latency for each match in this email.
-                for (const m of newMatches) {
+                for (const m of sendableMatches) {
                     const sig = signatureForMatch(m);
                     const firstSeenIso = newFirstSeenMap[sig];
                     if (firstSeenIso) sentLatenciesMs.push(sentAtMs - new Date(firstSeenIso).getTime());
@@ -973,11 +1013,31 @@ export async function run(config: RunConfig, prefetchedTargets?: NotificationTar
                 // name then each opening's site + dates. Prune subs the push service
                 // reports as gone (404/410).
                 if (config.vapid && (target.pushSubscriptions?.length ?? 0) > 0) {
+                    const dead: string[] = [];
+                    let pushSent = 0;
+
+                    // Trip digests first: one push per window, its own tag so a
+                    // new send replaces the prior notification for that window.
+                    for (const d of tripDigests) {
+                        for (const sub of target.pushSubscriptions ?? []) {
+                            try {
+                                const r = await sendWebPush(sub, d.push, config.vapid);
+                                if (r.gone) {
+                                    if (!dead.includes(sub.endpoint)) dead.push(sub.endpoint);
+                                } else if (r.status >= 200 && r.status < 300) {
+                                    pushSent++;
+                                }
+                            } catch (err) {
+                                console.error(`[push] ${target.email}: ${(err as Error).message}`);
+                            }
+                        }
+                    }
+
                     const byCg = new Map<
                         string,
                         { name: string; matches: MatchResult[]; groups: AdjacentGroup[] }
                     >();
-                    for (const m of newMatches) {
+                    for (const m of sendableMatches) {
                         const e = byCg.get(m.campgroundId) ?? {
                             name: m.campgroundName,
                             matches: [],
@@ -993,8 +1053,6 @@ export async function run(config: RunConfig, prefetchedTargets?: NotificationTar
                         byCg.set(g.campgroundId, e);
                     }
 
-                    const dead: string[] = [];
-                    let pushSent = 0;
                     for (const [cgId, { name, matches, groups }] of byCg) {
                         const lines = [
                             ...matches.map(
@@ -1044,7 +1102,7 @@ export async function run(config: RunConfig, prefetchedTargets?: NotificationTar
                             body: JSON.stringify({ email: target.email, endpoints: dead }),
                         }).catch(() => {});
                     }
-                    if (byCg.size > 0) {
+                    if (byCg.size > 0 || tripDigests.length > 0) {
                         console.log(
                             `[push] ${target.email}: ${pushSent} sent across ${byCg.size} campground(s)` +
                                 (dead.length > 0 ? `, ${dead.length} pruned` : ""),
@@ -1184,7 +1242,7 @@ export async function runTick(config: RunConfig, lockKv?: LockKv): Promise<void>
         const targets = await fetchTargets(config);
         const nowMonth = config.now.toISOString().slice(0, 7);
         if (config.kvAdapter && !config.dryRun) {
-            const fastLane = buildFastLanePlan(targets, nowMonth);
+            const fastLane = buildFastLanePlan(targets, nowMonth, config.now.toISOString().slice(0, 10));
             if (fastLane.length) {
                 console.log(`[FastLane] fetching ${fastLane.length} high-tier (campground, month) pairs`);
                 await fetchToCache(fastLane, config.kvAdapter, { concurrency: 1, delayMs: 250 });
@@ -1208,7 +1266,7 @@ export async function runSweep(config: RunConfig, lockKv: LockKv): Promise<void>
     const targets = await fetchTargets(config);
     const nowMonth = config.now.toISOString().slice(0, 7);
     const minute = config.now.getUTCMinutes();
-    const plan = buildSweepPlan(targets, minute, nowMonth);
+    const plan = buildSweepPlan(targets, minute, nowMonth, config.now.toISOString().slice(0, 10));
     if (plan.length === 0) {
         console.log(`[Sweep] minute=${minute} — no normal/low campgrounds due`);
         return;
