@@ -56,12 +56,20 @@ describe("buildSweepPlan", () => {
         const t2 = [target([cg("X")])];
         expect(ids(buildSweepPlan(t2, 5, NOW_MONTH))).toEqual(["X"]);
     });
+    it("excludes disabled campgrounds", () => {
+        const t2 = [target([cg("ON", "normal"), cg("OFF", "normal", false)])];
+        expect(ids(buildSweepPlan(t2, 5, NOW_MONTH))).toEqual(["ON"]);
+    });
 });
 
 describe("buildNotifyPlan", () => {
     it("includes every enabled campground regardless of tier or minute", () => {
         const t = [target([cg("H", "high"), cg("N", "normal"), cg("L", "low")])];
         expect(ids(buildNotifyPlan(t, NOW_MONTH))).toEqual(["H", "L", "N"]);
+    });
+    it("excludes disabled campgrounds", () => {
+        const t = [target([cg("ON", "normal"), cg("OFF", "high", false), cg("OFF2", "low", false)])];
+        expect(ids(buildNotifyPlan(t, NOW_MONTH))).toEqual(["ON"]);
     });
     it("drops fully-past months but keeps the now-month", () => {
         const t = [
@@ -157,6 +165,15 @@ describe("trip-window months", () => {
         expect(buildNotifyPlan([t], NOW_MONTH, TODAY)).toEqual([
             { campgroundId: "233563", month: "2026-08" },
         ]);
+    });
+
+    it("a disabled campground stays out even with an active window", () => {
+        // The whole point of the toggle is zero rec.gov calls. A trip window is
+        // the one thing that can pull in months the watch dates don't cover, so
+        // it's the path most likely to leak a fetch past the disabled guard.
+        const t = target(cg({ enabled: false }), [{ id: "w1", from: "2026-09-04", to: "2026-09-07" }]);
+        expect(buildNotifyPlan([t], NOW_MONTH, TODAY)).toEqual([]);
+        expect(buildSweepPlan([t], 10, NOW_MONTH, TODAY)).toEqual([]);
     });
 
     it("fast lane never promotes an out-of-tier campground, window or not", () => {

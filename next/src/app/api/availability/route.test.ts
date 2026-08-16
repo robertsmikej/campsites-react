@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { GET } from "./route";
 import * as sessions from "@/lib/sessions";
 import * as cloudflare from "@/lib/cloudflare";
@@ -32,9 +32,21 @@ describe("GET /api/availability", () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        // Every fixture below is built around a July 2026 watch window. The route
+        // clamps fully-past months out of the fetch plan, so with a real clock these
+        // tests silently degrade to "campground produced nothing" once that month
+        // passes — assertions still run, but against an empty snapshot. Pin the
+        // clock so the fixtures keep testing what they were written to test.
+        // Only Date is faked; faking timers would stall the route's awaits.
+        vi.useFakeTimers({ toFake: ["Date"] });
+        vi.setSystemTime(new Date("2026-06-15T12:00:00Z"));
         fetchSpy = vi.spyOn(globalThis, "fetch");
         kv = createMockKv();
         vi.mocked(cloudflare.getKv).mockReturnValue(kv as never);
+    });
+
+    afterEach(() => {
+        vi.useRealTimers();
     });
 
     it("returns snapshot from KV when present for logged-in user", async () => {
@@ -80,6 +92,31 @@ describe("GET /api/availability", () => {
         const body = (await response.json()) as { campgrounds: unknown[] };
         expect(body.campgrounds).toHaveLength(1);
         expect(fetchSpy).toHaveBeenCalled();
+    });
+
+    it("skips disabled campgrounds without fetching rec.gov", async () => {
+        vi.mocked(sessions.readSession).mockResolvedValue({ email: "alice@example.com" } as never);
+        vi.mocked(userCampgrounds.getUserCampgrounds).mockResolvedValue({
+            campgrounds: {
+                "recreation.gov": [
+                    {
+                        id: "232358",
+                        name: "Off CG",
+                        enabled: false,
+                        dates: { startDate: "2026-07-01", endDate: "2026-07-03" },
+                        sites: { favorites: [], worthwhile: [] },
+                    },
+                ],
+            },
+            globalSettings: { stayLengths: [2], validStartDays: ["Friday"] },
+            updatedAt: "2026-05-01T00:00:00Z",
+        } as never);
+
+        const response = await GET(new Request("http://x/api/availability"));
+        expect(response.status).toBe(200);
+        const body = (await response.json()) as { campgrounds: unknown[] };
+        expect(body.campgrounds).toHaveLength(0);
+        expect(fetchSpy).not.toHaveBeenCalled();
     });
 
     it("anonymous request uses curated default config", async () => {
