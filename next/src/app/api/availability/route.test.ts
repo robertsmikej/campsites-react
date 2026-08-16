@@ -35,7 +35,7 @@ describe("GET /api/availability", () => {
         // Every fixture below is built around a July 2026 watch window. The route
         // clamps fully-past months out of the fetch plan, so with a real clock these
         // tests silently degrade to "campground produced nothing" once that month
-        // passes — assertions still run, but against an empty snapshot. Pin the
+        // passes: assertions still run, but against an empty snapshot. Pin the
         // clock so the fixtures keep testing what they were written to test.
         // Only Date is faked; faking timers would stall the route's awaits.
         vi.useFakeTimers({ toFake: ["Date"] });
