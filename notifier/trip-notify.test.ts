@@ -167,8 +167,8 @@ describe("run() trip alerts (integration)", () => {
                     "Saturday",
                     "Sunday",
                 ],
-                tripWindows: [{ id: "w1", from: "2026-07-24", to: "2026-07-26", label: "Lake weekend" }],
             },
+            tripWindows: [{ id: "w1", from: "2026-07-24", to: "2026-07-26", label: "Lake weekend" }],
             notifierState,
         };
     }

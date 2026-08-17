@@ -14,6 +14,8 @@ export interface FetchPlanItem {
 
 export interface PlannableTarget {
     campgrounds: { "recreation.gov"?: Campground[] };
+    tripWindows?: TripWindow[];
+    /** @deprecated Read from target.tripWindows instead. Kept for backward compat. */
     globalSettings?: { tripWindows?: TripWindow[] };
 }
 
@@ -75,9 +77,7 @@ function buildPlan(
                 // Trip-window months ride along at the campground's OWN tier
                 // cadence. A window never raises the polling rate; that keeps
                 // the rec.gov footprint bounded by the user's settings.
-                const windows = todayIso
-                    ? activeWindowsFor(target.globalSettings?.tripWindows, c.id, todayIso)
-                    : [];
+                const windows = todayIso ? activeWindowsFor(target.tripWindows, c.id, todayIso) : [];
                 for (const m of tripMonths(windows, nowMonth)) months.add(m);
             }
             if (months.size === 0) continue;

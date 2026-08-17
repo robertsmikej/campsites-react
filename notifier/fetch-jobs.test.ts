@@ -149,7 +149,7 @@ describe("trip-window months", () => {
     const target = (campground: unknown, tripWindows?: unknown[]) =>
         ({
             campgrounds: { "recreation.gov": [campground] },
-            ...(tripWindows ? { globalSettings: { tripWindows } } : {}),
+            ...(tripWindows ? { tripWindows } : {}),
         }) as never;
 
     it("notify plan unions trip-window months beyond the watch dates", () => {

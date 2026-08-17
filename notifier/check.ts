@@ -128,6 +128,7 @@ interface NotificationTarget {
     campgrounds: {
         "recreation.gov"?: Campground[];
     };
+    tripWindows?: TripWindow[];
     globalSettings?: GlobalSettings;
     pushSubscriptions?: PushSubscriptionRecord[];
 }
@@ -410,12 +411,7 @@ async function computeMatchesForUser(
     const tripHitsByCg = new Map<string, TripSiteHit[]>();
     for (const c of target.campgrounds["recreation.gov"] ?? []) {
         if (c.enabled === false) continue;
-        const hits = tripHitsForCampground(
-            rawByCampground[c.id],
-            c,
-            target.globalSettings?.tripWindows,
-            todayIso,
-        );
+        const hits = tripHitsForCampground(rawByCampground[c.id], c, target.tripWindows, todayIso);
         if (hits.length === 0) continue;
         tripHits.push(...hits);
         tripHitsByCg.set(c.id, hits);
@@ -968,7 +964,7 @@ export async function run(config: RunConfig, prefetchedTargets?: NotificationTar
             continue;
         }
 
-        const tripDigests = buildTripDigests(newTripHits, target.globalSettings?.tripWindows ?? [], siteUrl);
+        const tripDigests = buildTripDigests(newTripHits, target.tripWindows ?? [], siteUrl);
         // A normal alert whose site+range a trip digest already covers this run
         // would be a duplicate card/push line.
         const sendableMatches = suppressTripDuplicates(newMatches, newTripHits);
