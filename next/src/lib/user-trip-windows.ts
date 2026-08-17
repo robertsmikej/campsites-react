@@ -10,8 +10,6 @@ function key(email: string): string {
     return `user:${email}:trip-windows`;
 }
 
-const EMPTY: TripWindowsRecord = { tripWindows: [], updatedAt: null };
-
 /**
  * Read trip windows from the dedicated key. On first access after deploy,
  * migrates from the legacy location (globalSettings.tripWindows inside
@@ -32,7 +30,7 @@ export async function getUserTripWindows(email: string): Promise<TripWindowsReco
         updatedAt: string;
     } | null;
 
-    if (!campRaw?.globalSettings?.tripWindows?.length) return EMPTY;
+    if (!campRaw?.globalSettings?.tripWindows?.length) return { tripWindows: [], updatedAt: null };
 
     const migrated: TripWindowsRecord = {
         tripWindows: campRaw.globalSettings.tripWindows,
