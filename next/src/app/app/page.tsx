@@ -34,7 +34,13 @@ import type { Campground } from "@/types/campground";
 export default function AppPage() {
     const auth = useAuth();
     const userCampgrounds = useUserCampgrounds();
-    const { tripWindows, saveTripWindows } = useTripWindows();
+    const {
+        tripWindows,
+        saveTripWindows,
+        syncStatus: tripSyncStatus,
+        syncError: tripSyncError,
+        clearSyncStatus: clearTripSyncStatus,
+    } = useTripWindows();
     const {
         siteConfig,
         globalSettings,
@@ -173,6 +179,16 @@ export default function AppPage() {
         }
         clearSyncStatus();
     }, [syncStatus, syncError, clearSyncStatus]);
+
+    useEffect(() => {
+        if (tripSyncStatus === null) return;
+        if (tripSyncStatus === "success") {
+            toast.success("Trip windows saved");
+        } else {
+            toast.warning(tripSyncError ?? "Failed to save trip windows");
+        }
+        clearTripSyncStatus();
+    }, [tripSyncStatus, tripSyncError, clearTripSyncStatus]);
 
     const isLoading = isFetching || isHydrating;
     const isEmpty = !userCampgrounds.isHydrating && userCampgrounds.isEmpty;

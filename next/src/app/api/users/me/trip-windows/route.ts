@@ -3,6 +3,8 @@ import { jsonResponse, withCors } from "@/lib/responses";
 import { withErrorLogging } from "@/lib/route-helpers";
 import { getUserTripWindows, putUserTripWindows } from "@/lib/user-trip-windows";
 import { validTripWindows, windowIsPast, serverTodayIso, TRIP_MAX_NIGHTS } from "@/lib/trip-windows";
+import { getKv } from "@/lib/cloudflare";
+import { WorkerKvAdapter } from "@/lib/recgov/worker-kv";
 import type { TripWindow } from "@/types/campground";
 
 const EMPTY = { tripWindows: [] as TripWindow[], updatedAt: null };
@@ -52,6 +54,10 @@ async function putHandler(request: Request): Promise<Response> {
     const pruned = (tripWindows as TripWindow[]).filter((w) => !windowIsPast(w, todayIso));
 
     const stored = await putUserTripWindows(session.email, pruned);
+
+    const adapter = new WorkerKvAdapter(getKv());
+    await adapter.deleteSnapshot(session.email);
+
     return withCors(jsonResponse(stored));
 }
 export const PUT = withErrorLogging(putHandler, "PUT /api/users/me/trip-windows");
