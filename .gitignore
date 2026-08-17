@@ -33,3 +33,4 @@ notifier/node_modules/
 
 # Personal Cloudflare API token for local wrangler (never commit)
 .campwatch-personal-cf.env
+.worktrees/
