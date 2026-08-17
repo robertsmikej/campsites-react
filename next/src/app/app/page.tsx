@@ -8,6 +8,7 @@ import SiteSettingsContext from "@/contexts/site-settings";
 import ProgressBarContext from "@/contexts/progress-bar";
 import { Button } from "@/components/ui/button";
 import { useUserCampgrounds } from "@/hooks/use-user-campgrounds";
+import { useTripWindows } from "@/hooks/use-trip-windows";
 import { useCampgroundsData } from "@/hooks/use-campgrounds-data";
 import { useAuth } from "@/hooks/use-auth";
 import { useIsMobile } from "@/hooks/use-is-mobile";
@@ -27,12 +28,13 @@ import { PushNudge } from "@/components/dashboard/push-nudge";
 import { siteData } from "@/data/site-data";
 import { recentlyAddedFromDefault } from "@/lib/default-additions";
 import type { SiteSettingsValue } from "@/contexts/site-settings";
-import type { Campground, TripWindow } from "@/types/campground";
+import type { Campground } from "@/types/campground";
 // import type { GroupBy } from "@/hooks/use-dashboard-prefs"; // kept for future grouping UI
 
 export default function AppPage() {
     const auth = useAuth();
     const userCampgrounds = useUserCampgrounds();
+    const { tripWindows, saveTripWindows } = useTripWindows();
     const {
         siteConfig,
         globalSettings,
@@ -120,12 +122,12 @@ export default function AppPage() {
                 stayLengths: globalSettings.stayLengths,
                 validStartDays: globalSettings.validStartDays,
                 blackoutDates: globalSettings.blackoutDates,
-                tripWindows: globalSettings.tripWindows,
+                tripWindows,
             },
             views: { type: "calendar" as const },
             dev: { useMockData },
         }),
-        [globalSettings, useMockData],
+        [globalSettings, tripWindows, useMockData],
     );
 
     const { campgroundsByAreas, isFetching, progressBarData, loadError, updatedAt, refresh } =
@@ -158,13 +160,6 @@ export default function AppPage() {
                 return { ...cg, sites: { favorites: favs, worthwhile } };
             });
             void save({ ...siteConfig, "recreation.gov": updated }, globalSettings);
-        },
-        [siteConfig, globalSettings, save],
-    );
-
-    const handleTripWindowsChange = useCallback(
-        (next: TripWindow[]) => {
-            void save(siteConfig, { ...globalSettings, tripWindows: next });
         },
         [siteConfig, globalSettings, save],
     );
@@ -333,10 +328,10 @@ export default function AppPage() {
 
                                     <DashboardErrorBoundary section="Trips">
                                         <TripsCard
-                                            tripWindows={globalSettings.tripWindows ?? []}
+                                            tripWindows={tripWindows}
                                             campgrounds={siteConfig["recreation.gov"] ?? []}
                                             campgroundsByAreas={campgroundsByAreas}
-                                            onChange={handleTripWindowsChange}
+                                            onChange={saveTripWindows}
                                             isMobile={isMobile}
                                         />
                                     </DashboardErrorBoundary>

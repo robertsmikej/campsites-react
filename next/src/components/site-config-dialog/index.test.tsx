@@ -119,18 +119,21 @@ describe("SiteConfigDialog save preserves unmanaged globalSettings fields", () =
         vi.unstubAllGlobals();
     });
 
-    it("carries tripWindows through when saving", () => {
+    it("does not inject extra fields into globalSettings on save", () => {
         const onSave = vi.fn();
-        const tripWindows = [
-            { id: "labor-day", from: "2026-09-04", to: "2026-09-08", label: "Labor Day" },
-        ];
         const gs = {
             stayLengths: [2, 3],
             validStartDays: ["Friday"],
-            tripWindows,
         } as GlobalSettings;
         const data: SiteConfig = {
-            "recreation.gov": [{ id: "232447", name: "Test Campground", enabled: true }],
+            "recreation.gov": [
+                {
+                    id: "232447",
+                    name: "Test Campground",
+                    enabled: true,
+                    sites: { favorites: [], worthwhile: [] },
+                },
+            ],
         };
         const { getByRole } = render(
             <SiteConfigDialog
@@ -145,7 +148,10 @@ describe("SiteConfigDialog save preserves unmanaged globalSettings fields", () =
         getByRole("button", { name: /^save$/i }).click();
         expect(onSave).toHaveBeenCalledTimes(1);
         const [, savedGlobal] = onSave.mock.calls[0]!;
-        expect(savedGlobal.tripWindows).toEqual(tripWindows);
+        // Only the fields the dialog manages should be present
+        expect(Object.keys(savedGlobal).sort()).toEqual(
+            expect.arrayContaining(["stayLengths", "validStartDays"]),
+        );
     });
 });
 
