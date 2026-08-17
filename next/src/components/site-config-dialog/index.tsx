@@ -354,6 +354,7 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
         const newConfig: SiteConfig = { "recreation.gov": sanitized };
         const validBlackouts = blackoutDates.filter((b) => b.from && b.to && b.from <= b.to);
         onSave(newConfig, {
+            ...globalSettings,
             stayLengths: buildStayLengths(stayRange),
             validStartDays,
             ...(validBlackouts.length > 0 ? { blackoutDates: validBlackouts } : {}),

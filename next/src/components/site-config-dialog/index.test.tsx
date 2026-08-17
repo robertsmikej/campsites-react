@@ -109,6 +109,46 @@ describe("SiteConfigDialog mobile history integration", () => {
     });
 });
 
+describe("SiteConfigDialog save preserves unmanaged globalSettings fields", () => {
+    beforeEach(() => {
+        vi.restoreAllMocks();
+        mockMatchMedia(false);
+    });
+    afterEach(() => {
+        cleanup();
+        vi.unstubAllGlobals();
+    });
+
+    it("carries tripWindows through when saving", () => {
+        const onSave = vi.fn();
+        const tripWindows = [
+            { id: "labor-day", from: "2026-09-04", to: "2026-09-08", label: "Labor Day" },
+        ];
+        const gs = {
+            stayLengths: [2, 3],
+            validStartDays: ["Friday"],
+            tripWindows,
+        } as GlobalSettings;
+        const data: SiteConfig = {
+            "recreation.gov": [{ id: "232447", name: "Test Campground", enabled: true }],
+        };
+        const { getByRole } = render(
+            <SiteConfigDialog
+                {...baseProps}
+                initialData={data}
+                globalSettings={gs}
+                onSave={onSave}
+                open
+                onClose={vi.fn()}
+            />,
+        );
+        getByRole("button", { name: /^save$/i }).click();
+        expect(onSave).toHaveBeenCalledTimes(1);
+        const [, savedGlobal] = onSave.mock.calls[0]!;
+        expect(savedGlobal.tripWindows).toEqual(tripWindows);
+    });
+});
+
 describe("SiteConfigDialog mobile layout wiring", () => {
     beforeEach(() => {
         vi.restoreAllMocks();
