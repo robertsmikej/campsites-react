@@ -137,8 +137,6 @@ export interface GlobalSettings {
     /** Dates the user can't camp: greyed in views, excluded from the planner,
      *  and alert emails are suppressed for stays overlapping these nights. */
     blackoutDates?: BlackoutRange[];
-    /** Dates the user is actively trying to book. See TripWindow. */
-    tripWindows?: TripWindow[];
 }
 
 export interface SiteConfig {

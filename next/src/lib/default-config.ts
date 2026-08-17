@@ -38,10 +38,7 @@ export async function getDefaultConfig(): Promise<DefaultConfig> {
     if (owner) {
         const record = await getUserCampgrounds(owner);
         if (record) {
-            // The curator's tripWindows are personal travel dates, not part of the
-            // shared watchlist. Never leak them through the public default or clone.
-            const { tripWindows: _tripWindows, ...sharedGlobalSettings } = record.globalSettings;
-            return { campgrounds: record.campgrounds, globalSettings: sharedGlobalSettings };
+            return { campgrounds: record.campgrounds, globalSettings: record.globalSettings };
         }
     }
     return buildDefaultFromCatalog();
