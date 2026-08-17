@@ -1,6 +1,7 @@
 import { readSession } from "@/lib/sessions";
 import { getKv } from "@/lib/cloudflare";
 import { getUserCampgrounds } from "@/lib/user-campgrounds";
+import { getUserTripWindows } from "@/lib/user-trip-windows";
 import { getDefaultConfig } from "@/lib/default-config";
 import { jsonResponse, withCors } from "@/lib/responses";
 import { withErrorLogging } from "@/lib/route-helpers";
@@ -14,7 +15,7 @@ import {
     type AvailabilitySnapshot,
     type SnapshotCampground,
 } from "@/lib/recgov";
-import type { Campground, GlobalSettings } from "@/types/campground";
+import type { Campground, GlobalSettings, TripWindow } from "@/types/campground";
 import { findAdjacentGroups, type AdjacencySite } from "@/lib/adjacent-groups";
 import { getSiteDetailsCached, kvNamespaceLike } from "@/lib/site-details-cache";
 import { activeWindowsFor, addDaysIso, tripHitsForCampground, serverTodayIso } from "@/lib/trip-windows";
@@ -22,6 +23,7 @@ import { activeWindowsFor, addDaysIso, tripHitsForCampground, serverTodayIso } f
 interface SourceConfig {
     campgrounds: { "recreation.gov"?: Campground[] };
     globalSettings: GlobalSettings;
+    tripWindows: TripWindow[];
 }
 
 function monthsBetween(startDate: string, endDate: string): string[] {
@@ -57,7 +59,7 @@ async function buildSnapshot(config: SourceConfig, adapter: WorkerKvAdapter): Pr
         const end = cg.dates?.endDate;
         if (!start || !end) continue;
 
-        const tripWins = activeWindowsFor(config.globalSettings.tripWindows, cg.id, todayIso);
+        const tripWins = activeWindowsFor(config.tripWindows, cg.id, todayIso);
         const monthSet = new Set(monthsBetween(start, end).filter((m) => m >= nowMonth));
         for (const w of tripWins) {
             for (const m of monthsBetween(w.from, addDaysIso(w.to, -1))) {
@@ -132,12 +134,7 @@ async function buildSnapshot(config: SourceConfig, adapter: WorkerKvAdapter): Pr
             if (groups.length > 0) adjacentGroups = groups;
         }
 
-        const tripMatches = tripHitsForCampground(
-            rawResults,
-            cg,
-            config.globalSettings.tripWindows,
-            todayIso,
-        );
+        const tripMatches = tripHitsForCampground(rawResults, cg, config.tripWindows, todayIso);
 
         results.push({
             ...cg,
@@ -161,12 +158,14 @@ async function getHandler(request: Request): Promise<Response> {
         if (cached) return withCors(jsonResponse(cached));
 
         const userRecord = await getUserCampgrounds(session.email);
+        const tripWindowsRecord = await getUserTripWindows(session.email);
         const config: SourceConfig = {
             campgrounds: userRecord?.campgrounds ?? { "recreation.gov": [] },
             globalSettings: (userRecord?.globalSettings ?? {
                 stayLengths: [2, 3, 4, 5],
                 validStartDays: ["Friday", "Saturday"],
             }) as GlobalSettings,
+            tripWindows: tripWindowsRecord.tripWindows,
         };
         const snapshot = await buildSnapshot(config, adapter);
         await adapter.putSnapshot(session.email, snapshot);
@@ -175,7 +174,7 @@ async function getHandler(request: Request): Promise<Response> {
 
     // Anonymous: use the curator's watchlist as the default; no snapshot persistence.
     const defaultConfig = await getDefaultConfig();
-    const snapshot = await buildSnapshot(defaultConfig, adapter);
+    const snapshot = await buildSnapshot({ ...defaultConfig, tripWindows: [] }, adapter);
     return withCors(jsonResponse(snapshot));
 }
 

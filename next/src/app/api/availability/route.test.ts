@@ -3,10 +3,12 @@ import { GET } from "./route";
 import * as sessions from "@/lib/sessions";
 import * as cloudflare from "@/lib/cloudflare";
 import * as userCampgrounds from "@/lib/user-campgrounds";
+import * as userTripWindows from "@/lib/user-trip-windows";
 
 vi.mock("@/lib/sessions");
 vi.mock("@/lib/cloudflare");
 vi.mock("@/lib/user-campgrounds");
+vi.mock("@/lib/user-trip-windows");
 
 function createMockKv(seed: Record<string, string> = {}) {
     const store = new Map<string, string>(Object.entries(seed));
@@ -43,6 +45,10 @@ describe("GET /api/availability", () => {
         fetchSpy = vi.spyOn(globalThis, "fetch");
         kv = createMockKv();
         vi.mocked(cloudflare.getKv).mockReturnValue(kv as never);
+        vi.mocked(userTripWindows.getUserTripWindows).mockResolvedValue({
+            tripWindows: [],
+            updatedAt: null,
+        });
     });
 
     afterEach(() => {
@@ -477,10 +483,13 @@ describe("GET /api/availability", () => {
             globalSettings: {
                 stayLengths: [7],
                 validStartDays: ["Monday"],
-                tripWindows: [{ id: "w1", from: "2100-07-10", to: "2100-07-12" }],
             },
             updatedAt: "2026-05-01T00:00:00Z",
         } as never);
+        vi.mocked(userTripWindows.getUserTripWindows).mockResolvedValue({
+            tripWindows: [{ id: "w1", from: "2100-07-10", to: "2100-07-12" }],
+            updatedAt: "2026-08-17T00:00:00.000Z",
+        });
         fetchSpy.mockResolvedValue(
             new Response(
                 JSON.stringify({
