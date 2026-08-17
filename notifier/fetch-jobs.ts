@@ -15,8 +15,6 @@ export interface FetchPlanItem {
 export interface PlannableTarget {
     campgrounds: { "recreation.gov"?: Campground[] };
     tripWindows?: TripWindow[];
-    /** @deprecated Read from target.tripWindows instead. Kept for backward compat. */
-    globalSettings?: { tripWindows?: TripWindow[] };
 }
 
 function monthsBetween(startIso: string, endIso: string): string[] {
