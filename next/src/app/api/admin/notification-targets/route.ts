@@ -1,9 +1,10 @@
 import { getEnv, getKv } from "@/lib/cloudflare";
 import { jsonResponse, withCors } from "@/lib/responses";
 import { getUserCampgrounds } from "@/lib/user-campgrounds";
+import { getUserTripWindows } from "@/lib/user-trip-windows";
 import { readPushSubs, type PushSubscriptionRecord } from "@/lib/push/subscription";
 import type { UserProfile, UserRole } from "@/types/user";
-import type { GlobalSettings, NotifyScope, SiteConfig } from "@/types/campground";
+import type { GlobalSettings, NotifyScope, SiteConfig, TripWindow } from "@/types/campground";
 import { withErrorLogging } from "@/lib/route-helpers";
 
 interface NotificationTarget {
@@ -16,6 +17,7 @@ interface NotificationTarget {
     notificationEmail?: string;
     campgrounds: SiteConfig;
     globalSettings: GlobalSettings;
+    tripWindows: TripWindow[];
     notifierState: unknown | null;
     pushSubscriptions: PushSubscriptionRecord[];
 }
@@ -48,6 +50,7 @@ async function getHandler(request: Request): Promise<Response> {
             const entries = userList?.campgrounds?.["recreation.gov"] ?? [];
             if (entries.length === 0) continue;
 
+            const tripWindowsRecord = await getUserTripWindows(profile.email);
             const notifierState = await kv.get(`user:${profile.email}:notifier-state`, "json");
 
             const target: NotificationTarget = {
@@ -57,6 +60,7 @@ async function getHandler(request: Request): Promise<Response> {
                 notifications: profile.notifications ?? { enabled: true, frequencyMinutes: 15 },
                 campgrounds: userList!.campgrounds,
                 globalSettings: userList!.globalSettings,
+                tripWindows: tripWindowsRecord.tripWindows,
                 notifierState: notifierState ?? null,
                 pushSubscriptions: await readPushSubs(profile.email),
             };

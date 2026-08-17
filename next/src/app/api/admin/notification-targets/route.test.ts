@@ -57,6 +57,10 @@ describe("GET /api/admin/notification-targets", () => {
                 globalSettings: { stayLengths: [2], validStartDays: ["Monday"] },
                 updatedAt: "2026-01-02T00:00:00.000Z",
             }),
+            "user:bob@x.com:trip-windows": JSON.stringify({
+                tripWindows: [{ id: "w1", from: "2100-09-04", to: "2100-09-08" }],
+                updatedAt: "2026-08-17T00:00:00.000Z",
+            }),
             "user:alice@x.com:profile": JSON.stringify({
                 email: "alice@x.com",
                 name: "Alice",
@@ -69,8 +73,11 @@ describe("GET /api/admin/notification-targets", () => {
 
         const res = await get(`Bearer ${SECRET}`);
         expect(res.status).toBe(200);
-        const body = (await res.json()) as { targets: Array<{ email: string }> };
+        const body = (await res.json()) as {
+            targets: Array<{ email: string; tripWindows: unknown[] }>;
+        };
         expect(body.targets.map((t) => t.email)).toEqual(["bob@x.com"]);
+        expect(body.targets[0]!.tripWindows).toHaveLength(1);
     });
 
     it("synthesizes default notifications when profile has none", async () => {
@@ -94,10 +101,14 @@ describe("GET /api/admin/notification-targets", () => {
 
         const res = await get(`Bearer ${SECRET}`);
         const body = (await res.json()) as {
-            targets: Array<{ notifications: { enabled: boolean; frequencyMinutes: number } }>;
+            targets: Array<{
+                notifications: { enabled: boolean; frequencyMinutes: number };
+                tripWindows: unknown[];
+            }>;
         };
         // Each test sets up exactly one user in KV, so targets[0] is guaranteed.
         expect(body.targets[0]!.notifications).toEqual({ enabled: true, frequencyMinutes: 15 });
+        expect(body.targets[0]!.tripWindows).toEqual([]);
     });
 
     it("includes notifierState from KV when present", async () => {
@@ -123,11 +134,16 @@ describe("GET /api/admin/notification-targets", () => {
 
         const res = await get(`Bearer ${SECRET}`);
         const body = (await res.json()) as {
-            targets: Array<{ notifierState: unknown; lastNotifiedAt?: string }>;
+            targets: Array<{
+                notifierState: unknown;
+                lastNotifiedAt?: string;
+                tripWindows: unknown[];
+            }>;
         };
         // Each test sets up exactly one user in KV, so targets[0] is guaranteed.
         expect(body.targets[0]!.notifierState).toEqual({ signatures: ["a", "b"] });
         expect(body.targets[0]!.lastNotifiedAt).toBe("2026-05-15T01:00:00.000Z");
+        expect(body.targets[0]!.tripWindows).toEqual([]);
     });
 
     it("includes roles in each target", async () => {
@@ -151,9 +167,12 @@ describe("GET /api/admin/notification-targets", () => {
 
         const res = await get(`Bearer ${SECRET}`);
         expect(res.status).toBe(200);
-        const body = (await res.json()) as { targets: Array<{ roles: string[] }> };
+        const body = (await res.json()) as {
+            targets: Array<{ roles: string[]; tripWindows: unknown[] }>;
+        };
         // Each test sets up exactly one user in KV, so targets[0] is guaranteed.
         expect(body.targets[0]!.roles).toEqual(["curator"]);
+        expect(body.targets[0]!.tripWindows).toEqual([]);
     });
 
     it("returns notifierState: null when no state has been stored", async () => {
@@ -176,9 +195,12 @@ describe("GET /api/admin/notification-targets", () => {
         vi.mocked(cloudflare.getKv).mockReturnValue(kv);
 
         const res = await get(`Bearer ${SECRET}`);
-        const body = (await res.json()) as { targets: Array<{ notifierState: unknown }> };
+        const body = (await res.json()) as {
+            targets: Array<{ notifierState: unknown; tripWindows: unknown[] }>;
+        };
         // Each test sets up exactly one user in KV, so targets[0] is guaranteed.
         expect(body.targets[0]!.notifierState).toBeNull();
+        expect(body.targets[0]!.tripWindows).toEqual([]);
     });
 
     it("passes notificationEmail through to the target", async () => {
@@ -205,6 +227,7 @@ describe("GET /api/admin/notification-targets", () => {
         expect(res.status).toBe(200);
         const body = (await res.json()) as { targets: Array<Record<string, unknown>> };
         expect(body.targets[0]?.notificationEmail).toBe("me@icloud.com");
+        expect(body.targets[0]?.tripWindows).toEqual([]);
     });
 
     it("omits notificationEmail from the target when the profile has none", async () => {
@@ -229,5 +252,6 @@ describe("GET /api/admin/notification-targets", () => {
         const res = await get(`Bearer ${SECRET}`);
         const body = (await res.json()) as { targets: Array<Record<string, unknown>> };
         expect(body.targets[0]?.notificationEmail).toBeUndefined();
+        expect(body.targets[0]?.tripWindows).toEqual([]);
     });
 });
