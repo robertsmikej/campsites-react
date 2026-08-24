@@ -30,6 +30,9 @@ const PAD = 10;
 interface MobileTimelineProps {
     rows: ProcessedCampground[];
     dateRange: { start: Date; end: Date };
+    /** Skip the May-Sep season clamp. Set to true when the caller already
+     *  computed a correct start (e.g. per-group timelines with winter dates). */
+    skipSeasonClamp?: boolean;
     onEditSettings?: (campgroundId: string) => void;
     addHref?: (campgroundId: string) => string;
 }
@@ -59,11 +62,19 @@ function horizonMonths(h: Horizon): Array<{ year: number; month: number }> {
     return out;
 }
 
-export function MobileTimeline({ rows, dateRange, onEditSettings, addHref }: MobileTimelineProps) {
+export function MobileTimeline({
+    rows,
+    dateRange,
+    skipSeasonClamp,
+    onEditSettings,
+    addHref,
+}: MobileTimelineProps) {
     const horizon = useMemo(() => {
-        const view = clampWindowStart({ start: dateRange.start, end: dateRange.end });
+        const view = skipSeasonClamp
+            ? dateRange
+            : clampWindowStart({ start: dateRange.start, end: dateRange.end });
         return buildHorizon(view.start, view.end);
-    }, [dateRange.start, dateRange.end]);
+    }, [dateRange.start, dateRange.end, skipSeasonClamp]);
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [mapOpen, setMapOpen] = useState(false);
     const { sitesById, ensureLoaded } = useCampgroundSites();

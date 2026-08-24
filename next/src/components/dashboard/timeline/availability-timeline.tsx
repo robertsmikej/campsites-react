@@ -17,6 +17,9 @@ interface AvailabilityTimelineProps {
     rows: ProcessedCampground[];
     dateRange: { start: Date; end: Date };
     defaultExpandFirst?: boolean;
+    /** Skip the May-Sep season clamp. Set to true when the caller already
+     *  computed a correct start (e.g. per-group timelines with winter dates). */
+    skipSeasonClamp?: boolean;
     onEditSettings?: (campgroundId: string) => void;
     addHref?: (campgroundId: string) => string;
 }
@@ -25,10 +28,11 @@ export function AvailabilityTimeline({
     rows,
     dateRange,
     defaultExpandFirst,
+    skipSeasonClamp,
     onEditSettings,
     addHref,
 }: AvailabilityTimelineProps) {
-    const view = clampWindowStart(dateRange);
+    const view = skipSeasonClamp ? dateRange : clampWindowStart(dateRange);
     const horizon = buildHorizon(view.start, view.end);
     const { sitesById, ensureLoaded } = useCampgroundSites();
     const blackoutDates = useSiteSettings()?.dates.blackoutDates;

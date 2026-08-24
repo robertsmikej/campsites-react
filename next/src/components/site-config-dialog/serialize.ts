@@ -124,5 +124,6 @@ export function sanitizeCampground(campground: EditableCampground): Campground {
             ? { checkPriority: campground.checkPriority }
             : {}),
         ...(campground.enabled === false ? { enabled: false } : {}),
+        ...(campground.group?.trim() ? { group: campground.group.trim() } : {}),
     };
 }

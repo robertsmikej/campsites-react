@@ -494,6 +494,14 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
                             onDragEnd={handleDragEndWrapper}
                         >
                             <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
+                                {/* Autocomplete suggestions for the Group field */}
+                                <datalist id="campground-groups-datalist">
+                                    {Array.from(
+                                        new Set(campgrounds.map((c) => c.group?.trim()).filter(Boolean)),
+                                    ).map((g) => (
+                                        <option key={g} value={g} />
+                                    ))}
+                                </datalist>
                                 <Accordion
                                     type="multiple"
                                     value={accordionValue}

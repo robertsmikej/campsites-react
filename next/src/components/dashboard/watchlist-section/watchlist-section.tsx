@@ -28,6 +28,12 @@ interface WatchlistSectionProps {
     isMobile: boolean;
     readOnly?: boolean;
     showControls?: boolean;
+    /** Hide the section header (title, edit button, legend) when the parent
+     *  renders its own heading, e.g. grouped watchlists. Default true. */
+    showSectionHeader?: boolean;
+    /** Skip the May-Sep season clamp in the timeline. Needed for groups
+     *  whose date range falls outside the summer season (e.g. winter cabins). */
+    skipSeasonClamp?: boolean;
     onRatingChange?: (
         campgroundId: string,
         siteName: string,
@@ -68,6 +74,8 @@ export function WatchlistSection({
     isMobile,
     readOnly,
     showControls = true,
+    showSectionHeader = true,
+    skipSeasonClamp,
     onEditSettings,
     onEditAll,
     addHref,
@@ -77,76 +85,82 @@ export function WatchlistSection({
     // preserves the user's config order, so the dashboard matches Configure.
     return (
         <section
-            className="relative border-t-[1.5px] border-cw-ink"
+            className={showSectionHeader ? "relative border-t-[1.5px] border-cw-ink" : "relative"}
             // Trim the side padding so the timeline plate gets more width than the
             // rest of the dashboard (every pixel helps on the shared axis).
-            style={{ padding: `24px ${Math.max(10, PAD - 12)}px 60px` }}
+            style={{
+                padding: `${showSectionHeader ? 24 : 8}px ${Math.max(10, PAD - 12)}px ${showSectionHeader ? 60 : 24}px`,
+            }}
         >
-            <div className="pt-7 mb-[18px] flex items-start justify-between gap-4">
-                <div>
-                    <div className="font-mono-field text-[13px] font-medium leading-none tracking-[0.18em] text-cw-clay mb-[10px] uppercase">
-                        {readOnly
-                            ? `The list · ${campgroundsByAreas.length} campground${campgroundsByAreas.length !== 1 ? "s" : ""}`
-                            : `§ II — THE WATCHLIST · ${campgroundsByAreas.length} CAMPGROUND${campgroundsByAreas.length !== 1 ? "S" : ""}`}
+            {showSectionHeader && (
+                <>
+                    <div className="pt-7 mb-[18px] flex items-start justify-between gap-4">
+                        <div>
+                            <div className="font-mono-field text-[13px] font-medium leading-none tracking-[0.18em] text-cw-clay mb-[10px] uppercase">
+                                {readOnly
+                                    ? `The list · ${campgroundsByAreas.length} campground${campgroundsByAreas.length !== 1 ? "s" : ""}`
+                                    : `§ II — THE WATCHLIST · ${campgroundsByAreas.length} CAMPGROUND${campgroundsByAreas.length !== 1 ? "S" : ""}`}
+                            </div>
+                            <h2 className="m-0 tracking-[-0.005em]">
+                                <span
+                                    className="font-poster font-black leading-none uppercase inline"
+                                    style={{ fontSize: isMobile ? 24 : 32 }}
+                                >
+                                    {readOnly ? "ALL" : "EVERY PLACE"}
+                                </span>
+                                <span
+                                    className="font-italic-serif font-medium italic leading-none text-cw-forest tracking-[-0.01em]"
+                                    style={{ fontSize: isMobile ? 24 : 32, marginLeft: 10 }}
+                                >
+                                    {readOnly ? "the picks." : "you're watching."}
+                                </span>
+                            </h2>
+                        </div>
+                        {!readOnly && onEditAll && (
+                            <button
+                                type="button"
+                                onClick={onEditAll}
+                                className="shrink-0 cursor-pointer whitespace-nowrap rounded-full font-mono-field font-semibold uppercase transition-colors hover:bg-[color-mix(in_srgb,var(--cw-forest)_8%,transparent)]"
+                                style={{
+                                    fontSize: 11,
+                                    letterSpacing: "0.08em",
+                                    padding: "8px 14px",
+                                    color: CW.forest,
+                                    border: `1px solid ${CW.rule}`,
+                                }}
+                            >
+                                Edit Campgrounds
+                            </button>
+                        )}
                     </div>
-                    <h2 className="m-0 tracking-[-0.005em]">
-                        <span
-                            className="font-poster font-black leading-none uppercase inline"
-                            style={{ fontSize: isMobile ? 24 : 32 }}
-                        >
-                            {readOnly ? "ALL" : "EVERY PLACE"}
-                        </span>
-                        <span
-                            className="font-italic-serif font-medium italic leading-none text-cw-forest tracking-[-0.01em]"
-                            style={{ fontSize: isMobile ? 24 : 32, marginLeft: 10 }}
-                        >
-                            {readOnly ? "the picks." : "you're watching."}
-                        </span>
-                    </h2>
-                </div>
-                {!readOnly && onEditAll && (
-                    <button
-                        type="button"
-                        onClick={onEditAll}
-                        className="shrink-0 cursor-pointer whitespace-nowrap rounded-full font-mono-field font-semibold uppercase transition-colors hover:bg-[color-mix(in_srgb,var(--cw-forest)_8%,transparent)]"
-                        style={{
-                            fontSize: 11,
-                            letterSpacing: "0.08em",
-                            padding: "8px 14px",
-                            color: CW.forest,
-                            border: `1px solid ${CW.rule}`,
-                        }}
-                    >
-                        Edit Campgrounds
-                    </button>
-                )}
-            </div>
 
-            {/* Timeline legend */}
-            <div className="flex items-center flex-wrap gap-x-5 gap-y-2 mb-4 font-italic-serif italic text-[14px] text-cw-ink-soft">
-                <span className="inline-flex items-center gap-2">
-                    <LegendSwatch kind="open" />
-                    Open
-                </span>
-                <span className="inline-flex items-center gap-2">
-                    <LegendSwatch kind="weekend" />
-                    Weekend (Fri/Sat)
-                </span>
-                <span className="inline-flex items-center gap-2">
-                    <LegendSwatch kind="limited" />
-                    Limited (1–2 sites)
-                </span>
-                <span className="inline-flex items-center gap-2">
-                    <LegendSwatch kind="booked" />
-                    Booked
-                </span>
-                <span className="inline-flex items-center gap-3 font-mono-field not-italic text-[11px] tracking-[0.12em] uppercase text-cw-ink-subtle">
-                    <span>Per-site:</span>
-                    <span style={{ color: CW.clay }}>★ favorite</span>
-                    <span style={{ color: CW.forest }}>◇ worthwhile</span>
-                    <span style={{ color: CW.inkFaint }}>· other</span>
-                </span>
-            </div>
+                    {/* Timeline legend */}
+                    <div className="flex items-center flex-wrap gap-x-5 gap-y-2 mb-4 font-italic-serif italic text-[14px] text-cw-ink-soft">
+                        <span className="inline-flex items-center gap-2">
+                            <LegendSwatch kind="open" />
+                            Open
+                        </span>
+                        <span className="inline-flex items-center gap-2">
+                            <LegendSwatch kind="weekend" />
+                            Weekend (Fri/Sat)
+                        </span>
+                        <span className="inline-flex items-center gap-2">
+                            <LegendSwatch kind="limited" />
+                            Limited (1–2 sites)
+                        </span>
+                        <span className="inline-flex items-center gap-2">
+                            <LegendSwatch kind="booked" />
+                            Booked
+                        </span>
+                        <span className="inline-flex items-center gap-3 font-mono-field not-italic text-[11px] tracking-[0.12em] uppercase text-cw-ink-subtle">
+                            <span>Per-site:</span>
+                            <span style={{ color: CW.clay }}>★ favorite</span>
+                            <span style={{ color: CW.forest }}>◇ worthwhile</span>
+                            <span style={{ color: CW.inkFaint }}>· other</span>
+                        </span>
+                    </div>
+                </>
+            )}
 
             {showControls && (
                 <DatePickerStrip
@@ -171,6 +185,7 @@ export function WatchlistSection({
                 <MobileTimeline
                     rows={campgroundsByAreas}
                     dateRange={dateRange}
+                    skipSeasonClamp={skipSeasonClamp}
                     onEditSettings={onEditSettings}
                     addHref={addHref}
                 />
@@ -178,6 +193,7 @@ export function WatchlistSection({
                 <AvailabilityTimeline
                     rows={campgroundsByAreas}
                     dateRange={dateRange}
+                    skipSeasonClamp={skipSeasonClamp}
                     defaultExpandFirst
                     onEditSettings={onEditSettings}
                     addHref={addHref}

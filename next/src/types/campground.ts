@@ -79,6 +79,10 @@ export interface Campground {
     /** How often the notifier checks this campground. Absent = "normal" (every 5 min). */
     checkPriority?: CheckPriority;
     enabled?: boolean;
+    /** Display group for the dashboard timeline. Campgrounds sharing a group
+     *  render under a single timeline section with its own date axis. Absent
+     *  or empty string places the campground in the default (ungrouped) section. */
+    group?: string;
     validStartDays?: string[];
     stayLengths?: number[];
     /** ISO timestamp of when this campground was added to the list. On the

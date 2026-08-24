@@ -412,6 +412,17 @@ export function CampgroundEditor({
                                 placeholder="e.g. Tahoe National Forest"
                             />
                         </div>
+                        <div>
+                            <FieldLabel>Group</FieldLabel>
+                            <Input
+                                className="mt-1 bg-cw-cream"
+                                value={campground.group ?? ""}
+                                onChange={(e) => onFieldChange("group", e.target.value || undefined)}
+                                placeholder="e.g. Winter Cabins"
+                                list="campground-groups-datalist"
+                            />
+                            <Hint>Campgrounds sharing a group get their own timeline section.</Hint>
+                        </div>
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <div>
                                 <FieldLabel required>Facility ID</FieldLabel>

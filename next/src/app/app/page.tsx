@@ -13,23 +13,20 @@ import { useCampgroundsData } from "@/hooks/use-campgrounds-data";
 import { useAuth } from "@/hooks/use-auth";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useNowTick } from "@/hooks/use-now-tick";
-import { useDashboardPrefs } from "@/hooks/use-dashboard-prefs";
 import { writeStorage } from "@/components/dashboard/helpers";
 import { formatRelativeTime } from "@/lib/relative-time";
-import { getCampgroundOpenCount } from "@/components/campground/get-open-count";
 import { DashboardTopBar } from "@/components/dashboard/dashboard-top-bar";
 import { AddCampgroundDialog } from "@/components/dashboard/add-campground-dialog";
 import { DashboardErrorBoundary } from "@/components/dashboard/error-boundary";
 import { Greeting } from "@/components/dashboard/greeting";
 import { TripsCard } from "@/components/dashboard/trips-card/trips-card";
-import { WatchlistSection } from "@/components/dashboard/watchlist-section";
+import { GroupedWatchlist } from "@/components/dashboard/grouped-watchlist";
 import { EmptyState } from "@/components/dashboard/empty-state";
 import { PushNudge } from "@/components/dashboard/push-nudge";
 import { siteData } from "@/data/site-data";
 import { recentlyAddedFromDefault } from "@/lib/default-additions";
 import type { SiteSettingsValue } from "@/contexts/site-settings";
 import type { Campground } from "@/types/campground";
-// import type { GroupBy } from "@/hooks/use-dashboard-prefs"; // kept for future grouping UI
 
 export default function AppPage() {
     const auth = useAuth();
@@ -76,31 +73,6 @@ export default function AppPage() {
         const qs = params.toString();
         window.history.replaceState(null, "", `${window.location.pathname}${qs ? `?${qs}` : ""}`);
     }, []);
-
-    // Latest season-end across the user's watched campgrounds. The default
-    // date range clamps to this so the strip doesn't show dead ticks past the
-    // last bookable day.
-    const maxWatchlistEnd = useMemo(() => {
-        let latest: Date | null = null;
-        for (const cg of siteConfig["recreation.gov"] ?? []) {
-            const iso = cg.dates?.endDate;
-            if (!iso) continue;
-            const d = new Date(iso + "T00:00:00");
-            if (!latest || d > latest) latest = d;
-        }
-        return latest ?? undefined;
-    }, [siteConfig]);
-
-    // Dashboard preferences (date range) — single persisted blob.
-    const {
-        dateRange,
-        calRange,
-        hasCustomRange,
-        datePickerOpen,
-        setDatePickerOpen,
-        handleCalSelect,
-        clearDateRange,
-    } = useDashboardPrefs({ maxEnd: maxWatchlistEnd });
 
     // Favorites
     const [favorites, setFavorites] = useState<Set<string>>(() => {
@@ -243,18 +215,9 @@ export default function AppPage() {
         toast.success("Cleared your watchlist — add any campground to start again");
     }, [startBlank]);
 
-    // Compute open counts within date range
-    const openCounts = useMemo(() => {
-        const m = new Map<string, number>();
-        for (const c of campgroundsByAreas) {
-            m.set(c.id ?? c.name, getCampgroundOpenCount(c, dateRange.start, dateRange.end));
-        }
-        return m;
-    }, [campgroundsByAreas, dateRange]);
-
     const campgroundsWithOpenings = useMemo(
-        () => campgroundsByAreas.filter((c) => (openCounts.get(c.id ?? c.name) ?? 0) > 0).length,
-        [campgroundsByAreas, openCounts],
+        () => campgroundsByAreas.filter((c) => c.hasAvailability).length,
+        [campgroundsByAreas],
     );
 
     // Drives the "Updated Xm ago" freshness label (re-renders on tick).
@@ -353,17 +316,11 @@ export default function AppPage() {
                                     </DashboardErrorBoundary>
 
                                     <DashboardErrorBoundary section="Watchlist">
-                                        <WatchlistSection
+                                        <GroupedWatchlist
                                             campgroundsByAreas={campgroundsByAreas}
-                                            openCounts={openCounts}
+                                            rawCampgrounds={siteConfig["recreation.gov"] ?? []}
+                                            openCounts={new Map()}
                                             isLoading={isLoading}
-                                            dateRange={dateRange}
-                                            calRange={calRange}
-                                            hasCustomRange={hasCustomRange}
-                                            datePickerOpen={datePickerOpen}
-                                            setDatePickerOpen={setDatePickerOpen}
-                                            handleCalSelect={handleCalSelect}
-                                            onClearDates={clearDateRange}
                                             favorites={favorites}
                                             onToggleFavorite={toggleFavorite}
                                             settings={settings as { views?: { type?: "calendar" | "table" } }}
