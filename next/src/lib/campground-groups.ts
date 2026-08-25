@@ -13,9 +13,9 @@ export interface CampgroundGroup<T extends Campground = Campground> {
 const DEFAULT_GROUP = "";
 
 /** Partition campgrounds by their `group` field. Returns an ordered array:
- *  the default (ungrouped) bucket first, then named groups in the order
- *  their first campground appears. Within each group the original order
- *  is preserved. */
+ *  named groups first (in the order their first campground appears), then
+ *  the default (ungrouped) bucket last. Within each group the original
+ *  order is preserved. */
 export function groupCampgrounds<T extends Campground>(campgrounds: T[]): CampgroundGroup<T>[] {
     const buckets = new Map<string, T[]>();
     const order: string[] = [];
@@ -29,10 +29,10 @@ export function groupCampgrounds<T extends Campground>(campgrounds: T[]): Campgr
         buckets.get(key)!.push(cg);
     }
 
-    // Default group always comes first if it exists.
+    // Named groups first, default (ungrouped) bucket last.
     const sorted = order.sort((a, b) => {
-        if (a === DEFAULT_GROUP) return -1;
-        if (b === DEFAULT_GROUP) return 1;
+        if (a === DEFAULT_GROUP) return 1;
+        if (b === DEFAULT_GROUP) return -1;
         return 0; // named groups stay in insertion order
     });
 

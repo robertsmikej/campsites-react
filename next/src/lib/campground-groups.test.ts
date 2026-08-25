@@ -30,16 +30,17 @@ describe("groupCampgrounds", () => {
         expect(result[1]!.campgrounds.map((c) => c.id)).toEqual(["2"]);
     });
 
-    it("places the default (ungrouped) bucket first", () => {
+    it("places named groups before the default (ungrouped) bucket", () => {
         const result = groupCampgrounds([
             cg({ id: "1", name: "Winter A", group: "Winter" }),
             cg({ id: "2", name: "No Group" }),
             cg({ id: "3", name: "Winter B", group: "Winter" }),
         ]);
         expect(result).toHaveLength(2);
-        expect(result[0]!.name).toBe("");
-        expect(result[0]!.campgrounds.map((c) => c.id)).toEqual(["2"]);
-        expect(result[1]!.name).toBe("Winter");
+        expect(result[0]!.name).toBe("Winter");
+        expect(result[0]!.campgrounds.map((c) => c.id)).toEqual(["1", "3"]);
+        expect(result[1]!.name).toBe("");
+        expect(result[1]!.campgrounds.map((c) => c.id)).toEqual(["2"]);
     });
 
     it("preserves campground order within each group", () => {
@@ -102,12 +103,12 @@ describe("groupCampgrounds", () => {
         expect(groupCampgrounds([])).toEqual([]);
     });
 
-    it("preserves named-group insertion order after the default bucket", () => {
+    it("preserves named-group insertion order before the default bucket", () => {
         const result = groupCampgrounds([
             cg({ id: "1", name: "A", group: "Zebra" }),
             cg({ id: "2", name: "B", group: "Alpha" }),
             cg({ id: "3", name: "C" }),
         ]);
-        expect(result.map((g) => g.name)).toEqual(["", "Zebra", "Alpha"]);
+        expect(result.map((g) => g.name)).toEqual(["Zebra", "Alpha", ""]);
     });
 });
