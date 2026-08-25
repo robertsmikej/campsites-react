@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 
 /**
@@ -12,7 +12,18 @@ import { useSearchParams } from "next/navigation";
  * `/go?url=<encoded>`, this page opens the real URL via `window.open()` (which
  * opens Safari on iOS), then redirects the PWA window back to `/app`.
  */
-export default function GoPage() {
+
+const SHELL_STYLE: React.CSSProperties = {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: "100vh",
+    fontFamily: "system-ui, sans-serif",
+    color: "#5a4a3a",
+    background: "#F4EAD8",
+};
+
+function GoRedirect() {
     const params = useSearchParams();
     const target = params.get("url");
 
@@ -43,21 +54,23 @@ export default function GoPage() {
         window.location.replace("/app");
     }, [target]);
 
-    // Brief flash while the redirect runs. Styled inline so it doesn't need
-    // the full CSS bundle.
     return (
-        <div
-            style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                minHeight: "100vh",
-                fontFamily: "system-ui, sans-serif",
-                color: "#5a4a3a",
-                background: "#F4EAD8",
-            }}
-        >
+        <div style={SHELL_STYLE}>
             <p>Opening recreation.gov…</p>
         </div>
+    );
+}
+
+export default function GoPage() {
+    return (
+        <Suspense
+            fallback={
+                <div style={SHELL_STYLE}>
+                    <p>Opening recreation.gov…</p>
+                </div>
+            }
+        >
+            <GoRedirect />
+        </Suspense>
     );
 }
