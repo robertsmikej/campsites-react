@@ -74,7 +74,7 @@ export function MobileTimeline({
             ? dateRange
             : clampWindowStart({ start: dateRange.start, end: dateRange.end });
         return buildHorizon(view.start, view.end);
-    }, [dateRange.start, dateRange.end, skipSeasonClamp]);
+    }, [dateRange, skipSeasonClamp]);
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [mapOpen, setMapOpen] = useState(false);
     const { sitesById, ensureLoaded } = useCampgroundSites();
