@@ -81,15 +81,17 @@ export default function AppPage() {
     }, []);
 
     // Favorites
-    const [favorites, setFavorites] = useState<Set<string>>(() => {
-        if (typeof window === "undefined") return new Set();
+    const [favorites, setFavorites] = useState<Set<string>>(new Set());
+    // Hydrate favorites from localStorage after mount to avoid a server/client
+    // mismatch (server has no localStorage, so the initial state must match).
+    useEffect(() => {
         try {
             const raw = localStorage.getItem("campwatch:favorites");
-            return new Set(raw ? (JSON.parse(raw) as string[]) : []);
+            if (raw) setFavorites(new Set(JSON.parse(raw) as string[]));
         } catch {
-            return new Set();
+            // ignore
         }
-    });
+    }, []);
     const toggleFavorite = (id: string) => {
         setFavorites((prev) => {
             const next = new Set(prev);
