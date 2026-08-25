@@ -194,7 +194,6 @@ export function WatchlistSection({
                     rows={campgroundsByAreas}
                     dateRange={dateRange}
                     skipSeasonClamp={skipSeasonClamp}
-                    defaultExpandFirst
                     onEditSettings={onEditSettings}
                     addHref={addHref}
                 />
