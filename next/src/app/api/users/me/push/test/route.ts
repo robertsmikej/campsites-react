@@ -25,18 +25,6 @@ async function postHandler(request: Request): Promise<Response> {
         return withCors(jsonResponse({ error: "No push subscriptions for this account" }, 404));
     }
 
-    // Accept an optional url override so we can test the external-URL
-    // pass-through (/go page) from the same endpoint.
-    let customUrl: string | undefined;
-    try {
-        const body = await request.json();
-        if (typeof body === "object" && body && typeof (body as Record<string, unknown>).url === "string") {
-            customUrl = (body as Record<string, unknown>).url as string;
-        }
-    } catch {
-        // No body or not JSON — fine, use the default.
-    }
-
     let sent = 0;
     const dead: string[] = [];
     for (const sub of subs) {
@@ -44,11 +32,9 @@ async function postHandler(request: Request): Promise<Response> {
             const r = await sendWebPush(
                 sub,
                 {
-                    title: customUrl ? "CampWatch test (external link)" : "CampWatch test",
-                    body: customUrl
-                        ? "Tap to test the recreation.gov redirect."
-                        : "Push is working — you'll get alerts here.",
-                    url: customUrl || "/app",
+                    title: "CampWatch test",
+                    body: "Push is working — you'll get alerts here.",
+                    url: "/app",
                     tag: "campwatch-test",
                 },
                 vapid,

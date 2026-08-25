@@ -34,27 +34,16 @@ self.addEventListener("push", (event) => {
 
 self.addEventListener("notificationclick", (event) => {
     event.notification.close();
-    const raw = (event.notification.data && event.notification.data.url) || "/app";
-
-    // External URLs (recreation.gov, etc.) must go through a pass-through
-    // page so the PWA window stays on CampWatch. In iOS standalone mode,
-    // clients.openWindow() with a cross-origin URL navigates the PWA window
-    // itself instead of opening Safari, which blanks the app permanently.
-    const isExternal = raw.startsWith("http") && !raw.includes(self.location.host);
-    const url = isExternal ? "/go?url=" + encodeURIComponent(raw) : raw;
+    // Always open the CampWatch dashboard. External URLs (recreation.gov)
+    // can't be opened safely in iOS standalone mode (blanks the PWA), and
+    // the availability data is already refreshed via notifyOpenClients(),
+    // so the opening shows up in the timeline.
+    const url = "/app";
 
     event.waitUntil(
         self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
             for (const c of clients) {
-                // For external URLs, find any CampWatch client to navigate;
-                // for internal URLs, look for one already on that page.
-                const match = isExternal
-                    ? new URL(c.url).host === self.location.host
-                    : c.url.includes(raw);
-                if (match && "focus" in c) {
-                    if (isExternal) c.navigate(url);
-                    return c.focus();
-                }
+                if (new URL(c.url).host === self.location.host && "focus" in c) return c.focus();
             }
             return self.clients.openWindow(url);
         }),
