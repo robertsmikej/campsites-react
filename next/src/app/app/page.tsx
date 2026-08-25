@@ -59,6 +59,12 @@ export default function AppPage() {
     const [addInitialQuery, setAddInitialQuery] = useState<string | undefined>(undefined);
     const [addingIds, setAddingIds] = useState<Set<string>>(new Set());
 
+    // Reset scroll on mount. The browser (and PWA standalone mode) restores
+    // the previous scroll position, which lands ~80px down on every load.
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, []);
+
     // Carried-through add intent: a user who looked up a campground on the
     // homepage and signed in lands here as `/app?add=<id>`. Open the add dialog
     // pre-filled with that id, then strip the param so a refresh/back doesn't
