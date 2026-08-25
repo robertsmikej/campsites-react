@@ -11,7 +11,7 @@ export const defaultCampgroundConfigurations: SiteConfig = {
             },
             dates: {
                 startDate: "2026-05-01",
-                endDate: "2026-10-01",
+                endDate: "2026-09-30",
             },
             showOrHide: {
                 Favorites: true,
@@ -29,7 +29,7 @@ export const defaultCampgroundConfigurations: SiteConfig = {
             },
             dates: {
                 startDate: "2026-05-01",
-                endDate: "2026-10-01",
+                endDate: "2026-09-30",
             },
             showOrHide: {
                 Favorites: true,
@@ -46,7 +46,7 @@ export const defaultCampgroundConfigurations: SiteConfig = {
             },
             dates: {
                 startDate: "2026-06-01",
-                endDate: "2026-10-01",
+                endDate: "2026-09-30",
             },
             showOrHide: {
                 Favorites: true,
@@ -63,7 +63,7 @@ export const defaultCampgroundConfigurations: SiteConfig = {
             },
             dates: {
                 startDate: "2026-06-01",
-                endDate: "2026-10-01",
+                endDate: "2026-09-30",
             },
             showOrHide: {
                 Favorites: true,
@@ -80,7 +80,7 @@ export const defaultCampgroundConfigurations: SiteConfig = {
             },
             dates: {
                 startDate: "2026-06-01",
-                endDate: "2026-10-01",
+                endDate: "2026-09-30",
             },
             showOrHide: {
                 Favorites: true,
@@ -98,7 +98,7 @@ export const defaultCampgroundConfigurations: SiteConfig = {
             },
             dates: {
                 startDate: "2026-06-01",
-                endDate: "2026-10-01",
+                endDate: "2026-09-30",
             },
             showOrHide: {
                 Favorites: true,
@@ -116,7 +116,7 @@ export const defaultCampgroundConfigurations: SiteConfig = {
             },
             dates: {
                 startDate: "2026-06-01",
-                endDate: "2026-10-01",
+                endDate: "2026-09-30",
             },
             showOrHide: {
                 Favorites: true,
@@ -133,7 +133,7 @@ export const defaultCampgroundConfigurations: SiteConfig = {
             },
             dates: {
                 startDate: "2026-06-01",
-                endDate: "2026-10-01",
+                endDate: "2026-09-30",
             },
             showOrHide: {
                 Favorites: true,
@@ -150,7 +150,7 @@ export const defaultCampgroundConfigurations: SiteConfig = {
             },
             dates: {
                 startDate: "2026-06-01",
-                endDate: "2026-10-01",
+                endDate: "2026-09-30",
             },
             showOrHide: {
                 Favorites: true,
@@ -167,7 +167,7 @@ export const defaultCampgroundConfigurations: SiteConfig = {
             },
             dates: {
                 startDate: "2026-06-01",
-                endDate: "2026-10-01",
+                endDate: "2026-09-30",
             },
             showOrHide: {
                 Favorites: true,
