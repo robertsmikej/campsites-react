@@ -35,7 +35,12 @@ function saveGroupRanges(ranges: StoredRanges): void {
 // Date helpers
 // ---------------------------------------------------------------------------
 
+/** Window length used when a group has no configured dates to derive one from. */
 const DEFAULT_RANGE_DAYS = 120;
+
+/** Upper bound on a configured window, so a wildly wide one (or a typo'd end
+ *  year) can't compress the axis into something unreadable. */
+const MAX_RANGE_DAYS = 365;
 
 function parseLocalIso(iso: string): Date {
     const [y, m, d] = iso.split("-").map(Number);
@@ -43,7 +48,7 @@ function parseLocalIso(iso: string): Date {
 }
 
 /** Compute the default date range for a group from its derived season window. */
-function getGroupDefaultRange(groupDateRange: { start: string; end: string } | null): {
+export function getGroupDefaultRange(groupDateRange: { start: string; end: string } | null): {
     start: Date;
     end: Date;
 } {
@@ -66,10 +71,12 @@ function getGroupDefaultRange(groupDateRange: { start: string; end: string } | n
         return { start: seasonEnd, end: seasonEnd };
     }
 
-    // End: earlier of start + 120 days or season end.
-    const defaultEnd = new Date(start);
-    defaultEnd.setDate(start.getDate() + DEFAULT_RANGE_DAYS - 1);
-    const end = defaultEnd < seasonEnd ? defaultEnd : seasonEnd;
+    // End: the configured season end. Off-season groups (the Redfish cabin runs
+    // Sep–Mar) push well past 120 days, and trimming to a fixed default hid their
+    // openings off the right edge of the timeline. Only MAX_RANGE_DAYS clamps it.
+    const maxEnd = new Date(start);
+    maxEnd.setDate(start.getDate() + MAX_RANGE_DAYS - 1);
+    const end = seasonEnd < maxEnd ? seasonEnd : maxEnd;
 
     return { start, end };
 }
