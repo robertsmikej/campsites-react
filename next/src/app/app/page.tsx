@@ -376,6 +376,7 @@ export default function AppPage() {
                         useMockData={false}
                         onToggleMockData={() => {}}
                         focusedCampgroundId={focusedCampgroundId}
+                        defaultNotifyScope={auth.user?.defaultNotifyScope}
                     />
                 </ProgressBarContext.Provider>
             </SiteSettingsContext.Provider>

@@ -1,4 +1,4 @@
-import type { Campground, CampgroundShowOrHide, GlobalSettings, SiteConfig } from "@/types/campground";
+import type { Campground, CampgroundShowOrHide, GlobalSettings, NotifyScope, SiteConfig } from "@/types/campground";
 
 export interface EditableCampground extends Campground {
     favoritesText: string;
@@ -23,6 +23,10 @@ export interface SiteConfigDialogProps {
     onToggleMockData: (event: React.ChangeEvent<HTMLInputElement>) => void;
     /** When set, the dialog scrolls to and expands this campground on open. */
     focusedCampgroundId?: string | null;
+    /** The user's account-level default notify scope. When a campground has no
+     *  explicit scope, the SegmentedControl ghost-highlights this value (falling
+     *  back to "favorites" when undefined) so the user sees the effective default. */
+    defaultNotifyScope?: NotifyScope;
 }
 
 export const ALL_DAYS = [

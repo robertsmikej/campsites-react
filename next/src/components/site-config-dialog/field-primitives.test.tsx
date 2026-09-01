@@ -18,6 +18,38 @@ describe("SegmentedControl", () => {
         );
     });
 
+    it("ghost-highlights the effective default when value is undefined", () => {
+        render(
+            <SegmentedControl options={OPTIONS} value={undefined} ghostValue="favorites" onChange={() => {}} />,
+        );
+        const favBtn = screen.getByRole("button", { name: "Favorites only" });
+        // Ghost button should NOT be aria-pressed (it's an inherited default, not an explicit choice)
+        expect(favBtn.getAttribute("aria-pressed")).toBe("false");
+        // Ghost button gets the forest accent color (not ink-soft like a plain inactive button)
+        const favStyle = favBtn.getAttribute("style") ?? "";
+        expect(favStyle).toContain("--cw-forest");
+        // Non-ghost inactive buttons use the softer ink color
+        const allBtn = screen.getByRole("button", { name: "Any site opens" });
+        const allStyle = allBtn.getAttribute("style") ?? "";
+        expect(allStyle).toContain("--cw-ink-soft");
+        expect(allStyle).not.toContain("--cw-forest");
+    });
+
+    it("does not ghost-highlight when value is explicitly set", () => {
+        render(
+            <SegmentedControl
+                options={OPTIONS}
+                value="all"
+                ghostValue="favorites"
+                onChange={() => {}}
+            />,
+        );
+        // When an explicit value is set, the ghost option renders as a plain inactive button
+        const favBtn = screen.getByRole("button", { name: "Favorites only" });
+        const favStyle = favBtn.getAttribute("style") ?? "";
+        expect(favStyle).toContain("--cw-ink-soft");
+    });
+
     it("fires onChange with the clicked value", () => {
         const onChange = vi.fn();
         render(<SegmentedControl options={OPTIONS} value="favorites" onChange={onChange} />);

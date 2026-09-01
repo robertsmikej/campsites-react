@@ -58,13 +58,24 @@ interface SegmentedControlProps<T extends string> {
     options: Array<{ value: T; label: string; disabled?: boolean }>;
     value: T | undefined;
     onChange: (value: T) => void;
+    /**
+     * When `value` is undefined, highlight this option in a dimmed "inherited"
+     * style so the user sees the effective default rather than a blank control.
+     */
+    ghostValue?: T;
 }
 
-export function SegmentedControl<T extends string>({ options, value, onChange }: SegmentedControlProps<T>) {
+export function SegmentedControl<T extends string>({
+    options,
+    value,
+    onChange,
+    ghostValue,
+}: SegmentedControlProps<T>) {
     return (
         <div className="flex flex-wrap gap-1.5 sm:inline-flex sm:flex-nowrap sm:gap-0 sm:overflow-hidden sm:rounded-[3px] sm:border-[1.5px] sm:border-[var(--cw-ink)]">
             {options.map((opt, i) => {
                 const active = opt.value === value;
+                const ghost = !active && value === undefined && opt.value === ghostValue;
                 const joinBorder =
                     i < options.length - 1 ? "sm:border-r-[1.5px] sm:border-r-[var(--cw-ink)]" : "";
                 return (
@@ -79,8 +90,12 @@ export function SegmentedControl<T extends string>({ options, value, onChange }:
                             fontSize: 11,
                             letterSpacing: "0.1em",
                             padding: "11px 15px",
-                            background: active ? CW.forest : CW.cream,
-                            color: active ? CW.cream : CW.inkSoft,
+                            background: active
+                                ? CW.forest
+                                : ghost
+                                  ? `color-mix(in srgb, ${CW.forest} 18%, ${CW.cream})`
+                                  : CW.cream,
+                            color: active ? CW.cream : ghost ? CW.forest : CW.inkSoft,
                             opacity: opt.disabled ? 0.45 : undefined,
                             cursor: opt.disabled ? "not-allowed" : undefined,
                         }}

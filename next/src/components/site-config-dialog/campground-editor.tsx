@@ -39,6 +39,8 @@ interface CampgroundEditorProps {
     dragHandleProps?: Record<string, unknown>;
     /** Count of enabled high-tier campgrounds across the whole list (for the 3-max gate). */
     highTierCount: number;
+    /** The user's account-level default notify scope (falls back to "favorites"). */
+    defaultNotifyScope?: NotifyScope;
     onToggleEnabled: (checked: boolean) => void;
     onFieldChange: <K extends keyof EditableCampground>(field: K, value: EditableCampground[K]) => void;
     onDateChange: (key: "startDate" | "endDate", value: string) => void;
@@ -257,6 +259,7 @@ export function CampgroundEditor({
     globalValidStartDays,
     dragHandleProps,
     highTierCount,
+    defaultNotifyScope,
     onToggleEnabled,
     onFieldChange,
     onDateChange,
@@ -592,6 +595,7 @@ export function CampgroundEditor({
                             { value: "all", label: "Any site opens" },
                         ]}
                         value={campground.notifyScope ?? (campground.notifyAll ? "all" : undefined)}
+                        ghostValue={defaultNotifyScope ?? "favorites"}
                         onChange={(value) => {
                             onFieldChange("notifyScope", value);
                             // Clear legacy notifyAll once the new field is set so the
@@ -599,7 +603,11 @@ export function CampgroundEditor({
                             if (campground.notifyAll) onFieldChange("notifyAll", false);
                         }}
                     />
-                    <Hint>Favorites means only the sites you&apos;ve starred above.</Hint>
+                    <Hint>
+                        {campground.notifyScope || campground.notifyAll
+                            ? "Favorites means only the sites you've starred above."
+                            : `Using your account default (${defaultNotifyScope ?? "favorites"}). Tap to override.`}
+                    </Hint>
                 </div>
 
                 {/* Adjacent-site alerts */}

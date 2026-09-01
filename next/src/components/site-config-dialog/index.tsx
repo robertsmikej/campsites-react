@@ -36,7 +36,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion } from "@/components/ui/accordion";
 import { Separator } from "@/components/ui/separator";
-import type { BlackoutRange, Campground, SiteConfig } from "@/types/campground";
+import type { BlackoutRange, Campground, NotifyScope, SiteConfig } from "@/types/campground";
 import { useCampgroundSites } from "@/hooks/use-campground-sites";
 
 import {
@@ -91,6 +91,7 @@ function SortableCampgroundEditor(props: {
     globalStayRange: [number, number];
     globalValidStartDays: string[];
     highTierCount: number;
+    defaultNotifyScope?: NotifyScope;
     onToggleEnabled: (checked: boolean) => void;
     onFieldChange: <K extends keyof EditableCampground>(field: K, value: EditableCampground[K]) => void;
     onDateChange: (key: "startDate" | "endDate", value: string) => void;
@@ -128,6 +129,7 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
         useMockData,
         onToggleMockData,
         focusedCampgroundId,
+        defaultNotifyScope,
     } = props;
 
     const [campgrounds, setCampgrounds] = useState<EditableCampground[]>([createEmptyCampground()]);
@@ -523,6 +525,7 @@ export function SiteConfigDialog(props: SiteConfigDialogProps) {
                                             globalStayRange={stayRange}
                                             globalValidStartDays={validStartDays}
                                             highTierCount={highTierCount}
+                                            defaultNotifyScope={defaultNotifyScope}
                                             onToggleEnabled={(checked) => handleToggleEnabled(index, checked)}
                                             onFieldChange={(field, value) =>
                                                 handleFieldChange(index, field, value)
