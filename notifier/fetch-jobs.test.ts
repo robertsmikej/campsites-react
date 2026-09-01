@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import {
+    bookingHorizonMonth,
     buildFastLanePlan,
     buildSweepPlan,
     buildNotifyPlan,
@@ -208,5 +209,117 @@ describe("trip-window months", () => {
     it("omitting todayIso keeps legacy behavior", () => {
         const t = target(cg(), [{ id: "w1", from: "2026-09-04", to: "2026-09-07" }]);
         expect(buildNotifyPlan([t], NOW_MONTH).map((p) => p.month)).toEqual(["2026-07"]);
+    });
+});
+
+describe("bookingHorizonMonth", () => {
+    it("returns 6 months + 1 day ahead", () => {
+        // Sept 1 + 6 months = Mar 1 + 1 day = Mar 2 → "2027-03"
+        expect(bookingHorizonMonth("2026-09-01")).toBe("2027-03");
+    });
+
+    it("buffer day pushes into the next month when needed", () => {
+        // Aug 31 + 6 months → Feb 28 (non-leap) would overflow to Mar 3 in JS,
+        // + 1 day = Mar 4. Either way the month is "2027-03", which is the
+        // correct conservative result.
+        const result = bookingHorizonMonth("2026-08-31");
+        expect(result).toBe("2027-03");
+    });
+
+    it("mid-month date stays in the expected month", () => {
+        // July 15 + 6 months = Jan 15 + 1 day = Jan 16 → "2027-01"
+        expect(bookingHorizonMonth("2026-07-15")).toBe("2027-01");
+    });
+
+    it("year boundary works correctly", () => {
+        // Dec 1 + 6 months = Jun 1 + 1 day = Jun 2 → "2027-06"
+        expect(bookingHorizonMonth("2026-12-01")).toBe("2027-06");
+    });
+});
+
+describe("booking horizon filtering", () => {
+    // A campground spanning well past the 6-month booking window.
+    const farOut = (id: string, checkPriority?: "high" | "normal" | "low") => ({
+        id,
+        name: id,
+        enabled: true,
+        ...(checkPriority ? { checkPriority } : {}),
+        dates: { startDate: "2026-07-01", endDate: "2027-06-30" },
+        sites: { favorites: [], worthwhile: [] },
+    });
+    const farTarget = (cgs: ReturnType<typeof farOut>[]) => ({
+        campgrounds: { "recreation.gov": cgs },
+    });
+
+    it("clips watch-date months to the booking horizon", () => {
+        // Today is 2026-09-01, horizon is 2027-03. Months from Jul 2026
+        // through Jun 2027 are in the date range, but only Sep 2026 through
+        // Mar 2027 should survive (past months dropped, beyond-horizon dropped).
+        const t = [farTarget([farOut("A")])];
+        const months = buildNotifyPlan(t, "2026-09", "2026-09-01")
+            .map((p) => p.month)
+            .sort();
+        expect(months).toEqual([
+            "2026-09",
+            "2026-10",
+            "2026-11",
+            "2026-12",
+            "2027-01",
+            "2027-02",
+            "2027-03",
+        ]);
+    });
+
+    it("clips trip-window months to the booking horizon", () => {
+        // A trip window 8 months out should be clipped.
+        const cg = farOut("A");
+        cg.dates = { startDate: "2026-09-01", endDate: "2026-09-30" };
+        const t = {
+            campgrounds: { "recreation.gov": [cg] },
+            tripWindows: [
+                { id: "w1", from: "2027-05-01", to: "2027-05-04", campgroundIds: ["A"] },
+            ],
+        } as never;
+        const months = buildNotifyPlan([t], "2026-09", "2026-09-01")
+            .map((p) => p.month)
+            .sort();
+        // 2027-05 is past the horizon (2027-03), so only the watch month survives.
+        expect(months).toEqual(["2026-09"]);
+    });
+
+    it("without todayIso, no horizon is applied (backward compat)", () => {
+        const t = [farTarget([farOut("A")])];
+        const months = buildNotifyPlan(t, "2026-09")
+            .map((p) => p.month)
+            .sort();
+        // All months from Sep 2026 through Jun 2027 (no horizon clipping).
+        expect(months).toEqual([
+            "2026-09",
+            "2026-10",
+            "2026-11",
+            "2026-12",
+            "2027-01",
+            "2027-02",
+            "2027-03",
+            "2027-04",
+            "2027-05",
+            "2027-06",
+        ]);
+    });
+
+    it("horizon applies consistently across fast-lane and sweep plans", () => {
+        const t = [farTarget([farOut("H", "high"), farOut("N", "normal")])];
+        const fastMonths = buildFastLanePlan(t, "2026-09", "2026-09-01")
+            .map((p) => p.month)
+            .sort();
+        const sweepMonths = buildSweepPlan(t, 5, "2026-09", "2026-09-01")
+            .map((p) => p.month)
+            .sort();
+        const expected = [
+            "2026-09", "2026-10", "2026-11", "2026-12",
+            "2027-01", "2027-02", "2027-03",
+        ];
+        expect(fastMonths).toEqual(expected);
+        expect(sweepMonths).toEqual(expected);
     });
 });

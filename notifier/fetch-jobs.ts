@@ -12,6 +12,30 @@ export interface FetchPlanItem {
     month: string;
 }
 
+/** Recreation.gov opens reservations 6 months out on a rolling daily basis. */
+export const BOOKING_HORIZON_MONTHS = 6;
+
+/** Start checking 1 day before the horizon opens so the pipeline is warm when
+ *  sites go live, and to catch early releases. */
+export const BOOKING_HORIZON_BUFFER_DAYS = 1;
+
+/**
+ * Returns the furthest YYYY-MM worth fetching. Recreation.gov won't have
+ * availability data beyond ~6 months from today, so anything past this is
+ * wasted API calls. The 1-day buffer means we start polling a month the day
+ * before its first date enters the booking window.
+ *
+ * End-of-month arithmetic can overflow (e.g. Aug 31 + 6 months → Mar 3) which
+ * is intentionally conservative: we'd rather include one extra month than miss
+ * a bookable one.
+ */
+export function bookingHorizonMonth(todayIso: string): string {
+    const d = new Date(todayIso + "T00:00:00Z");
+    d.setUTCMonth(d.getUTCMonth() + BOOKING_HORIZON_MONTHS);
+    d.setUTCDate(d.getUTCDate() + BOOKING_HORIZON_BUFFER_DAYS);
+    return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
 export interface PlannableTarget {
     campgrounds: { "recreation.gov"?: Campground[] };
     tripWindows?: TripWindow[];
@@ -36,11 +60,11 @@ function tierOf(c: Campground): CheckPriority {
 
 // Months a set of windows needs fetched. `to` is checkout, so the last night
 // (and last month) is the day before.
-function tripMonths(windows: TripWindow[], nowMonth: string): string[] {
+function tripMonths(windows: TripWindow[], nowMonth: string, horizon?: string): string[] {
     const months = new Set<string>();
     for (const w of windows) {
         for (const m of monthsBetween(w.from, addDaysIso(w.to, -1))) {
-            if (m >= nowMonth) months.add(m);
+            if (m >= nowMonth && (!horizon || m <= horizon)) months.add(m);
         }
     }
     return [...months];
@@ -56,6 +80,11 @@ function buildPlan(
     minute?: number,
     todayIso?: string,
 ): FetchPlanItem[] {
+    // Recreation.gov has no availability beyond ~6 months out. Skip months
+    // past the booking horizon to avoid wasting API calls on empty data.
+    // When todayIso is absent (legacy/test callers) the horizon is not applied.
+    const horizon = todayIso ? bookingHorizonMonth(todayIso) : undefined;
+
     const ranges = new Map<string, Set<string>>();
     for (const target of targets) {
         for (const c of target.campgrounds["recreation.gov"] ?? []) {
@@ -70,13 +99,15 @@ function buildPlan(
                 const start = c.dates?.startDate;
                 const end = c.dates?.endDate;
                 if (start && end) {
-                    for (const m of monthsBetween(start, end)) if (m >= nowMonth) months.add(m);
+                    for (const m of monthsBetween(start, end)) {
+                        if (m >= nowMonth && (!horizon || m <= horizon)) months.add(m);
+                    }
                 }
                 // Trip-window months ride along at the campground's OWN tier
                 // cadence. A window never raises the polling rate; that keeps
                 // the rec.gov footprint bounded by the user's settings.
                 const windows = todayIso ? activeWindowsFor(target.tripWindows, c.id, todayIso) : [];
-                for (const m of tripMonths(windows, nowMonth)) months.add(m);
+                for (const m of tripMonths(windows, nowMonth, horizon)) months.add(m);
             }
             if (months.size === 0) continue;
             if (!ranges.has(c.id)) ranges.set(c.id, new Set());
