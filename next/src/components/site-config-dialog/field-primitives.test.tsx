@@ -20,7 +20,12 @@ describe("SegmentedControl", () => {
 
     it("ghost-highlights the effective default when value is undefined", () => {
         render(
-            <SegmentedControl options={OPTIONS} value={undefined} ghostValue="favorites" onChange={() => {}} />,
+            <SegmentedControl
+                options={OPTIONS}
+                value={undefined}
+                ghostValue="favorites"
+                onChange={() => {}}
+            />,
         );
         const favBtn = screen.getByRole("button", { name: "Favorites only" });
         // Ghost button should NOT be aria-pressed (it's an inherited default, not an explicit choice)
@@ -36,14 +41,7 @@ describe("SegmentedControl", () => {
     });
 
     it("does not ghost-highlight when value is explicitly set", () => {
-        render(
-            <SegmentedControl
-                options={OPTIONS}
-                value="all"
-                ghostValue="favorites"
-                onChange={() => {}}
-            />,
-        );
+        render(<SegmentedControl options={OPTIONS} value="all" ghostValue="favorites" onChange={() => {}} />);
         // When an explicit value is set, the ghost option renders as a plain inactive button
         const favBtn = screen.getByRole("button", { name: "Favorites only" });
         const favStyle = favBtn.getAttribute("style") ?? "";

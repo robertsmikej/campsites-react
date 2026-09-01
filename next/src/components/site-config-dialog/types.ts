@@ -1,4 +1,10 @@
-import type { Campground, CampgroundShowOrHide, GlobalSettings, NotifyScope, SiteConfig } from "@/types/campground";
+import type {
+    Campground,
+    CampgroundShowOrHide,
+    GlobalSettings,
+    NotifyScope,
+    SiteConfig,
+} from "@/types/campground";
 
 export interface EditableCampground extends Campground {
     favoritesText: string;
