@@ -253,6 +253,7 @@ const buildOpeningCard = (match: MatchResult): string => {
     const siteName = match.siteName.replace(/^Site\s+/i, "");
     const dateRange = `${formatDate(match.match.from)} &nbsp;&rarr;&nbsp; ${formatDate(match.match.to)}`;
     const nightsText = `${match.match.nights} ${match.match.nights === 1 ? "night" : "nights"}`;
+    const areaText = match.campgroundArea || "";
     const spottedLine = match.firstSeenAt ? formatSpottedLine(match.firstSeenAt, Date.now()) : "";
     const spottedHtml = spottedLine
         ? `<div style="font-family:${F.mono};font-size:12px;color:${C.inkSubtle};letter-spacing:0.08em;margin-top:6px;">${spottedLine}</div>`
@@ -290,7 +291,13 @@ const buildOpeningCard = (match: MatchResult): string => {
                                                     </tbody>
                                                 </table>
                                                 <!-- Site number -->
-                                                <div style="font-family:${F.ital};font-style:italic;font-size:22px;line-height:26px;color:${C.ink};">Site ${siteName}</div>
+                                                <div style="font-family:${F.ital};font-style:italic;font-size:22px;line-height:26px;color:${C.ink};">Site ${siteName}</div>${
+                                                    areaText
+                                                        ? `
+                                                <!-- Area -->
+                                                <div style="font-family:${F.body};font-size:13px;line-height:18px;color:${C.inkSoft};margin-top:2px;">${areaText}</div>`
+                                                        : ""
+                                                }
                                                 <!-- Dates -->
                                                 <div style="font-family:${F.body};font-weight:bold;font-size:16px;line-height:22px;color:${C.ink};margin-top:6px;">${dateRange}</div>
                                                 <!-- Nights -->

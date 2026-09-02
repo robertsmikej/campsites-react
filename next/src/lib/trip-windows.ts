@@ -6,6 +6,7 @@
 // through UTC so DST can't shift a calendar day.
 
 import { IGNORE_CAMPSITE_TYPES } from "./recgov/types";
+import { displayName } from "./display-name";
 import type { StayMatch, TripWindow, Campground } from "@/types/campground";
 
 export const TRIP_MAX_WINDOWS = 10;
@@ -162,7 +163,7 @@ export function tripHitsForCampground(
             hits.push({
                 windowId: w.id,
                 campgroundId: campground.id,
-                campgroundName: campground.name,
+                campgroundName: displayName(campground.name, campground.type),
                 siteId: site.siteId,
                 siteName: site.siteName,
                 tier,

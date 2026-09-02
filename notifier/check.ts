@@ -31,6 +31,7 @@ import type { AvailabilitySnapshot, SnapshotCampground } from "../next/src/lib/r
 import type { KvAdapter } from "../next/src/lib/recgov/cache";
 import { tripHitsForCampground, serverTodayIso, type TripSiteHit } from "../next/src/lib/trip-windows";
 import { TRIP_COOLDOWN_MS } from "../next/src/lib/notifier-state-merge";
+import { displayName } from "../next/src/lib/display-name";
 import type { TripWindow } from "../next/src/types/campground";
 
 export interface RunConfig {
@@ -354,7 +355,7 @@ async function computeMatchesForUser(
 
         syntheticResults.push({
             campgroundId: c.id,
-            campgroundName: c.name,
+            campgroundName: displayName(c.name, c.type),
             campgroundArea: c.area ?? "",
             campgroundDescription: c.description ?? "",
             sites: siteAvailability,
@@ -399,7 +400,7 @@ async function computeMatchesForUser(
             });
             if (cgGroups.length > 0) {
                 groups.push(...cgGroups);
-                campgroundNamesById[c.id] = c.name;
+                campgroundNamesById[c.id] = displayName(c.name, c.type);
             }
         }
     }
