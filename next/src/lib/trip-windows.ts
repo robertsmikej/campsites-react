@@ -140,7 +140,7 @@ export function openNightsBySiteFromRaw(
 /** All trip hits at one campground for the user's windows. */
 export function tripHitsForCampground(
     rawApiResults: unknown[] | null | undefined,
-    campground: Pick<Campground, "id" | "name" | "sites">,
+    campground: Pick<Campground, "id" | "name" | "type" | "sites">,
     windows: TripWindow[] | undefined,
     todayIso: string,
 ): TripSiteHit[] {
