@@ -113,10 +113,17 @@ export function useCampgroundLookup({
     const isLoading =
         isFetching || (touched && value.trim() && memoryResult === null && !fetchedResult && auth.isLoading);
 
+    // Each lookup takes a ticket; a response only lands if its ticket is still the
+    // newest. Otherwise "Redfish" Enter, "Stanley" Enter could show Redfish results
+    // under the Stanley query when the slower first response arrived last.
+    const lookupTicketRef = useRef(0);
+
     const doLookup = useCallback(
         async (raw?: string) => {
             const input = (raw ?? value).trim();
             if (!input) return;
+            const ticket = ++lookupTicketRef.current;
+            const isCurrent = (): boolean => lookupTicketRef.current === ticket;
             const id = parseInput(input);
             if (!id) {
                 if (looksLikeUrlAttempt(input)) {
@@ -130,16 +137,18 @@ export function useCampgroundLookup({
                 setIsSearching(true);
                 try {
                     const resp = await fetch(`/api/campgrounds/search?q=${encodeURIComponent(input)}`);
+                    if (!isCurrent()) return;
                     if (resp.ok) {
                         const data = (await resp.json()) as SearchResult[];
+                        if (!isCurrent()) return;
                         setSearchResults(Array.isArray(data) ? data : []);
                     } else {
                         setSearchResults([]);
                     }
                 } catch {
-                    setSearchResults([]);
+                    if (isCurrent()) setSearchResults([]);
                 } finally {
-                    setIsSearching(false);
+                    if (isCurrent()) setIsSearching(false);
                 }
                 return;
             }
@@ -154,11 +163,13 @@ export function useCampgroundLookup({
             setAddedSuccess(false);
             try {
                 const resp = await fetch(`/api/campgrounds/${id}/details`);
+                if (!isCurrent()) return;
                 if (!resp.ok) {
                     setFetchedResult({ state: "not-found", parsedId: id });
                     return;
                 }
                 const data = (await resp.json()) as { name: string | null; previewImageUrl?: string | null };
+                if (!isCurrent()) return;
                 if (!data.name) {
                     setFetchedResult({ state: "not-found", parsedId: id });
                 } else {
@@ -169,9 +180,9 @@ export function useCampgroundLookup({
                     });
                 }
             } catch {
-                setFetchedResult({ state: "not-found", parsedId: id });
+                if (isCurrent()) setFetchedResult({ state: "not-found", parsedId: id });
             } finally {
-                setIsFetching(false);
+                if (isCurrent()) setIsFetching(false);
             }
         },
         [value, resolve],

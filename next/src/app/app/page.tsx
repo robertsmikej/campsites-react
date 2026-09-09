@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState, useCallback } from "react";
+import dynamic from "next/dynamic";
 import { toast } from "sonner";
 import { Sparkles, X } from "lucide-react";
-import { SiteConfigDialog } from "@/components/site-config-dialog";
 import SiteSettingsContext from "@/contexts/site-settings";
 import ProgressBarContext from "@/contexts/progress-bar";
 import { Button } from "@/components/ui/button";
@@ -28,8 +28,25 @@ import { recentlyAddedFromDefault } from "@/lib/default-additions";
 import type { SiteSettingsValue } from "@/contexts/site-settings";
 import type { Campground } from "@/types/campground";
 
+// The configure dialog pulls in drag-and-drop and the command palette (~145 KB)
+// and is closed on every load, so it stays out of the first bundle.
+const SiteConfigDialog = dynamic(
+    () => import("@/components/site-config-dialog").then((m) => m.SiteConfigDialog),
+    { ssr: false },
+);
+
 export default function AppPage() {
     const auth = useAuth();
+
+    // The middleware only checks that a session cookie exists. An expired one
+    // reaches this page and every user-scoped GET answers as if there were no
+    // account, which used to render the "welcome aboard" onboarding to an
+    // existing user. Mirror the account page and go sign in instead.
+    useEffect(() => {
+        if (!auth.isLoading && !auth.user) {
+            window.location.replace("/auth/google/start?returnTo=/app");
+        }
+    }, [auth.isLoading, auth.user]);
     const userCampgrounds = useUserCampgrounds();
     const {
         tripWindows,
@@ -116,9 +133,12 @@ export default function AppPage() {
         [globalSettings, tripWindows, useMockData],
     );
 
+    // Availability is fetched immediately rather than after the watchlist GET:
+    // the server derives the snapshot from the session, and the watchlist only
+    // feeds the rating overlay, so waiting on it was a pure two-hop waterfall.
     const { campgroundsByAreas, isFetching, progressBarData, loadError, updatedAt, refresh } =
         useCampgroundsData({
-            enabled: !isHydrating,
+            enabled: true,
             siteConfig,
         });
 
@@ -185,12 +205,14 @@ export default function AppPage() {
         [userCampgrounds.defaultCampgrounds, siteConfig, auth.user?.defaultSeenAt],
     );
 
+    // Success toasts only fire when the save actually landed; the sync-status
+    // effect above already reports failures.
     const handleAddRecent = useCallback(
         async (c: Campground) => {
             setAddingIds((prev) => new Set(prev).add(c.id));
             try {
-                await userCampgrounds.addCampground(c);
-                toast.success(`Added ${c.name}`);
+                const added = await userCampgrounds.addCampground(c);
+                if (added) toast.success(`Added ${c.name}`);
             } finally {
                 setAddingIds((prev) => {
                     const next = new Set(prev);
@@ -209,8 +231,9 @@ export default function AppPage() {
     }, [userCampgrounds, auth]);
 
     const handleAddDefaults = useCallback(async () => {
-        const { added } = await userCampgrounds.addAllFromDefault();
+        const { added, ok } = await userCampgrounds.addAllFromDefault();
         await auth.refresh();
+        if (!ok) return;
         toast.success(
             added > 0
                 ? `Added ${added} campground${added === 1 ? "" : "s"}`
@@ -219,8 +242,8 @@ export default function AppPage() {
     }, [userCampgrounds, auth]);
 
     const handleStartFresh = useCallback(async () => {
-        await startBlank();
-        toast.success("Cleared your watchlist — add any campground to start again");
+        const cleared = await startBlank();
+        if (cleared) toast.success("Cleared your watchlist — add any campground to start again");
     }, [startBlank]);
 
     const campgroundsWithOpenings = useMemo(
@@ -301,7 +324,11 @@ export default function AppPage() {
 
                             {isEmpty ? (
                                 <DashboardErrorBoundary section="Empty state">
-                                    <EmptyState onClone={cloneDefault} />
+                                    <EmptyState
+                                        onClone={async () => {
+                                            await cloneDefault();
+                                        }}
+                                    />
                                 </DashboardErrorBoundary>
                             ) : (
                                 <>

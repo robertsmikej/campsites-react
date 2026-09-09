@@ -74,7 +74,10 @@ export function PushToggle() {
                     </Button>
                 </div>
             ) : (
-                <Button onClick={() => void subscribe()} disabled={status === "subscribing"}>
+                <Button
+                    onClick={() => void subscribe()}
+                    disabled={status === "subscribing" || status === "checking"}
+                >
                     {status === "subscribing" ? "Enabling…" : "Enable push"}
                 </Button>
             )}

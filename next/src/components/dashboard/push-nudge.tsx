@@ -1,32 +1,48 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Bell, X } from "lucide-react";
 import { usePushSubscription } from "@/hooks/use-push-subscription";
 import { Button } from "@/components/ui/button";
 
 const DISMISS_KEY = "campwatch:push-nudge-dismissed";
 
+function readDismissed(): boolean {
+    try {
+        return localStorage.getItem(DISMISS_KEY) === "1";
+    } catch {
+        return false;
+    }
+}
+
+function isIosBrowser(): boolean {
+    return /iphone|ipad|ipod/i.test(navigator.userAgent);
+}
+
 // One-time dashboard banner prompting push, since the toggle is otherwise buried
 // in Account. Only shows when enabling push is actually possible here (so it
 // never dead-ends), and self-hides once enabled, denied, or dismissed.
+//
+// Nothing renders until after mount: the decision depends on localStorage, the
+// user agent, and the live push subscription, none of which the server can see.
+// Rendering the banner on the client's first pass was a hydration mismatch, and
+// showing it before the subscription check finished flashed it at every
+// already-subscribed user.
 export function PushNudge() {
     const { isSupported, isInstalledPWA, status, subscribe } = usePushSubscription();
-    const [dismissed, setDismissed] = useState(() => {
-        if (typeof window === "undefined") return true;
-        try {
-            return localStorage.getItem(DISMISS_KEY) === "1";
-        } catch {
-            return false;
-        }
-    });
+    const [environment, setEnvironment] = useState<{ dismissed: boolean; isIOS: boolean } | null>(null);
 
-    const isIOS = typeof navigator !== "undefined" && /iphone|ipad|ipod/i.test(navigator.userAgent);
-    const canEnableHere = isSupported && (!isIOS || isInstalledPWA);
-    if (dismissed || !canEnableHere || status === "subscribed" || status === "denied") return null;
+    useEffect(() => {
+        setEnvironment({ dismissed: readDismissed(), isIOS: isIosBrowser() });
+    }, []);
+
+    if (!environment || environment.dismissed) return null;
+    if (status === "checking" || status === "subscribed" || status === "denied") return null;
+    const canEnableHere = isSupported && (!environment.isIOS || isInstalledPWA);
+    if (!canEnableHere) return null;
 
     const dismiss = () => {
-        setDismissed(true);
+        setEnvironment({ ...environment, dismissed: true });
         try {
             localStorage.setItem(DISMISS_KEY, "1");
         } catch {

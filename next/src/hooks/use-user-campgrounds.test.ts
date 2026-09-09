@@ -331,3 +331,81 @@ describe("default-additions actions", () => {
         expect(state.calls.some((c) => c.url.includes(SEEN_ENDPOINT) && c.method === "POST")).toBe(true);
     });
 });
+
+describe("useUserCampgrounds instance sync and failure handling", () => {
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
+    const campA = { id: "1", name: "A", enabled: true, sites: { favorites: [], worthwhile: [] } };
+    const campB = { id: "2", name: "B", enabled: true, sites: { favorites: [], worthwhile: [] } };
+
+    function jsonResponse(body: unknown, status = 200) {
+        return { ok: status < 400, status, json: () => Promise.resolve(body) };
+    }
+
+    it("a save in one instance updates every other mounted instance", async () => {
+        const stored = makeFakeRecord({
+            campgrounds: { "recreation.gov": [campA] },
+            updatedAt: "2026-01-01",
+        });
+        const afterSave = makeFakeRecord({
+            campgrounds: { "recreation.gov": [campA, campB] },
+            updatedAt: "2026-01-02",
+        });
+        globalThis.fetch = vi.fn(async (url: string, init?: RequestInit) => {
+            if (url === ENDPOINT && init?.method === "PUT") return jsonResponse(afterSave);
+            if (url === ENDPOINT) return jsonResponse(stored);
+            return jsonResponse({});
+        }) as unknown as typeof fetch;
+
+        const page = renderHook(() => useUserCampgrounds());
+        const dialog = renderHook(() => useUserCampgrounds());
+        await waitFor(() => expect(page.result.current.isHydrating).toBe(false));
+        await waitFor(() => expect(dialog.result.current.isHydrating).toBe(false));
+
+        let added = false;
+        await act(async () => {
+            added = await dialog.result.current.addCampground(campB);
+        });
+
+        expect(added).toBe(true);
+        // The page never re-fetched; it adopted the record the dialog's save returned.
+        expect(page.result.current.siteConfig["recreation.gov"]?.map((c) => c.id)).toEqual(["1", "2"]);
+        expect(page.result.current.updatedAt).toBe("2026-01-02");
+    });
+
+    it("keeps the last-good record and flags loadError when the GET fails", async () => {
+        globalThis.fetch = vi.fn(async () => jsonResponse({ error: "nope" }, 500)) as unknown as typeof fetch;
+
+        const { result } = renderHook(() => useUserCampgrounds());
+        await waitFor(() => expect(result.current.isHydrating).toBe(false));
+
+        expect(result.current.loadError).toBe(true);
+        // An empty list under a failed load is NOT a new user.
+        expect(result.current.isEmpty).toBe(false);
+    });
+
+    it("save resolves false and does not broadcast when the server rejects", async () => {
+        const listener = vi.fn();
+        window.addEventListener("campwatch:watchlist-changed", listener);
+        globalThis.fetch = vi.fn(async (url: string, init?: RequestInit) => {
+            if (url === ENDPOINT && init?.method === "PUT") return jsonResponse({ error: "bad" }, 400);
+            if (url === ENDPOINT) return jsonResponse(makeFakeRecord({ updatedAt: "2026-01-01" }));
+            return jsonResponse({});
+        }) as unknown as typeof fetch;
+
+        const { result } = renderHook(() => useUserCampgrounds());
+        await waitFor(() => expect(result.current.isHydrating).toBe(false));
+
+        let saved = true;
+        await act(async () => {
+            saved = await result.current.save({ "recreation.gov": [campA] }, result.current.globalSettings);
+        });
+
+        expect(saved).toBe(false);
+        expect(result.current.syncStatus).toBe("error");
+        expect(listener).not.toHaveBeenCalled();
+        window.removeEventListener("campwatch:watchlist-changed", listener);
+    });
+});

@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-type Status = "idle" | "subscribing" | "subscribed" | "denied" | "error";
+// "checking" is the initial state until the existing registration has been
+// inspected, so UI can avoid flashing "Enable push" at a subscribed user.
+type Status = "checking" | "idle" | "subscribing" | "subscribed" | "denied" | "error";
 
 function urlBase64ToUint8Array(base64: string): Uint8Array<ArrayBuffer> {
     const padding = "=".repeat((4 - (base64.length % 4)) % 4);
@@ -14,25 +16,56 @@ function urlBase64ToUint8Array(base64: string): Uint8Array<ArrayBuffer> {
     return out;
 }
 
-export function usePushSubscription() {
-    const [status, setStatus] = useState<Status>("idle");
-    const [isInstalledPWA, setIsInstalledPWA] = useState(false);
+function pushIsSupported(): boolean {
+    return typeof window !== "undefined" && "serviceWorker" in navigator && "PushManager" in window;
+}
 
-    const isSupported =
-        typeof window !== "undefined" && "serviceWorker" in navigator && "PushManager" in window;
+function isStandaloneDisplay(): boolean {
+    const mediaStandalone = window.matchMedia?.("(display-mode: standalone)").matches ?? false;
+    const iosStandalone = (navigator as unknown as { standalone?: boolean }).standalone === true;
+    return mediaStandalone || iosStandalone;
+}
+
+// Uses getRegistration(), not serviceWorker.ready: `ready` never resolves when
+// no worker is registered yet, which is exactly the fresh-browser case.
+async function detectExistingStatus(): Promise<Status> {
+    if (typeof Notification !== "undefined" && Notification.permission === "denied") {
+        return "denied";
+    }
+    const registration = await navigator.serviceWorker.getRegistration();
+    if (!registration) {
+        return "idle";
+    }
+    const subscription = await registration.pushManager.getSubscription();
+    return subscription ? "subscribed" : "idle";
+}
+
+export function usePushSubscription() {
+    const [status, setStatus] = useState<Status>("checking");
+    const [isInstalledPWA, setIsInstalledPWA] = useState(false);
+    const [isSupported, setIsSupported] = useState(false);
 
     useEffect(() => {
+        const supported = pushIsSupported();
+        setIsSupported(supported);
         // iOS only allows push from an installed (standalone) PWA.
-        const standalone =
-            window.matchMedia?.("(display-mode: standalone)").matches ||
-            (navigator as unknown as { standalone?: boolean }).standalone === true;
-        setIsInstalledPWA(Boolean(standalone));
-        if (!isSupported) return;
-        void navigator.serviceWorker.ready.then(async (reg) => {
-            const sub = await reg.pushManager.getSubscription();
-            if (sub) setStatus("subscribed");
-        });
-    }, [isSupported]);
+        setIsInstalledPWA(isStandaloneDisplay());
+        if (!supported) {
+            setStatus("idle");
+            return;
+        }
+        let cancelled = false;
+        detectExistingStatus()
+            .then((detected) => {
+                if (!cancelled) setStatus(detected);
+            })
+            .catch(() => {
+                if (!cancelled) setStatus("idle");
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
     const subscribe = useCallback(async () => {
         if (!isSupported) return;
@@ -62,8 +95,8 @@ export function usePushSubscription() {
 
     const unsubscribe = useCallback(async () => {
         if (!isSupported) return;
-        const reg = await navigator.serviceWorker.ready;
-        const sub = await reg.pushManager.getSubscription();
+        const reg = await navigator.serviceWorker.getRegistration();
+        const sub = await reg?.pushManager.getSubscription();
         if (sub) {
             await fetch("/api/users/me/push", {
                 method: "DELETE",
