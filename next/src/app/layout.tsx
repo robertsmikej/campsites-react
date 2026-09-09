@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { GeistSans } from "geist/font/sans";
 import { Inter, Big_Shoulders, Cormorant_Garamond, Source_Serif_4, DM_Mono, Caveat } from "next/font/google";
-import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
@@ -99,19 +98,8 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
     return (
-        <html lang="en" suppressHydrationWarning>
+        <html lang="en">
             <head>
-                {/*
-                  Polyfill esbuild's __name helper before next-themes' inline anti-flash
-                  script runs. The script ships with `__name(fn, "name")` calls (a side
-                  effect of keep-names minification) but the helper definition lives in a
-                  later chunk that hasn't loaded yet at head-script time.
-                */}
-                <script
-                    dangerouslySetInnerHTML={{
-                        __html: "window.__name=window.__name||function(t,n){try{Object.defineProperty(t,'name',{value:n,configurable:true})}catch(e){}return t};",
-                    }}
-                />
                 {/*
                   Cloudflare Web Analytics — free, cookieless, GDPR-safe.
                   Get your beacon token from: Cloudflare dashboard → campwatch.dev →
@@ -130,14 +118,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </head>
             <body
                 className={`${inter.variable} ${GeistSans.variable} ${bigShoulders.variable} ${cormorant.variable} ${sourceSerif.variable} ${dmMono.variable} ${caveat.variable} font-sans antialiased`}
-                suppressHydrationWarning
             >
-                <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
-                    <TooltipProvider>
-                        {children}
-                        <Toaster richColors closeButton position="top-right" />
-                    </TooltipProvider>
-                </ThemeProvider>
+                <TooltipProvider>
+                    {children}
+                    <Toaster richColors closeButton position="top-right" />
+                </TooltipProvider>
             </body>
         </html>
     );

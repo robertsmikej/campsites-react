@@ -1,15 +1,15 @@
 "use client";
 
-import { useTheme } from "next-themes";
 import { Toaster as Sonner, type ToasterProps } from "sonner";
 import { CircleCheckIcon, InfoIcon, TriangleAlertIcon, OctagonXIcon, Loader2Icon } from "lucide-react";
 
-const Toaster = ({ ...props }: ToasterProps) => {
-    const { theme = "system" } = useTheme();
+// The app ships a single light palette, so the toaster is pinned to it.
+const TOASTER_THEME: ToasterProps["theme"] = "light";
 
+const Toaster = ({ ...props }: ToasterProps) => {
     return (
         <Sonner
-            theme={theme as ToasterProps["theme"]}
+            theme={TOASTER_THEME}
             className="toaster group"
             icons={{
                 success: <CircleCheckIcon className="size-4" />,
