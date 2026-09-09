@@ -259,15 +259,7 @@ describe("booking horizon filtering", () => {
         const months = buildNotifyPlan(t, "2026-09", "2026-09-01")
             .map((p) => p.month)
             .sort();
-        expect(months).toEqual([
-            "2026-09",
-            "2026-10",
-            "2026-11",
-            "2026-12",
-            "2027-01",
-            "2027-02",
-            "2027-03",
-        ]);
+        expect(months).toEqual(["2026-09", "2026-10", "2026-11", "2026-12", "2027-01", "2027-02", "2027-03"]);
     });
 
     it("clips trip-window months to the booking horizon", () => {
@@ -276,9 +268,7 @@ describe("booking horizon filtering", () => {
         cg.dates = { startDate: "2026-09-01", endDate: "2026-09-30" };
         const t = {
             campgrounds: { "recreation.gov": [cg] },
-            tripWindows: [
-                { id: "w1", from: "2027-05-01", to: "2027-05-04", campgroundIds: ["A"] },
-            ],
+            tripWindows: [{ id: "w1", from: "2027-05-01", to: "2027-05-04", campgroundIds: ["A"] }],
         } as never;
         const months = buildNotifyPlan([t], "2026-09", "2026-09-01")
             .map((p) => p.month)
@@ -315,10 +305,7 @@ describe("booking horizon filtering", () => {
         const sweepMonths = buildSweepPlan(t, 5, "2026-09", "2026-09-01")
             .map((p) => p.month)
             .sort();
-        const expected = [
-            "2026-09", "2026-10", "2026-11", "2026-12",
-            "2027-01", "2027-02", "2027-03",
-        ];
+        const expected = ["2026-09", "2026-10", "2026-11", "2026-12", "2027-01", "2027-02", "2027-03"];
         expect(fastMonths).toEqual(expected);
         expect(sweepMonths).toEqual(expected);
     });
