@@ -55,7 +55,16 @@ export async function fetchDedupedConcurrent<T>(
             const item = plan[i]!;
             let value: T | null = null;
             for (let attempt = 0; attempt <= maxRetries; attempt++) {
-                value = await fetchOne(item.campgroundId, item.month);
+                // One item's failure (a KV 429, a thrown adapter error) must not reject
+                // the whole batch and take the notify pass down with it.
+                try {
+                    value = await fetchOne(item.campgroundId, item.month);
+                } catch (error) {
+                    console.error(
+                        `[fetch] ${item.campgroundId} ${item.month} threw: ${(error as Error).message}`,
+                    );
+                    value = null;
+                }
                 if (value !== null) break;
                 if (attempt < maxRetries) {
                     await sleep(backoffMs[Math.min(attempt, backoffMs.length - 1)] ?? 0);

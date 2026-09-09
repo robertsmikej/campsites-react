@@ -157,9 +157,19 @@ export async function readCachedMonths(
     kv: KvAdapter,
 ): Promise<Record<string, (RawMonthResult | null)[]>> {
     const out: Record<string, (RawMonthResult | null)[]> = {};
-    for (const { campgroundId, month } of plan) {
-        const value = await kv.getRaw(campgroundId, month);
+    const misses: string[] = [];
+    const values = await Promise.all(plan.map(({ campgroundId, month }) => kv.getRaw(campgroundId, month)));
+    plan.forEach(({ campgroundId, month }, index) => {
+        const value = values[index] ?? null;
         (out[campgroundId] ??= []).push(value);
+        if (value === null) {
+            misses.push(`${campgroundId}/${month}`);
+        }
+    });
+    // A miss is carried forward silently downstream, so this is the only place a
+    // stale cache (rec.gov block, expired raw TTL) becomes visible in the logs.
+    if (misses.length > 0) {
+        console.warn(`[Notify] ${misses.length}/${plan.length} cache miss(es): ${misses.join(", ")}`);
     }
     return out;
 }

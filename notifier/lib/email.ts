@@ -863,8 +863,11 @@ export const sendEmail = async (
     apiKey: string,
     unsubscribeLink = "",
 ): Promise<unknown> => {
+    // A hung Resend socket would otherwise stall every user queued behind this one.
+    const RESEND_TIMEOUT_MS = 10_000;
     const response = await fetch("https://api.resend.com/emails", {
         method: "POST",
+        signal: AbortSignal.timeout(RESEND_TIMEOUT_MS),
         headers: {
             Authorization: `Bearer ${apiKey}`,
             "Content-Type": "application/json",

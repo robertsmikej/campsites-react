@@ -570,3 +570,158 @@ describe("blackout alert suppression", () => {
         expect(n).toBeGreaterThan(0);
     });
 });
+
+describe("delivery failure handling", () => {
+    beforeEach(() => vi.restoreAllMocks());
+
+    const RECGOV_TWO_ADJACENT = {
+        campsites: {
+            "1": {
+                site: "001",
+                campsite_type: "STANDARD",
+                availabilities: { "2026-07-04T00:00:00Z": "Available", "2026-07-05T00:00:00Z": "Available" },
+            },
+            "2": {
+                site: "002",
+                campsite_type: "STANDARD",
+                availabilities: { "2026-07-04T00:00:00Z": "Available", "2026-07-05T00:00:00Z": "Available" },
+            },
+        },
+    };
+
+    function adjacencyTarget(roles: string[]) {
+        return {
+            email: "boss@example.com",
+            roles,
+            notifications: { enabled: true, frequencyMinutes: 0 },
+            defaultNotifyScope: "all",
+            campgrounds: {
+                "recreation.gov": [
+                    {
+                        id: "232358",
+                        name: "Outlet",
+                        enabled: true,
+                        notifyScope: "all",
+                        adjacencyAnchor: "all",
+                        dates: { startDate: "2026-07-01", endDate: "2026-07-10" },
+                        sites: { favorites: [], worthwhile: [] },
+                    },
+                ],
+            },
+            globalSettings: { stayLengths: [2], validStartDays: ["Saturday"] },
+            notifierState: { sites: {} },
+        };
+    }
+
+    function mockFetchWith(opts: {
+        targets: unknown[];
+        firstSeen?: Record<string, string>;
+        resendStatus?: number;
+    }) {
+        return vi.fn(async (url: string | URL, _init?: RequestInit) => {
+            const u = String(url);
+            if (u.includes("/api/admin/notification-targets")) {
+                return new Response(JSON.stringify({ targets: opts.targets }), { status: 200 });
+            }
+            if (u.includes("/api/admin/first-seen")) {
+                return new Response(JSON.stringify(opts.firstSeen ?? {}), { status: 200 });
+            }
+            if (u.includes("/api/openings/recent")) {
+                return new Response(JSON.stringify([]), { status: 200 });
+            }
+            if (u.includes("api.resend.com")) {
+                return new Response("{}", { status: opts.resendStatus ?? 200 });
+            }
+            return new Response("{}", { status: 200 });
+        });
+    }
+
+    function kvWithAdjacent() {
+        const kv = stubKv();
+        kv.getRaw = vi.fn(async (id: string, month: string) =>
+            id === "232358" && month === "2026-07" ? (RECGOV_TWO_ADJACENT as never) : null,
+        );
+        return kv;
+    }
+
+    const baseConfig = {
+        subscriberApiUrl: "https://campwatch.dev",
+        subscriberApiSecret: "secret",
+        resendApiKey: "re_x",
+        siteUrl: "https://campwatch.dev",
+        forceEmail: false,
+        dryRun: false,
+    };
+
+    function statePutBody(fetchSpy: { mock: { calls: unknown[][] } }) {
+        const call = fetchSpy.mock.calls.find(
+            (c) =>
+                String(c[0]).includes("/api/admin/notifier-state") && (c[1] as RequestInit)?.method === "PUT",
+        );
+        return JSON.parse(String((call![1] as RequestInit).body)) as { updates: Array<{ email: string }> };
+    }
+
+    function firstSeenPutBody(fetchSpy: { mock: { calls: unknown[][] } }) {
+        const call = fetchSpy.mock.calls.find(
+            (c) => String(c[0]).includes("/api/admin/first-seen") && (c[1] as RequestInit)?.method === "PUT",
+        );
+        return JSON.parse(String((call![1] as RequestInit).body)) as { map: Record<string, string> };
+    }
+
+    it("does not record the alert as sent when every email attempt fails", async () => {
+        const target = {
+            ...tierTarget([tierCampground("232358", "Outlet")]),
+            notifierState: { sites: {} },
+        };
+        const fetchSpy = vi
+            .spyOn(globalThis, "fetch")
+            .mockImplementation(mockFetchWith({ targets: [target], resendStatus: 500 }) as never);
+        vi.spyOn(console, "log").mockImplementation(() => {});
+        vi.spyOn(console, "warn").mockImplementation(() => {});
+        vi.spyOn(console, "error").mockImplementation(() => {});
+        const kv = stubKv();
+        kv.getRaw = vi.fn(async (id: string, month: string) =>
+            id === "232358" && month === "2026-07" ? (RECGOV_WITH_MATCH as never) : null,
+        );
+
+        await run({ ...baseConfig, kvAdapter: kv, now: new Date("2026-07-06T00:00:00Z") });
+
+        const resendCalls = fetchSpy.mock.calls.filter((c) => String(c[0]).includes("api.resend.com"));
+        expect(resendCalls.length).toBe(2); // one retry, then give up
+        const persisted = statePutBody(fetchSpy);
+        // No update for this user: the prior state stays, so next tick retries.
+        expect(persisted.updates.find((u) => u.email === "boss@example.com")).toBeUndefined();
+    }, 10_000);
+
+    it("holds an adjacent group for a non-curator until the group itself clears lead time", async () => {
+        const target = adjacencyTarget([]);
+        const t0 = new Date("2026-07-06T00:00:00Z");
+
+        const fetchSpy = vi
+            .spyOn(globalThis, "fetch")
+            .mockImplementation(mockFetchWith({ targets: [target] }) as never);
+        vi.spyOn(console, "log").mockImplementation(() => {});
+        vi.spyOn(console, "warn").mockImplementation(() => {});
+        await run({ ...baseConfig, kvAdapter: kvWithAdjacent(), now: t0 });
+
+        // First sighting: nothing sent, but the group was stamped in the first-seen map.
+        expect(fetchSpy.mock.calls.some((c) => String(c[0]).includes("api.resend.com"))).toBe(false);
+        const firstSeen = firstSeenPutBody(fetchSpy).map;
+        const groupKeys = Object.keys(firstSeen).filter((k) => k.startsWith("group:232358:"));
+        expect(groupKeys).toHaveLength(1);
+
+        // 16 minutes later, with that map persisted, the group is released.
+        vi.restoreAllMocks();
+        const fetchSpy2 = vi
+            .spyOn(globalThis, "fetch")
+            .mockImplementation(mockFetchWith({ targets: [target], firstSeen }) as never);
+        vi.spyOn(console, "log").mockImplementation(() => {});
+        vi.spyOn(console, "warn").mockImplementation(() => {});
+        await run({ ...baseConfig, kvAdapter: kvWithAdjacent(), now: new Date(t0.getTime() + 16 * 60_000) });
+
+        const resend = fetchSpy2.mock.calls.filter((c) => String(c[0]).includes("api.resend.com"));
+        expect(resend.length).toBeGreaterThan(0);
+        const html = (JSON.parse(String((resend[0]![1] as RequestInit).body)) as { html: string }).html;
+        expect(html).toContain("Adjacent openings");
+    });
+});

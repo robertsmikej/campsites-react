@@ -17,32 +17,57 @@ export const getAllDatesInRange = (start: string, end: string): string[] => {
     return result;
 };
 
-export const findConsecutiveAvailableRanges = (dates: string[], length: number): [string, string][] => {
+const MS_PER_DAY = 86400000;
+
+const isConsecutiveRun = (timestamps: number[], start: number, length: number): boolean => {
+    const startTs = timestamps[start] ?? 0;
+    for (let j = 1; j < length; j++) {
+        if ((timestamps[start + j] ?? -1) !== startTs + j * MS_PER_DAY) {
+            return false;
+        }
+    }
+    return true;
+};
+
+const isoDate = (ts: number): string => new Date(ts).toISOString().split("T")[0] ?? "";
+
+/**
+ * Finds `length`-night stays over the sorted `dates`. After accepting a window the
+ * scan jumps past it (one alert per block, not one per night), but a window that
+ * fails `isValidStart` is stepped over one day at a time so a valid start day
+ * hidden inside a rejected window is still found. Without the predicate every
+ * consecutive window is accepted.
+ */
+export const findConsecutiveAvailableRanges = (
+    dates: string[],
+    length: number,
+    isValidStart: (from: string) => boolean = () => true,
+): [string, string][] => {
     const ranges: [string, string][] = [];
     const timestamps = dates.map((d) => new Date(d).getTime());
     for (let i = 0; i <= timestamps.length - length; ) {
-        const iTs = timestamps[i] ?? 0;
-        let isConsecutive = true;
-        for (let j = 1; j < length; j++) {
-            const expected = iTs + j * 86400000;
-            if ((timestamps[i + j] ?? -1) !== expected) {
-                isConsecutive = false;
-                break;
-            }
-        }
-        if (isConsecutive) {
-            const from = new Date(iTs).toISOString().split("T")[0] ?? "";
-            const lastTs = timestamps[i + length - 1] ?? iTs;
-            const toDate = new Date(lastTs);
-            toDate.setDate(toDate.getDate() + 1);
-            const to = toDate.toISOString().split("T")[0] ?? "";
-            ranges.push([from, to]);
-            i += length;
-        } else {
+        if (!isConsecutiveRun(timestamps, i, length)) {
             i++;
+            continue;
         }
+        const from = isoDate(timestamps[i] ?? 0);
+        if (!isValidStart(from)) {
+            i++;
+            continue;
+        }
+        const lastTs = timestamps[i + length - 1] ?? 0;
+        ranges.push([from, isoDate(lastTs + MS_PER_DAY)]);
+        i += length;
     }
     return ranges;
+};
+
+const weekdayNameOf = (isoDay: string): string => {
+    const parts = isoDay.split("-").map(Number);
+    const y = parts[0] ?? 0;
+    const m = parts[1] ?? 1;
+    const d = parts[2] ?? 1;
+    return new Date(Date.UTC(y, m - 1, d)).toLocaleString("en-US", { weekday: "long", timeZone: "UTC" });
 };
 
 const filterNonOverlapping = (matches: StayMatch[]): StayMatch[] => {
@@ -95,23 +120,11 @@ export const processCampgroundResults = (
         if (!site) continue;
         const uniqueDates = [...new Set(site.dates)].sort();
         const stayMatches: StayMatch[] = [];
-        for (let length = 1; length <= 14; length++) {
-            const allRangesForLength = findConsecutiveAvailableRanges(uniqueDates, length);
-            for (const [from, to] of allRangesForLength) {
-                const parts = from.split("-").map(Number);
-                const y = parts[0] ?? 0;
-                const m = parts[1] ?? 1;
-                const d = parts[2] ?? 1;
-                const startDay = new Date(Date.UTC(y, m - 1, d)).toLocaleString("en-US", {
-                    weekday: "long",
-                    timeZone: "UTC",
-                });
-                const isValidStartDay =
-                    !settings.validStartDays?.length || settings.validStartDays.includes(startDay);
-                const isValidStayLength = length >= minStay && length <= maxStay;
-                if (isValidStayLength && isValidStartDay) {
-                    stayMatches.push({ from, to, nights: length });
-                }
+        const isValidStartDay = (from: string): boolean =>
+            !settings.validStartDays?.length || settings.validStartDays.includes(weekdayNameOf(from));
+        for (let length = minStay; length <= maxStay; length++) {
+            for (const [from, to] of findConsecutiveAvailableRanges(uniqueDates, length, isValidStartDay)) {
+                stayMatches.push({ from, to, nights: length });
             }
         }
         site.matches = filterNonOverlapping(stayMatches);

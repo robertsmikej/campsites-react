@@ -23,6 +23,7 @@ import {
 import { acquireSweepLock, type LockKv } from "./sweep-lock";
 import { acquireNotifyLock, releaseNotifyLock } from "./notify-lock";
 import { sendWebPush } from "./lib/push";
+import { retry, assertOk } from "./lib/retry";
 import type { PushSubscriptionRecord } from "../next/src/lib/push/subscription";
 import type { Campground, GlobalSettings, NotifyScope } from "../next/src/types/campground";
 import type { MatchResult, SiteConfigForDiff, CampgroundResult } from "./lib/diff";
@@ -33,6 +34,19 @@ import { tripHitsForCampground, serverTodayIso, type TripSiteHit } from "../next
 import { TRIP_COOLDOWN_MS } from "../next/src/lib/notifier-state-merge";
 import { displayName } from "../next/src/lib/display-name";
 import type { TripWindow } from "../next/src/types/campground";
+
+// Admin API calls to campwatch.dev. A stalled call holds the notify lock and can
+// push a tick past its minute, so every hop gets a hard timeout.
+const ADMIN_TIMEOUT_MS = 5_000;
+// Resend's default limit is 2 req/s; sends are serial so a burst of users in one
+// tick can trip it. One retry after a beat recovers that without a duplicate.
+const EMAIL_SEND_RETRY = { attempts: 2, baseDelayMs: 1_000 };
+// Losing the state PUT re-sends every alert next tick, so it gets the most
+// patience of any call in the cycle.
+const STATE_PUT_RETRY = { attempts: 3, baseDelayMs: 500 };
+// A first-seen GET failure would reset every lead-time clock; a skipped tick
+// costs a minute, a reset costs fifteen.
+const FIRST_SEEN_GET_RETRY = { attempts: 2, baseDelayMs: 500 };
 
 export interface RunConfig {
     subscriberApiUrl: string;
@@ -451,6 +465,11 @@ async function computeMatchesForUser(
         ? filtered.filter((m) => !stayOverlapsBlackout(m.match.from, m.match.to, blackouts))
         : filtered;
 
+    if (failedCampgroundIds.size > 0) {
+        console.warn(
+            `[${target.email}] no cached data for ${failedCampgroundIds.size} campground(s), carried forward: ${[...failedCampgroundIds].join(", ")}`,
+        );
+    }
     await writeUserSnapshot(target, syntheticResults, failedCampgroundIds, tripHitsByCg);
 
     return { matches: sendable, groups, campgroundNamesById, tripHits };
@@ -460,6 +479,13 @@ async function computeMatchesForUser(
 
 // signatureForMatch wraps diff.ts's generateSignature to accept the match object shape
 // that findNewMatches returns: { campgroundId, siteId, match: { from, to, nights } }
+// Group entries live in the same first-seen map as site signatures; the prefix
+// keeps them from ever colliding with a `campground:site:from:to:nights` key.
+export function signatureForGroup(g: AdjacentGroup): string {
+    const members = [...g.siteIds].sort().join("+");
+    return `group:${g.campgroundId}:${members}:${g.from}:${g.to}:${g.nights}`;
+}
+
 function signatureForMatch(m: MatchResult): string {
     return generateSignature(m.campgroundId, m.siteId, m.match);
 }
@@ -771,18 +797,23 @@ async function sendEmailToUser({
 
 // ── First-seen map helpers ────────────────────────────────────────────────────
 
+// Throws after retries: proceeding with an empty map would stamp every visible
+// opening as first seen "now" and hold non-curators another 15 minutes.
 async function fetchFirstSeenMap(
     subscriberApiUrl: string,
     subscriberApiSecret: string,
 ): Promise<FirstSeenMap> {
-    const res = await fetch(`${subscriberApiUrl}/api/admin/first-seen`, {
-        headers: { Authorization: `Bearer ${subscriberApiSecret}` },
-    });
-    if (!res.ok) {
-        console.error(`[Warn] first-seen GET returned ${res.status} — starting with empty map`);
-        return {};
-    }
-    return res.json() as Promise<FirstSeenMap>;
+    return retry(
+        async () => {
+            const res = await fetch(`${subscriberApiUrl}/api/admin/first-seen`, {
+                headers: { Authorization: `Bearer ${subscriberApiSecret}` },
+                signal: AbortSignal.timeout(ADMIN_TIMEOUT_MS),
+            });
+            assertOk(res, "first-seen GET");
+            return res.json() as Promise<FirstSeenMap>;
+        },
+        { ...FIRST_SEEN_GET_RETRY, label: "first-seen GET" },
+    );
 }
 
 async function putFirstSeenMap(
@@ -797,9 +828,43 @@ async function putFirstSeenMap(
             Authorization: `Bearer ${subscriberApiSecret}`,
         },
         body: JSON.stringify({ map }),
+        signal: AbortSignal.timeout(ADMIN_TIMEOUT_MS),
     });
     if (!res.ok) {
         console.error(`[Warn] first-seen PUT returned ${res.status}`);
+    }
+}
+
+// Retries the per-user state write. Without it a single 502 (the app and the
+// notifier deploy on the same push) lost every dedup range written this tick and
+// the next tick re-sent the same emails.
+async function persistNotifierState(
+    subscriberApiUrl: string,
+    subscriberApiSecret: string,
+    updates: StateUpdate[],
+): Promise<void> {
+    try {
+        const result = await retry(
+            async () => {
+                const res = await fetch(`${subscriberApiUrl}/api/admin/notifier-state`, {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${subscriberApiSecret}`,
+                    },
+                    body: JSON.stringify({ updates }),
+                    signal: AbortSignal.timeout(ADMIN_TIMEOUT_MS),
+                });
+                assertOk(res, "notifier-state PUT");
+                return (await res.json()) as { updated: number };
+            },
+            { ...STATE_PUT_RETRY, label: "notifier-state PUT" },
+        );
+        console.log(`[Done] Updated state for ${result.updated} user(s)`);
+    } catch (err) {
+        console.error(
+            `[Error] notifier-state PUT failed after ${STATE_PUT_RETRY.attempts} attempts; ${updates.length} user update(s) lost, expect re-sends next tick: ${(err as Error).message}`,
+        );
     }
 }
 
@@ -808,6 +873,7 @@ async function putFirstSeenMap(
 async function fetchTargets(config: RunConfig): Promise<NotificationTarget[]> {
     const res = await fetch(`${config.subscriberApiUrl}/api/admin/notification-targets`, {
         headers: { Authorization: `Bearer ${config.subscriberApiSecret}` },
+        signal: AbortSignal.timeout(ADMIN_TIMEOUT_MS),
     });
     if (!res.ok) throw new Error(`notification-targets returned ${res.status}`);
     const { targets } = (await res.json()) as NotificationTargetsResponse;
@@ -867,7 +933,17 @@ export async function run(config: RunConfig, prefetchedTargets?: NotificationTar
     const newFirstSeenMap: FirstSeenMap = {};
     const globalMatchesBySig: Record<string, Omit<RecentOpening, "signature" | "detectedAt">> = {};
     for (const target of eligible) {
-        const { matches: userMatches } = computedByTarget.get(target)!;
+        const { matches: userMatches, groups: userGroups } = computedByTarget.get(target)!;
+        // Adjacent groups get their own first-seen entries. Deriving a group's age
+        // from its member sites' signatures never worked: a site's signature is its
+        // maximal open window, not the group's window, so the lookup always missed
+        // and non-curators were held at the lead-time gate forever.
+        for (const g of userGroups) {
+            const sig = signatureForGroup(g);
+            if (!newFirstSeenMap[sig]) {
+                newFirstSeenMap[sig] = existingFirstSeenMap[sig] ?? now.toISOString();
+            }
+        }
         for (const m of userMatches) {
             const sig = signatureForMatch(m);
             if (!newFirstSeenMap[sig]) {
@@ -912,25 +988,13 @@ export async function run(config: RunConfig, prefetchedTargets?: NotificationTar
                   return now.getTime() - new Date(firstSeen).getTime() >= LEAD_TIME_MS;
               });
 
-        // Same lead-time gate for adjacent groups: a group's age is the MAX (latest)
-        // first-seen across its constituent sites' exact-window signatures, so a group
-        // isn't emailed to non-curators until every member site has cleared lead-time.
-        // A site whose window isn't in the first-seen map is treated as just-appeared
-        // (now), conservatively delaying the group.
+        // Same lead-time gate for adjacent groups, keyed by the group's own
+        // first-seen entry (recorded in step 2 above).
         const groupClearedLeadTime = (g: AdjacentGroup): boolean => {
             if (isCurator) return true;
-            let maxFirstSeenMs = 0;
-            for (const siteId of g.siteIds) {
-                const sig = generateSignature(g.campgroundId, siteId, {
-                    from: g.from,
-                    to: g.to,
-                    nights: g.nights,
-                });
-                const firstSeen = newFirstSeenMap[sig];
-                const ms = firstSeen ? new Date(firstSeen).getTime() : now.getTime();
-                if (ms > maxFirstSeenMs) maxFirstSeenMs = ms;
-            }
-            return now.getTime() - maxFirstSeenMs >= LEAD_TIME_MS;
+            const firstSeen = newFirstSeenMap[signatureForGroup(g)];
+            if (!firstSeen) return false;
+            return now.getTime() - new Date(firstSeen).getTime() >= LEAD_TIME_MS;
         };
         const visibleGroups = userGroups.filter(groupClearedLeadTime);
 
@@ -988,17 +1052,21 @@ export async function run(config: RunConfig, prefetchedTargets?: NotificationTar
         } else {
             try {
                 const sentAtMs = Date.now();
-                await sendEmailToUser({
-                    user: target,
-                    matches: sendableMatches,
-                    groups: newGroups,
-                    campgroundNamesById,
-                    tripDigests,
-                    resendApiKey,
-                    siteUrl,
-                    apiSecret: subscriberApiSecret,
-                    subscriberApiUrl,
-                });
+                await retry(
+                    () =>
+                        sendEmailToUser({
+                            user: target,
+                            matches: sendableMatches,
+                            groups: newGroups,
+                            campgroundNamesById,
+                            tripDigests,
+                            resendApiKey,
+                            siteUrl,
+                            apiSecret: subscriberApiSecret,
+                            subscriberApiUrl,
+                        }),
+                    { ...EMAIL_SEND_RETRY, label: `email ${target.email}` },
+                );
                 // Record latency for each match in this email.
                 for (const m of sendableMatches) {
                     const sig = signatureForMatch(m);
@@ -1108,28 +1176,19 @@ export async function run(config: RunConfig, prefetchedTargets?: NotificationTar
                 }
                 updates.push({ email: target.email, state: mergedState, lastNotifiedAt: now.toISOString() });
             } catch (err) {
-                console.error(`[${target.email}] email send failed: ${(err as Error).message}`);
-                updates.push({ email: target.email, state: mergedState });
+                // Do NOT record mergedState: it carries the new ranges as seen, which
+                // would put them in the 24h cooldown and drop the alert for good. With
+                // no update the server keeps the prior state and next tick retries.
+                console.error(
+                    `[${target.email}] email send failed after ${EMAIL_SEND_RETRY.attempts} attempts, will retry next tick: ${(err as Error).message}`,
+                );
             }
         }
     }
 
     // 4. Push state back to the API.
     if (!dryRun) {
-        const stateResponse = await fetch(`${subscriberApiUrl}/api/admin/notifier-state`, {
-            method: "PUT",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${subscriberApiSecret}`,
-            },
-            body: JSON.stringify({ updates }),
-        });
-        if (!stateResponse.ok) {
-            console.error(`[Warn] notifier-state PUT returned ${stateResponse.status}`);
-        } else {
-            const result = (await stateResponse.json()) as { updated: number };
-            console.log(`[Done] Updated state for ${result.updated} user(s)`);
-        }
+        await persistNotifierState(subscriberApiUrl, subscriberApiSecret, updates);
     }
 
     // 5. Persist the updated first-seen map (pruned to only currently-visible signatures).
@@ -1237,18 +1296,32 @@ export async function runTick(config: RunConfig, lockKv?: LockKv): Promise<void>
     }
     try {
         const targets = await fetchTargets(config);
-        const nowMonth = config.now.toISOString().slice(0, 7);
         if (config.kvAdapter && !config.dryRun) {
-            const fastLane = buildFastLanePlan(targets, nowMonth, serverTodayIso(config.now));
-            if (fastLane.length) {
-                console.log(`[FastLane] fetching ${fastLane.length} high-tier (campground, month) pairs`);
-                await fetchToCache(fastLane, config.kvAdapter, { concurrency: 1, delayMs: 250 });
-            }
+            await refreshFastLane(targets, config);
         }
         await run(config, targets);
     } finally {
         if (lock) await releaseNotifyLock(lock);
     }
+}
+
+// Best-effort cache refresh of the high-tier campgrounds. A failure here (KV
+// 429, adapter throw) must never stop the notify pass: notify reads whatever is
+// in cache and carries forward on a miss, which beats skipping the minute.
+async function refreshFastLane(targets: NotificationTarget[], config: RunConfig): Promise<void> {
+    if (!config.kvAdapter) return;
+    const fastLane = buildFastLanePlan(targets, nowMonthOf(config.now), serverTodayIso(config.now));
+    if (fastLane.length === 0) return;
+    console.log(`[FastLane] fetching ${fastLane.length} high-tier (campground, month) pairs`);
+    try {
+        await fetchToCache(fastLane, config.kvAdapter, { concurrency: 1, delayMs: 250 });
+    } catch (err) {
+        console.error(`[FastLane] refresh failed, notifying from existing cache: ${(err as Error).message}`);
+    }
+}
+
+function nowMonthOf(now: Date): string {
+    return now.toISOString().slice(0, 7);
 }
 
 // SWEEP (cron "*/5 * * * *"): refresh normal/low campgrounds into cache. Fetch
