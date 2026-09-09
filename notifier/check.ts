@@ -623,15 +623,13 @@ export function diffGroupsWithCooldown(
     const prior = priorState?.groups ?? {};
     const seenIso = new Date(nowMs).toISOString();
 
-    // Prior alerted windows per key still within cooldown.
-    const priorByKey = new Map<string, Array<{ from: string; to: string }>>();
+    // Prior alerted windows per key still within cooldown, original `seen` kept.
+    const priorByKey = new Map<string, Array<{ from: string; to: string; seen: string }>>();
     for (const [key, ranges] of Object.entries(prior)) {
         const fresh = ranges.filter((r) => new Date(r.seen).getTime() >= cutoff);
-        if (fresh.length)
-            priorByKey.set(
-                key,
-                fresh.map((r) => ({ from: r.from, to: r.to })),
-            );
+        if (fresh.length) {
+            priorByKey.set(key, fresh);
+        }
     }
 
     const overlaps = (a: { from: string; to: string }, b: { from: string; to: string }) =>
@@ -646,12 +644,15 @@ export function diffGroupsWithCooldown(
         if (isNew) newGroups.push(g);
         (next[key] ??= []).push({ from: g.from, to: g.to, seen: seenIso });
     }
-    // Retain prior fresh windows not re-seen this cycle.
+    // Retain prior fresh windows not re-seen this cycle WITH their original
+    // `seen`, mirroring diffPerUser. Re-stamping them every tick kept a
+    // booked-then-cancelled group inside the cooldown forever, so it never
+    // re-alerted when it genuinely freed up again.
     for (const [key, ranges] of priorByKey.entries()) {
         const merged = next[key] ?? (next[key] = []);
         for (const r of ranges) {
             if (!merged.some((m) => m.from === r.from && m.to === r.to)) {
-                merged.push({ ...r, seen: seenIso });
+                merged.push({ from: r.from, to: r.to, seen: r.seen });
             }
         }
     }
@@ -868,6 +869,30 @@ async function persistNotifierState(
     }
 }
 
+// Prior stats come from the authenticated admin route, never the public
+// /api/stats: the public route strips _dailyHistory and _latencyWindow, and
+// without them the 7-day total collapses to today and the median resets every
+// tick. Any failure degrades to "no prior stats" rather than failing the run.
+async function fetchPriorStats(
+    subscriberApiUrl: string,
+    subscriberApiSecret: string,
+): Promise<PriorStats | null> {
+    try {
+        const res = await fetch(`${subscriberApiUrl}/api/admin/stats`, {
+            headers: { Authorization: `Bearer ${subscriberApiSecret}` },
+            signal: AbortSignal.timeout(ADMIN_TIMEOUT_MS),
+        });
+        if (!res.ok) {
+            console.error(`[Warn] prior stats GET returned ${res.status}`);
+            return null;
+        }
+        return (await res.json()) as PriorStats | null;
+    } catch (err) {
+        console.error(`[Warn] Could not fetch prior stats: ${(err as Error).message}`);
+        return null;
+    }
+}
+
 // ── Targets fetch ─────────────────────────────────────────────────────────────
 
 async function fetchTargets(config: RunConfig): Promise<NotificationTarget[]> {
@@ -878,6 +903,81 @@ async function fetchTargets(config: RunConfig): Promise<NotificationTarget[]> {
     if (!res.ok) throw new Error(`notification-targets returned ${res.status}`);
     const { targets } = (await res.json()) as NotificationTargetsResponse;
     return targets;
+}
+
+// ── Per-tick compute over all targets ─────────────────────────────────────────
+
+// computeMatchesForUser has no shared mutable state across calls: the failure set
+// is per call and the snapshot write is keyed by the user's email. Running the
+// users concurrently trades nothing for a tick that is one user's compute long
+// instead of the sum.
+async function computeMatchesForTargets(
+    targets: NotificationTarget[],
+    rawByCampground: Record<string, unknown[]>,
+    todayIso: string,
+): Promise<Map<NotificationTarget, ComputedUserResults>> {
+    const computed = await Promise.all(
+        targets.map((target) => computeMatchesForUser(target, rawByCampground, todayIso)),
+    );
+    const byTarget = new Map<NotificationTarget, ComputedUserResults>();
+    targets.forEach((target, index) => {
+        byTarget.set(target, computed[index]!);
+    });
+    return byTarget;
+}
+
+interface FirstSeenBuild {
+    newFirstSeenMap: FirstSeenMap;
+    globalMatchesBySig: Record<string, Omit<RecentOpening, "signature" | "detectedAt">>;
+}
+
+// The first-seen map is global and must be built from EVERY target's visible
+// openings, eligible or not. Building it from eligible users only meant a
+// campground watched by one 15-minute-frequency user lost its entries on the 14
+// ticks that user was ineligible, so the lead-time clock restarted each time.
+function buildFirstSeenMap(
+    targets: NotificationTarget[],
+    computedByTarget: Map<NotificationTarget, ComputedUserResults>,
+    existingFirstSeenMap: FirstSeenMap,
+    now: Date,
+): FirstSeenBuild {
+    const newFirstSeenMap: FirstSeenMap = {};
+    const globalMatchesBySig: FirstSeenBuild["globalMatchesBySig"] = {};
+    const stamp = (sig: string): void => {
+        if (!newFirstSeenMap[sig]) {
+            newFirstSeenMap[sig] = existingFirstSeenMap[sig] ?? now.toISOString();
+        }
+    };
+    for (const target of targets) {
+        const { matches, groups } = computedByTarget.get(target)!;
+        // Adjacent groups get their own first-seen entries. Deriving a group's age
+        // from its member sites' signatures never worked: a site's signature is its
+        // maximal open window, not the group's window, so the lookup always missed
+        // and non-curators were held at the lead-time gate forever.
+        for (const g of groups) {
+            stamp(signatureForGroup(g));
+        }
+        for (const m of matches) {
+            const sig = signatureForMatch(m);
+            stamp(sig);
+            if (!globalMatchesBySig[sig]) {
+                globalMatchesBySig[sig] = enrichmentForMatch(m);
+            }
+        }
+    }
+    return { newFirstSeenMap, globalMatchesBySig };
+}
+
+function enrichmentForMatch(m: MatchResult): Omit<RecentOpening, "signature" | "detectedAt"> {
+    return {
+        campgroundId: m.campgroundId,
+        campgroundName: m.campgroundName,
+        siteId: m.siteId,
+        siteName: m.siteName,
+        from: m.match.from,
+        to: m.match.to,
+        nights: m.match.nights,
+    };
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
@@ -897,71 +997,45 @@ export async function run(config: RunConfig, prefetchedTargets?: NotificationTar
     const targets = prefetchedTargets ?? (await fetchTargets(config));
     console.log(`[Targets] ${targets.length} users with non-empty campground lists`);
 
-    const eligible = targets.filter((t) => isEligible(t, now, forceEmail));
-    console.log(`[Eligible] ${eligible.length} users due for a check this cycle`);
-    if (eligible.length === 0) {
+    if (targets.length === 0) {
         console.log("[Done] Nothing to do");
         return;
     }
+    const eligible = targets.filter((t) => isEligible(t, now, forceEmail));
+    console.log(`[Eligible] ${eligible.length} users due for a check this cycle`);
 
     // Notify reads the KV cache only — no rec.gov calls. The cache is kept warm
     // by runTick (fast lane) and runSweep. A cache miss = carry-forward no-data.
+    // The plan covers EVERY target, not just the eligible ones: the first-seen
+    // map below is global, and a user who is between frequency ticks still needs
+    // their openings stamped or their lead-time clock restarts every time they
+    // become eligible.
     const nowMonth = now.toISOString().slice(0, 7);
     const todayIso = serverTodayIso(now);
-    const plan = buildNotifyPlan(eligible, nowMonth, todayIso);
+    const plan = buildNotifyPlan(targets, nowMonth, todayIso);
     const rawByCampground = kvAdapter ? await readCachedMonths(plan, kvAdapter) : {};
     console.log(`[Notify] reading cache for ${plan.length} (campground, month) pairs`);
 
     // 1. Fetch the existing global first-seen map.
     const existingFirstSeenMap = await fetchFirstSeenMap(subscriberApiUrl, subscriberApiSecret);
 
-    // Compute each eligible user's matches/groups exactly once. Both the
-    // first-seen pass and the per-user diff pass below reuse this. Computing it
-    // twice per tick also re-ran the adjacency KV reads and re-wrote every
-    // user's snapshot a second time for no reason.
-    const computedByTarget = new Map<NotificationTarget, ComputedUserResults>();
-    for (const target of eligible) {
-        computedByTarget.set(target, await computeMatchesForUser(target, rawByCampground, todayIso));
-    }
+    // Compute each user's matches/groups exactly once. Both the first-seen pass
+    // and the per-user diff pass below reuse this. The calls are independent
+    // (per-user snapshot key, per-call failure set), so they run in parallel.
+    const computedByTarget = await computeMatchesForTargets(targets, rawByCampground, todayIso);
 
-    // 2. Compute all currently-visible match signatures across all eligible users.
+    // 2. Compute all currently-visible match signatures across ALL targets.
     //    For each signature: record first-seen timestamp if not already present; keep existing if so.
     //    Only retain signatures still visible this cycle (stale ones drop naturally).
     //
-    //    Also build a global enrichment map (sig → enriched fields) so step 9.5 can
+    //    Also build a global enrichment map (sig → enriched fields) so step 5.5 can
     //    populate the recent-openings log without re-walking per-user data.
-    const newFirstSeenMap: FirstSeenMap = {};
-    const globalMatchesBySig: Record<string, Omit<RecentOpening, "signature" | "detectedAt">> = {};
-    for (const target of eligible) {
-        const { matches: userMatches, groups: userGroups } = computedByTarget.get(target)!;
-        // Adjacent groups get their own first-seen entries. Deriving a group's age
-        // from its member sites' signatures never worked: a site's signature is its
-        // maximal open window, not the group's window, so the lookup always missed
-        // and non-curators were held at the lead-time gate forever.
-        for (const g of userGroups) {
-            const sig = signatureForGroup(g);
-            if (!newFirstSeenMap[sig]) {
-                newFirstSeenMap[sig] = existingFirstSeenMap[sig] ?? now.toISOString();
-            }
-        }
-        for (const m of userMatches) {
-            const sig = signatureForMatch(m);
-            if (!newFirstSeenMap[sig]) {
-                newFirstSeenMap[sig] = existingFirstSeenMap[sig] ?? now.toISOString();
-            }
-            if (!globalMatchesBySig[sig]) {
-                globalMatchesBySig[sig] = {
-                    campgroundId: m.campgroundId,
-                    campgroundName: m.campgroundName,
-                    siteId: m.siteId,
-                    siteName: m.siteName,
-                    from: m.match.from,
-                    to: m.match.to,
-                    nights: m.match.nights,
-                };
-            }
-        }
-    }
+    const { newFirstSeenMap, globalMatchesBySig } = buildFirstSeenMap(
+        targets,
+        computedByTarget,
+        existingFirstSeenMap,
+        now,
+    );
 
     // 3. Per user: apply lead-time filter (non-curators only), diff against their state.
     const updates: StateUpdate[] = [];
@@ -1241,15 +1315,7 @@ export async function run(config: RunConfig, prefetchedTargets?: NotificationTar
     }
 
     // Read prior stats so we can accumulate the daily counter and the latency window.
-    let priorStats: PriorStats | null = null;
-    try {
-        const priorStatsResponse = await fetch(`${subscriberApiUrl}/api/stats`);
-        if (priorStatsResponse.ok) {
-            priorStats = (await priorStatsResponse.json()) as PriorStats;
-        }
-    } catch (err) {
-        console.error(`[Warn] Could not fetch prior stats: ${(err as Error).message}`);
-    }
+    const priorStats = await fetchPriorStats(subscriberApiUrl, subscriberApiSecret);
 
     const statsBody = computeStatsBody({
         priorStats,
@@ -1312,12 +1378,38 @@ async function refreshFastLane(targets: NotificationTarget[], config: RunConfig)
     if (!config.kvAdapter) return;
     const fastLane = buildFastLanePlan(targets, nowMonthOf(config.now), serverTodayIso(config.now));
     if (fastLane.length === 0) return;
-    console.log(`[FastLane] fetching ${fastLane.length} high-tier (campground, month) pairs`);
+    // Parallelism across campgrounds only: the 250 ms per-worker delay keeps
+    // each worker's request rate the same as the old serial pass, so a plan of
+    // three campgrounds finishes in a third of the time without hitting rec.gov
+    // any harder per campground.
+    const concurrency = Math.min(FAST_LANE_MAX_CONCURRENCY, distinctCampgroundCount(fastLane));
+    console.log(
+        `[FastLane] fetching ${fastLane.length} high-tier (campground, month) pairs, concurrency ${concurrency}`,
+    );
     try {
-        await fetchToCache(fastLane, config.kvAdapter, { concurrency: 1, delayMs: 250 });
+        const startedMs = Date.now();
+        const summary = await fetchToCache(fastLane, config.kvAdapter, {
+            concurrency,
+            delayMs: FAST_LANE_DELAY_MS,
+        });
+        console.log(
+            `[FastLane] done: ${summary.fetched}/${fastLane.length} fetched, ${summary.failed} failed, ${Date.now() - startedMs} ms`,
+        );
     } catch (err) {
         console.error(`[FastLane] refresh failed, notifying from existing cache: ${(err as Error).message}`);
     }
+}
+
+const FAST_LANE_MAX_CONCURRENCY = 3;
+const FAST_LANE_DELAY_MS = 250;
+const SWEEP_DELAY_MS = 500;
+
+function distinctCampgroundCount(plan: Array<{ campgroundId: string }>): number {
+    const ids = new Set<string>();
+    for (const item of plan) {
+        ids.add(item.campgroundId);
+    }
+    return ids.size;
 }
 
 function nowMonthOf(now: Date): string {
@@ -1342,7 +1434,13 @@ export async function runSweep(config: RunConfig, lockKv: LockKv): Promise<void>
         return;
     }
     console.log(`[Sweep] minute=${minute} fetching ${plan.length} (campground, month) pairs`);
-    await fetchToCache(plan, config.kvAdapter, { concurrency: 1, delayMs: 500 });
+    const startedMs = Date.now();
+    const summary = await fetchToCache(plan, config.kvAdapter, { concurrency: 1, delayMs: SWEEP_DELAY_MS });
+    // The sweep lease is 4 minutes; this line is how a plan that outgrows it
+    // (or a rec.gov block turning every fetch null) shows up in the logs.
+    console.log(
+        `[Sweep] minute=${minute} done: ${summary.fetched}/${plan.length} fetched, ${summary.failed} failed, ${Date.now() - startedMs} ms`,
+    );
 }
 
 // Returns a new daily-history array with today's entry updated/inserted and
@@ -1422,21 +1520,22 @@ export function computeStatsBody(args: {
     now: Date;
 }): StatsBody {
     const { priorStats, sentLatenciesMs, campgroundsTracked, now } = args;
-    const todayKeyUtc = now.toISOString().slice(0, 10); // "YYYY-MM-DD" UTC
+    // Same UTC-8 grace as trip windows, so "sent today" rolls over around
+    // midnight in the US west instead of late afternoon.
+    const todayKey = serverTodayIso(now);
 
     // Daily counter: reset to 0 if the date has rolled over; otherwise accumulate.
-    const priorOpenings =
-        priorStats?.todayKey === todayKeyUtc ? Number(priorStats.openingsSentToday) || 0 : 0;
+    const priorOpenings = priorStats?.todayKey === todayKey ? Number(priorStats.openingsSentToday) || 0 : 0;
     const openingsSentToday = priorOpenings + sentLatenciesMs.length;
 
     // Daily history for the rolling 7-day window.
     const priorHistory = Array.isArray(priorStats?._dailyHistory) ? priorStats._dailyHistory : [];
-    const dailyHistory = updateDailyHistory(priorHistory, todayKeyUtc, openingsSentToday);
+    const dailyHistory = updateDailyHistory(priorHistory, todayKey, openingsSentToday);
     const openingsSentLast7Days = dailyHistory.reduce((acc, entry) => acc + (Number(entry.count) || 0), 0);
 
     // Latency window: carry forward up to 200 prior samples, then append this cycle's.
     const priorWindow =
-        priorStats?.todayKey === todayKeyUtc && Array.isArray(priorStats._latencyWindow)
+        priorStats?.todayKey === todayKey && Array.isArray(priorStats._latencyWindow)
             ? priorStats._latencyWindow.slice(-LATENCY_WINDOW_MAX)
             : [];
     const latencyWindow = [...priorWindow, ...sentLatenciesMs].slice(-LATENCY_WINDOW_MAX);
@@ -1461,7 +1560,7 @@ export function computeStatsBody(args: {
         openingsSentLast7Days,
         medianLatencyMs,
         sampleSize: sortedLatencies.length,
-        todayKey: todayKeyUtc,
+        todayKey,
         _latencyWindow: latencyWindow,
         _dailyHistory: dailyHistory,
     };

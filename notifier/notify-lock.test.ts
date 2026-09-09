@@ -50,4 +50,15 @@ describe("releaseNotifyLock", () => {
         await releaseNotifyLock(kv);
         expect(kv.put).toHaveBeenCalledWith("notifier:notify-lock", "0", { expirationTtl: 60 });
     });
+
+    it("logs and resolves when the release write fails, so a finally block cannot mask the tick's own error", async () => {
+        const kv = lockKv(String(NOW));
+        kv.put.mockRejectedValueOnce(new Error("KV PUT failed: 429 Too Many Requests"));
+        const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+        await expect(releaseNotifyLock(kv)).resolves.toBeUndefined();
+        expect(errorSpy).toHaveBeenCalledTimes(1);
+        expect(String(errorSpy.mock.calls[0]?.[0])).toContain("release failed");
+        expect(String(errorSpy.mock.calls[0]?.[0])).toContain("429");
+        errorSpy.mockRestore();
+    });
 });

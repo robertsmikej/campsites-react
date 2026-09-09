@@ -43,6 +43,36 @@ describe("computeStatsBody", () => {
         expect(body.medianLatencyMs).toBe(25);
     });
 
+    it("keys the day with the UTC-8 grace, so the counter does not roll over at UTC midnight", () => {
+        // 03:00 UTC on the 25th is still the evening of the 24th in the US west.
+        const lateEvening = new Date("2026-06-25T03:00:00Z");
+        const priorStats = {
+            todayKey: "2026-06-24",
+            openingsSentToday: 5,
+            _latencyWindow: [100],
+            _dailyHistory: [{ date: "2026-06-24", count: 5 }],
+        };
+        const body = computeStatsBody({
+            priorStats,
+            sentLatenciesMs: [200],
+            campgroundsTracked: 1,
+            now: lateEvening,
+        });
+        expect(body.todayKey).toBe("2026-06-24");
+        expect(body.openingsSentToday).toBe(6); // accumulated, not reset
+        expect(body.medianLatencyMs).toBe(150); // prior window kept
+
+        // Past the grace (08:00 UTC) the day genuinely rolls over.
+        const afterGrace = computeStatsBody({
+            priorStats,
+            sentLatenciesMs: [],
+            campgroundsTracked: 1,
+            now: new Date("2026-06-25T08:00:00Z"),
+        });
+        expect(afterGrace.todayKey).toBe("2026-06-25");
+        expect(afterGrace.openingsSentToday).toBe(0);
+    });
+
     it("resets the daily counter and latency window when the day rolls over", () => {
         const priorStats = {
             todayKey: "2026-06-23",

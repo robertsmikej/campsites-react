@@ -28,6 +28,18 @@ function isAuthorized(request: Request): boolean {
     return !!env.API_SECRET && auth === `Bearer ${env.API_SECRET}`;
 }
 
+// The notifier reads its prior stats from here, not from the public GET /api/stats:
+// the public route strips _latencyWindow and _dailyHistory, and without those the
+// 7-day total collapses to today and the median resets every tick.
+async function getHandler(request: Request): Promise<Response> {
+    if (!isAuthorized(request)) {
+        return withCors(jsonResponse({ error: "Unauthorized" }, 401));
+    }
+    const stored = (await getKv().get(KEY, "json")) as NotifierStatsInternal | null;
+    return withCors(jsonResponse(stored ?? null));
+}
+export const GET = withErrorLogging(getHandler, "GET /api/admin/stats");
+
 async function putHandler(request: Request): Promise<Response> {
     if (!isAuthorized(request)) {
         return withCors(jsonResponse({ error: "Unauthorized" }, 401));

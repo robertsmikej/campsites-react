@@ -31,6 +31,14 @@ export async function acquireNotifyLock(
 // Release on completion so the next minute's tick can acquire immediately. "0"
 // reads back as an always-stale heldAt; the 60s TTL (KV minimum) just garbage
 // collects the marker.
+//
+// Never throws. runTick calls this from a `finally`, where a KV 429 on the
+// release write would replace whatever the tick itself threw; the lease TTL
+// reclaims the lock on its own within two minutes, so logging is enough.
 export async function releaseNotifyLock(kv: LockKv): Promise<void> {
-    await kv.put(LOCK_KEY, "0", { expirationTtl: 60 });
+    try {
+        await kv.put(LOCK_KEY, "0", { expirationTtl: 60 });
+    } catch (err) {
+        console.error(`[NotifyLock] release failed, lease expires on its own: ${(err as Error).message}`);
+    }
 }

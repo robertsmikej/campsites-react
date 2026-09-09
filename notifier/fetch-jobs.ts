@@ -174,18 +174,37 @@ export async function readCachedMonths(
     return out;
 }
 
+export interface FetchToCacheSummary {
+    /** Plan items that produced data and were written through to the cache. */
+    fetched: number;
+    /** Plan items that came back null (rec.gov error, 429, adapter throw). */
+    failed: number;
+}
+
 // Fetch each (campground, month) fresh from rec.gov and write it through to the
-// cache. Gentle footprint: serial with a throttle, no retries (a 429 just leaves
-// last-good in cache for this cycle). Returns nothing — the cache is the output.
+// cache. Gentle footprint: bounded concurrency with a per-worker throttle, no
+// retries (a 429 just leaves last-good in cache for this cycle). The cache is
+// the real output; the summary exists so callers can log how the pass went.
 export async function fetchToCache(
     plan: FetchPlanItem[],
     kv: KvAdapter,
     opts?: { concurrency?: number; delayMs?: number },
-): Promise<void> {
-    if (plan.length === 0) return;
-    await fetchDedupedConcurrent(
+): Promise<FetchToCacheSummary> {
+    if (plan.length === 0) {
+        return { fetched: 0, failed: 0 };
+    }
+    const results = await fetchDedupedConcurrent(
         plan,
         (campgroundId, month) => fetchMonthWithCache(campgroundId, month, kv, { forceFresh: true }),
         { concurrency: opts?.concurrency ?? 1, maxRetries: 0, delayMs: opts?.delayMs ?? 500 },
     );
+    let failed = 0;
+    for (const months of Object.values(results)) {
+        for (const value of months) {
+            if (value === null) {
+                failed++;
+            }
+        }
+    }
+    return { fetched: plan.length - failed, failed };
 }

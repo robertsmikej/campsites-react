@@ -123,7 +123,7 @@ describe("fetchToCache", () => {
             putSnapshot: async () => {},
             deleteSnapshot: async () => {},
         };
-        await fetchToCache(
+        const summary = await fetchToCache(
             [
                 { campgroundId: "A", month: "2026-07" },
                 { campgroundId: "FAIL", month: "2026-07" },
@@ -133,6 +133,21 @@ describe("fetchToCache", () => {
         );
         expect(putRaw).toHaveBeenCalledWith("A", "2026-07", { campsites: { "A-2026-07": {} } });
         expect(putRaw).not.toHaveBeenCalledWith("FAIL", "2026-07", expect.anything());
+        // The summary is what the sweep/fast-lane log lines report.
+        expect(summary).toEqual({ fetched: 1, failed: 1 });
+    });
+
+    it("reports zero counts for an empty plan without touching the cache", async () => {
+        const putRaw = vi.fn(async () => {});
+        const kv: KvAdapter = {
+            getRaw: async () => null,
+            putRaw,
+            getSnapshot: async () => null,
+            putSnapshot: async () => {},
+            deleteSnapshot: async () => {},
+        };
+        expect(await fetchToCache([], kv)).toEqual({ fetched: 0, failed: 0 });
+        expect(putRaw).not.toHaveBeenCalled();
     });
 });
 

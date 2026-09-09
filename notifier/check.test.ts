@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { run } from "./check";
+import { run, runTick } from "./check";
 import type { KvAdapter } from "../next/src/lib/recgov/cache";
 
 // Mock the Web Push sender so these tests don't run real crypto; we only assert
@@ -107,16 +107,19 @@ describe("run() dry-run", () => {
         // nothing to send.
         expect(logSpy.mock.calls.some((c) => String(c[0]).includes("would email"))).toBe(true);
 
-        // No send and no state-mutating writes.
+        // No send and no state-mutating writes. The prior-stats read is a GET on
+        // /api/admin/stats and is allowed; only PUT/POST there count as writes.
         expect(calledUrls.some((u) => u.includes("api.resend.com"))).toBe(false);
-        expect(
-            calledUrls.some(
-                (u) =>
-                    u.includes("/api/admin/notifier-state") ||
-                    u.includes("/api/admin/openings/recent") ||
-                    u.includes("/api/admin/stats"),
-            ),
-        ).toBe(false);
+        const adminWrites = fetchSpy.mock.calls.filter((c) => {
+            const u = String(c[0]);
+            const method = (c[1] as RequestInit | undefined)?.method ?? "GET";
+            const isAdminStatePath =
+                u.includes("/api/admin/notifier-state") ||
+                u.includes("/api/admin/openings/recent") ||
+                u.includes("/api/admin/stats");
+            return isAdminStatePath && method !== "GET";
+        });
+        expect(adminWrites).toHaveLength(0);
         const firstSeenWrites = fetchSpy.mock.calls.filter(
             (c) => String(c[0]).includes("/api/admin/first-seen") && (c[1] as RequestInit)?.method === "PUT",
         );
@@ -723,5 +726,126 @@ describe("delivery failure handling", () => {
         expect(resend.length).toBeGreaterThan(0);
         const html = (JSON.parse(String((resend[0]![1] as RequestInit).body)) as { html: string }).html;
         expect(html).toContain("Adjacent openings");
+    });
+
+    it("stamps first-seen for an opening watched only by an ineligible user, so their lead-time clock does not restart", async () => {
+        const t0 = new Date("2026-07-06T00:00:00Z");
+        // Non-curator on a 15-minute frequency, notified one minute ago: ineligible at T0.
+        const target = {
+            ...tierTarget([tierCampground("232358", "Outlet")]),
+            roles: [],
+            notifications: { enabled: true, frequencyMinutes: 15 },
+            lastNotifiedAt: new Date(t0.getTime() - 60_000).toISOString(),
+            notifierState: { sites: {} },
+        };
+        const kvWithMatch = () => {
+            const kv = stubKv();
+            kv.getRaw = vi.fn(async (id: string, month: string) =>
+                id === "232358" && month === "2026-07" ? (RECGOV_WITH_MATCH as never) : null,
+            );
+            return kv;
+        };
+
+        // Tick 1 at T0: nobody is eligible, but the opening is visible and must be stamped.
+        const fetchSpy = vi
+            .spyOn(globalThis, "fetch")
+            .mockImplementation(mockFetchWith({ targets: [target] }) as never);
+        vi.spyOn(console, "log").mockImplementation(() => {});
+        vi.spyOn(console, "warn").mockImplementation(() => {});
+        await run({ ...baseConfig, kvAdapter: kvWithMatch(), now: t0 });
+
+        expect(fetchSpy.mock.calls.some((c) => String(c[0]).includes("api.resend.com"))).toBe(false);
+        const firstSeen = firstSeenPutBody(fetchSpy).map;
+        const siteSigs = Object.keys(firstSeen).filter((k) => k.startsWith("232358:"));
+        expect(siteSigs).toHaveLength(1);
+        expect(firstSeen[siteSigs[0]!]).toBe(t0.toISOString());
+
+        // Tick 2 at T0+16m: the user is eligible and the opening has cleared the
+        // 15-minute lead time because its first-seen is still T0.
+        vi.restoreAllMocks();
+        const fetchSpy2 = vi
+            .spyOn(globalThis, "fetch")
+            .mockImplementation(mockFetchWith({ targets: [target], firstSeen }) as never);
+        vi.spyOn(console, "log").mockImplementation(() => {});
+        vi.spyOn(console, "warn").mockImplementation(() => {});
+        await run({ ...baseConfig, kvAdapter: kvWithMatch(), now: new Date(t0.getTime() + 16 * 60_000) });
+
+        expect(fetchSpy2.mock.calls.some((c) => String(c[0]).includes("api.resend.com"))).toBe(true);
+        expect(firstSeenPutBody(fetchSpy2).map[siteSigs[0]!]).toBe(t0.toISOString());
+    });
+});
+
+describe("prior stats read", () => {
+    beforeEach(() => vi.restoreAllMocks());
+
+    it("reads prior stats from the authenticated admin route with a timeout, not the public route", async () => {
+        const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(mockFetch() as never);
+        vi.spyOn(console, "log").mockImplementation(() => {});
+        const kv = stubKv();
+        kv.getRaw = vi.fn(async (id: string, month: string) =>
+            id === "232358" && month === "2026-07" ? (RECGOV_WITH_MATCH as never) : null,
+        );
+
+        await run({
+            subscriberApiUrl: "https://campwatch.dev",
+            subscriberApiSecret: "secret",
+            resendApiKey: "re_x",
+            siteUrl: "https://campwatch.dev",
+            forceEmail: false,
+            dryRun: true,
+            kvAdapter: kv,
+            now: new Date("2026-07-06T00:00:00Z"),
+        });
+
+        const statsReads = fetchSpy.mock.calls.filter(
+            (c) =>
+                String(c[0]).endsWith("/api/admin/stats") &&
+                (c[1] as RequestInit | undefined)?.method !== "PUT",
+        );
+        expect(statsReads).toHaveLength(1);
+        const init = statsReads[0]![1] as RequestInit;
+        expect((init.headers as Record<string, string>).Authorization).toBe("Bearer secret");
+        expect(init.signal).toBeInstanceOf(AbortSignal);
+        expect(fetchSpy.mock.calls.some((c) => String(c[0]).endsWith("/api/stats"))).toBe(false);
+    });
+});
+
+describe("runTick lock release", () => {
+    beforeEach(() => vi.restoreAllMocks());
+
+    it("surfaces the tick's own error when the lock release write also fails", async () => {
+        vi.spyOn(globalThis, "fetch").mockImplementation((async () => {
+            return new Response("{}", { status: 503 });
+        }) as never);
+        vi.spyOn(console, "log").mockImplementation(() => {});
+        const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+        const lockKv = {
+            get: vi.fn(async () => null),
+            put: vi.fn(async (_key: string, value: string) => {
+                if (value === "0") {
+                    throw new Error("KV PUT failed: 429");
+                }
+            }),
+        };
+
+        await expect(
+            runTick(
+                {
+                    subscriberApiUrl: "https://campwatch.dev",
+                    subscriberApiSecret: "secret",
+                    resendApiKey: "re_x",
+                    siteUrl: "https://campwatch.dev",
+                    forceEmail: false,
+                    dryRun: false,
+                    kvAdapter: null,
+                    now: new Date("2026-07-06T00:00:00Z"),
+                },
+                lockKv,
+            ),
+        ).rejects.toThrow("notification-targets returned 503");
+
+        // The release was attempted, failed, and was logged rather than thrown.
+        expect(lockKv.put).toHaveBeenCalledWith("notifier:notify-lock", "0", { expirationTtl: 60 });
+        expect(errorSpy.mock.calls.some((c) => String(c[0]).includes("release failed"))).toBe(true);
     });
 });
