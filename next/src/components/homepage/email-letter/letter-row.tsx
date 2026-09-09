@@ -12,9 +12,10 @@ export function LetterRow({ name, date, tag }: { name: string; date: string; tag
             <div className="font-italic-serif text-[14px] leading-[1.4] text-cw-ink-soft mt-1 font-medium italic">
                 {date}
             </div>
-            <a className="font-body-serif text-[13px] leading-none text-cw-forest underline mt-[6px] inline-block font-semibold">
+            {/* Decorative: this is a mock of the alert email, not a live link. */}
+            <span className="font-body-serif text-[13px] leading-none text-cw-forest underline mt-[6px] inline-block font-semibold">
                 Book on recreation.gov →
-            </a>
+            </span>
         </div>
     );
 }

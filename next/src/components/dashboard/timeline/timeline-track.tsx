@@ -130,7 +130,7 @@ export function TimelineTrack({
                 {site && !hasBlocks && (
                     <span
                         className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 font-italic-serif italic"
-                        style={{ fontSize: 14, color: CW.inkFaint, letterSpacing: "0.02em" }}
+                        style={{ fontSize: 14, color: CW.inkMuted, letterSpacing: "0.02em" }}
                     >
                         booked all season
                     </span>

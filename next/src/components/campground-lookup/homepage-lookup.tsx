@@ -84,6 +84,8 @@ export function HomepageLookup() {
                                     borderLeft: `1px solid ${C.rule}`,
                                 }}
                                 type="text"
+                                aria-label="Campground name, recreation.gov ID, or URL"
+                                enterKeyHint="search"
                                 value={value}
                                 placeholder={
                                     isMobile
@@ -98,6 +100,7 @@ export function HomepageLookup() {
                             />
                         </div>
                         <button
+                            type="button"
                             onClick={() => void doLookup()}
                             className="font-poster text-[13px] leading-none tracking-[0.14em] uppercase bg-cw-forest text-cw-cream border-none cursor-pointer flex items-center justify-center gap-[10px] font-extrabold"
                             style={{

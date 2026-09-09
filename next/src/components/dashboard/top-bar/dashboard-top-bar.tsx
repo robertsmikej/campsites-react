@@ -84,6 +84,7 @@ export function DashboardTopBar({
                                 <Link
                                     key={link.href}
                                     href={link.href}
+                                    prefetch={auth.user ? undefined : false}
                                     className="no-underline relative pb-[6px] outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
                                     style={{ color: isActive ? CW.ink : CW.inkSubtle }}
                                 >
@@ -106,7 +107,7 @@ export function DashboardTopBar({
                             <div className="flex items-center gap-[8px]">
                                 {lastUpdatedLabel && (
                                     <span
-                                        className="hidden sm:inline font-mono-field text-[11px] font-medium leading-none uppercase tracking-[0.1em] text-cw-ink-faint"
+                                        className="hidden sm:inline font-mono-field text-[11px] font-medium leading-none uppercase tracking-[0.1em] text-cw-ink-muted"
                                         aria-live="polite"
                                     >
                                         Updated {lastUpdatedLabel}
@@ -186,6 +187,7 @@ export function DashboardTopBar({
                         ) : (
                             <Link
                                 href="/auth/google/start?returnTo=/app"
+                                prefetch={false}
                                 className="font-mono-field text-[13px] font-bold leading-none uppercase tracking-[0.14em] no-underline px-[13px] py-[9px] border border-cw-ink rounded-[2px] text-cw-ink"
                             >
                                 Sign in

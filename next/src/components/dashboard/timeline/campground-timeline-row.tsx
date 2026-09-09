@@ -278,7 +278,7 @@ export function CampgroundTimelineRow({
                                                 top: "50%",
                                                 width: 9,
                                                 height: 1,
-                                                background: CW.inkFaint,
+                                                background: CW.inkMuted,
                                             }}
                                         />
                                         <span
@@ -292,7 +292,7 @@ export function CampgroundTimelineRow({
                                                         ? CW.clay
                                                         : tier === "worth"
                                                           ? CW.forest
-                                                          : CW.inkFaint,
+                                                          : CW.inkMuted,
                                             }}
                                         >
                                             {TIER_MARK[tier]}
@@ -318,7 +318,7 @@ export function CampgroundTimelineRow({
                                                 className="ml-auto inline-block transition-transform"
                                                 style={{
                                                     fontSize: 9,
-                                                    color: CW.inkFaint,
+                                                    color: CW.inkMuted,
                                                     transform: showWindows ? "rotate(180deg)" : undefined,
                                                 }}
                                             >

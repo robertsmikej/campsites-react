@@ -71,7 +71,8 @@
     --cw-ink: #1a1614;
     --cw-ink-soft: rgba(26, 22, 20, 0.7);
     --cw-ink-subtle: rgba(26, 22, 20, 0.5);
-    --cw-ink-faint: rgba(26, 22, 20, 0.3);
+    --cw-ink-faint: rgba(26, 22, 20, 0.3); /* hairlines and disabled fills only, fails AA as text */
+    --cw-ink-muted: rgba(26, 22, 20, 0.55); /* quietest ink that still passes AA on cream */
     --cw-rule: rgba(26, 22, 20, 0.18);
     --cw-rule-soft: rgba(26, 22, 20, 0.07);
     --cw-forest: #1f3d2a;
@@ -79,6 +80,7 @@
     --cw-forest-deep: #142a1d; /* pressed-button shadow */
     --cw-clay: #9c4a31;
     --cw-mustard: #8e7416;
+    --cw-mustard-bright: #e2bc4e; /* mustard for text on forest-deep (the light one is 3.4:1 there) */
 }
 
 @theme inline {
@@ -134,6 +136,7 @@
     --color-cw-ink-soft: var(--cw-ink-soft);
     --color-cw-ink-subtle: var(--cw-ink-subtle);
     --color-cw-ink-faint: var(--cw-ink-faint);
+    --color-cw-ink-muted: var(--cw-ink-muted);
     --color-cw-rule: var(--cw-rule);
     --color-cw-rule-soft: var(--cw-rule-soft);
     --color-cw-forest: var(--cw-forest);
@@ -141,6 +144,7 @@
     --color-cw-forest-deep: var(--cw-forest-deep);
     --color-cw-clay: var(--cw-clay);
     --color-cw-mustard: var(--cw-mustard);
+    --color-cw-mustard-bright: var(--cw-mustard-bright);
 
     /* Field Notes fonts — registered as font-* utilities */
     --font-poster: var(--font-poster);

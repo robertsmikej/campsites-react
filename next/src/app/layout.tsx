@@ -1,13 +1,30 @@
 import type { Metadata, Viewport } from "next";
-import { GeistSans } from "geist/font/sans";
-import { Inter, Big_Shoulders, Cormorant_Garamond, Source_Serif_4, DM_Mono, Caveat } from "next/font/google";
+import {
+    Inter,
+    Geist,
+    Big_Shoulders,
+    Cormorant_Garamond,
+    Source_Serif_4,
+    DM_Mono,
+    Caveat,
+} from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
+// Inter and Geist back the shadcn UI (dialogs, buttons, account, admin). The
+// marketing pages render no text in them, so they are not preloaded: the
+// browser fetches them only when a page actually uses the face.
 const inter = Inter({
     variable: "--font-sans",
     subsets: ["latin"],
+    preload: false,
+});
+
+const geist = Geist({
+    variable: "--font-geist-sans",
+    subsets: ["latin"],
+    preload: false,
 });
 
 const bigShoulders = Big_Shoulders({
@@ -117,7 +134,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 )}
             </head>
             <body
-                className={`${inter.variable} ${GeistSans.variable} ${bigShoulders.variable} ${cormorant.variable} ${sourceSerif.variable} ${dmMono.variable} ${caveat.variable} font-sans antialiased`}
+                className={`${inter.variable} ${geist.variable} ${bigShoulders.variable} ${cormorant.variable} ${sourceSerif.variable} ${dmMono.variable} ${caveat.variable} font-sans antialiased`}
             >
                 <TooltipProvider>
                     {children}

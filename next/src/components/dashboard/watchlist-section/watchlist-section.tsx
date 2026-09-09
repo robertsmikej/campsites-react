@@ -156,7 +156,7 @@ export function WatchlistSection({
                             <span>Per-site:</span>
                             <span style={{ color: CW.clay }}>★ favorite</span>
                             <span style={{ color: CW.forest }}>◇ worthwhile</span>
-                            <span style={{ color: CW.inkFaint }}>· other</span>
+                            <span style={{ color: CW.inkMuted }}>· other</span>
                         </span>
                     </div>
                 </>

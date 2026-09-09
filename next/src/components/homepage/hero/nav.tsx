@@ -10,7 +10,7 @@ interface NavProps {
 
 export function Nav({ auth, isMobile }: NavProps) {
     return (
-        <div className="relative flex items-center justify-between py-[14px] px-[22px] md:py-6 md:px-14 z-[3]">
+        <header className="relative flex items-center justify-between py-[14px] px-[22px] md:py-6 md:px-14 z-[3]">
             <NavLogo />
             <nav className="flex gap-7 items-center font-mono-field text-[12px] font-semibold leading-none tracking-[0.14em] uppercase text-cw-cream">
                 {!isMobile && (
@@ -39,6 +39,6 @@ export function Nav({ auth, isMobile }: NavProps) {
                     </a>
                 )}
             </nav>
-        </div>
+        </header>
     );
 }

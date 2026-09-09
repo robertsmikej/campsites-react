@@ -64,7 +64,7 @@ export function Faq() {
                         href="https://github.com/robertsmikej/campsites-react"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-cw-mustard underline [text-underline-offset:2px]"
+                        className="text-cw-mustard-bright underline [text-underline-offset:2px]"
                     >
                         source is on GitHub
                     </a>
@@ -85,7 +85,7 @@ export function Faq() {
             a: (
                 <>
                     Median time from a site opening to an email in your inbox is currently{" "}
-                    <span style={{ color: C.mustard, fontFamily: FM, letterSpacing: "0.04em" }}>
+                    <span style={{ color: C.mustardBright, fontFamily: FM, letterSpacing: "0.04em" }}>
                         {stats && stats.sampleSize > 0
                             ? formatLatency(stats.medianLatencyMs)
                             : "well under a minute"}

@@ -170,7 +170,7 @@ function MultiSelectSites({
                         size="sm"
                     >
                         {value.length === 0 ? (
-                            <span className="font-italic-serif italic" style={{ color: CW.inkFaint }}>
+                            <span className="font-italic-serif italic" style={{ color: CW.inkMuted }}>
                                 Type to add a site…
                             </span>
                         ) : (
@@ -320,7 +320,7 @@ export function CampgroundEditor({
                 <div className="flex w-full items-center gap-2 sm:gap-[14px]">
                     <span
                         className="cursor-grab"
-                        style={{ color: CW.inkFaint }}
+                        style={{ color: CW.inkMuted }}
                         {...(dragHandleProps as React.HTMLAttributes<HTMLSpanElement>)}
                         onClick={(e) => e.stopPropagation()}
                     >
@@ -332,7 +332,7 @@ export function CampgroundEditor({
                     >
                         {campground.name || `Campground ${index + 1}`}
                         {!isEnabled && (
-                            <span className="ml-2 text-xs font-normal italic" style={{ color: CW.inkFaint }}>
+                            <span className="ml-2 text-xs font-normal italic" style={{ color: CW.inkMuted }}>
                                 disabled
                             </span>
                         )}

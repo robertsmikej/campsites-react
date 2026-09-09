@@ -368,7 +368,7 @@ function DetailScreen({
                     {quietHidden > 0 && (
                         <div
                             className="mt-2 font-italic-serif italic"
-                            style={{ fontSize: 13, color: CW.inkFaint }}
+                            style={{ fontSize: 13, color: CW.inkMuted }}
                         >
                             +{quietHidden} quiet month{quietHidden > 1 ? "s" : ""} hidden
                         </div>
@@ -409,7 +409,7 @@ function DetailScreen({
                                                 ? CW.clay
                                                 : tier === "worth"
                                                   ? CW.forest
-                                                  : CW.inkFaint,
+                                                  : CW.inkMuted,
                                     }}
                                 >
                                     {TIER_MARK[tier]}
@@ -431,7 +431,7 @@ function DetailScreen({
                                         className="ml-auto inline-block transition-transform"
                                         style={{
                                             fontSize: 9,
-                                            color: CW.inkFaint,
+                                            color: CW.inkMuted,
                                             transform: showWindows ? "rotate(180deg)" : undefined,
                                         }}
                                     >
@@ -515,7 +515,7 @@ function MiniCalendar({
                           : weekend
                             ? "color-mix(in srgb, var(--cw-clay) 8%, transparent)"
                             : "transparent",
-                    color: open ? CW.cream : limited ? "#3a2f06" : CW.inkFaint,
+                    color: open ? CW.cream : limited ? "#3a2f06" : CW.inkMuted,
                 }}
             >
                 {d}
@@ -528,14 +528,14 @@ function MiniCalendar({
                 className="mb-1 font-poster font-black uppercase"
                 style={{ fontSize: 11, letterSpacing: "0.06em", color: CW.ink }}
             >
-                {MON[month]} <span style={{ color: CW.inkFaint }}>{year}</span>
+                {MON[month]} <span style={{ color: CW.inkMuted }}>{year}</span>
             </div>
             <div className="grid grid-cols-7 gap-[2px]">
                 {DOW.map((d, i) => (
                     <div
                         key={i}
                         className="text-center font-mono-field"
-                        style={{ fontSize: 8, color: i === 5 || i === 6 ? CW.clay : CW.inkFaint }}
+                        style={{ fontSize: 8, color: i === 5 || i === 6 ? CW.clay : CW.inkMuted }}
                     >
                         {d}
                     </div>

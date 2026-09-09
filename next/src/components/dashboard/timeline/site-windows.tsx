@@ -17,7 +17,7 @@ export function SiteWindowsList({ horizon, site, indent = 50 }: SiteWindowsListP
         return (
             <div
                 className="font-italic-serif italic"
-                style={{ padding: `4px ${indent}px 10px`, fontSize: 13, color: CW.inkFaint }}
+                style={{ padding: `4px ${indent}px 10px`, fontSize: 13, color: CW.inkMuted }}
             >
                 No open dates in this window.
             </div>

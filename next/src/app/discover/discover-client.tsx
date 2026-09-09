@@ -167,7 +167,7 @@ export function DiscoverClient() {
                         />
 
                         {/* Footer */}
-                        <footer className="px-[22px] md:px-9 pt-5 pb-9 flex justify-between font-mono-field text-[13px] font-medium leading-none tracking-[0.12em] text-cw-ink-faint uppercase flex-wrap gap-2">
+                        <footer className="px-[22px] md:px-9 pt-5 pb-9 flex justify-between font-mono-field text-[13px] font-medium leading-none tracking-[0.12em] text-cw-ink-muted uppercase flex-wrap gap-2">
                             <span>Built by a camper, for campers</span>
                             <span>CampWatch</span>
                         </footer>

@@ -91,7 +91,7 @@ export function UsersTable({ users, currentEmail, onToggleRole, onRemove }: User
                                     {isSelf ? (
                                         <Tooltip>
                                             <TooltipTrigger asChild>
-                                                <span className="font-mono-field text-[12px] text-cw-ink-faint">
+                                                <span className="font-mono-field text-[12px] text-cw-ink-muted">
                                                     —
                                                 </span>
                                             </TooltipTrigger>

@@ -315,7 +315,7 @@ export function SummerPlan({
             </div>
 
             {plan.trips.length === 0 ? (
-                <div className="font-italic-serif italic" style={{ fontSize: 16, color: CW.inkFaint }}>
+                <div className="font-italic-serif italic" style={{ fontSize: 16, color: CW.inkMuted }}>
                     No openings in this window yet — widen it or check back as sites free up.
                 </div>
             ) : (

@@ -256,7 +256,7 @@ export function TripsCard({
                                                 : ""}
                                         </span>
                                         {past ? (
-                                            <span className="font-mono-field text-[11px] uppercase text-cw-ink-faint">
+                                            <span className="font-mono-field text-[11px] uppercase text-cw-ink-muted">
                                                 Past
                                             </span>
                                         ) : hits.length > 0 ? (
@@ -274,7 +274,7 @@ export function TripsCard({
                                                 )}
                                             </button>
                                         ) : (
-                                            <span className="font-mono-field text-[11px] uppercase text-cw-ink-faint">
+                                            <span className="font-mono-field text-[11px] uppercase text-cw-ink-muted">
                                                 Watching
                                             </span>
                                         )}

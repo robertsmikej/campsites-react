@@ -9,7 +9,7 @@ import type { JSX } from "react";
 export function StarRating({ value, reviews }: { value: number | null; reviews: number }): JSX.Element {
     if (value === null) {
         return (
-            <span className="font-mono-field" style={{ fontSize: 11, color: CW.inkFaint }}>
+            <span className="font-mono-field" style={{ fontSize: 11, color: CW.inkMuted }}>
                 No ratings
             </span>
         );
@@ -30,7 +30,7 @@ export function StarRating({ value, reviews }: { value: number | null; reviews: 
                     <span key={i} aria-hidden>
                         {s === "½" ? (
                             <span style={{ position: "relative", display: "inline-block" }}>
-                                <span style={{ color: CW.inkFaint }}>☆</span>
+                                <span style={{ color: CW.inkMuted }}>☆</span>
                                 <span
                                     style={{
                                         position: "absolute",
@@ -45,7 +45,7 @@ export function StarRating({ value, reviews }: { value: number | null; reviews: 
                                 </span>
                             </span>
                         ) : s === "☆" ? (
-                            <span style={{ color: CW.inkFaint }}>☆</span>
+                            <span style={{ color: CW.inkMuted }}>☆</span>
                         ) : (
                             "★"
                         )}
@@ -65,7 +65,7 @@ export function StarRating({ value, reviews }: { value: number | null; reviews: 
 // ─── CellSignal ────────────────────────────────────────────────────────────────
 
 function cellLabel(level: number | null): { label: string; color: string } {
-    if (level === null || level === 0) return { label: "None", color: CW.inkFaint };
+    if (level === null || level === 0) return { label: "None", color: CW.inkMuted };
     if (level >= 3) return { label: "Good", color: CW.forest };
     return { label: "Weak", color: CW.mustard };
 }
@@ -86,7 +86,7 @@ export function CellSignal({ level }: { level: number | null }): JSX.Element {
                             width: 3,
                             height: bar * 3,
                             borderRadius: 1,
-                            background: bar <= bars ? color : CW.inkFaint,
+                            background: bar <= bars ? color : CW.inkMuted,
                             opacity: bar <= bars ? 1 : 0.35,
                         }}
                     />

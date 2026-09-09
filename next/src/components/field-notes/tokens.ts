@@ -10,6 +10,7 @@ export const C = {
     forestDeep: "#142a1d",
     clay: "#B65C3F",
     mustard: "#C9A227",
+    mustardBright: "#E2BC4E",
     skyMid: "#e89b8a",
     skyLow: "#b97a8d",
     water: "#3d5b6e",

@@ -43,7 +43,7 @@ export function TripCard({
                         style={{
                             fontSize: 10,
                             letterSpacing: "0.1em",
-                            color: trip.locked ? CW.forest : CW.inkFaint,
+                            color: trip.locked ? CW.forest : CW.inkMuted,
                         }}
                     >
                         {trip.locked ? "★ Locked" : "Lock"}
@@ -53,7 +53,7 @@ export function TripCard({
                             type="button"
                             onClick={() => onSwap(trip.id)}
                             className="font-mono-field uppercase"
-                            style={{ fontSize: 10, letterSpacing: "0.1em", color: CW.inkFaint }}
+                            style={{ fontSize: 10, letterSpacing: "0.1em", color: CW.inkMuted }}
                         >
                             Swap
                         </button>
@@ -83,7 +83,7 @@ export function TripCard({
                 <span
                     style={{
                         color:
-                            trip.tier === "fav" ? CW.clay : trip.tier === "worth" ? CW.forest : CW.inkFaint,
+                            trip.tier === "fav" ? CW.clay : trip.tier === "worth" ? CW.forest : CW.inkMuted,
                     }}
                 >
                     {TIER_MARK[trip.tier]}

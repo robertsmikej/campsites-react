@@ -18,14 +18,16 @@ export default function HomePage() {
         <StatsProvider>
             <AuthErrorToast />
             <div className="w-full min-h-full bg-cw-paper text-cw-ink font-body-serif relative overflow-hidden">
-                <Hero auth={auth} />
-                <StatsBand />
-                <WatchlistPostcard />
-                {/* ====== CAMPGROUND LOOKUP ====== */}
-                <CampgroundLookup />
-                <HowItWorks />
-                <EmailLetter auth={auth} />
-                <Faq />
+                <main>
+                    <Hero auth={auth} />
+                    <StatsBand />
+                    <WatchlistPostcard />
+                    {/* ====== CAMPGROUND LOOKUP ====== */}
+                    <CampgroundLookup />
+                    <HowItWorks />
+                    <EmailLetter auth={auth} />
+                    <Faq />
+                </main>
                 <Footer />
             </div>
         </StatsProvider>
