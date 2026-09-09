@@ -51,7 +51,12 @@ async function getHandler(request: Request): Promise<Response> {
             if (entries.length === 0) continue;
 
             const tripWindowsRecord = await getUserTripWindows(profile.email);
-            const notifierState = await kv.get(`user:${profile.email}:notifier-state`, "json");
+            const notifierState = (await kv.get(`user:${profile.email}:notifier-state`, "json")) as {
+                lastNotifiedAt?: string;
+            } | null;
+            // The notifier-owned blob is authoritative; the profile field is the
+            // pre-2026-09 location and only matters until the first new write.
+            const lastNotifiedAt = notifierState?.lastNotifiedAt ?? profile.lastNotifiedAt;
 
             const target: NotificationTarget = {
                 email: profile.email,
@@ -65,7 +70,7 @@ async function getHandler(request: Request): Promise<Response> {
                 pushSubscriptions: await readPushSubs(profile.email),
             };
             if (profile.defaultNotifyScope) target.defaultNotifyScope = profile.defaultNotifyScope;
-            if (profile.lastNotifiedAt) target.lastNotifiedAt = profile.lastNotifiedAt;
+            if (lastNotifiedAt) target.lastNotifiedAt = lastNotifiedAt;
             if (profile.notificationEmail) target.notificationEmail = profile.notificationEmail;
             targets.push(target);
         }

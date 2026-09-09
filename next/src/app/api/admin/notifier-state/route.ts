@@ -1,6 +1,5 @@
 import { getEnv, getKv } from "@/lib/cloudflare";
 import { jsonResponse, withCors } from "@/lib/responses";
-import { getUserProfile, updateUserProfile } from "@/lib/users";
 import { withErrorLogging } from "@/lib/route-helpers";
 import { putIfChanged } from "@/lib/kv-utils";
 import { mergeNotifierSites, TRIP_COOLDOWN_MS, type NotifierSites } from "@/lib/notifier-state-merge";
@@ -21,6 +20,15 @@ function isValidBody(body: unknown): body is { updates: UpdateEntry[] } {
         // `state` can be anything (including null or undefined); we just persist it.
         return true;
     });
+}
+
+// The later of two ISO timestamps; unparseable or missing values lose.
+function latestTimestamp(a: string | undefined, b: string | undefined): string | undefined {
+    const aMs = a ? Date.parse(a) : NaN;
+    const bMs = b ? Date.parse(b) : NaN;
+    if (Number.isNaN(aMs)) return Number.isNaN(bMs) ? undefined : b;
+    if (Number.isNaN(bMs)) return a;
+    return bMs > aMs ? b : a;
 }
 
 async function putHandler(request: Request): Promise<Response> {
@@ -59,6 +67,7 @@ async function putHandler(request: Request): Promise<Response> {
             sites?: NotifierSites;
             groups?: NotifierSites;
             trips?: NotifierSites;
+            lastNotifiedAt?: string;
         } | null;
         const incoming = (entry.state ?? {}) as {
             sites?: NotifierSites;
@@ -75,20 +84,23 @@ async function putHandler(request: Request): Promise<Response> {
         // the re-alert cadence (still-open trip sites re-fire when their range
         // expires here), so do not "fix" this to the 24h cooldown.
         const trips = mergeNotifierSites(existing?.trips, incoming.trips, nowMs, TRIP_COOLDOWN_MS);
-        const nextBlob: { sites: NotifierSites; groups?: NotifierSites; trips?: NotifierSites } = { sites };
+        const nextBlob: {
+            sites: NotifierSites;
+            groups?: NotifierSites;
+            trips?: NotifierSites;
+            lastNotifiedAt?: string;
+        } = { sites };
         if (Object.keys(groups).length > 0) nextBlob.groups = groups;
         if (Object.keys(trips).length > 0) nextBlob.trips = trips;
+        // lastNotifiedAt lives in this notifier-owned blob, not the user profile.
+        // Writing it to the profile was a read-modify-write across KV colos that
+        // could resurrect a setting the user had just changed (e.g. re-enable
+        // notifications they turned off). Only ever advance it, so a stale
+        // concurrent write can't move it backward and re-open eligibility.
+        const advanced = latestTimestamp(existing?.lastNotifiedAt, entry.lastNotifiedAt);
+        if (advanced) nextBlob.lastNotifiedAt = advanced;
         const result = await putIfChanged(kv, key, JSON.stringify(nextBlob));
         if (result.written) written++;
-        // lastNotifiedAt is the same clobber class: only ever advance it, so a
-        // stale concurrent write can't move it backward and re-open eligibility.
-        if (entry.lastNotifiedAt && !Number.isNaN(Date.parse(entry.lastNotifiedAt))) {
-            const profile = await getUserProfile(entry.email);
-            const prior = profile?.lastNotifiedAt ? Date.parse(profile.lastNotifiedAt) : 0;
-            if (Date.parse(entry.lastNotifiedAt) > prior) {
-                await updateUserProfile(entry.email, { lastNotifiedAt: entry.lastNotifiedAt });
-            }
-        }
         updated++;
     }
 

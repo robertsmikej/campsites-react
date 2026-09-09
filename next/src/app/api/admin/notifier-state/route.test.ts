@@ -121,13 +121,15 @@ describe("PUT /api/admin/notifier-state", () => {
         const aliceState = await kv.get("user:alice@x.com:notifier-state", "json");
         expect(aliceState).toEqual({
             sites: { "100:1": [{ from: "2026-07-16", to: "2026-07-19", seen: recentIso }] },
+            lastNotifiedAt: "2026-05-15T01:00:00.000Z",
         });
 
-        // Alice's profile patched with lastNotifiedAt
+        // The profile is never written by this route (a cross-colo read-modify-
+        // write there could resurrect settings the user just changed).
         const aliceProfile = (await kv.get("user:alice@x.com:profile", "json")) as {
             lastNotifiedAt?: string;
         };
-        expect(aliceProfile.lastNotifiedAt).toBe("2026-05-15T01:00:00.000Z");
+        expect(aliceProfile.lastNotifiedAt).toBeUndefined();
 
         // Bob's notifier state written
         const bobState = await kv.get("user:bob@x.com:notifier-state", "json");
@@ -189,6 +191,9 @@ describe("PUT /api/admin/notifier-state", () => {
                 name: "C",
                 roles: [],
                 createdAt: "2026-01-01T00:00:00.000Z",
+            }),
+            "user:c@x.com:notifier-state": JSON.stringify({
+                sites: {},
                 lastNotifiedAt: "2026-06-18T13:20:00.000Z",
             }),
         });
@@ -204,8 +209,20 @@ describe("PUT /api/admin/notifier-state", () => {
             `Bearer ${SECRET}`,
         );
 
-        const profile = (await kv.get("user:c@x.com:profile", "json")) as { lastNotifiedAt?: string };
-        expect(profile.lastNotifiedAt).toBe("2026-06-18T13:20:00.000Z");
+        const state = (await kv.get("user:c@x.com:notifier-state", "json")) as { lastNotifiedAt?: string };
+        expect(state.lastNotifiedAt).toBe("2026-06-18T13:20:00.000Z");
+
+        // A newer report advances it.
+        await put(
+            {
+                updates: [
+                    { email: "c@x.com", state: { sites: {} }, lastNotifiedAt: "2026-06-18T13:25:00.000Z" },
+                ],
+            },
+            `Bearer ${SECRET}`,
+        );
+        const advanced = (await kv.get("user:c@x.com:notifier-state", "json")) as { lastNotifiedAt?: string };
+        expect(advanced.lastNotifiedAt).toBe("2026-06-18T13:25:00.000Z");
     });
 
     it("returns updated: 0 for empty updates array", async () => {
