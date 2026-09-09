@@ -334,7 +334,7 @@ describe("PUT /api/users/me/campgrounds", () => {
         expect(body.error).toContain("checkPriority");
     });
 
-    it("tolerates malformed array entries without crashing", async () => {
+    it("rejects malformed array entries with a 400 instead of storing them", async () => {
         vi.mocked(sessions.readSession).mockResolvedValue({
             id: "x",
             email: "user@example.com",
@@ -349,8 +349,54 @@ describe("PUT /api/users/me/campgrounds", () => {
             },
             globalSettings: GLOBAL_SETTINGS,
         });
-        // Malformed entries have no valid checkPriority — they're not high, not invalid-string objects.
-        expect(res.status).toBe(200);
+        expect(res.status).toBe(400);
+        expect(((await res.json()) as { error: string }).error).toContain("campgrounds[0]");
+    });
+
+    it("caps watchlist size so one user cannot bloat the notifier's target list", async () => {
+        vi.mocked(sessions.readSession).mockResolvedValue({
+            id: "x",
+            email: "user@example.com",
+            createdAt: "x",
+            expiresAt: "x",
+        });
+        vi.mocked(cloudflare.getKv).mockReturnValue(createMockKv());
+
+        const tooMany = Array.from({ length: 101 }, (_, i) => cgWithPriority(String(i + 1), "normal"));
+        const res = await doPut({
+            campgrounds: { "recreation.gov": tooMany },
+            globalSettings: GLOBAL_SETTINGS,
+        });
+        expect(res.status).toBe(400);
+
+        const longName = { ...cgWithPriority("1", "normal"), name: "x".repeat(201) };
+        const named = await doPut({
+            campgrounds: { "recreation.gov": [longName] },
+            globalSettings: GLOBAL_SETTINGS,
+        });
+        expect(named.status).toBe(400);
+
+        const badId = { ...cgWithPriority("1", "normal"), id: "x".repeat(40) };
+        const idRes = await doPut({
+            campgrounds: { "recreation.gov": [badId] },
+            globalSettings: GLOBAL_SETTINGS,
+        });
+        expect(idRes.status).toBe(400);
+
+        const badNights = await doPut({
+            campgrounds: { "recreation.gov": [] },
+            globalSettings: { ...GLOBAL_SETTINGS, stayLengths: [0, 99] },
+        });
+        expect(badNights.status).toBe(400);
+
+        const huge = JSON.stringify({
+            campgrounds: {
+                "recreation.gov": [{ ...cgWithPriority("1", "normal"), description: "x".repeat(300_000) }],
+            },
+            globalSettings: GLOBAL_SETTINGS,
+        });
+        const hugeRes = await doPutRaw(huge);
+        expect(hugeRes.status).toBe(413);
     });
 
     const ARCHIVE_KEY = "user:user@example.com:campground-archive";

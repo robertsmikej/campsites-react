@@ -25,12 +25,16 @@ interface PatchBody {
 const ALLOWED_PATCH_KEYS = new Set(["name", "notifications", "defaultNotifyScope", "notificationEmail"]);
 
 const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Profiles ride along in the notifier's once-a-minute target fetch; keep them small.
+const NAME_MAX_LENGTH = 100;
 
 function isValidPatch(body: unknown): body is PatchBody {
     if (!body || typeof body !== "object") return false;
     const obj = body as Record<string, unknown>;
     if (Object.keys(obj).some((k) => !ALLOWED_PATCH_KEYS.has(k))) return false;
-    if (obj.name !== undefined && typeof obj.name !== "string") return false;
+    if (obj.name !== undefined && (typeof obj.name !== "string" || obj.name.length > NAME_MAX_LENGTH)) {
+        return false;
+    }
     if (obj.notifications !== undefined) {
         const n = obj.notifications as Record<string, unknown>;
         if (typeof n !== "object" || n === null) return false;

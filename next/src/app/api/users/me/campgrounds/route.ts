@@ -15,6 +15,86 @@ const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 const BLACKOUT_MAX_RANGES = 50;
 const BLACKOUT_MAX_LABEL = 80;
 
+// Size caps. The notifier fetches every user's full watchlist once a minute in
+// a single response, so one oversized record would take alerts down for
+// everyone. Real lists are a handful of campgrounds and a few KB.
+const MAX_BODY_BYTES = 256 * 1024;
+const MAX_CAMPGROUNDS = 100;
+const MAX_SITE_NAMES = 500;
+const MAX_SHORT_STRING = 200;
+const MAX_LONG_STRING = 2000;
+const MAX_STAY_NIGHTS = 14;
+// rec.gov facility ids are numeric, but older records carry slugs; allow both, bounded.
+const CAMPGROUND_ID = /^[A-Za-z0-9_-]{1,32}$/;
+const WEEKDAYS = new Set(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]);
+
+function isShortString(v: unknown): boolean {
+    return typeof v === "string" && v.length <= MAX_SHORT_STRING;
+}
+
+function validSiteNames(v: unknown): boolean {
+    if (v === undefined) return true;
+    if (!Array.isArray(v) || v.length > MAX_SITE_NAMES) return false;
+    return v.every(isShortString);
+}
+
+// Returns null when the entry is acceptable, otherwise a message for the 400.
+function campgroundEntryError(entry: unknown, index: number): string | null {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+        return `campgrounds[${index}] must be an object`;
+    }
+    const c = entry as Record<string, unknown>;
+    if (typeof c.id !== "string" || !CAMPGROUND_ID.test(c.id)) {
+        return `campgrounds[${index}].id must be a short campground id`;
+    }
+    if (c.name !== undefined && !isShortString(c.name)) {
+        return `campgrounds[${index}].name must be a string of at most ${MAX_SHORT_STRING} characters`;
+    }
+    for (const [key, value] of Object.entries(c)) {
+        if (typeof value === "string" && value.length > MAX_LONG_STRING) {
+            return `campgrounds[${index}].${key} is too long`;
+        }
+    }
+    if (c.sites !== undefined) {
+        const sites = c.sites as { favorites?: unknown; worthwhile?: unknown } | null;
+        if (!sites || typeof sites !== "object") return `campgrounds[${index}].sites must be an object`;
+        if (!validSiteNames(sites.favorites) || !validSiteNames(sites.worthwhile)) {
+            return `campgrounds[${index}].sites lists are limited to ${MAX_SITE_NAMES} names of ${MAX_SHORT_STRING} characters`;
+        }
+    }
+    const dates = c.dates as { startDate?: unknown; endDate?: unknown } | undefined;
+    for (const bound of [dates?.startDate, dates?.endDate]) {
+        if (bound !== undefined && (typeof bound !== "string" || !ISO_DAY.test(bound))) {
+            return `campgrounds[${index}].dates must be YYYY-MM-DD`;
+        }
+    }
+    return null;
+}
+
+function campgroundsError(list: unknown[]): string | null {
+    if (list.length > MAX_CAMPGROUNDS) {
+        return `At most ${MAX_CAMPGROUNDS} campgrounds per watchlist`;
+    }
+    for (let i = 0; i < list.length; i++) {
+        const error = campgroundEntryError(list[i], i);
+        if (error) return error;
+    }
+    return null;
+}
+
+function globalSettingsError(gs: { stayLengths: unknown[]; validStartDays: unknown[] }): string | null {
+    if (gs.stayLengths.length > MAX_STAY_NIGHTS) return "Too many stay lengths";
+    const badNight = gs.stayLengths.some(
+        (n) => typeof n !== "number" || !Number.isInteger(n) || n < 1 || n > MAX_STAY_NIGHTS,
+    );
+    if (badNight) return `stayLengths must be whole nights between 1 and ${MAX_STAY_NIGHTS}`;
+    if (gs.validStartDays.length > WEEKDAYS.size) return "Too many start days";
+    if (gs.validStartDays.some((d) => typeof d !== "string" || !WEEKDAYS.has(d))) {
+        return "validStartDays must be weekday names";
+    }
+    return null;
+}
+
 function validBlackoutDates(v: unknown): boolean {
     if (v === undefined) return true;
     if (!Array.isArray(v) || v.length > BLACKOUT_MAX_RANGES) return false;
@@ -71,14 +151,24 @@ async function putHandler(request: Request): Promise<Response> {
     const session = await readSession(request);
     if (!session) return withCors(jsonResponse({ error: "Unauthorized" }, 401));
 
+    const rawBody = await request.text();
+    if (rawBody.length > MAX_BODY_BYTES) {
+        return withCors(jsonResponse({ error: "Watchlist is too large" }, 413));
+    }
     let body: unknown;
     try {
-        body = await request.json();
+        body = JSON.parse(rawBody);
     } catch {
         return withCors(jsonResponse({ error: "Invalid JSON" }, 400));
     }
     if (!isValidBody(body)) {
         return withCors(jsonResponse({ error: "Body must include campgrounds and globalSettings" }, 400));
+    }
+
+    const shapeError =
+        campgroundsError(body.campgrounds["recreation.gov"]) ?? globalSettingsError(body.globalSettings);
+    if (shapeError) {
+        return withCors(jsonResponse({ error: shapeError }, 400));
     }
 
     const invalidPriority = body.campgrounds["recreation.gov"].some((cg) => {
