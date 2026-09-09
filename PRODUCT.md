@@ -28,15 +28,17 @@ Per-user watchlists diffed against a globally deduplicated fetch cycle (one requ
 
 Campers set up watchlists pointing at specific recreation.gov campground IDs and date ranges (including trip windows for multi-night stays). The notifier runs on a 1-minute tick / 5-minute sweep cron schedule. Users receive email (Resend) or web push (PWA) when openings match, then race to book on recreation.gov directly.
 
-The dashboard shows an openings feed, grouped watchlists with inline availability, a per-site drawer with an availability calendar and satellite map, and trip-window planning. A discover page helps find campgrounds. An admin panel exposes notifier state and user management.
+The dashboard shows grouped watchlists with an inline availability timeline, a per-site drawer with an availability calendar and satellite map, and trip-window planning. A discover page helps find campgrounds. An admin panel exposes notifier state and user management.
 
 ## Capabilities and Constraints
 
-Confirmed functionality: Google OAuth sign-in, per-user watchlists with campground search, trip windows with multi-night filtering, email + push notifications, availability calendar, site map modal, openings feed, admin panel, dark mode, PWA installable.
+Confirmed functionality: Google OAuth sign-in, per-user watchlists with campground search, trip windows with multi-night filtering, email + Web Push notifications (installable PWA, iOS 16.4+), availability timeline and calendar, site map modal, admin panel.
+
+Not offered: dark mode (removed 2026-09-09; the palette is light only). The "open right now" openings feed was removed from the dashboard and its code deleted; the homepage postcard still shows recent openings.
 
 Technical constraints: Cloudflare Workers runtime (no Node.js APIs), KV for all persistence (no relational DB), recreation.gov has no official API (scraping their public availability endpoint), Cloudflare Cron Triggers for scheduling.
 
-Undecided: state parks integration (Idaho's getoutside.idaho.gov has no availability API and blocks scraping). iOS PWA + Web Push plan committed but not executed.
+Undecided: state parks integration (Idaho's getoutside.idaho.gov has no availability API and blocks scraping; an Oregon/Washington plan is scoped in `docs/state-parks-integration-plan.md` and not started).
 
 ## Brand Commitments
 
@@ -44,11 +46,11 @@ Name: CampWatch. Domain: campwatch.dev.
 
 Logo: hand-drawn compass-rose mark in `/public/images/logos/`.
 
-Design system: "Field Notes," a cohesive visual language across all surfaces. Cream/ink/forest/clay/mustard palette with five typefaces (Big Shoulders Display for poster headlines, Cormorant Garamond for italic accents, Source Serif 4 for body, DM Mono for data/fields, Caveat for handwritten annotations). Tokens live in CSS custom properties (`--cw-*`) with automatic dark-mode inversion. The metaphor is a naturalist's field notebook.
+Design system: "Field Notes," a cohesive visual language across all surfaces. Cream/ink/forest/clay/mustard palette with five typefaces (Big Shoulders Display for poster headlines, Cormorant Garamond for italic accents, Source Serif 4 for body, DM Mono for data/fields, Caveat for handwritten annotations). Tokens live in CSS custom properties (`--cw-*`). The metaphor is a naturalist's field notebook.
 
 ## Evidence on Hand
 
-Live production site at campwatch.dev with real users, real telemetry (campgrounds tracked, openings sent, median latency), and real notification history. Screenshots in `docs/screenshots/` (homepage, dashboard, drawer, email). Email template rendered in `notifier/email-preview.html`. No testimonials, press, or case studies. Do not fabricate any.
+Live production site at campwatch.dev with real users, real telemetry (campgrounds tracked, openings sent, median latency), and real notification history. Email template rendered locally via `notifier/render-preview.ts`. No screenshots are checked in. No testimonials, press, or case studies. Do not fabricate any.
 
 ## Product Principles
 

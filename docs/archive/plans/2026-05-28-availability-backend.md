@@ -1858,7 +1858,7 @@ Expected: see "[Fetch]" lines and no `[Snapshot] put failed` errors.
 Using wrangler:
 ```bash
 cd /Users/mikeroberts/Code/campwatch/next
-pnpm exec wrangler kv key get --namespace-id=41a67a8b06044ee38f0bf22cfbcc069d "snapshot:mikeroberts421@gmail.com"
+pnpm exec wrangler kv key get --namespace-id=41a67a8b06044ee38f0bf22cfbcc069d "snapshot:you@example.com"
 ```
 Expected: returns a JSON blob with `updatedAt` and `campgrounds`.
 
