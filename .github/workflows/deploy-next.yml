@@ -13,7 +13,60 @@ concurrency:
     cancel-in-progress: false
 
 jobs:
+    # Same gates as ci.yml, run inline so a red check blocks the deploy instead
+    # of failing in a parallel workflow nobody looks at. Main had four red CI
+    # runs ship to prod before this job existed.
+    checks:
+        runs-on: ubuntu-latest
+        defaults:
+            run:
+                working-directory: next
+        steps:
+            - uses: actions/checkout@v5
+
+            - uses: pnpm/action-setup@v6
+              with:
+                  version: 9
+
+            - uses: actions/setup-node@v5
+              with:
+                  node-version-file: .nvmrc
+                  cache: pnpm
+                  cache-dependency-path: next/pnpm-lock.yaml
+
+            - name: Install
+              run: pnpm install --frozen-lockfile
+
+            - name: Lint
+              run: pnpm lint
+
+            - name: Format check
+              run: pnpm format:check
+
+            - name: Type-check
+              run: pnpm exec tsc --noEmit
+
+            - name: Test
+              run: pnpm test
+
+            - name: Notifier install
+              working-directory: notifier
+              run: npm ci
+
+            - name: Notifier format check
+              working-directory: notifier
+              run: npm run format:check
+
+            - name: Notifier type-check
+              working-directory: notifier
+              run: npm run typecheck
+
+            - name: Notifier test
+              working-directory: notifier
+              run: npm test
+
     deploy:
+        needs: checks
         runs-on: ubuntu-latest
         defaults:
             run:
@@ -66,7 +119,24 @@ jobs:
                   BOOTSTRAP_ADMIN_EMAIL: ${{ secrets.BOOTSTRAP_ADMIN_EMAIL }}
                   VAPID_PRIVATE_JWK: ${{ secrets.VAPID_PRIVATE_JWK }}
 
+            # The homepage stats band and the notifier both depend on this route.
+            # Retry briefly so a cold isolate right after deploy doesn't read as red.
+            - name: Smoke test
+              working-directory: .
+              run: |
+                  for attempt in 1 2 3 4 5; do
+                      if curl -fsS --max-time 15 https://campwatch.dev/api/stats > /dev/null; then
+                          echo "api/stats responded"
+                          exit 0
+                      fi
+                      echo "attempt $attempt failed, retrying"
+                      sleep 5
+                  done
+                  echo "campwatch.dev/api/stats did not respond after deploy"
+                  exit 1
+
     deploy-notifier:
+        needs: checks
         runs-on: ubuntu-latest
         defaults:
             run:
@@ -77,7 +147,7 @@ jobs:
               with:
                   node-version-file: .nvmrc
             - name: Install notifier dependencies
-              run: npm install
+              run: npm ci
             - name: Deploy notifier Worker
               uses: cloudflare/wrangler-action@v4
               with:
